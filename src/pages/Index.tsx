@@ -8,7 +8,7 @@ const Index = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <IconCard icon={Clock} label="Horas" />
           <IconCard icon={Calendar} label="Extra" />
-          <IconCard icon={BookOpen} label="Editor" />
+          <IconCard icon={BookOpen} label="Editor" showCalendar />
           <IconCard icon={FileText} label="Escala" />
         </div>
       </div>
