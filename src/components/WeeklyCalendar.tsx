@@ -70,14 +70,19 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
     }
   };
 
+  const formatTimeForDB = (time: string) => {
+    // Add seconds to the time string if not present
+    return time.includes(":") ? `${time}:00` : `${time}:00:00`;
+  };
+
   const handleTimeSlotAdd = async (timeSlot: TimeSlot) => {
     try {
       const { error } = await supabase
         .from('time_slots')
         .insert([{
           date: format(timeSlot.date, 'yyyy-MM-dd'),
-          start_time: timeSlot.startTime,
-          end_time: timeSlot.endTime,
+          start_time: formatTimeForDB(timeSlot.startTime),
+          end_time: formatTimeForDB(timeSlot.endTime),
           total_slots: timeSlot.slots,
           slots_used: 0
         }]);
@@ -107,8 +112,8 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         .from('time_slots')
         .update({
           date: format(updatedTimeSlot.date, 'yyyy-MM-dd'),
-          start_time: updatedTimeSlot.startTime,
-          end_time: updatedTimeSlot.endTime,
+          start_time: formatTimeForDB(updatedTimeSlot.startTime),
+          end_time: formatTimeForDB(updatedTimeSlot.endTime),
           total_slots: updatedTimeSlot.slots,
           slots_used: updatedTimeSlot.slotsUsed
         })
