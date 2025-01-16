@@ -42,8 +42,8 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         const isAlreadyAuthenticated = await isAuthenticated();
         if (!isAlreadyAuthenticated) {
           const result = await signInAnonymously();
-          if (result.type === 'supabase' && !result.session) {
-            console.log('Falling back to localStorage');
+          if (result.type === 'local') {
+            console.log('Using localStorage for data storage');
           }
         }
         fetchTimeSlots();
