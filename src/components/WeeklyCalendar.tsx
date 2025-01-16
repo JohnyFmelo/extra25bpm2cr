@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import TimeSlotDialog from "./TimeSlotDialog";
 import { signInAnonymously, isAuthenticated, dataOperations } from "@/lib/supabase";
-import { useToast } from "./ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface TimeSlot {
   date: Date;
@@ -29,6 +29,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [editingTimeSlot, setEditingTimeSlot] = useState<TimeSlot | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUsingSupabase, setIsUsingSupabase] = useState(false);
   const { toast } = useToast();
   
   const weekDays = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -42,17 +43,22 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         const isAlreadyAuthenticated = await isAuthenticated();
         if (!isAlreadyAuthenticated) {
           const result = await signInAnonymously();
+          setIsUsingSupabase(result.type !== 'local');
           if (result.type === 'local') {
             console.log('Using localStorage for data storage');
           }
+        } else {
+          setIsUsingSupabase(true);
         }
         fetchTimeSlots();
       } catch (error) {
         console.error('Error initializing auth:', error);
-        toast({
-          title: "Aviso",
-          description: "Usando armazenamento local para os horários.",
-        });
+        if (isUsingSupabase) {
+          toast({
+            title: "Aviso",
+            description: "Usando armazenamento local para os horários.",
+          });
+        }
       }
     };
 
@@ -75,10 +81,12 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       setTimeSlots(formattedSlots);
     } catch (error) {
       console.error('Erro ao carregar horários:', error);
-      toast({
-        title: "Erro ao carregar horários",
-        description: "Usando armazenamento local.",
-      });
+      if (isUsingSupabase) {
+        toast({
+          title: "Erro ao carregar horários",
+          description: "Usando armazenamento local.",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -102,19 +110,23 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         throw new Error('Failed to insert time slot');
       }
 
-      toast({
-        title: "Horário registrado",
-        description: "O horário foi registrado com sucesso!"
-      });
+      if (isUsingSupabase) {
+        toast({
+          title: "Horário registrado",
+          description: "O horário foi registrado com sucesso!"
+        });
+      }
 
       await fetchTimeSlots();
       setIsDialogOpen(false);
     } catch (error) {
       console.error('Erro ao adicionar horário:', error);
-      toast({
-        title: "Erro ao registrar horário",
-        description: "O horário foi salvo localmente.",
-      });
+      if (isUsingSupabase) {
+        toast({
+          title: "Erro ao registrar horário",
+          description: "O horário foi salvo localmente.",
+        });
+      }
     }
   };
 
@@ -135,20 +147,24 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         }
       );
 
-      toast({
-        title: "Horário atualizado",
-        description: "O horário foi atualizado com sucesso!"
-      });
+      if (isUsingSupabase) {
+        toast({
+          title: "Horário atualizado",
+          description: "O horário foi atualizado com sucesso!"
+        });
+      }
 
       await fetchTimeSlots();
       setIsDialogOpen(false);
       setEditingTimeSlot(null);
     } catch (error) {
       console.error('Erro ao atualizar horário:', error);
-      toast({
-        title: "Erro ao atualizar horário",
-        description: "O horário foi atualizado localmente.",
-      });
+      if (isUsingSupabase) {
+        toast({
+          title: "Erro ao atualizar horário",
+          description: "O horário foi atualizado localmente.",
+        });
+      }
     }
   };
 
@@ -160,18 +176,22 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         end_time: timeSlot.endTime
       });
 
-      toast({
-        title: "Horário excluído",
-        description: "O horário foi excluído com sucesso!"
-      });
+      if (isUsingSupabase) {
+        toast({
+          title: "Horário excluído",
+          description: "O horário foi excluído com sucesso!"
+        });
+      }
 
       await fetchTimeSlots();
     } catch (error) {
       console.error('Erro ao excluir horário:', error);
-      toast({
-        title: "Erro ao excluir horário",
-        description: "O horário foi excluído localmente.",
-      });
+      if (isUsingSupabase) {
+        toast({
+          title: "Erro ao excluir horário",
+          description: "O horário foi excluído localmente.",
+        });
+      }
     }
   };
 
