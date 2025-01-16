@@ -309,8 +309,8 @@ const WeeklyCalendar = ({
   };
 
   const getCurrentWeekTimeSlots = () => {
-    const startDate = new Date(currentDate);
-    startDate.setDate(currentDate.getDate() - currentDate.getDay() + 2); // Adjust to start from Tuesday
+    const startDate = new Date(currentDateValue);
+    startDate.setDate(currentDateValue.getDate() - currentDateValue.getDay() + 2); // Adjust to start from Tuesday
     
     const weekSlots = [];
     for (let i = 0; i < 7; i++) {
@@ -329,10 +329,10 @@ const WeeklyCalendar = ({
 
   const getDaysOfWeek = () => {
     const days = [];
-    const startDate = new Date(currentDate);
+    const startDate = new Date(currentDateValue);
     const currentDay = startDate.getDay();
     const daysToSubtract = (currentDay + 5) % 7; // Calculate days to subtract to reach Tuesday
-    startDate.setDate(currentDate.getDate() - daysToSubtract);
+    startDate.setDate(currentDateValue.getDate() - daysToSubtract);
 
     for (let i = 0; i < 7; i++) {
       const currentDateInWeek = new Date(startDate);
