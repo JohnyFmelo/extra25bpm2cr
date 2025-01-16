@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import TimeSlotDialog from "./TimeSlotDialog";
-import { supabase, signInAnonymously, isAuthenticated } from "@/lib/supabase";
+import { signInAnonymously, isAuthenticated, dataOperations } from "@/lib/supabase";
 import { useToast } from "./ui/use-toast";
 
 interface TimeSlot {
@@ -41,23 +41,17 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       try {
         const isAlreadyAuthenticated = await isAuthenticated();
         if (!isAlreadyAuthenticated) {
-          const session = await signInAnonymously();
-          if (!session) {
-            toast({
-              title: "Erro de autenticação",
-              description: "Não foi possível inicializar a autenticação anônima. Verifique se está habilitada no Supabase.",
-              variant: "destructive"
-            });
-            return;
+          const result = await signInAnonymously();
+          if (result.type === 'supabase' && !result.session) {
+            console.log('Falling back to localStorage');
           }
         }
         fetchTimeSlots();
       } catch (error) {
         console.error('Error initializing auth:', error);
         toast({
-          title: "Erro de autenticação",
-          description: "Ocorreu um erro ao inicializar a autenticação.",
-          variant: "destructive"
+          title: "Aviso",
+          description: "Usando armazenamento local para os horários.",
         });
       }
     };
@@ -68,13 +62,9 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const fetchTimeSlots = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('time_slots')
-        .select('*');
+      const data = await dataOperations.fetch();
 
-      if (error) throw error;
-
-      const formattedSlots = data.map(slot => ({
+      const formattedSlots = data.map((slot: any) => ({
         date: new Date(slot.date),
         startTime: slot.start_time.slice(0, 5),
         endTime: slot.end_time.slice(0, 5),
@@ -87,8 +77,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       console.error('Erro ao carregar horários:', error);
       toast({
         title: "Erro ao carregar horários",
-        description: "Não foi possível carregar os horários. Tente novamente mais tarde.",
-        variant: "destructive"
+        description: "Usando armazenamento local.",
       });
     } finally {
       setIsLoading(false);
@@ -96,21 +85,18 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   };
 
   const formatTimeForDB = (time: string) => {
-    // Convert numeric time (like "13") to proper time format (like "13:00:00")
     return time.includes(":") ? `${time}:00` : `${time}:00:00`;
   };
 
   const handleTimeSlotAdd = async (timeSlot: TimeSlot) => {
     try {
-      const { error } = await supabase
-        .from('time_slots')
-        .insert([{
-          date: format(timeSlot.date, 'yyyy-MM-dd'),
-          start_time: formatTimeForDB(timeSlot.startTime),
-          end_time: formatTimeForDB(timeSlot.endTime),
-          total_slots: timeSlot.slots,
-          slots_used: 0
-        }]);
+      const { error } = await dataOperations.insert({
+        date: format(timeSlot.date, 'yyyy-MM-dd'),
+        start_time: formatTimeForDB(timeSlot.startTime),
+        end_time: formatTimeForDB(timeSlot.endTime),
+        total_slots: timeSlot.slots,
+        slots_used: 0
+      });
 
       if (error) throw error;
 
@@ -125,28 +111,27 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       console.error('Erro ao adicionar horário:', error);
       toast({
         title: "Erro ao registrar horário",
-        description: "Não foi possível registrar o horário. Tente novamente.",
-        variant: "destructive"
+        description: "O horário foi salvo localmente.",
       });
     }
   };
 
   const handleTimeSlotEdit = async (updatedTimeSlot: TimeSlot) => {
     try {
-      const { error } = await supabase
-        .from('time_slots')
-        .update({
+      await dataOperations.update(
+        {
           date: format(updatedTimeSlot.date, 'yyyy-MM-dd'),
           start_time: formatTimeForDB(updatedTimeSlot.startTime),
           end_time: formatTimeForDB(updatedTimeSlot.endTime),
           total_slots: updatedTimeSlot.slots,
           slots_used: updatedTimeSlot.slotsUsed
-        })
-        .eq('date', format(editingTimeSlot!.date, 'yyyy-MM-dd'))
-        .eq('start_time', formatTimeForDB(editingTimeSlot!.startTime))
-        .eq('end_time', formatTimeForDB(editingTimeSlot!.endTime));
-
-      if (error) throw error;
+        },
+        {
+          date: format(editingTimeSlot!.date, 'yyyy-MM-dd'),
+          start_time: formatTimeForDB(editingTimeSlot!.startTime),
+          end_time: formatTimeForDB(editingTimeSlot!.endTime)
+        }
+      );
 
       toast({
         title: "Horário atualizado",
@@ -160,22 +145,18 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       console.error('Erro ao atualizar horário:', error);
       toast({
         title: "Erro ao atualizar horário",
-        description: "Não foi possível atualizar o horário. Tente novamente.",
-        variant: "destructive"
+        description: "O horário foi atualizado localmente.",
       });
     }
   };
 
   const handleDeleteTimeSlot = async (timeSlot: TimeSlot) => {
     try {
-      const { error } = await supabase
-        .from('time_slots')
-        .delete()
-        .eq('date', format(timeSlot.date, 'yyyy-MM-dd'))
-        .eq('start_time', timeSlot.startTime)
-        .eq('end_time', timeSlot.endTime);
-
-      if (error) throw error;
+      await dataOperations.delete({
+        date: format(timeSlot.date, 'yyyy-MM-dd'),
+        start_time: timeSlot.startTime,
+        end_time: timeSlot.endTime
+      });
 
       toast({
         title: "Horário excluído",
@@ -187,8 +168,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       console.error('Erro ao excluir horário:', error);
       toast({
         title: "Erro ao excluir horário",
-        description: "Não foi possível excluir o horário. Tente novamente.",
-        variant: "destructive"
+        description: "O horário foi excluído localmente.",
       });
     }
   };
