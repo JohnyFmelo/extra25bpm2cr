@@ -71,7 +71,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   };
 
   const formatTimeForDB = (time: string) => {
-    // Add seconds to the time string if not present
+    // Convert numeric time (like "13") to proper time format (like "13:00:00")
     return time.includes(":") ? `${time}:00` : `${time}:00:00`;
   };
 
@@ -118,8 +118,8 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
           slots_used: updatedTimeSlot.slotsUsed
         })
         .eq('date', format(editingTimeSlot!.date, 'yyyy-MM-dd'))
-        .eq('start_time', editingTimeSlot!.startTime)
-        .eq('end_time', editingTimeSlot!.endTime);
+        .eq('start_time', formatTimeForDB(editingTimeSlot!.startTime))
+        .eq('end_time', formatTimeForDB(editingTimeSlot!.endTime));
 
       if (error) throw error;
 
