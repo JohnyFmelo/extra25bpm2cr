@@ -103,17 +103,29 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
     try {
       const formattedDate = format(timeSlot.date, 'yyyy-MM-dd');
       
-      // Verificar se já existe um horário igual
-      const existingSlot = timeSlots.find(slot => 
-        format(slot.date, 'yyyy-MM-dd') === formattedDate &&
-        slot.startTime === timeSlot.startTime &&
-        slot.endTime === timeSlot.endTime
+      // Verificação mais rigorosa de horários duplicados
+      const existingSlots = timeSlots.filter(slot => 
+        format(slot.date, 'yyyy-MM-dd') === formattedDate
       );
 
-      if (existingSlot) {
+      const hasOverlap = existingSlots.some(slot => {
+        const newStart = timeSlot.startTime;
+        const newEnd = timeSlot.endTime;
+        const existingStart = slot.startTime;
+        const existingEnd = slot.endTime;
+
+        // Verifica se há sobreposição de horários
+        return (
+          (newStart >= existingStart && newStart < existingEnd) ||
+          (newEnd > existingStart && newEnd <= existingEnd) ||
+          (newStart <= existingStart && newEnd >= existingEnd)
+        );
+      });
+
+      if (hasOverlap) {
         toast({
-          title: "Horário já existe",
-          description: "Este horário já está cadastrado.",
+          title: "Horário indisponível",
+          description: "Já existe um horário cadastrado que conflita com este período.",
           variant: "destructive"
         });
         return;
