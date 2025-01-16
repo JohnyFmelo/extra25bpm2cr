@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -19,13 +19,38 @@ interface TimeSlotDialogProps {
   onClose: () => void;
   selectedDate: Date;
   onAddTimeSlot: (timeSlot: TimeSlot) => void;
+  onEditTimeSlot: (timeSlot: TimeSlot) => void;
+  editingTimeSlot: TimeSlot | null;
 }
 
-const TimeSlotDialog = ({ isOpen, onClose, selectedDate, onAddTimeSlot }: TimeSlotDialogProps) => {
+const TimeSlotDialog = ({ 
+  isOpen, 
+  onClose, 
+  selectedDate, 
+  onAddTimeSlot, 
+  onEditTimeSlot,
+  editingTimeSlot 
+}: TimeSlotDialogProps) => {
   const [timeSlot, setTimeSlot] = useState("13 às 19");
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
+
+  useEffect(() => {
+    if (editingTimeSlot) {
+      setTimeSlot(`${editingTimeSlot.startTime} às ${editingTimeSlot.endTime}`);
+      setSelectedSlots(editingTimeSlot.slots);
+      if (!slotOptions.includes(editingTimeSlot.slots)) {
+        setShowCustomSlots(true);
+        setCustomSlots(editingTimeSlot.slots.toString());
+      }
+    } else {
+      setTimeSlot("13 às 19");
+      setSelectedSlots(2);
+      setShowCustomSlots(false);
+      setCustomSlots("");
+    }
+  }, [editingTimeSlot]);
 
   const slotOptions = [2, 3, 4, 5];
 
@@ -38,10 +63,14 @@ const TimeSlotDialog = ({ isOpen, onClose, selectedDate, onAddTimeSlot }: TimeSl
       startTime,
       endTime,
       slots,
-      slotsUsed: 0
+      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0
     };
     
-    onAddTimeSlot(newTimeSlot);
+    if (editingTimeSlot) {
+      onEditTimeSlot(newTimeSlot);
+    } else {
+      onAddTimeSlot(newTimeSlot);
+    }
     onClose();
   };
 
@@ -108,7 +137,7 @@ const TimeSlotDialog = ({ isOpen, onClose, selectedDate, onAddTimeSlot }: TimeSl
               Cancelar
             </Button>
             <Button onClick={handleRegister}>
-              Registrar Horário
+              {editingTimeSlot ? "Salvar" : "Registrar Horário"}
             </Button>
           </div>
         </div>

@@ -25,6 +25,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [editingTimeSlot, setEditingTimeSlot] = useState<TimeSlot | null>(null);
   const weekDays = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
   const fullWeekDays = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
   const currentMonth = format(currentDate, "MMMM yyyy", { locale: ptBR });
@@ -52,13 +53,29 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
 
   const handlePlusClick = () => {
     if (selectedDate) {
+      setEditingTimeSlot(null);
       setIsDialogOpen(true);
     }
+  };
+
+  const handleEditClick = (timeSlot: TimeSlot) => {
+    setEditingTimeSlot(timeSlot);
+    setIsDialogOpen(true);
   };
 
   const handleTimeSlotAdd = (timeSlot: TimeSlot) => {
     setTimeSlots((prev) => [...prev, timeSlot]);
     setIsDialogOpen(false);
+  };
+
+  const handleTimeSlotEdit = (updatedTimeSlot: TimeSlot) => {
+    setTimeSlots((prev) =>
+      prev.map((slot) =>
+        slot === editingTimeSlot ? updatedTimeSlot : slot
+      )
+    );
+    setIsDialogOpen(false);
+    setEditingTimeSlot(null);
   };
 
   const getTimeSlotsForDate = (date: Date) => {
@@ -165,7 +182,12 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => handleEditClick(slot)}
+                >
                   <Pencil className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -180,9 +202,14 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       {selectedDate && (
         <TimeSlotDialog
           isOpen={isDialogOpen}
-          onClose={() => setIsDialogOpen(false)}
+          onClose={() => {
+            setIsDialogOpen(false);
+            setEditingTimeSlot(null);
+          }}
           selectedDate={selectedDate}
           onAddTimeSlot={handleTimeSlotAdd}
+          onEditTimeSlot={handleTimeSlotEdit}
+          editingTimeSlot={editingTimeSlot}
         />
       )}
     </div>
