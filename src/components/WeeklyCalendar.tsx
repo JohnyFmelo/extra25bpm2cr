@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2 } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
@@ -54,9 +54,9 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       const formattedSlots = data.map((slot: any) => ({
         id: slot.id,
         date: parseISO(slot.date),
-        startTime: slot.start_time.slice(0, 5),
-        endTime: slot.end_time.slice(0, 5),
-        slots: slot.total_slots,
+        startTime: slot.start_time ? slot.start_time.slice(0, 5) : "00:00",
+        endTime: slot.end_time ? slot.end_time.slice(0, 5) : "00:00",
+        slots: slot.total_slots || slot.slots || 0,
         slotsUsed: slot.slots_used || 0
       }));
 
@@ -279,14 +279,6 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       <div className="flex justify-between items-center mb-4 md:mb-6">
         <h2 className="text-lg md:text-xl font-semibold">{currentMonth}</h2>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="h-8 w-8 md:h-10 md:w-10"
-            onClick={handleClearData}
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
           <Button 
             variant="outline" 
             size="icon" 
