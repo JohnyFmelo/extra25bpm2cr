@@ -35,7 +35,7 @@ const Index = () => {
 
           <TabsContent value="editor">
             <div className="relative">
-              <div className="absolute right-0 -top-8 mb-4">
+              <div className="absolute right-0 -top-12 mb-4">
                 <button
                   onClick={handleBackClick}
                   className="p-2 rounded-full hover:bg-gray-200 transition-colors"
