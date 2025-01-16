@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2 } from "lucide-react";
 import { format, addWeeks, subWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -6,6 +6,8 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import TimeSlotDialog from "./TimeSlotDialog";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "./ui/use-toast";
 
 interface TimeSlot {
   date: Date;
@@ -26,10 +28,140 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [editingTimeSlot, setEditingTimeSlot] = useState<TimeSlot | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  
   const weekDays = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
   const fullWeekDays = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
   const currentMonth = format(currentDate, "MMMM yyyy", { locale: ptBR });
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    fetchTimeSlots();
+  }, []);
+
+  const fetchTimeSlots = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('time_slots')
+        .select('*');
+
+      if (error) throw error;
+
+      const formattedSlots = data.map(slot => ({
+        date: new Date(slot.date),
+        startTime: slot.start_time.slice(0, 5),
+        endTime: slot.end_time.slice(0, 5),
+        slots: slot.total_slots,
+        slotsUsed: slot.slots_used
+      }));
+
+      setTimeSlots(formattedSlots);
+    } catch (error) {
+      console.error('Erro ao carregar horários:', error);
+      toast({
+        title: "Erro ao carregar horários",
+        description: "Não foi possível carregar os horários. Tente novamente mais tarde.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTimeSlotAdd = async (timeSlot: TimeSlot) => {
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .insert([{
+          date: format(timeSlot.date, 'yyyy-MM-dd'),
+          start_time: timeSlot.startTime,
+          end_time: timeSlot.endTime,
+          total_slots: timeSlot.slots,
+          slots_used: 0
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Horário registrado",
+        description: "O horário foi registrado com sucesso!"
+      });
+
+      await fetchTimeSlots();
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Erro ao adicionar horário:', error);
+      toast({
+        title: "Erro ao registrar horário",
+        description: "Não foi possível registrar o horário. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleTimeSlotEdit = async (updatedTimeSlot: TimeSlot) => {
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .update({
+          date: format(updatedTimeSlot.date, 'yyyy-MM-dd'),
+          start_time: updatedTimeSlot.startTime,
+          end_time: updatedTimeSlot.endTime,
+          total_slots: updatedTimeSlot.slots,
+          slots_used: updatedTimeSlot.slotsUsed
+        })
+        .eq('date', format(editingTimeSlot!.date, 'yyyy-MM-dd'))
+        .eq('start_time', editingTimeSlot!.startTime)
+        .eq('end_time', editingTimeSlot!.endTime);
+
+      if (error) throw error;
+
+      toast({
+        title: "Horário atualizado",
+        description: "O horário foi atualizado com sucesso!"
+      });
+
+      await fetchTimeSlots();
+      setIsDialogOpen(false);
+      setEditingTimeSlot(null);
+    } catch (error) {
+      console.error('Erro ao atualizar horário:', error);
+      toast({
+        title: "Erro ao atualizar horário",
+        description: "Não foi possível atualizar o horário. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteTimeSlot = async (timeSlot: TimeSlot) => {
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .delete()
+        .eq('date', format(timeSlot.date, 'yyyy-MM-dd'))
+        .eq('start_time', timeSlot.startTime)
+        .eq('end_time', timeSlot.endTime);
+
+      if (error) throw error;
+
+      toast({
+        title: "Horário excluído",
+        description: "O horário foi excluído com sucesso!"
+      });
+
+      await fetchTimeSlots();
+    } catch (error) {
+      console.error('Erro ao excluir horário:', error);
+      toast({
+        title: "Erro ao excluir horário",
+        description: "Não foi possível excluir o horário. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handlePreviousWeek = () => {
     if (!isLocked) {
@@ -64,52 +196,6 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
     console.log('Editando horário:', timeSlot);
     setEditingTimeSlot(timeSlot);
     setIsDialogOpen(true);
-  };
-
-  const handleTimeSlotAdd = (timeSlot: TimeSlot) => {
-    console.log('Novo horário a ser adicionado:', timeSlot);
-    // Verificar se já existe um horário com mesmo início e fim para o mesmo dia
-    const isDuplicate = timeSlots.some(
-      existingSlot => 
-        existingSlot.date.toDateString() === timeSlot.date.toDateString() &&
-        existingSlot.startTime === timeSlot.startTime &&
-        existingSlot.endTime === timeSlot.endTime
-    );
-
-    if (isDuplicate) {
-      console.log('Horário duplicado detectado!');
-      alert('Já existe um horário registrado para este período no mesmo dia.');
-      return;
-    }
-
-    setTimeSlots((prev) => [...prev, timeSlot]);
-    setIsDialogOpen(false);
-  };
-
-  const handleTimeSlotEdit = (updatedTimeSlot: TimeSlot) => {
-    console.log('Atualizando horário:', updatedTimeSlot);
-    // Verificar duplicatas excluindo o próprio slot sendo editado
-    const isDuplicate = timeSlots.some(
-      existingSlot => 
-        existingSlot !== editingTimeSlot &&
-        existingSlot.date.toDateString() === updatedTimeSlot.date.toDateString() &&
-        existingSlot.startTime === updatedTimeSlot.startTime &&
-        existingSlot.endTime === updatedTimeSlot.endTime
-    );
-
-    if (isDuplicate) {
-      console.log('Horário duplicado detectado durante edição!');
-      alert('Já existe um horário registrado para este período no mesmo dia.');
-      return;
-    }
-
-    setTimeSlots((prev) =>
-      prev.map((slot) =>
-        slot === editingTimeSlot ? updatedTimeSlot : slot
-      )
-    );
-    setIsDialogOpen(false);
-    setEditingTimeSlot(null);
   };
 
   const getTimeSlotsForDate = (date: Date) => {
@@ -224,7 +310,12 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => handleDeleteTimeSlot(slot)}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
