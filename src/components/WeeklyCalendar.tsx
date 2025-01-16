@@ -37,6 +37,11 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const currentMonth = format(currentDate, "MMMM yyyy", { locale: ptBR });
   const isMobile = useIsMobile();
 
+  const hasTimeSlotsForDate = (date: Date) => {
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    return timeSlots.some(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
+  };
+
   useEffect(() => {
     fetchTimeSlots();
   }, []);
@@ -103,7 +108,6 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
     try {
       const formattedDate = format(timeSlot.date, 'yyyy-MM-dd');
       
-      // Verificação mais rigorosa de horários duplicados
       const existingSlots = timeSlots.filter(slot => 
         format(slot.date, 'yyyy-MM-dd') === formattedDate
       );
@@ -114,7 +118,6 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         const existingStart = slot.startTime;
         const existingEnd = slot.endTime;
 
-        // Verifica se há sobreposição de horários
         return (
           (newStart >= existingStart && newStart < existingEnd) ||
           (newEnd > existingStart && newEnd <= existingEnd) ||
@@ -281,6 +284,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         date: currentDateInWeek.getDate(),
         fullDate: currentDateInWeek,
         isToday: currentDateInWeek.toDateString() === new Date().toDateString(),
+        hasTimeSlots: hasTimeSlotsForDate(currentDateInWeek)
       });
     }
     return days;
@@ -331,7 +335,8 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
               className={cn(
                 "flex flex-col items-center p-1 md:p-2 rounded-lg transition-all cursor-pointer hover:bg-gray-100",
                 day.isToday && "bg-black text-white hover:bg-black/90",
-                selectedDate?.toDateString() === day.fullDate.toDateString() && "bg-gray-200 hover:bg-gray-300"
+                selectedDate?.toDateString() === day.fullDate.toDateString() && "bg-gray-200 hover:bg-gray-300",
+                day.hasTimeSlots && "bg-[#F2FCE2]"
               )}
               onClick={() => handleDayClick(day.fullDate)}
             >
