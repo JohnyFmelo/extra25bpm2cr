@@ -1,11 +1,19 @@
 import React, { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Lock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2 } from "lucide-react";
 import { format, addWeeks, subWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import TimeSlotDialog from "./TimeSlotDialog";
+
+interface TimeSlot {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  slots: number;
+  slotsUsed: number;
+}
 
 interface WeeklyCalendarProps {
   className?: string;
@@ -16,6 +24,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const [isLocked, setIsLocked] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const weekDays = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
   const fullWeekDays = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
   const currentMonth = format(currentDate, "MMMM yyyy", { locale: ptBR });
@@ -45,6 +54,17 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
     if (selectedDate) {
       setIsDialogOpen(true);
     }
+  };
+
+  const handleTimeSlotAdd = (timeSlot: TimeSlot) => {
+    setTimeSlots((prev) => [...prev, timeSlot]);
+    setIsDialogOpen(false);
+  };
+
+  const getTimeSlotsForDate = (date: Date) => {
+    return timeSlots.filter(
+      (slot) => slot.date.toDateString() === date.toDateString()
+    );
   };
 
   const getDaysOfWeek = () => {
@@ -128,11 +148,41 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
+      
+      {selectedDate && (
+        <div className="mt-4 space-y-2">
+          {getTimeSlotsForDate(selectedDate).map((slot, index) => (
+            <div
+              key={index}
+              className="flex items-center justify-between p-3 rounded-lg border border-gray-200"
+            >
+              <div>
+                <div className="font-medium">
+                  {slot.startTime} às {slot.endTime}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {slot.slotsUsed}/{slot.slots} vagas
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {selectedDate && (
         <TimeSlotDialog
           isOpen={isDialogOpen}
           onClose={() => setIsDialogOpen(false)}
           selectedDate={selectedDate}
+          onAddTimeSlot={handleTimeSlotAdd}
         />
       )}
     </div>
