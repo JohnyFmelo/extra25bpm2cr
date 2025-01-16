@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2, RefreshCw } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
@@ -91,6 +91,28 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleClearData = async () => {
+    try {
+      const result = await dataOperations.clear();
+      if (result.success) {
+        setTimeSlots([]);
+        toast({
+          title: "Sucesso",
+          description: "Todos os horários foram removidos.",
+        });
+      } else {
+        throw new Error('Failed to clear data');
+      }
+    } catch (error) {
+      console.error('Erro ao limpar dados:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível limpar os horários.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -281,6 +303,14 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
           <Button 
             variant="outline" 
             size="icon" 
+            className="h-8 w-8 md:h-10 md:w-10"
+            onClick={handleClearData}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="icon" 
             className={cn(
               "h-8 w-8 md:h-10 md:w-10",
               isLocked && "bg-black text-white hover:bg-black/90"
@@ -300,6 +330,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
           </Button>
         </div>
       </div>
+
       <div className="flex justify-between items-center">
         <Button 
           variant="ghost" 

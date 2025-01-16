@@ -43,6 +43,18 @@ const saveLocalTimeSlots = (slots: any[]) => {
   }
 };
 
+// Nova função para limpar dados
+const clearLocalTimeSlots = () => {
+  try {
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    console.log('Local storage cleared successfully');
+    return true;
+  } catch (error) {
+    console.error('Error clearing localStorage:', error);
+    return false;
+  }
+};
+
 export const signInAnonymously = async () => {
   console.info('Using localStorage for data storage');
   return { type: 'local' };
@@ -136,6 +148,16 @@ export const dataOperations = {
       return { success: saved };
     } catch (error) {
       console.error('Error deleting data:', error);
+      return { success: false };
+    }
+  },
+
+  async clear() {
+    try {
+      const cleared = clearLocalTimeSlots();
+      return { success: cleared };
+    } catch (error) {
+      console.error('Error clearing data:', error);
       return { success: false };
     }
   }
