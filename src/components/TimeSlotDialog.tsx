@@ -6,13 +6,22 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { cn } from "@/lib/utils";
 
+interface TimeSlot {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  slots: number;
+  slotsUsed: number;
+}
+
 interface TimeSlotDialogProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: Date;
+  onAddTimeSlot: (timeSlot: TimeSlot) => void;
 }
 
-const TimeSlotDialog = ({ isOpen, onClose, selectedDate }: TimeSlotDialogProps) => {
+const TimeSlotDialog = ({ isOpen, onClose, selectedDate, onAddTimeSlot }: TimeSlotDialogProps) => {
   const [timeSlot, setTimeSlot] = useState("13 às 19");
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
@@ -22,11 +31,17 @@ const TimeSlotDialog = ({ isOpen, onClose, selectedDate }: TimeSlotDialogProps) 
 
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
-    console.log("Registering time slot:", {
+    const [startTime, endTime] = timeSlot.split(" às ");
+    
+    const newTimeSlot: TimeSlot = {
       date: selectedDate,
-      timeSlot,
+      startTime,
+      endTime,
       slots,
-    });
+      slotsUsed: 0
+    };
+    
+    onAddTimeSlot(newTimeSlot);
     onClose();
   };
 
