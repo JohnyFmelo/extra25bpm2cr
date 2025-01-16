@@ -48,10 +48,12 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   };
 
   const handleDayClick = (date: Date) => {
+    console.log('Dia selecionado:', date);
     setSelectedDate(date);
   };
 
   const handlePlusClick = () => {
+    console.log('Adicionando novo horário para:', selectedDate);
     if (selectedDate) {
       setEditingTimeSlot(null);
       setIsDialogOpen(true);
@@ -59,16 +61,48 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   };
 
   const handleEditClick = (timeSlot: TimeSlot) => {
+    console.log('Editando horário:', timeSlot);
     setEditingTimeSlot(timeSlot);
     setIsDialogOpen(true);
   };
 
   const handleTimeSlotAdd = (timeSlot: TimeSlot) => {
+    console.log('Novo horário a ser adicionado:', timeSlot);
+    // Verificar se já existe um horário com mesmo início e fim para o mesmo dia
+    const isDuplicate = timeSlots.some(
+      existingSlot => 
+        existingSlot.date.toDateString() === timeSlot.date.toDateString() &&
+        existingSlot.startTime === timeSlot.startTime &&
+        existingSlot.endTime === timeSlot.endTime
+    );
+
+    if (isDuplicate) {
+      console.log('Horário duplicado detectado!');
+      alert('Já existe um horário registrado para este período no mesmo dia.');
+      return;
+    }
+
     setTimeSlots((prev) => [...prev, timeSlot]);
     setIsDialogOpen(false);
   };
 
   const handleTimeSlotEdit = (updatedTimeSlot: TimeSlot) => {
+    console.log('Atualizando horário:', updatedTimeSlot);
+    // Verificar duplicatas excluindo o próprio slot sendo editado
+    const isDuplicate = timeSlots.some(
+      existingSlot => 
+        existingSlot !== editingTimeSlot &&
+        existingSlot.date.toDateString() === updatedTimeSlot.date.toDateString() &&
+        existingSlot.startTime === updatedTimeSlot.startTime &&
+        existingSlot.endTime === updatedTimeSlot.endTime
+    );
+
+    if (isDuplicate) {
+      console.log('Horário duplicado detectado durante edição!');
+      alert('Já existe um horário registrado para este período no mesmo dia.');
+      return;
+    }
+
     setTimeSlots((prev) =>
       prev.map((slot) =>
         slot === editingTimeSlot ? updatedTimeSlot : slot
