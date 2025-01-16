@@ -33,8 +33,8 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const [showAllWeekSlots, setShowAllWeekSlots] = useState(false);
   const { toast } = useToast();
   
-  const weekDays = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
-  const fullWeekDays = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+  const weekDays = ["ter", "qua", "qui", "sex", "sáb", "dom", "seg"];
+  const fullWeekDays = ["terça", "quarta", "quinta", "sexta", "sábado", "domingo", "segunda"];
   const currentMonth = format(currentDate, "MMMM yyyy", { locale: ptBR });
   const isMobile = useIsMobile();
 
@@ -282,7 +282,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
 
   const getCurrentWeekTimeSlots = () => {
     const startDate = new Date(currentDate);
-    startDate.setDate(currentDate.getDate() - currentDate.getDay());
+    startDate.setDate(currentDate.getDate() - currentDate.getDay() + 2); // Adjust to start from Tuesday
     
     const weekSlots = [];
     for (let i = 0; i < 7; i++) {
@@ -302,7 +302,9 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const getDaysOfWeek = () => {
     const days = [];
     const startDate = new Date(currentDate);
-    startDate.setDate(currentDate.getDate() - currentDate.getDay());
+    const currentDay = startDate.getDay();
+    const daysToSubtract = (currentDay + 5) % 7; // Calculate days to subtract to reach Tuesday
+    startDate.setDate(currentDate.getDate() - daysToSubtract);
 
     for (let i = 0; i < 7; i++) {
       const currentDateInWeek = new Date(startDate);
