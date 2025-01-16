@@ -23,7 +23,7 @@ const Index = () => {
         <ArrowLeft className="h-6 w-6" />
       </button>
       
-      <div className="p-6">
+      <div className="pt-16 px-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="max-w-4xl mx-auto">
           <TabsList className="hidden">
             <TabsTrigger value="main">Main</TabsTrigger>
