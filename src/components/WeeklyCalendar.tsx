@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2, Eye } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
@@ -30,6 +30,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [editingTimeSlot, setEditingTimeSlot] = useState<TimeSlot | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showAllWeekSlots, setShowAllWeekSlots] = useState(false);
   const { toast } = useToast();
   
   const weekDays = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -236,12 +237,14 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const handlePreviousWeek = () => {
     if (!isLocked) {
       setCurrentDate((prev) => subWeeks(prev, 1));
+      setShowAllWeekSlots(false);
     }
   };
 
   const handleNextWeek = () => {
     if (!isLocked) {
       setCurrentDate((prev) => addWeeks(prev, 1));
+      setShowAllWeekSlots(false);
     }
   };
 
@@ -252,6 +255,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const handleDayClick = (date: Date) => {
     console.log('Dia selecionado:', date);
     setSelectedDate(date);
+    setShowAllWeekSlots(false);
   };
 
   const handlePlusClick = () => {
@@ -259,6 +263,11 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       setEditingTimeSlot(null);
       setIsDialogOpen(true);
     }
+  };
+
+  const handleEyeClick = () => {
+    setShowAllWeekSlots(prev => !prev);
+    setSelectedDate(null);
   };
 
   const handleEditClick = (timeSlot: TimeSlot) => {
@@ -269,6 +278,25 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const getTimeSlotsForDate = (date: Date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     return timeSlots.filter(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
+  };
+
+  const getCurrentWeekTimeSlots = () => {
+    const startDate = new Date(currentDate);
+    startDate.setDate(currentDate.getDate() - currentDate.getDay());
+    
+    const weekSlots = [];
+    for (let i = 0; i < 7; i++) {
+      const currentDateInWeek = new Date(startDate);
+      currentDateInWeek.setDate(startDate.getDate() + i);
+      const slotsForDay = getTimeSlotsForDate(currentDateInWeek);
+      if (slotsForDay.length > 0) {
+        weekSlots.push({
+          date: currentDateInWeek,
+          slots: slotsForDay
+        });
+      }
+    }
+    return weekSlots;
   };
 
   const getDaysOfWeek = () => {
@@ -315,6 +343,17 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
           >
             <Plus className="h-4 w-4" />
           </Button>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className={cn(
+              "h-8 w-8 md:h-10 md:w-10",
+              showAllWeekSlots && "bg-gray-100"
+            )}
+            onClick={handleEyeClick}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -356,7 +395,50 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         </Button>
       </div>
       
-      {selectedDate && (
+      {showAllWeekSlots ? (
+        <div className="mt-4 space-y-4">
+          {getCurrentWeekTimeSlots().map(({ date, slots }) => (
+            <div key={format(date, 'yyyy-MM-dd')} className="space-y-2">
+              <h3 className="font-medium text-gray-700">
+                {format(date, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+              </h3>
+              {slots.map((slot, index) => (
+                <div
+                  key={slot.id || index}
+                  className="flex items-center justify-between p-3 rounded-lg border border-gray-200"
+                >
+                  <div>
+                    <div className="font-medium">
+                      {slot.startTime} às {slot.endTime}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {slot.slotsUsed}/{slot.slots} vagas
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => handleEditClick(slot)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => handleDeleteTimeSlot(slot)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : selectedDate && (
         <div className="mt-4 space-y-2">
           {getTimeSlotsForDate(selectedDate).map((slot, index) => (
             <div
