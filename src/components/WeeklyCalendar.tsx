@@ -90,7 +90,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
 
   const handleTimeSlotAdd = async (timeSlot: TimeSlot) => {
     try {
-      const { error } = await dataOperations.insert({
+      const result = await dataOperations.insert({
         date: format(timeSlot.date, 'yyyy-MM-dd'),
         start_time: formatTimeForDB(timeSlot.startTime),
         end_time: formatTimeForDB(timeSlot.endTime),
@@ -98,7 +98,9 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         slots_used: 0
       });
 
-      if (error) throw error;
+      if (!result.success) {
+        throw new Error('Failed to insert time slot');
+      }
 
       toast({
         title: "Horário registrado",
