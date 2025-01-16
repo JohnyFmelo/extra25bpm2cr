@@ -39,7 +39,12 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
 
   const handleDayClick = (date: Date) => {
     setSelectedDate(date);
-    setIsDialogOpen(true);
+  };
+
+  const handlePlusClick = () => {
+    if (selectedDate) {
+      setIsDialogOpen(true);
+    }
   };
 
   const getDaysOfWeek = () => {
@@ -76,7 +81,13 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
           >
             <Lock className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon" className="h-8 w-8 md:h-10 md:w-10">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-8 w-8 md:h-10 md:w-10"
+            onClick={handlePlusClick}
+            disabled={!selectedDate}
+          >
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -97,7 +108,8 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
               key={index}
               className={cn(
                 "flex flex-col items-center p-1 md:p-2 rounded-lg transition-all cursor-pointer hover:bg-gray-100",
-                day.isToday && "bg-black text-white hover:bg-black/90"
+                day.isToday && "bg-black text-white hover:bg-black/90",
+                selectedDate?.toDateString() === day.fullDate.toDateString() && "bg-gray-200 hover:bg-gray-300"
               )}
               onClick={() => handleDayClick(day.fullDate)}
             >
