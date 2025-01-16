@@ -1,4 +1,4 @@
-import { Clock, Calendar, BookOpen, FileText } from "lucide-react";
+import { Clock, Calendar, BookOpen, FileText, ArrowLeft } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import { useState } from "react";
@@ -9,6 +9,10 @@ const Index = () => {
 
   const handleEditorClick = () => {
     setActiveTab("editor");
+  };
+
+  const handleBackClick = () => {
+    setActiveTab("main");
   };
 
   return (
@@ -30,7 +34,16 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="editor">
-            <WeeklyCalendar />
+            <div className="relative">
+              <button
+                onClick={handleBackClick}
+                className="absolute left-0 top-0 p-2 rounded-full hover:bg-gray-200 transition-colors"
+                aria-label="Voltar para home"
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </button>
+              <WeeklyCalendar />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
