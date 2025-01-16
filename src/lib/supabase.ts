@@ -23,16 +23,23 @@ export type TimeSlotRow = {
 const LOCAL_STORAGE_KEY = 'time_slots';
 
 const getLocalTimeSlots = () => {
-  const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-  return stored ? JSON.parse(stored) : [];
+  try {
+    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Error reading from localStorage:', error);
+    return [];
+  }
 };
 
 const saveLocalTimeSlots = (slots: any[]) => {
   try {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(slots));
     console.log('Slots saved to localStorage:', slots);
+    return true;
   } catch (error) {
     console.error('Error saving to localStorage:', error);
+    return false;
   }
 };
 
@@ -66,10 +73,23 @@ export const dataOperations = {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
-      slots.push(slotWithTimestamp);
-      saveLocalTimeSlots(slots);
-      console.log('New slot inserted:', slotWithTimestamp);
-      return { success: true };
+      
+      // Verificar se já existe um slot com mesma data e horário
+      const existingSlot = slots.find((slot: any) => 
+        slot.date === newSlot.date && 
+        slot.start_time === newSlot.start_time && 
+        slot.end_time === newSlot.end_time
+      );
+      
+      if (!existingSlot) {
+        slots.push(slotWithTimestamp);
+        const saved = saveLocalTimeSlots(slots);
+        console.log('New slot inserted:', slotWithTimestamp);
+        return { success: saved };
+      } else {
+        console.log('Slot already exists:', existingSlot);
+        return { success: false };
+      }
     } catch (error) {
       console.error('Error inserting data:', error);
       return { success: false };
@@ -84,16 +104,18 @@ export const dataOperations = {
         slot.start_time === conditions.start_time && 
         slot.end_time === conditions.end_time
       );
+      
       if (index !== -1) {
         slots[index] = {
           ...slots[index],
           ...updatedSlot,
           updated_at: new Date().toISOString()
         };
-        saveLocalTimeSlots(slots);
+        const saved = saveLocalTimeSlots(slots);
         console.log('Slot updated:', slots[index]);
+        return { success: saved };
       }
-      return { success: true };
+      return { success: false };
     } catch (error) {
       console.error('Error updating data:', error);
       return { success: false };
@@ -108,9 +130,10 @@ export const dataOperations = {
           slot.start_time === conditions.start_time && 
           slot.end_time === conditions.end_time)
       );
-      saveLocalTimeSlots(filteredSlots);
+      
+      const saved = saveLocalTimeSlots(filteredSlots);
       console.log('Slot deleted, remaining slots:', filteredSlots);
-      return { success: true };
+      return { success: saved };
     } catch (error) {
       console.error('Error deleting data:', error);
       return { success: false };
