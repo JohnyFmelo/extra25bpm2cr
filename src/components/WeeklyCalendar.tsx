@@ -5,6 +5,7 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import TimeSlotDialog from "./TimeSlotDialog";
 
 interface WeeklyCalendarProps {
   className?: string;
@@ -13,6 +14,8 @@ interface WeeklyCalendarProps {
 const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isLocked, setIsLocked] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const weekDays = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
   const fullWeekDays = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
   const currentMonth = format(currentDate, "MMMM yyyy", { locale: ptBR });
@@ -34,10 +37,15 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
     setIsLocked((prev) => !prev);
   };
 
+  const handleDayClick = (date: Date) => {
+    setSelectedDate(date);
+    setIsDialogOpen(true);
+  };
+
   const getDaysOfWeek = () => {
     const days = [];
     const startDate = new Date(currentDate);
-    startDate.setDate(currentDate.getDate() - currentDate.getDay()); // Start from Sunday
+    startDate.setDate(currentDate.getDate() - currentDate.getDay());
 
     for (let i = 0; i < 7; i++) {
       const currentDateInWeek = new Date(startDate);
@@ -45,6 +53,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       days.push({
         dayName: isMobile ? weekDays[i] : fullWeekDays[i],
         date: currentDateInWeek.getDate(),
+        fullDate: currentDateInWeek,
         isToday: currentDateInWeek.toDateString() === new Date().toDateString(),
       });
     }
@@ -87,9 +96,10 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
             <div
               key={index}
               className={cn(
-                "flex flex-col items-center p-1 md:p-2 rounded-lg transition-all",
-                day.isToday && "bg-black text-white"
+                "flex flex-col items-center p-1 md:p-2 rounded-lg transition-all cursor-pointer hover:bg-gray-100",
+                day.isToday && "bg-black text-white hover:bg-black/90"
               )}
+              onClick={() => handleDayClick(day.fullDate)}
             >
               <span className="text-xs md:text-sm">{day.dayName}</span>
               <span className="text-sm md:text-lg font-semibold mt-1">{day.date}</span>
@@ -106,6 +116,13 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
+      {selectedDate && (
+        <TimeSlotDialog
+          isOpen={isDialogOpen}
+          onClose={() => setIsDialogOpen(false)}
+          selectedDate={selectedDate}
+        />
+      )}
     </div>
   );
 };
