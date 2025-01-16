@@ -361,6 +361,26 @@ const WeeklyCalendar = ({
               size="icon" 
               className={cn(
                 "h-8 w-8 md:h-10 md:w-10",
+                isLocked && "bg-black text-white hover:bg-black/90"
+              )}
+              onClick={toggleLock}
+            >
+              <Lock className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-8 w-8 md:h-10 md:w-10"
+              onClick={handlePlusClick}
+              disabled={!selectedDate}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className={cn(
+                "h-8 w-8 md:h-10 md:w-10",
                 showAllWeekSlots && "bg-gray-100"
               )}
               onClick={handleEyeClick}
