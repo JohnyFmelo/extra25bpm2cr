@@ -69,6 +69,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
     try {
       setIsLoading(true);
       const data = await dataOperations.fetch();
+      console.log('Fetched data:', data);
 
       const formattedSlots = data.map((slot: any) => ({
         date: new Date(slot.date),
@@ -110,29 +111,16 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         throw new Error('Failed to insert time slot');
       }
 
-      if (isUsingSupabase) {
-        toast({
-          title: "Horário registrado",
-          description: "O horário foi registrado com sucesso!"
-        });
-      }
-
       await fetchTimeSlots();
       setIsDialogOpen(false);
     } catch (error) {
       console.error('Erro ao adicionar horário:', error);
-      if (isUsingSupabase) {
-        toast({
-          title: "Erro ao registrar horário",
-          description: "O horário foi salvo localmente.",
-        });
-      }
     }
   };
 
   const handleTimeSlotEdit = async (updatedTimeSlot: TimeSlot) => {
     try {
-      await dataOperations.update(
+      const result = await dataOperations.update(
         {
           date: format(updatedTimeSlot.date, 'yyyy-MM-dd'),
           start_time: formatTimeForDB(updatedTimeSlot.startTime),
@@ -147,11 +135,8 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         }
       );
 
-      if (isUsingSupabase) {
-        toast({
-          title: "Horário atualizado",
-          description: "O horário foi atualizado com sucesso!"
-        });
+      if (!result.success) {
+        throw new Error('Failed to update time slot');
       }
 
       await fetchTimeSlots();
@@ -159,39 +144,35 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       setEditingTimeSlot(null);
     } catch (error) {
       console.error('Erro ao atualizar horário:', error);
-      if (isUsingSupabase) {
-        toast({
-          title: "Erro ao atualizar horário",
-          description: "O horário foi atualizado localmente.",
-        });
-      }
     }
   };
 
   const handleDeleteTimeSlot = async (timeSlot: TimeSlot) => {
     try {
-      await dataOperations.delete({
+      console.log('Deleting time slot:', timeSlot);
+      const result = await dataOperations.delete({
         date: format(timeSlot.date, 'yyyy-MM-dd'),
-        start_time: timeSlot.startTime,
-        end_time: timeSlot.endTime
+        start_time: formatTimeForDB(timeSlot.startTime),
+        end_time: formatTimeForDB(timeSlot.endTime)
       });
 
-      if (isUsingSupabase) {
-        toast({
-          title: "Horário excluído",
-          description: "O horário foi excluído com sucesso!"
-        });
+      if (!result.success) {
+        throw new Error('Failed to delete time slot');
       }
 
       await fetchTimeSlots();
+      
+      toast({
+        title: "Horário excluído",
+        description: "O horário foi excluído com sucesso!"
+      });
     } catch (error) {
       console.error('Erro ao excluir horário:', error);
-      if (isUsingSupabase) {
-        toast({
-          title: "Erro ao excluir horário",
-          description: "O horário foi excluído localmente.",
-        });
-      }
+      toast({
+        title: "Erro ao excluir horário",
+        description: "Não foi possível excluir o horário.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -217,7 +198,6 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   };
 
   const handlePlusClick = () => {
-    console.log('Adicionando novo horário para:', selectedDate);
     if (selectedDate) {
       setEditingTimeSlot(null);
       setIsDialogOpen(true);
@@ -225,14 +205,13 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   };
 
   const handleEditClick = (timeSlot: TimeSlot) => {
-    console.log('Editando horário:', timeSlot);
     setEditingTimeSlot(timeSlot);
     setIsDialogOpen(true);
   };
 
   const getTimeSlotsForDate = (date: Date) => {
     return timeSlots.filter(
-      (slot) => slot.date.toDateString() === date.toDateString()
+      (slot) => format(slot.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
     );
   };
 
