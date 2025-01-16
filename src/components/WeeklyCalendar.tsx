@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2 } from "lucide-react";
-import { format, addWeeks, subWeeks } from "date-fns";
+import { format, addWeeks, subWeeks, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ interface TimeSlot {
   endTime: string;
   slots: number;
   slotsUsed: number;
+  id?: string;
 }
 
 interface WeeklyCalendarProps {
@@ -44,21 +45,17 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         if (!isAlreadyAuthenticated) {
           const result = await signInAnonymously();
           setIsUsingSupabase(result.type !== 'local');
-          if (result.type === 'local') {
-            console.log('Using localStorage for data storage');
-          }
         } else {
           setIsUsingSupabase(true);
         }
         fetchTimeSlots();
       } catch (error) {
         console.error('Error initializing auth:', error);
-        if (isUsingSupabase) {
-          toast({
-            title: "Aviso",
-            description: "Usando armazenamento local para os horários.",
-          });
-        }
+        toast({
+          title: "Erro",
+          description: "Erro ao inicializar autenticação.",
+          variant: "destructive"
+        });
       }
     };
 
@@ -71,23 +68,27 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       const data = await dataOperations.fetch();
       console.log('Fetched data:', data);
 
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid data format');
+      }
+
       const formattedSlots = data.map((slot: any) => ({
-        date: new Date(slot.date),
+        id: slot.id,
+        date: parseISO(slot.date),
         startTime: slot.start_time.slice(0, 5),
         endTime: slot.end_time.slice(0, 5),
         slots: slot.total_slots,
-        slotsUsed: slot.slots_used
+        slotsUsed: slot.slots_used || 0
       }));
 
       setTimeSlots(formattedSlots);
     } catch (error) {
       console.error('Erro ao carregar horários:', error);
-      if (isUsingSupabase) {
-        toast({
-          title: "Erro ao carregar horários",
-          description: "Usando armazenamento local.",
-        });
-      }
+      toast({
+        title: "Erro ao carregar horários",
+        description: "Não foi possível carregar os horários.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -99,8 +100,26 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
 
   const handleTimeSlotAdd = async (timeSlot: TimeSlot) => {
     try {
+      const formattedDate = format(timeSlot.date, 'yyyy-MM-dd');
+      
+      // Verificar se já existe um horário igual
+      const existingSlot = timeSlots.find(slot => 
+        format(slot.date, 'yyyy-MM-dd') === formattedDate &&
+        slot.startTime === timeSlot.startTime &&
+        slot.endTime === timeSlot.endTime
+      );
+
+      if (existingSlot) {
+        toast({
+          title: "Horário já existe",
+          description: "Este horário já está cadastrado.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const result = await dataOperations.insert({
-        date: format(timeSlot.date, 'yyyy-MM-dd'),
+        date: formattedDate,
         start_time: formatTimeForDB(timeSlot.startTime),
         end_time: formatTimeForDB(timeSlot.endTime),
         total_slots: timeSlot.slots,
@@ -113,12 +132,24 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
 
       await fetchTimeSlots();
       setIsDialogOpen(false);
+      
+      toast({
+        title: "Sucesso",
+        description: "Horário adicionado com sucesso!"
+      });
     } catch (error) {
       console.error('Erro ao adicionar horário:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o horário.",
+        variant: "destructive"
+      });
     }
   };
 
   const handleTimeSlotEdit = async (updatedTimeSlot: TimeSlot) => {
+    if (!editingTimeSlot) return;
+    
     try {
       const result = await dataOperations.update(
         {
@@ -129,9 +160,9 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
           slots_used: updatedTimeSlot.slotsUsed
         },
         {
-          date: format(editingTimeSlot!.date, 'yyyy-MM-dd'),
-          start_time: formatTimeForDB(editingTimeSlot!.startTime),
-          end_time: formatTimeForDB(editingTimeSlot!.endTime)
+          date: format(editingTimeSlot.date, 'yyyy-MM-dd'),
+          start_time: formatTimeForDB(editingTimeSlot.startTime),
+          end_time: formatTimeForDB(editingTimeSlot.endTime)
         }
       );
 
@@ -142,8 +173,18 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       await fetchTimeSlots();
       setIsDialogOpen(false);
       setEditingTimeSlot(null);
+      
+      toast({
+        title: "Sucesso",
+        description: "Horário atualizado com sucesso!"
+      });
     } catch (error) {
       console.error('Erro ao atualizar horário:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o horário.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -163,13 +204,13 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       await fetchTimeSlots();
       
       toast({
-        title: "Horário excluído",
-        description: "O horário foi excluído com sucesso!"
+        title: "Sucesso",
+        description: "Horário excluído com sucesso!"
       });
     } catch (error) {
       console.error('Erro ao excluir horário:', error);
       toast({
-        title: "Erro ao excluir horário",
+        title: "Erro",
         description: "Não foi possível excluir o horário.",
         variant: "destructive"
       });
@@ -210,9 +251,8 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   };
 
   const getTimeSlotsForDate = (date: Date) => {
-    return timeSlots.filter(
-      (slot) => format(slot.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
-    );
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    return timeSlots.filter(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
   };
 
   const getDaysOfWeek = () => {
@@ -301,7 +341,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
         <div className="mt-4 space-y-2">
           {getTimeSlotsForDate(selectedDate).map((slot, index) => (
             <div
-              key={index}
+              key={slot.id || index}
               className="flex items-center justify-between p-3 rounded-lg border border-gray-200"
             >
               <div>
