@@ -28,47 +28,56 @@ const getLocalTimeSlots = () => {
 };
 
 const saveLocalTimeSlots = (slots: any[]) => {
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(slots));
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(slots));
+    console.log('Slots saved to localStorage:', slots);
+  } catch (error) {
+    console.error('Error saving to localStorage:', error);
+  }
 };
 
 export const signInAnonymously = async () => {
-  // Since anonymous auth is disabled, we'll just use localStorage
   console.info('Using localStorage for data storage');
   return { type: 'local' };
 };
 
 export const isAuthenticated = async () => {
-  // Since we're using localStorage, we'll always return false
   return false;
 };
 
 export const dataOperations = {
   async fetch() {
     try {
-      // Skip Supabase attempt since we know it will fail
-      return getLocalTimeSlots();
+      const slots = getLocalTimeSlots();
+      console.log('Fetched slots from localStorage:', slots);
+      return slots;
     } catch (error) {
-      console.warn('Error fetching data:', error);
-      return getLocalTimeSlots();
+      console.error('Error fetching data:', error);
+      return [];
     }
   },
 
   async insert(newSlot: any) {
     try {
-      // Skip Supabase attempt since we know it will fail
       const slots = getLocalTimeSlots();
-      slots.push({ ...newSlot, id: Date.now().toString() });
+      const slotWithTimestamp = {
+        ...newSlot,
+        id: Date.now().toString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      slots.push(slotWithTimestamp);
       saveLocalTimeSlots(slots);
+      console.log('New slot inserted:', slotWithTimestamp);
       return { success: true };
     } catch (error) {
-      console.warn('Error inserting data:', error);
+      console.error('Error inserting data:', error);
       return { success: false };
     }
   },
 
   async update(updatedSlot: any, conditions: any) {
     try {
-      // Skip Supabase attempt since we know it will fail
       const slots = getLocalTimeSlots();
       const index = slots.findIndex((slot: any) => 
         slot.date === conditions.date && 
@@ -76,19 +85,23 @@ export const dataOperations = {
         slot.end_time === conditions.end_time
       );
       if (index !== -1) {
-        slots[index] = { ...slots[index], ...updatedSlot };
+        slots[index] = {
+          ...slots[index],
+          ...updatedSlot,
+          updated_at: new Date().toISOString()
+        };
         saveLocalTimeSlots(slots);
+        console.log('Slot updated:', slots[index]);
       }
       return { success: true };
     } catch (error) {
-      console.warn('Error updating data:', error);
+      console.error('Error updating data:', error);
       return { success: false };
     }
   },
 
   async delete(conditions: any) {
     try {
-      // Skip Supabase attempt since we know it will fail
       const slots = getLocalTimeSlots();
       const filteredSlots = slots.filter((slot: any) => 
         !(slot.date === conditions.date && 
@@ -96,9 +109,10 @@ export const dataOperations = {
           slot.end_time === conditions.end_time)
       );
       saveLocalTimeSlots(filteredSlots);
+      console.log('Slot deleted, remaining slots:', filteredSlots);
       return { success: true };
     } catch (error) {
-      console.warn('Error deleting data:', error);
+      console.error('Error deleting data:', error);
       return { success: false };
     }
   }
