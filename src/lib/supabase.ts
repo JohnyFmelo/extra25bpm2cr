@@ -7,15 +7,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing environment variables for Supabase');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-  db: {
-    schema: 'public'
-  }
-});
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export type TimeSlotRow = {
   id: string;
@@ -30,7 +22,21 @@ export type TimeSlotRow = {
 
 // Helper function to sign in anonymously
 export const signInAnonymously = async () => {
-  const { data: { session }, error } = await supabase.auth.signInAnonymously();
-  if (error) throw error;
-  return session;
+  try {
+    const { data: { session }, error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      console.error('Anonymous auth error:', error);
+      return null;
+    }
+    return session;
+  } catch (error) {
+    console.error('Unexpected error during anonymous auth:', error);
+    return null;
+  }
+};
+
+// Helper function to check if user is authenticated
+export const isAuthenticated = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session !== null;
 };
