@@ -35,13 +35,15 @@ const Index = () => {
 
           <TabsContent value="editor">
             <div className="relative">
-              <button
-                onClick={handleBackClick}
-                className="absolute left-0 top-0 p-2 rounded-full hover:bg-gray-200 transition-colors"
-                aria-label="Voltar para home"
-              >
-                <ArrowLeft className="h-6 w-6" />
-              </button>
+              <div className="absolute right-0 -top-8 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
               <WeeklyCalendar />
             </div>
           </TabsContent>
