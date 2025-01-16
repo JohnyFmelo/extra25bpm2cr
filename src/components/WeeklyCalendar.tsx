@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import TimeSlotDialog from "./TimeSlotDialog";
-import { signInAnonymously, isAuthenticated, dataOperations } from "@/lib/supabase";
+import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 
 interface TimeSlot {
@@ -30,7 +30,6 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [editingTimeSlot, setEditingTimeSlot] = useState<TimeSlot | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isUsingSupabase, setIsUsingSupabase] = useState(false);
   const { toast } = useToast();
   
   const weekDays = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -39,27 +38,7 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const isAlreadyAuthenticated = await isAuthenticated();
-        if (!isAlreadyAuthenticated) {
-          const result = await signInAnonymously();
-          setIsUsingSupabase(result.type !== 'local');
-        } else {
-          setIsUsingSupabase(true);
-        }
-        fetchTimeSlots();
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao inicializar autenticação.",
-          variant: "destructive"
-        });
-      }
-    };
-
-    initializeAuth();
+    fetchTimeSlots();
   }, []);
 
   const fetchTimeSlots = async () => {
@@ -421,6 +400,3 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       )}
     </div>
   );
-};
-
-export default WeeklyCalendar;
