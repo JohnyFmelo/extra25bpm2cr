@@ -20,11 +20,21 @@ interface TimeSlot {
 
 interface WeeklyCalendarProps {
   className?: string;
+  isLocked?: boolean;
+  onLockChange?: (isLocked: boolean) => void;
+  currentDate?: Date;
+  onDateChange?: (date: Date) => void;
 }
 
-const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [isLocked, setIsLocked] = useState(false);
+const WeeklyCalendar = ({ 
+  className,
+  isLocked: externalIsLocked,
+  onLockChange,
+  currentDate: externalCurrentDate,
+  onDateChange
+}: WeeklyCalendarProps) => {
+  const [internalIsLocked, setInternalIsLocked] = useState(false);
+  const [internalCurrentDate, setInternalCurrentDate] = useState(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -32,10 +42,13 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showAllWeekSlots, setShowAllWeekSlots] = useState(false);
   const { toast } = useToast();
+
+  const isLocked = externalIsLocked !== undefined ? externalIsLocked : internalIsLocked;
+  const currentDateValue = externalCurrentDate !== undefined ? externalCurrentDate : internalCurrentDate;
   
   const weekDays = ["ter", "qua", "qui", "sex", "sáb", "dom", "seg"];
   const fullWeekDays = ["terça", "quarta", "quinta", "sexta", "sábado", "domingo", "segunda"];
-  const currentMonth = format(currentDate, "MMMM yyyy", { locale: ptBR });
+  const currentMonth = format(currentDateValue, "MMMM yyyy", { locale: ptBR });
   const isMobile = useIsMobile();
 
   const hasTimeSlotsForDate = (date: Date) => {
@@ -236,20 +249,35 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
 
   const handlePreviousWeek = () => {
     if (!isLocked) {
-      setCurrentDate((prev) => subWeeks(prev, 1));
+      const newDate = subWeeks(currentDateValue, 1);
+      if (onDateChange) {
+        onDateChange(newDate);
+      } else {
+        setInternalCurrentDate(newDate);
+      }
       setShowAllWeekSlots(false);
     }
   };
 
   const handleNextWeek = () => {
     if (!isLocked) {
-      setCurrentDate((prev) => addWeeks(prev, 1));
+      const newDate = addWeeks(currentDateValue, 1);
+      if (onDateChange) {
+        onDateChange(newDate);
+      } else {
+        setInternalCurrentDate(newDate);
+      }
       setShowAllWeekSlots(false);
     }
   };
 
   const toggleLock = () => {
-    setIsLocked((prev) => !prev);
+    const newLockState = !isLocked;
+    if (onLockChange) {
+      onLockChange(newLockState);
+    } else {
+      setInternalIsLocked(newLockState);
+    }
   };
 
   const handleDayClick = (date: Date) => {

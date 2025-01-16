@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
+  const [isLocked, setIsLocked] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   const handleEditorClick = () => {
     setActiveTab("editor");
@@ -49,7 +51,12 @@ const Index = () => {
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <WeeklyCalendar />
+              <WeeklyCalendar 
+                isLocked={isLocked}
+                onLockChange={setIsLocked}
+                currentDate={currentDate}
+                onDateChange={setCurrentDate}
+              />
             </div>
           </TabsContent>
 
@@ -64,7 +71,12 @@ const Index = () => {
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <WeeklyCalendar />
+              <WeeklyCalendar 
+                isLocked={isLocked}
+                onLockChange={setIsLocked}
+                currentDate={currentDate}
+                onDateChange={setCurrentDate}
+              />
             </div>
           </TabsContent>
         </Tabs>
