@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import TimeSlotDialog from "./TimeSlotDialog";
-import { supabase } from "@/lib/supabase";
+import { supabase, signInAnonymously } from "@/lib/supabase";
 import { useToast } from "./ui/use-toast";
 
 interface TimeSlot {
@@ -37,7 +37,23 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    fetchTimeSlots();
+    const initializeAuth = async () => {
+      try {
+        const session = await signInAnonymously();
+        if (session) {
+          fetchTimeSlots();
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        toast({
+          title: "Erro de autenticação",
+          description: "Não foi possível inicializar a autenticação.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const fetchTimeSlots = async () => {
