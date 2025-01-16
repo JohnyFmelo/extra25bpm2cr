@@ -24,6 +24,7 @@ interface WeeklyCalendarProps {
   onLockChange?: (isLocked: boolean) => void;
   currentDate?: Date;
   onDateChange?: (date: Date) => void;
+  showControls?: boolean;
 }
 
 const WeeklyCalendar = ({ 
@@ -31,7 +32,8 @@ const WeeklyCalendar = ({
   isLocked: externalIsLocked,
   onLockChange,
   currentDate: externalCurrentDate,
-  onDateChange
+  onDateChange,
+  showControls = true
 }: WeeklyCalendarProps) => {
   const [internalIsLocked, setInternalIsLocked] = useState(false);
   const [internalCurrentDate, setInternalCurrentDate] = useState(new Date());
@@ -352,39 +354,41 @@ const WeeklyCalendar = ({
     <div className={cn("bg-white rounded-xl shadow-sm p-4 md:p-6", className)}>
       <div className="flex justify-between items-center mb-4 md:mb-6">
         <h2 className="text-lg md:text-xl font-semibold">{currentMonth}</h2>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className={cn(
-              "h-8 w-8 md:h-10 md:w-10",
-              isLocked && "bg-black text-white hover:bg-black/90"
-            )}
-            onClick={toggleLock}
-          >
-            <Lock className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="h-8 w-8 md:h-10 md:w-10"
-            onClick={handlePlusClick}
-            disabled={!selectedDate}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className={cn(
-              "h-8 w-8 md:h-10 md:w-10",
-              showAllWeekSlots && "bg-gray-100"
-            )}
-            onClick={handleEyeClick}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-        </div>
+        {showControls && (
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className={cn(
+                "h-8 w-8 md:h-10 md:w-10",
+                isLocked && "bg-black text-white hover:bg-black/90"
+              )}
+              onClick={toggleLock}
+            >
+              <Lock className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-8 w-8 md:h-10 md:w-10"
+              onClick={handlePlusClick}
+              disabled={!selectedDate}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className={cn(
+                "h-8 w-8 md:h-10 md:w-10",
+                showAllWeekSlots && "bg-gray-100"
+              )}
+              onClick={handleEyeClick}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-between items-center">

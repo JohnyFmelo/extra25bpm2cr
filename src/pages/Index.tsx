@@ -56,6 +56,7 @@ const Index = () => {
                 onLockChange={setIsLocked}
                 currentDate={currentDate}
                 onDateChange={setCurrentDate}
+                showControls={true}
               />
             </div>
           </TabsContent>
@@ -76,6 +77,7 @@ const Index = () => {
                 onLockChange={setIsLocked}
                 currentDate={currentDate}
                 onDateChange={setCurrentDate}
+                showControls={false}
               />
             </div>
           </TabsContent>
