@@ -400,3 +400,6 @@ const WeeklyCalendar = ({ className }: WeeklyCalendarProps) => {
       )}
     </div>
   );
+};
+
+export default WeeklyCalendar;
