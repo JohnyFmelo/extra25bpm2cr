@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
 import { auth } from "@/lib/firebase";
+import { CustomUser } from "@/types/user";
 
 interface HoursData {
   Nome: string;
@@ -37,7 +38,7 @@ const Hours = () => {
   const { toast } = useToast();
 
   const handleConsult = async () => {
-    const user = auth.currentUser;
+    const user = auth.currentUser as CustomUser | null;
     if (!user?.email) {
       toast({
         variant: "destructive",

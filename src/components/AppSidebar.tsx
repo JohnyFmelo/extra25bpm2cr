@@ -5,12 +5,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import PasswordChangeDialog from "./PasswordChangeDialog";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import { useState } from "react";
+import { CustomUser } from "@/types/user";
 
 const AppSidebar = () => {
   const navigate = useNavigate();
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
-  const user = auth.currentUser;
+  const user = auth.currentUser as CustomUser | null;
 
   const userData = user ? {
     id: user.uid,
