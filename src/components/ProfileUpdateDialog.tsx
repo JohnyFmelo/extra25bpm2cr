@@ -7,9 +7,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { getFirestore, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import {
   Select,
   SelectContent,
@@ -63,36 +64,61 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
     try {
       const db = getFirestore();
+
+      // Verificar se já existe outro usuário com a mesma matrícula
+      const usersRef = collection(db, "users");
+      const q = query(
+        usersRef, 
+        where("registration", "==", registration),
+        where("id", "!=", userData.id)
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        toast({
+          title: "Erro",
+          description: "Já existe um usuário com esta matrícula",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Atualizar os dados do usuário
       const userRef = doc(db, "users", userData.id);
-      await updateDoc(userRef, {
+      const updatedData = {
         email,
         warName,
         rank,
-        registration
-      });
+        registration,
+        updatedAt: new Date()
+      };
+
+      await updateDoc(userRef, updatedData);
+
+      // Atualizar localStorage
+      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = {
+        ...storedUser,
+        ...updatedData
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
 
       toast({
         title: "Sucesso",
         description: "Dados atualizados com sucesso",
         className: "bg-blue-500 text-white",
       });
+
       onOpenChange(false);
-      
-      // Update localStorage with new data
-      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      localStorage.setItem('user', JSON.stringify({
-        ...storedUser,
-        email,
-        warName,
-        rank,
-      }));
-      
     } catch (error) {
+      console.error("Erro ao atualizar dados:", error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar dados",
+        description: "Erro ao atualizar dados. Por favor, tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -105,6 +131,9 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Atualizar Perfil</DialogTitle>
+          <DialogDescription>
+            Atualize seus dados de perfil abaixo.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
