@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { getFirestore, collection, addDoc } from 'firebase/firestore';
 
 const RegisterForm = () => {
   const [email, setEmail] = useState("");
@@ -12,10 +13,12 @@ const RegisterForm = () => {
   const [password, setPassword] = useState("");
   const [userType, setUserType] = useState("user");
   const [adminPassword, setAdminPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
     if (userType === "admin" && adminPassword !== "010355") {
       toast({
@@ -23,14 +26,43 @@ const RegisterForm = () => {
         description: "Senha de administrador incorreta.",
         variant: "destructive",
       });
+      setIsLoading(false);
       return;
     }
 
-    // TODO: Implement registration logic
-    toast({
-      title: "Cadastro realizado",
-      description: "Sua conta foi criada com sucesso.",
-    });
+    try {
+      const db = getFirestore();
+      await addDoc(collection(db, "users"), {
+        email,
+        warName,
+        registration,
+        password, // Note: In a production environment, you should hash passwords
+        userType,
+        createdAt: new Date(),
+      });
+
+      toast({
+        title: "Usuário cadastrado",
+        description: "Cadastro realizado com sucesso!",
+        className: "bg-blue-500 text-white",
+      });
+
+      // Clear form
+      setEmail("");
+      setWarName("");
+      setRegistration("");
+      setPassword("");
+      setUserType("user");
+      setAdminPassword("");
+    } catch (error) {
+      toast({
+        title: "Erro no cadastro",
+        description: "Ocorreu um erro ao realizar o cadastro.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -112,8 +144,8 @@ const RegisterForm = () => {
           />
         </div>
       )}
-      <Button type="submit" className="w-full">
-        Cadastrar
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? "Cadastrando..." : "Cadastrar"}
       </Button>
     </form>
   );
