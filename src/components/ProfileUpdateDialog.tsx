@@ -68,23 +68,22 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
     try {
       const db = getFirestore();
 
-      // Verificar se já existe outro usuário com a mesma matrícula
-      const usersRef = collection(db, "users");
-      const q = query(
-        usersRef, 
-        where("registration", "==", registration),
-        where("id", "!=", userData.id)
-      );
-      const querySnapshot = await getDocs(q);
+      // Verificar se a matrícula mudou
+      if (registration !== userData.registration) {
+        // Se mudou, verificar se já existe
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("registration", "==", registration));
+        const querySnapshot = await getDocs(q);
 
-      if (!querySnapshot.empty) {
-        toast({
-          title: "Erro",
-          description: "Já existe um usuário com esta matrícula",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
+        if (!querySnapshot.empty) {
+          toast({
+            title: "Erro",
+            description: "Já existe um usuário com esta matrícula",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Atualizar os dados do usuário
