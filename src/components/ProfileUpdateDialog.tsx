@@ -32,10 +32,10 @@ interface ProfileUpdateDialogProps {
 }
 
 const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDialogProps) => {
-  const [email, setEmail] = useState(userData.email);
-  const [warName, setWarName] = useState(userData.warName);
-  const [rank, setRank] = useState(userData.rank);
-  const [registration, setRegistration] = useState(userData.registration || '');
+  const [email, setEmail] = useState("");
+  const [warName, setWarName] = useState("");
+  const [rank, setRank] = useState("");
+  const [registration, setRegistration] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -54,11 +54,14 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
     "Sd PM"
   ];
 
+  // Initialize form data when userData changes or component mounts
   useEffect(() => {
-    setEmail(userData.email);
-    setWarName(userData.warName);
-    setRank(userData.rank);
-    setRegistration(userData.registration || '');
+    if (userData) {
+      setEmail(userData.email || "");
+      setWarName(userData.warName || "");
+      setRank(userData.rank || "");
+      setRegistration(userData.registration || "");
+    }
   }, [userData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
