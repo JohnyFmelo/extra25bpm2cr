@@ -58,13 +58,15 @@ const AppSidebar = () => {
               </div>
             </div>
 
-            <button
-              onClick={() => navigate('/hours')}
+            <a
+              href="/hours"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <Clock className="h-5 w-5 text-gray-600" />
               <span className="text-sm text-gray-700">Horas</span>
-            </button>
+            </a>
           </div>
 
           {user && userData && (
