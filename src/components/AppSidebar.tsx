@@ -30,7 +30,7 @@ const AppSidebar = () => {
               <div className="flex items-center space-x-2">
                 <div className="flex-1">
                   <span className="text-sm font-semibold text-blue-700">{user.rank}</span>
-                  <span className="text-sm text-gray-700">{user.warName}</span>
+                  <span className="text-sm text-gray-700"> {user.warName}</span>
                 </div>
               </div>
               {user.userType === 'admin' && (
