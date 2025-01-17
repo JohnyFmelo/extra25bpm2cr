@@ -1,16 +1,9 @@
 import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
-import { getFirestore, doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Select,
   SelectContent,
@@ -18,6 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 
 interface ProfileUpdateDialogProps {
   open: boolean;
@@ -32,97 +27,61 @@ interface ProfileUpdateDialogProps {
 }
 
 const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDialogProps) => {
-  const [email, setEmail] = useState("");
-  const [warName, setWarName] = useState("");
-  const [rank, setRank] = useState("");
-  const [registration, setRegistration] = useState("");
+  const [email, setEmail] = useState(userData?.email || "");
+  const [warName, setWarName] = useState(userData?.warName || "");
+  const [rank, setRank] = useState(userData?.rank || "");
+  const [registration, setRegistration] = useState(userData?.registration || "");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const ranks = [
-    "Cel PM",
-    "Ten Cel PM",
-    "Maj PM",
-    "Cap PM",
-    "1° Ten PM",
-    "2° Ten PM",
-    "Sub Ten PM",
-    "1° Sgt PM",
-    "2° Sgt PM",
-    "3° Sgt PM",
-    "Cb PM",
-    "Sd PM"
-  ];
-
-  // Initialize form data when userData changes or component mounts
   useEffect(() => {
-    if (userData) {
-      console.log("Updating form data with userData:", userData);
+    if (userData && open) {
+      console.log("ProfileUpdateDialog - Setting form data with:", userData);
       setEmail(userData.email || "");
       setWarName(userData.warName || "");
       setRank(userData.rank || "");
       setRegistration(userData.registration || "");
     }
-  }, [userData, open]); // Adicionado 'open' como dependência para atualizar quando o diálogo abrir
+  }, [userData, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const db = getFirestore();
-
-      // Verificar se a matrícula mudou
-      if (registration !== userData.registration) {
-        // Se mudou, verificar se já existe
-        const usersRef = collection(db, "users");
-        const q = query(usersRef, where("registration", "==", registration));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-          toast({
-            title: "Erro",
-            description: "Já existe um usuário com esta matrícula",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // Atualizar os dados do usuário no Firestore
       const userRef = doc(db, "users", userData.id);
       const updatedData = {
         email,
         warName,
         rank,
         registration,
-        updatedAt: new Date()
+        updatedAt: new Date().toISOString(),
       };
 
       await updateDoc(userRef, updatedData);
 
-      // Atualizar localStorage com os novos dados
-      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      const updatedUser = {
-        ...storedUser,
-        ...updatedData
-      };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      // Update localStorage
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          ...currentUser,
+          ...updatedData,
+        })
+      );
 
       toast({
-        title: "Sucesso",
-        description: "Dados atualizados com sucesso",
-        className: "bg-blue-500 text-white",
+        title: "Perfil atualizado",
+        description: "Suas informações foram atualizadas com sucesso.",
       });
 
       onOpenChange(false);
     } catch (error) {
-      console.error("Erro ao atualizar dados:", error);
+      console.error("Error updating profile:", error);
       toast({
-        title: "Erro",
-        description: "Erro ao atualizar dados. Por favor, tente novamente.",
         variant: "destructive",
+        title: "Erro ao atualizar",
+        description: "Ocorreu um erro ao atualizar suas informações.",
       });
     } finally {
       setIsLoading(false);
@@ -131,18 +90,13 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Atualizar Perfil</DialogTitle>
-          <DialogDescription>
-            Atualize seus dados de perfil abaixo.
-          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
@@ -151,52 +105,58 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
               required
             />
           </div>
-          <div>
-            <label htmlFor="warName" className="block text-sm font-medium text-gray-700">
-              Nome de Guerra
-            </label>
+          <div className="space-y-2">
+            <Label htmlFor="warName">Nome de Guerra</Label>
             <Input
               id="warName"
-              type="text"
               value={warName}
               onChange={(e) => setWarName(e.target.value)}
               required
             />
           </div>
-          <div>
-            <label htmlFor="rank" className="block text-sm font-medium text-gray-700">
-              Graduação
-            </label>
-            <Select value={rank} onValueChange={setRank}>
+          <div className="space-y-2">
+            <Label htmlFor="rank">Graduação</Label>
+            <Select value={rank} onValueChange={setRank} required>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione a graduação" />
+                <SelectValue placeholder="Selecione sua graduação" />
               </SelectTrigger>
               <SelectContent>
-                {ranks.map((rankOption) => (
-                  <SelectItem key={rankOption} value={rankOption}>
-                    {rankOption}
-                  </SelectItem>
-                ))}
+                <SelectItem value="Sd PM">Sd PM</SelectItem>
+                <SelectItem value="Cb PM">Cb PM</SelectItem>
+                <SelectItem value="3° Sgt PM">3° Sgt PM</SelectItem>
+                <SelectItem value="2° Sgt PM">2° Sgt PM</SelectItem>
+                <SelectItem value="1° Sgt PM">1° Sgt PM</SelectItem>
+                <SelectItem value="Sub Ten PM">Sub Ten PM</SelectItem>
+                <SelectItem value="2° Ten PM">2° Ten PM</SelectItem>
+                <SelectItem value="1° Ten PM">1° Ten PM</SelectItem>
+                <SelectItem value="Cap PM">Cap PM</SelectItem>
+                <SelectItem value="Maj PM">Maj PM</SelectItem>
+                <SelectItem value="Ten Cel PM">Ten Cel PM</SelectItem>
+                <SelectItem value="Cel PM">Cel PM</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <label htmlFor="registration" className="block text-sm font-medium text-gray-700">
-              Matrícula
-            </label>
+          <div className="space-y-2">
+            <Label htmlFor="registration">Matrícula</Label>
             <Input
               id="registration"
-              type="text"
               value={registration}
               onChange={(e) => setRegistration(e.target.value)}
               required
             />
           </div>
-          <DialogFooter>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Atualizando..." : "Atualizar Dados"}
+          <div className="flex justify-end gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancelar
             </Button>
-          </DialogFooter>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Salvando..." : "Salvar"}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

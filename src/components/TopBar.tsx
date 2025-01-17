@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, LogOut, UserCog, KeyRound } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
 
@@ -15,18 +15,14 @@ const TopBar = () => {
   const navigate = useNavigate();
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [userData, setUserData] = useState(null);
-
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    console.log("User data from localStorage:", user);
-    setUserData(user);
-  }, [showProfileDialog]); // Recarrega os dados quando o diálogo é fechado
 
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
   };
+
+  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  console.log("TopBar - User data:", userData);
 
   return (
     <header className="border-b">
@@ -41,7 +37,7 @@ const TopBar = () => {
               <span className="sr-only">Settings</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={() => setShowProfileDialog(true)}>
               <UserCog className="mr-2 h-4 w-4" />
               Alterar Cadastro
@@ -57,18 +53,16 @@ const TopBar = () => {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {userData && (
-          <ProfileUpdateDialog
-            open={showProfileDialog}
-            onOpenChange={setShowProfileDialog}
-            userData={userData}
-          />
-        )}
+        <ProfileUpdateDialog
+          open={showProfileDialog}
+          onOpenChange={setShowProfileDialog}
+          userData={userData}
+        />
         <PasswordChangeDialog
           open={showPasswordDialog}
           onOpenChange={setShowPasswordDialog}
-          userId={JSON.parse(localStorage.getItem('user') || '{}').id}
-          currentPassword={JSON.parse(localStorage.getItem('user') || '{}').password}
+          userId={userData.id}
+          currentPassword={userData.password}
         />
       </div>
     </header>
