@@ -21,6 +21,10 @@ const AppSidebar = () => {
     registration: user.registration || ''
   } : null;
 
+  const handleHoursClick = () => {
+    navigate('/hours');
+  };
+
   return (
     <div className="w-64 min-h-screen bg-white border-r border-gray-200 p-4">
       {user && (
@@ -59,10 +63,13 @@ const AppSidebar = () => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-gray-100 transition-colors">
+          <button
+            onClick={handleHoursClick}
+            className="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          >
             <Clock className="h-5 w-5 text-gray-600" />
             <span className="text-sm text-gray-700">Horas</span>
-          </div>
+          </button>
 
           {userData && (
             <>
