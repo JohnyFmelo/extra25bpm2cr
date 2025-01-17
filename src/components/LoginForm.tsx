@@ -3,20 +3,69 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 
 const LoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement login logic
-    toast({
-      title: "Login realizado",
-      description: "Você será redirecionado em instantes.",
-    });
+    setIsLoading(true);
+
+    try {
+      const db = getFirestore();
+      const usersRef = collection(db, "users");
+      const q = query(
+        usersRef,
+        where("email", "==", email),
+        where("password", "==", password)
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        toast({
+          title: "Erro no login",
+          description: "Email ou senha incorretos.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
+
+      // Store user data in localStorage or context
+      localStorage.setItem('user', JSON.stringify({
+        id: userDoc.id,
+        email: userData.email,
+        userType: userData.userType,
+        warName: userData.warName
+      }));
+
+      toast({
+        title: "Login realizado",
+        description: "Você será redirecionado em instantes.",
+        className: "bg-blue-500 text-white",
+      });
+
+      // Clear form
+      setEmail("");
+      setPassword("");
+
+    } catch (error) {
+      toast({
+        title: "Erro no login",
+        description: "Ocorreu um erro ao tentar fazer login.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -54,8 +103,8 @@ const LoginForm = () => {
           </button>
         </div>
       </div>
-      <Button type="submit" className="w-full">
-        Entrar
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? "Entrando..." : "Entrar"}
       </Button>
     </form>
   );
