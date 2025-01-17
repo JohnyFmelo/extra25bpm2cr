@@ -5,16 +5,39 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const RegisterForm = () => {
   const [email, setEmail] = useState("");
   const [warName, setWarName] = useState("");
+  const [rank, setRank] = useState("");
   const [registration, setRegistration] = useState("");
   const [password, setPassword] = useState("");
   const [userType, setUserType] = useState("user");
   const [adminPassword, setAdminPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  const ranks = [
+    "Cel PM",
+    "Ten Cel PM",
+    "Maj PM",
+    "Cap PM",
+    "1° Ten PM",
+    "2° Ten PM",
+    "Sub Ten PM",
+    "1° Sgt PM",
+    "2° Sgt PM",
+    "3° Sgt PM",
+    "Cb PM",
+    "Sd PM"
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,8 +58,9 @@ const RegisterForm = () => {
       await addDoc(collection(db, "users"), {
         email,
         warName,
+        rank,
         registration,
-        password, // Note: In a production environment, you should hash passwords
+        password,
         userType,
         createdAt: new Date(),
       });
@@ -50,6 +74,7 @@ const RegisterForm = () => {
       // Clear form
       setEmail("");
       setWarName("");
+      setRank("");
       setRegistration("");
       setPassword("");
       setUserType("user");
@@ -90,6 +115,23 @@ const RegisterForm = () => {
           onChange={(e) => setWarName(e.target.value)}
           required
         />
+      </div>
+      <div>
+        <label htmlFor="rank" className="block text-sm font-medium text-gray-700">
+          Graduação
+        </label>
+        <Select value={rank} onValueChange={setRank} required>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione a graduação" />
+          </SelectTrigger>
+          <SelectContent>
+            {ranks.map((rankOption) => (
+              <SelectItem key={rankOption} value={rankOption}>
+                {rankOption}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div>
         <label htmlFor="registration" className="block text-sm font-medium text-gray-700">
