@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings } from "lucide-react";
+import { Settings, LogOut, UserCog, KeyRound } from "lucide-react";
 import { useState } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
@@ -36,12 +36,15 @@ const TopBar = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setShowProfileDialog(true)}>
+              <UserCog className="mr-2 h-4 w-4" />
               Alterar Cadastro
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setShowPasswordDialog(true)}>
+              <KeyRound className="mr-2 h-4 w-4" />
               Alterar Senha
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>
