@@ -38,12 +38,12 @@ const Hours = () => {
   const { toast } = useToast();
 
   const handleConsult = async () => {
-    const user = auth.currentUser as CustomUser | null;
-    if (!user?.email) {
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!storedUser?.registration) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Usuário não autenticado",
+        description: "Usuário não autenticado ou sem matrícula cadastrada",
       });
       return;
     }
@@ -60,7 +60,7 @@ const Hours = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${selectedMonth}&matricula=${user.email}`
+        `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${selectedMonth}&matricula=${storedUser.registration}`
       );
       const result = await response.json();
 
