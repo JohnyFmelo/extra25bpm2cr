@@ -1,36 +1,25 @@
-import { useState } from "react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-} from "@/components/ui/sidebar";
-import { Settings, Lock, UserCog } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useNavigate } from "react-router-dom";
+import { auth } from "@/lib/firebase";
+import { Clock, Settings } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PasswordChangeDialog from "./PasswordChangeDialog";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
+import { useState } from "react";
 
 const AppSidebar = () => {
-  const userString = localStorage.getItem('user');
-  const user = userString ? JSON.parse(userString) : null;
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const navigate = useNavigate();
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const user = auth.currentUser;
 
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border bg-blue-600 p-6">
-        <h2 className="text-2xl font-bold text-white tracking-tight">Extra+</h2>
-      </SidebarHeader>
-      <SidebarContent>
-        {user && (
-          <div className="p-6 space-y-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+    <div className="w-64 min-h-screen bg-white border-r border-gray-200 p-4">
+      {user && (
+        <div>
+          <div className="space-y-4">
+            <div className="flex flex-col space-y-2">
+              <div className="flex items-center space-x-2">
+                <div className="flex-1">
                   <span className="text-sm font-semibold text-blue-700">{user.rank}</span>
                   <span className="text-sm text-gray-700">{user.warName}</span>
                 </div>
@@ -49,44 +38,37 @@ const AppSidebar = () => {
                     <Settings className="h-5 w-5 text-gray-600" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => setShowPasswordDialog(true)}>
-                      <Lock className="mr-2 h-4 w-4" />
-                      <span>Alterar Senha</span>
+                    <DropdownMenuItem onClick={() => setIsPasswordDialogOpen(true)}>
+                      Alterar Senha
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowProfileDialog(true)}>
-                      <UserCog className="mr-2 h-4 w-4" />
-                      <span>Atualizar Cadastro</span>
+                    <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)}>
+                      Alterar Cadastro
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </div>
-          </div>
-        )}
-      </SidebarContent>
 
-      {user && (
-        <>
+            <button
+              onClick={() => navigate('/hours')}
+              className="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Clock className="h-5 w-5 text-gray-600" />
+              <span className="text-sm text-gray-700">Horas</span>
+            </button>
+          </div>
+
           <PasswordChangeDialog
-            open={showPasswordDialog}
-            onOpenChange={setShowPasswordDialog}
-            userId={user.id}
-            currentPassword={user.password}
+            open={isPasswordDialogOpen}
+            onOpenChange={setIsPasswordDialogOpen}
           />
           <ProfileUpdateDialog
-            open={showProfileDialog}
-            onOpenChange={setShowProfileDialog}
-            userData={{
-              id: user.id,
-              email: user.email,
-              warName: user.warName,
-              rank: user.rank,
-              registration: user.registration || "",
-            }}
+            open={isProfileDialogOpen}
+            onOpenChange={setIsProfileDialogOpen}
           />
-        </>
+        </div>
       )}
-    </Sidebar>
+    </div>
   );
 };
 
