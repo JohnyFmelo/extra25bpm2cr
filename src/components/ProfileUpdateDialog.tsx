@@ -32,10 +32,10 @@ interface ProfileUpdateDialogProps {
 }
 
 const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDialogProps) => {
-  const [email, setEmail] = useState(userData?.email || "");
-  const [warName, setWarName] = useState(userData?.warName || "");
-  const [rank, setRank] = useState(userData?.rank || "");
-  const [registration, setRegistration] = useState(userData?.registration || "");
+  const [email, setEmail] = useState("");
+  const [warName, setWarName] = useState("");
+  const [rank, setRank] = useState("");
+  const [registration, setRegistration] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -63,7 +63,7 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
       setRank(userData.rank || "");
       setRegistration(userData.registration || "");
     }
-  }, [userData]);
+  }, [userData, open]); // Adicionado 'open' como dependência para atualizar quando o diálogo abrir
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
