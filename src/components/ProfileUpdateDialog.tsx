@@ -32,10 +32,10 @@ interface ProfileUpdateDialogProps {
 }
 
 const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDialogProps) => {
-  const [email, setEmail] = useState("");
-  const [warName, setWarName] = useState("");
-  const [rank, setRank] = useState("");
-  const [registration, setRegistration] = useState("");
+  const [email, setEmail] = useState(userData?.email || "");
+  const [warName, setWarName] = useState(userData?.warName || "");
+  const [rank, setRank] = useState(userData?.rank || "");
+  const [registration, setRegistration] = useState(userData?.registration || "");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -57,6 +57,7 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
   // Initialize form data when userData changes or component mounts
   useEffect(() => {
     if (userData) {
+      console.log("Updating form data with userData:", userData);
       setEmail(userData.email || "");
       setWarName(userData.warName || "");
       setRank(userData.rank || "");
