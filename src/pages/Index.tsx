@@ -1,6 +1,7 @@
 import { Clock, Calendar, BookOpen, FileText, ArrowLeft } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
+import TimeSlotsList from "@/components/TimeSlotsList";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -72,13 +73,9 @@ const Index = () => {
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <WeeklyCalendar 
-                isLocked={isLocked}
-                onLockChange={setIsLocked}
-                currentDate={currentDate}
-                onDateChange={setCurrentDate}
-                showControls={false}
-              />
+              <div className="bg-white rounded-xl shadow-sm">
+                <TimeSlotsList />
+              </div>
             </div>
           </TabsContent>
         </Tabs>
