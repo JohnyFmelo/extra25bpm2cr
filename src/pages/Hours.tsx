@@ -39,6 +39,11 @@ const Hours = () => {
 
   const handleConsult = async () => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    // Adicionando logs para debug
+    console.log('Usuário armazenado:', storedUser);
+    console.log('Matrícula do usuário:', storedUser?.registration);
+
     if (!storedUser?.registration) {
       toast({
         variant: "destructive",
@@ -62,7 +67,12 @@ const Hours = () => {
       const response = await fetch(
         `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${selectedMonth}&matricula=${storedUser.registration}`
       );
+
+      // Adicionando log para debug da URL
+      console.log('URL da consulta:', `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${selectedMonth}&matricula=${storedUser.registration}`);
+
       const result = await response.json();
+      console.log('Resultado da consulta:', result);
 
       if (result.error) {
         throw new Error(result.error);
