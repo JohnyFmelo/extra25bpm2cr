@@ -12,6 +12,14 @@ const AppSidebar = () => {
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
   const user = auth.currentUser;
 
+  const userData = user ? {
+    id: user.uid,
+    email: user.email || '',
+    warName: user.warName || '',
+    rank: user.rank || '',
+    registration: user.registration || ''
+  } : null;
+
   return (
     <div className="w-64 min-h-screen bg-white border-r border-gray-200 p-4">
       {user && (
@@ -58,14 +66,21 @@ const AppSidebar = () => {
             </button>
           </div>
 
-          <PasswordChangeDialog
-            open={isPasswordDialogOpen}
-            onOpenChange={setIsPasswordDialogOpen}
-          />
-          <ProfileUpdateDialog
-            open={isProfileDialogOpen}
-            onOpenChange={setIsProfileDialogOpen}
-          />
+          {user && userData && (
+            <>
+              <PasswordChangeDialog
+                open={isPasswordDialogOpen}
+                onOpenChange={setIsPasswordDialogOpen}
+                userId={user.uid}
+                currentPassword={user.password || ''}
+              />
+              <ProfileUpdateDialog
+                open={isProfileDialogOpen}
+                onOpenChange={setIsProfileDialogOpen}
+                userData={userData}
+              />
+            </>
+          )}
         </div>
       )}
     </div>
