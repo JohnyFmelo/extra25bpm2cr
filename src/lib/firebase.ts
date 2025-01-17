@@ -10,35 +10,52 @@ import {
   doc, 
   updateDoc,
   Firestore,
-  DocumentData
+  DocumentData,
+  QuerySnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBH8Pb2Ew8Yx7Hn9LmGqHLRVVSVHYnqxhY",
-  authDomain: "bpm-app-9b3e9.firebaseapp.com",
-  projectId: "bpm-app-9b3e9",
-  storageBucket: "bpm-app-9b3e9.appspot.com",
-  messagingSenderId: "722055830047",
-  appId: "1:722055830047:web:1c5b4e7b4d0c3f4f3b4b4b"
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.VITE_FIREBASE_APP_ID,
+  measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 export const auth = getAuth(app);
 
-// Helper function to safely clone Firestore data
+// Helper function to safely clone Firestore data by removing non-serializable fields
 const safeClone = (data: DocumentData) => {
-  return JSON.parse(JSON.stringify(data));
+  const cleaned = Object.entries(data).reduce((acc, [key, value]) => {
+    // Skip functions and complex objects that can't be cloned
+    if (typeof value !== 'function' && !(value instanceof ReadableStream)) {
+      acc[key] = value;
+    }
+    return acc;
+  }, {} as Record<string, any>);
+  
+  return JSON.parse(JSON.stringify(cleaned));
+};
+
+// Helper function to safely get documents from a query snapshot
+const getDocsFromSnapshot = (snapshot: QuerySnapshot) => {
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...safeClone(doc.data())
+  }));
 };
 
 // Helper function to handle Firestore operations with proper cleanup
 const handleFirestoreOperation = async <T>(
   operation: (db: Firestore) => Promise<T>
 ): Promise<T> => {
-  let result: T;
   try {
-    result = await operation(db);
+    const result = await operation(db);
     return result;
   } catch (error) {
     console.error('Firestore operation error:', error);
@@ -51,11 +68,7 @@ export const dataOperations = {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
       const querySnapshot = await getDocs(timeSlotCollection);
-      const data = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...safeClone(doc.data())
-      }));
-      return data;
+      return getDocsFromSnapshot(querySnapshot);
     }).catch(error => {
       console.error('Error fetching data:', error);
       return [];
