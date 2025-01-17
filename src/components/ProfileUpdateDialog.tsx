@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +21,8 @@ interface ProfileUpdateDialogProps {
     id: string;
     email: string;
     warName: string;
-    rank: string;
-    registration: string;
+    rank?: string;
+    registration?: string;
   };
 }
 
@@ -60,7 +60,6 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
 
       await updateDoc(userRef, updatedData);
 
-      // Update localStorage
       const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
       localStorage.setItem(
         "user",
@@ -93,6 +92,9 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Atualizar Perfil</DialogTitle>
+          <DialogDescription>
+            Faça as alterações necessárias no seu perfil
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -116,7 +118,7 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
           </div>
           <div className="space-y-2">
             <Label htmlFor="rank">Graduação</Label>
-            <Select value={rank} onValueChange={setRank} required>
+            <Select value={rank} onValueChange={setRank}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione sua graduação" />
               </SelectTrigger>
@@ -142,7 +144,6 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
               id="registration"
               value={registration}
               onChange={(e) => setRegistration(e.target.value)}
-              required
             />
           </div>
           <div className="flex justify-end gap-4">

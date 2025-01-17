@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, LogOut, UserCog, KeyRound } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
 
@@ -16,10 +16,10 @@ const TopBar = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem("user");
     navigate("/login");
-  };
+  }, [navigate]);
 
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
   console.log("TopBar - User data:", userData);
@@ -30,14 +30,14 @@ const TopBar = () => {
         <div className="flex-1">
           <h2 className="text-lg font-semibold">Dashboard</h2>
         </div>
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
               <Settings className="h-5 w-5" />
               <span className="sr-only">Settings</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-56 bg-white">
             <DropdownMenuItem onClick={() => setShowProfileDialog(true)}>
               <UserCog className="mr-2 h-4 w-4" />
               Alterar Cadastro
@@ -53,17 +53,22 @@ const TopBar = () => {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <ProfileUpdateDialog
-          open={showProfileDialog}
-          onOpenChange={setShowProfileDialog}
-          userData={userData}
-        />
-        <PasswordChangeDialog
-          open={showPasswordDialog}
-          onOpenChange={setShowPasswordDialog}
-          userId={userData.id}
-          currentPassword={userData.password}
-        />
+        {showProfileDialog && (
+          <ProfileUpdateDialog
+            open={showProfileDialog}
+            onOpenChange={setShowProfileDialog}
+            userData={userData}
+          />
+        )}
+        
+        {showPasswordDialog && (
+          <PasswordChangeDialog
+            open={showPasswordDialog}
+            onOpenChange={setShowPasswordDialog}
+            userId={userData.id}
+            currentPassword={userData.password}
+          />
+        )}
       </div>
     </header>
   );
