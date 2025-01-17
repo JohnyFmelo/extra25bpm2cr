@@ -8,8 +8,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Settings } from "lucide-react";
 import { useState } from "react";
-import { ProfileUpdateDialog } from "./ProfileUpdateDialog";
-import { PasswordChangeDialog } from "./PasswordChangeDialog";
+import ProfileUpdateDialog from "./ProfileUpdateDialog";
+import PasswordChangeDialog from "./PasswordChangeDialog";
 
 const TopBar = () => {
   const navigate = useNavigate();
@@ -50,10 +50,13 @@ const TopBar = () => {
         <ProfileUpdateDialog
           open={showProfileDialog}
           onOpenChange={setShowProfileDialog}
+          userData={JSON.parse(localStorage.getItem('user') || '{}')}
         />
         <PasswordChangeDialog
           open={showPasswordDialog}
           onOpenChange={setShowPasswordDialog}
+          userId={JSON.parse(localStorage.getItem('user') || '{}').id}
+          currentPassword={JSON.parse(localStorage.getItem('user') || '{}').password}
         />
       </div>
     </header>
