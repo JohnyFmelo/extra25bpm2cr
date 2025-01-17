@@ -9,7 +9,8 @@ import {
   deleteDoc, 
   doc, 
   updateDoc,
-  Firestore
+  Firestore,
+  DocumentData
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
@@ -26,12 +27,18 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 export const auth = getAuth(app);
 
+// Helper function to safely clone Firestore data
+const safeClone = (data: DocumentData) => {
+  return JSON.parse(JSON.stringify(data));
+};
+
 // Helper function to handle Firestore operations with proper cleanup
 const handleFirestoreOperation = async <T>(
   operation: (db: Firestore) => Promise<T>
 ): Promise<T> => {
+  let result: T;
   try {
-    const result = await operation(db);
+    result = await operation(db);
     return result;
   } catch (error) {
     console.error('Firestore operation error:', error);
@@ -44,10 +51,11 @@ export const dataOperations = {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
       const querySnapshot = await getDocs(timeSlotCollection);
-      return querySnapshot.docs.map(doc => ({
+      const data = querySnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...safeClone(doc.data())
       }));
+      return data;
     }).catch(error => {
       console.error('Error fetching data:', error);
       return [];
@@ -57,7 +65,8 @@ export const dataOperations = {
   async insert(newSlot: any) {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
-      await addDoc(timeSlotCollection, newSlot);
+      const clonedSlot = safeClone(newSlot);
+      await addDoc(timeSlotCollection, clonedSlot);
       return { success: true };
     }).catch(error => {
       console.error('Error inserting data:', error);
@@ -78,7 +87,8 @@ export const dataOperations = {
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
         const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
-        await updateDoc(docRef, updatedSlot);
+        const clonedSlot = safeClone(updatedSlot);
+        await updateDoc(docRef, clonedSlot);
         return { success: true };
       }
       return { success: false };
