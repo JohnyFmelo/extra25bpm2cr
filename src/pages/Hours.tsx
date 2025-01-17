@@ -3,9 +3,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Loader2 } from "lucide-react";
-import { auth } from "@/lib/firebase";
-import { CustomUser } from "@/types/user";
+import { Loader2, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface HoursData {
   Nome: string;
@@ -36,6 +35,7 @@ const Hours = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<HoursData | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleConsult = async () => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -92,6 +92,16 @@ const Hours = () => {
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
+      <div className="mb-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </Button>
+      </div>
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="space-y-4">
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
