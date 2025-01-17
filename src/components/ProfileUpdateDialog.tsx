@@ -86,7 +86,7 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
         }
       }
 
-      // Atualizar os dados do usuário
+      // Atualizar os dados do usuário no Firestore
       const userRef = doc(db, "users", userData.id);
       const updatedData = {
         email,
@@ -98,7 +98,7 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
 
       await updateDoc(userRef, updatedData);
 
-      // Atualizar localStorage
+      // Atualizar localStorage com os novos dados
       const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
       const updatedUser = {
         ...storedUser,
