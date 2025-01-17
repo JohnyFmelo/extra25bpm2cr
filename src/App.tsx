@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState } from "react";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import AppSidebar from "./components/AppSidebar";
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -40,7 +42,14 @@ const App = () => {
               path="/" 
               element={
                 <ProtectedRoute>
-                  <Index />
+                  <SidebarProvider>
+                    <div className="flex min-h-screen w-full">
+                      <AppSidebar />
+                      <main className="flex-1">
+                        <Index />
+                      </main>
+                    </div>
+                  </SidebarProvider>
                 </ProtectedRoute>
               } 
             />
