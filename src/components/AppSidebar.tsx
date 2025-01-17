@@ -34,6 +34,16 @@ const AppSidebar = () => {
                   <span className="text-sm font-semibold text-blue-700">{user.rank}</span>
                   <span className="text-sm text-gray-700">{user.warName}</span>
                 </div>
+              </div>
+              {user.userType === 'admin' && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                    Administrador
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-sm text-gray-700">Configuração</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                     <Settings className="h-5 w-5 text-gray-600" />
@@ -50,13 +60,6 @@ const AppSidebar = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              {user.userType === 'admin' && (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-                    Administrador
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         )}
