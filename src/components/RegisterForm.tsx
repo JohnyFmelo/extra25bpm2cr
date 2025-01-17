@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { getFirestore, collection, addDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import {
   Select,
   SelectContent,
@@ -55,7 +55,24 @@ const RegisterForm = () => {
 
     try {
       const db = getFirestore();
-      await addDoc(collection(db, "users"), {
+      
+      // Verificar se já existe um usuário com a mesma matrícula
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("registration", "==", registration));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        toast({
+          title: "Erro no cadastro",
+          description: "Já existe um usuário com esta matrícula.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Criar novo usuário com todos os dados necessários
+      const userData = {
         email,
         warName,
         rank,
@@ -63,7 +80,10 @@ const RegisterForm = () => {
         password,
         userType,
         createdAt: new Date(),
-      });
+      };
+
+      const docRef = await addDoc(collection(db, "users"), userData);
+      console.log("Usuário cadastrado com ID:", docRef.id);
 
       toast({
         title: "Usuário cadastrado",
@@ -80,6 +100,7 @@ const RegisterForm = () => {
       setUserType("user");
       setAdminPassword("");
     } catch (error) {
+      console.error("Erro ao cadastrar:", error);
       toast({
         title: "Erro no cadastro",
         description: "Ocorreu um erro ao realizar o cadastro.",
