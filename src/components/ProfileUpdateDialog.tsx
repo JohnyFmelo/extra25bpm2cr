@@ -35,7 +35,7 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
   const [email, setEmail] = useState(userData.email);
   const [warName, setWarName] = useState(userData.warName);
   const [rank, setRank] = useState(userData.rank);
-  const [registration, setRegistration] = useState(userData.registration);
+  const [registration, setRegistration] = useState(userData.registration || '');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -58,7 +58,7 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
     setEmail(userData.email);
     setWarName(userData.warName);
     setRank(userData.rank);
-    setRegistration(userData.registration);
+    setRegistration(userData.registration || '');
   }, [userData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
