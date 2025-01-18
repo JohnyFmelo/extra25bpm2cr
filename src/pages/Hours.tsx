@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,17 +34,33 @@ const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<HoursData | null>(null);
+  const [userData, setUserData] = useState<any>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleConsult = async () => {
+  useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-    
-    if (!storedUser?.registration) {
+    setUserData(storedUser);
+
+    // Add event listener for storage changes
+    const handleStorageChange = () => {
+      const updatedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      setUserData(updatedUser);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  const handleConsult = async () => {
+    if (!userData?.registration) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Usuário não autenticado ou sem matrícula cadastrada",
+        description: "Usuário não autenticado ou sem matrícula cadastrada. Por favor, atualize seu cadastro.",
       });
       return;
     }
@@ -61,10 +77,10 @@ const Hours = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${selectedMonth}&matricula=${storedUser.registration}`
+        `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${selectedMonth}&matricula=${userData.registration}`
       );
 
-      console.log('URL da consulta:', `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${selectedMonth}&matricula=${storedUser.registration}`);
+      console.log('URL da consulta:', `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${selectedMonth}&matricula=${userData.registration}`);
 
       const result = await response.json();
       console.log('Resultado da consulta:', result);
@@ -124,7 +140,7 @@ const Hours = () => {
 
           <Button 
             onClick={handleConsult} 
-            disabled={loading} 
+            disabled={loading || !userData?.registration} 
             className="w-full"
           >
             {loading ? (
@@ -136,6 +152,12 @@ const Hours = () => {
               "Consultar"
             )}
           </Button>
+
+          {!userData?.registration && (
+            <p className="text-sm text-red-500">
+              Você precisa cadastrar sua matrícula para consultar as horas.
+            </p>
+          )}
 
           {data && (
             <div className="mt-6 space-y-4">
