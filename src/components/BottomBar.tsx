@@ -1,10 +1,15 @@
-import { Clock, Calendar, BookOpen, FileText } from "lucide-react";
+import { Clock, Calendar, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const BottomBar = () => {
   const navigate = useNavigate();
 
   const handleClick = (route: string) => {
+    if (route === "extra" || route === "editor") {
+      toast.info("Funcionalidade em desenvolvimento");
+      return;
+    }
     navigate(route);
   };
 
@@ -19,22 +24,18 @@ const BottomBar = () => {
           <span className="text-xs">Horas</span>
         </button>
         <button
+          onClick={() => handleClick("extra")}
           className="flex flex-col items-center p-2 text-primary hover:text-primary-light transition-colors"
         >
           <Calendar className="h-6 w-6" />
           <span className="text-xs">Extra</span>
         </button>
         <button
-          className="flex flex-col items-center p-2 text-primary hover:text-primary-light transition-colors"
-        >
-          <BookOpen className="h-6 w-6" />
-          <span className="text-xs">Editor</span>
-        </button>
-        <button
+          onClick={() => handleClick("editor")}
           className="flex flex-col items-center p-2 text-primary hover:text-primary-light transition-colors"
         >
           <FileText className="h-6 w-6" />
-          <span className="text-xs">Escala</span>
+          <span className="text-xs">Editor</span>
         </button>
       </div>
     </div>
