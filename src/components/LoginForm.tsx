@@ -41,12 +41,14 @@ const LoginForm = () => {
       const userDoc = querySnapshot.docs[0];
       const userData = userDoc.data();
 
-      // Store user data in localStorage or context
+      // Store ALL user data in localStorage
       localStorage.setItem('user', JSON.stringify({
         id: userDoc.id,
         email: userData.email,
         userType: userData.userType,
-        warName: userData.warName
+        warName: userData.warName,
+        registration: userData.registration,
+        rank: userData.rank
       }));
 
       toast({
