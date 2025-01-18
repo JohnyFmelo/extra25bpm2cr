@@ -23,9 +23,9 @@ const Index = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-gray-50">
-      <div className="pt-16 px-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="max-w-4xl mx-auto">
+    <div className="relative min-h-screen bg-[#E8F1F2]">
+      <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
           <TabsList className="hidden">
             <TabsTrigger value="main">Main</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
@@ -46,7 +46,7 @@ const Index = () => {
               <div className="absolute right-0 -top-12 mb-4">
                 <button
                   onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
                   aria-label="Voltar para home"
                 >
                   <ArrowLeft className="h-6 w-6" />
@@ -67,13 +67,13 @@ const Index = () => {
               <div className="absolute right-0 -top-12 mb-4">
                 <button
                   onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
                   aria-label="Voltar para home"
                 >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <div className="bg-white rounded-xl shadow-sm">
+              <div className="bg-white rounded-xl shadow-lg">
                 <TimeSlotsList />
               </div>
             </div>

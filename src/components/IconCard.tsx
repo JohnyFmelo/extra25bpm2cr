@@ -21,10 +21,10 @@ const IconCard = ({ icon: Icon, label, onClick }: IconCardProps) => {
   return (
     <button
       onClick={handleClick}
-      className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow space-y-2"
+      className="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all space-y-3 group hover:bg-primary hover:text-primary-foreground"
     >
-      <Icon className="h-8 w-8 text-gray-600" />
-      <span className="text-sm font-medium text-gray-700">{label}</span>
+      <Icon className="h-10 w-10 text-primary group-hover:text-primary-foreground transition-colors" />
+      <span className="text-base font-medium">{label}</span>
     </button>
   );
 };
