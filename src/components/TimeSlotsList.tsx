@@ -4,6 +4,8 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { collection, query, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface TimeSlot {
   id?: string;
@@ -26,39 +28,32 @@ const TimeSlotsList = () => {
   const [volunteerName] = useState("3° Sgt Johny Melo");
 
   useEffect(() => {
-    fetchTimeSlots();
-  }, []);
-
-  const fetchTimeSlots = async () => {
-    try {
-      setIsLoading(true);
-      const data = await dataOperations.fetch();
-      if (!Array.isArray(data)) {
-        throw new Error('Invalid data format');
-      }
-
-      const formattedSlots = data.map((slot: any) => ({
-        id: slot.id,
-        date: slot.date,
-        start_time: slot.start_time,
-        end_time: slot.end_time,
-        total_slots: slot.total_slots || slot.slots || 0,
-        slots_used: slot.slots_used || 0,
-        volunteers: slot.volunteers || []
+    // Set up real-time listener
+    const timeSlotsCollection = collection(db, 'timeSlots');
+    const q = query(timeSlotsCollection);
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const formattedSlots = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        volunteers: doc.data().volunteers || [],
+        slots_used: doc.data().slots_used || 0,
+        total_slots: doc.data().total_slots || doc.data().slots || 0,
       }));
-
       setTimeSlots(formattedSlots);
-    } catch (error) {
-      console.error('Erro ao carregar horários:', error);
+      setIsLoading(false);
+    }, (error) => {
+      console.error('Error listening to time slots:', error);
       toast({
-        title: "Erro ao carregar horários",
-        description: "Não foi possível carregar os horários.",
+        title: "Erro ao atualizar horários",
+        description: "Não foi possível receber atualizações em tempo real.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    });
+
+    // Cleanup subscription
+    return () => unsubscribe();
+  }, [toast]);
 
   const handleVolunteer = async (timeSlot: TimeSlot) => {
     try {
@@ -81,7 +76,6 @@ const TimeSlotsList = () => {
         throw new Error('Failed to update time slot');
       }
 
-      await fetchTimeSlots();
       toast({
         title: "Sucesso",
         description: "Vaga reservada com sucesso!"
@@ -117,7 +111,6 @@ const TimeSlotsList = () => {
         throw new Error('Failed to update time slot');
       }
 
-      await fetchTimeSlots();
       toast({
         title: "Sucesso",
         description: "Vaga desmarcada com sucesso!"
