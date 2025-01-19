@@ -23,7 +23,7 @@ const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const [volunteerName, setVolunteerName] = useState("Voluntário " + Math.floor(Math.random() * 1000));
+  const [volunteerName] = useState("3° Sgt Johny Melo");
 
   useEffect(() => {
     fetchTimeSlots();
@@ -147,6 +147,10 @@ const TimeSlotsList = () => {
     return timeSlot.volunteers?.includes(volunteerName);
   };
 
+  const isLastSlot = (timeSlot: TimeSlot) => {
+    return timeSlot.slots_used === timeSlot.total_slots - 1;
+  };
+
   const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
 
   if (isLoading) {
@@ -162,7 +166,10 @@ const TimeSlotsList = () => {
           </h3>
           <div className="space-y-4">
             {slots.map((slot) => (
-              <div key={slot.id} className="border rounded-lg p-4 space-y-3">
+              <div 
+                key={slot.id} 
+                className={`border rounded-lg p-4 space-y-3 ${isLastSlot(slot) ? 'bg-orange-100' : ''}`}
+              >
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-medium">
