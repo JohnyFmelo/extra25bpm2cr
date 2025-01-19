@@ -10,11 +10,6 @@ const Index = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Get user data from localStorage
-  const userDataString = localStorage.getItem('user');
-  const userData = userDataString ? JSON.parse(userDataString) : null;
-  const isAdmin = userData?.role === 'admin';
-
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
@@ -28,7 +23,7 @@ const Index = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-primary dark:bg-primary text-foreground">
+    <div className="relative min-h-screen bg-[#E8F1F2]">
       <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
           <TabsList className="hidden">
@@ -41,9 +36,7 @@ const Index = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <IconCard icon={Clock} label="Horas" />
               <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
-              {isAdmin && (
-                <IconCard icon={BookOpen} label="Editor" onClick={handleEditorClick} />
-              )}
+              <IconCard icon={BookOpen} label="Editor" onClick={handleEditorClick} />
               <IconCard icon={FileText} label="Escala" />
             </div>
           </TabsContent>
@@ -53,7 +46,7 @@ const Index = () => {
               <div className="absolute right-0 -top-12 mb-4">
                 <button
                   onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-accent/80 transition-colors text-foreground"
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
                   aria-label="Voltar para home"
                 >
                   <ArrowLeft className="h-6 w-6" />
@@ -74,13 +67,13 @@ const Index = () => {
               <div className="absolute right-0 -top-12 mb-4">
                 <button
                   onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-accent/80 transition-colors text-foreground"
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
                   aria-label="Voltar para home"
                 >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <div className="bg-card rounded-xl shadow-lg">
+              <div className="bg-white rounded-xl shadow-lg">
                 <TimeSlotsList />
               </div>
             </div>
