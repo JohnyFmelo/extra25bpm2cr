@@ -74,6 +74,21 @@ const TimeSlotsList = () => {
       return;
     }
 
+    // Check if user is already registered in any slot for this date
+    const slotsForDate = timeSlots.filter(slot => slot.date === timeSlot.date);
+    const isAlreadyRegistered = slotsForDate.some(slot => 
+      slot.volunteers?.includes(volunteerName)
+    );
+
+    if (isAlreadyRegistered) {
+      toast({
+        title: "Erro",
+        description: "Você já está registrado em um horário nesta data.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const updatedSlot = {
         ...timeSlot,
@@ -167,8 +182,8 @@ const TimeSlotsList = () => {
     return timeSlot.volunteers?.includes(volunteerName);
   };
 
-  const isLastSlot = (timeSlot: TimeSlot) => {
-    return timeSlot.slots_used === timeSlot.total_slots - 1;
+  const isSlotFull = (timeSlot: TimeSlot) => {
+    return timeSlot.slots_used === timeSlot.total_slots;
   };
 
   const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
@@ -188,7 +203,7 @@ const TimeSlotsList = () => {
             {slots.map((slot) => (
               <div 
                 key={slot.id} 
-                className={`border rounded-lg p-4 space-y-3 ${isLastSlot(slot) ? 'bg-orange-100' : ''}`}
+                className={`border rounded-lg p-4 space-y-3 ${isSlotFull(slot) ? 'bg-orange-100' : ''}`}
               >
                 <div className="flex justify-between items-center">
                   <div>
@@ -199,7 +214,7 @@ const TimeSlotsList = () => {
                       {slot.slots_used}/{slot.total_slots} vagas ocupadas
                     </p>
                   </div>
-                  {slot.slots_used < slot.total_slots && !isVolunteered(slot) ? (
+                  {!isSlotFull(slot) && !isVolunteered(slot) ? (
                     <Button 
                       onClick={() => handleVolunteer(slot)}
                       className="bg-blue-500 hover:bg-blue-600 text-white"
