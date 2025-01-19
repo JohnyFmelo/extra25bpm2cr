@@ -33,13 +33,18 @@ const TimeSlotsList = () => {
     const q = query(timeSlotsCollection);
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const formattedSlots = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        volunteers: doc.data().volunteers || [],
-        slots_used: doc.data().slots_used || 0,
-        total_slots: doc.data().total_slots || doc.data().slots || 0,
-      }));
+      const formattedSlots: TimeSlot[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          date: data.date,
+          start_time: data.start_time,
+          end_time: data.end_time,
+          volunteers: data.volunteers || [],
+          slots_used: data.slots_used || 0,
+          total_slots: data.total_slots || data.slots || 0,
+        };
+      });
       setTimeSlots(formattedSlots);
       setIsLoading(false);
     }, (error) => {
