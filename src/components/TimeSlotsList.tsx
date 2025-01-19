@@ -25,7 +25,11 @@ const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const [volunteerName] = useState("3° Sgt Johny Melo");
+  
+  // Get logged in user data from localStorage
+  const userDataString = localStorage.getItem('user');
+  const userData = userDataString ? JSON.parse(userDataString) : null;
+  const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
 
   useEffect(() => {
     // Set up real-time listener
@@ -61,6 +65,15 @@ const TimeSlotsList = () => {
   }, [toast]);
 
   const handleVolunteer = async (timeSlot: TimeSlot) => {
+    if (!volunteerName) {
+      toast({
+        title: "Erro",
+        description: "Usuário não encontrado. Por favor, faça login novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const updatedSlot = {
         ...timeSlot,
@@ -96,6 +109,15 @@ const TimeSlotsList = () => {
   };
 
   const handleUnvolunteer = async (timeSlot: TimeSlot) => {
+    if (!volunteerName) {
+      toast({
+        title: "Erro",
+        description: "Usuário não encontrado. Por favor, faça login novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const updatedSlot = {
         ...timeSlot,
