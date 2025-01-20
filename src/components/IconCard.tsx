@@ -15,8 +15,6 @@ const IconCard = ({ icon: Icon, label, onClick }: IconCardProps) => {
       onClick();
     } else if (label === "Horas") {
       navigate("/hours");
-    } else if (label === "Escala") {
-      navigate("/schedule");
     }
   };
 
