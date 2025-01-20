@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, UserCog, KeyRound } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useState, useCallback } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
@@ -32,19 +32,11 @@ const TopBar = () => {
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-light">
-              <Settings className="h-5 w-5" />
-              <span className="sr-only">Settings</span>
+              <LogOut className="h-5 w-5" />
+              <span className="sr-only">Logout</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 bg-popover">
-            <DropdownMenuItem onClick={() => setShowProfileDialog(true)} className="hover:bg-accent hover:text-accent-foreground">
-              <UserCog className="mr-2 h-4 w-4" />
-              Alterar Cadastro
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowPasswordDialog(true)} className="hover:bg-accent hover:text-accent-foreground">
-              <KeyRound className="mr-2 h-4 w-4" />
-              Alterar Senha
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={handleLogout} className="hover:bg-accent hover:text-accent-foreground">
               <LogOut className="mr-2 h-4 w-4" />
               Sair
