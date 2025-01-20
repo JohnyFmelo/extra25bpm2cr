@@ -1,4 +1,4 @@
-import { Clock, Calendar, BookOpen, FileText, ArrowLeft, Settings } from "lucide-react";
+import { Clock, Calendar, BookOpen, FileText, ArrowLeft, Settings, Users } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
