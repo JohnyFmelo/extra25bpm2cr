@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2, Eye, UserPlus } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
@@ -15,6 +15,7 @@ interface TimeSlot {
   endTime: string;
   slots: number;
   slotsUsed: number;
+  volunteers?: string[];
   id?: string;
 }
 
@@ -93,7 +94,8 @@ const WeeklyCalendar = ({
         startTime: slot.start_time ? slot.start_time.slice(0, 5) : "00:00",
         endTime: slot.end_time ? slot.end_time.slice(0, 5) : "00:00",
         slots: slot.total_slots || slot.slots || 0,
-        slotsUsed: slot.slots_used || 0
+        slotsUsed: slot.slots_used || 0,
+        volunteers: slot.volunteers || []
       }));
 
       setTimeSlots(formattedSlots);
@@ -259,6 +261,56 @@ const WeeklyCalendar = ({
       toast({
         title: "Erro",
         description: "Não foi possível excluir o horário.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleVolunteerClick = async (timeSlot: TimeSlot) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userName = user.name;
+
+      if (!userName) {
+        toast({
+          title: "Erro",
+          description: "Usuário não encontrado.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const result = await dataOperations.update(
+        {
+          date: format(timeSlot.date, 'yyyy-MM-dd'),
+          start_time: formatTimeForDB(timeSlot.startTime),
+          end_time: formatTimeForDB(timeSlot.endTime),
+          total_slots: timeSlot.slots,
+          slots_used: timeSlot.slotsUsed + 1,
+          volunteers: [...(timeSlot.volunteers || []), userName]
+        },
+        {
+          date: format(timeSlot.date, 'yyyy-MM-dd'),
+          start_time: formatTimeForDB(timeSlot.startTime),
+          end_time: formatTimeForDB(timeSlot.endTime)
+        }
+      );
+
+      if (!result.success) {
+        throw new Error('Failed to update time slot');
+      }
+
+      await fetchTimeSlots();
+      
+      toast({
+        title: "Sucesso",
+        description: "Voluntário adicionado com sucesso!"
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar voluntário:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o voluntário.",
         variant: "destructive"
       });
     }
@@ -463,8 +515,25 @@ const WeeklyCalendar = ({
                     <div className="text-sm text-gray-500">
                       {slot.slotsUsed}/{slot.slots} vagas
                     </div>
+                    {slot.volunteers && (
+                      <div className="mt-1 text-sm text-gray-600">
+                        {slot.volunteers.map((volunteer, idx) => (
+                          <div key={idx}>{volunteer}</div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
+                    {slot.slotsUsed < slot.slots && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleVolunteerClick(slot)}
+                      >
+                        <UserPlus className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button 
                       variant="ghost" 
                       size="icon" 
@@ -501,8 +570,25 @@ const WeeklyCalendar = ({
                 <div className="text-sm text-gray-500">
                   {slot.slotsUsed}/{slot.slots} vagas
                 </div>
+                {slot.volunteers && (
+                  <div className="mt-1 text-sm text-gray-600">
+                    {slot.volunteers.map((volunteer, idx) => (
+                      <div key={idx}>{volunteer}</div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
+                {slot.slotsUsed < slot.slots && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleVolunteerClick(slot)}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button 
                   variant="ghost" 
                   size="icon" 
