@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2, Eye, UserPlus } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2, Eye } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
@@ -15,7 +15,6 @@ interface TimeSlot {
   endTime: string;
   slots: number;
   slotsUsed: number;
-  volunteers?: string[];
   id?: string;
 }
 
@@ -48,31 +47,16 @@ const WeeklyCalendar = ({
 
   const isLocked = externalIsLocked !== undefined ? externalIsLocked : internalIsLocked;
   const currentDateValue = externalCurrentDate !== undefined ? externalCurrentDate : internalCurrentDate;
+  
+  const weekDays = ["ter", "qua", "qui", "sex", "sáb", "dom", "seg"];
+  const fullWeekDays = ["terça", "quarta", "quinta", "sexta", "sábado", "domingo", "segunda"];
+  const currentMonth = format(currentDateValue, "MMMM yyyy", { locale: ptBR });
+  const isMobile = useIsMobile();
 
-  // Store the current week's start and end dates
-  const weekStartDate = useMemo(() => {
-    const date = new Date(currentDateValue);
-    const day = date.getDay();
-    date.setDate(date.getDate() - ((day + 6) % 7)); // Adjust to start from Tuesday
-    return date;
-  }, [currentDateValue]);
-
-  const weekEndDate = useMemo(() => {
-    const date = new Date(weekStartDate);
-    date.setDate(date.getDate() + 6); // Add 6 days to get to Monday
-    return date;
-  }, [weekStartDate]);
-
-  // Store the locked week dates in localStorage when the calendar is locked
-  useEffect(() => {
-    if (isLocked) {
-      localStorage.setItem('lockedWeekStart', weekStartDate.toISOString());
-      localStorage.setItem('lockedWeekEnd', weekEndDate.toISOString());
-    } else {
-      localStorage.removeItem('lockedWeekStart');
-      localStorage.removeItem('lockedWeekEnd');
-    }
-  }, [isLocked, weekStartDate, weekEndDate]);
+  const hasTimeSlotsForDate = (date: Date) => {
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    return timeSlots.some(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
+  };
 
   useEffect(() => {
     fetchTimeSlots();
@@ -94,8 +78,7 @@ const WeeklyCalendar = ({
         startTime: slot.start_time ? slot.start_time.slice(0, 5) : "00:00",
         endTime: slot.end_time ? slot.end_time.slice(0, 5) : "00:00",
         slots: slot.total_slots || slot.slots || 0,
-        slotsUsed: slot.slots_used || 0,
-        volunteers: slot.volunteers || []
+        slotsUsed: slot.slots_used || 0
       }));
 
       setTimeSlots(formattedSlots);
@@ -266,56 +249,6 @@ const WeeklyCalendar = ({
     }
   };
 
-  const handleVolunteerClick = async (timeSlot: TimeSlot) => {
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const userName = user.name;
-
-      if (!userName) {
-        toast({
-          title: "Erro",
-          description: "Usuário não encontrado.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const result = await dataOperations.update(
-        {
-          date: format(timeSlot.date, 'yyyy-MM-dd'),
-          start_time: formatTimeForDB(timeSlot.startTime),
-          end_time: formatTimeForDB(timeSlot.endTime),
-          total_slots: timeSlot.slots,
-          slots_used: timeSlot.slotsUsed + 1,
-          volunteers: [...(timeSlot.volunteers || []), userName]
-        },
-        {
-          date: format(timeSlot.date, 'yyyy-MM-dd'),
-          start_time: formatTimeForDB(timeSlot.startTime),
-          end_time: formatTimeForDB(timeSlot.endTime)
-        }
-      );
-
-      if (!result.success) {
-        throw new Error('Failed to update time slot');
-      }
-
-      await fetchTimeSlots();
-      
-      toast({
-        title: "Sucesso",
-        description: "Voluntário adicionado com sucesso!"
-      });
-    } catch (error) {
-      console.error('Erro ao adicionar voluntário:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível adicionar o voluntário.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const handlePreviousWeek = () => {
     if (!isLocked) {
       const newDate = subWeeks(currentDateValue, 1);
@@ -400,18 +333,18 @@ const WeeklyCalendar = ({
     const days = [];
     const startDate = new Date(currentDateValue);
     const currentDay = startDate.getDay();
-    const daysToSubtract = (currentDay + 6) % 7; // Calculate days to subtract to reach Tuesday
+    const daysToSubtract = (currentDay + 5) % 7; // Calculate days to subtract to reach Tuesday
     startDate.setDate(currentDateValue.getDate() - daysToSubtract);
 
     for (let i = 0; i < 7; i++) {
       const currentDateInWeek = new Date(startDate);
       currentDateInWeek.setDate(startDate.getDate() + i);
       days.push({
-        dayName: useIsMobile() ? ["ter", "qua", "qui", "sex", "sáb", "dom", "seg"][i] : ["terça", "quarta", "quinta", "sexta", "sábado", "domingo", "segunda"][i],
+        dayName: isMobile ? weekDays[i] : fullWeekDays[i],
         date: currentDateInWeek.getDate(),
         fullDate: currentDateInWeek,
         isToday: currentDateInWeek.toDateString() === new Date().toDateString(),
-        hasTimeSlots: timeSlots.some(slot => format(slot.date, 'yyyy-MM-dd') === format(currentDateInWeek, 'yyyy-MM-dd'))
+        hasTimeSlots: hasTimeSlotsForDate(currentDateInWeek)
       });
     }
     return days;
@@ -420,7 +353,7 @@ const WeeklyCalendar = ({
   return (
     <div className={cn("bg-white rounded-xl shadow-sm p-4 md:p-6", className)}>
       <div className="flex justify-between items-center mb-4 md:mb-6">
-        <h2 className="text-lg md:text-xl font-semibold">{format(currentDateValue, "MMMM yyyy", { locale: ptBR })}</h2>
+        <h2 className="text-lg md:text-xl font-semibold">{currentMonth}</h2>
         {showControls && (
           <div className="flex gap-2">
             <Button 
@@ -515,25 +448,8 @@ const WeeklyCalendar = ({
                     <div className="text-sm text-gray-500">
                       {slot.slotsUsed}/{slot.slots} vagas
                     </div>
-                    {slot.volunteers && (
-                      <div className="mt-1 text-sm text-gray-600">
-                        {slot.volunteers.map((volunteer, idx) => (
-                          <div key={idx}>{volunteer}</div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                   <div className="flex gap-2">
-                    {slot.slotsUsed < slot.slots && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleVolunteerClick(slot)}
-                      >
-                        <UserPlus className="h-4 w-4" />
-                      </Button>
-                    )}
                     <Button 
                       variant="ghost" 
                       size="icon" 
@@ -570,25 +486,8 @@ const WeeklyCalendar = ({
                 <div className="text-sm text-gray-500">
                   {slot.slotsUsed}/{slot.slots} vagas
                 </div>
-                {slot.volunteers && (
-                  <div className="mt-1 text-sm text-gray-600">
-                    {slot.volunteers.map((volunteer, idx) => (
-                      <div key={idx}>{volunteer}</div>
-                    ))}
-                  </div>
-                )}
               </div>
               <div className="flex gap-2">
-                {slot.slotsUsed < slot.slots && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleVolunteerClick(slot)}
-                  >
-                    <UserPlus className="h-4 w-4" />
-                  </Button>
-                )}
                 <Button 
                   variant="ghost" 
                   size="icon" 

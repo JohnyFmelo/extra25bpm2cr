@@ -24,7 +24,6 @@ const ScheduleList = () => {
     queryKey: ["timeSlots"],
     queryFn: async () => {
       const slots = await dataOperations.fetch();
-      console.log("Fetched slots:", slots);
       return slots.filter((slot: TimeSlot) => 
         slot.slots_used === slot.total_slots || 
         (slot.slots_used === 1 && slot.total_slots === 1)
