@@ -60,7 +60,6 @@ const TimeSlotsList = () => {
       });
     });
 
-    // Cleanup subscription
     return () => unsubscribe();
   }, [toast]);
 
@@ -214,21 +213,21 @@ const TimeSlotsList = () => {
                       {slot.slots_used}/{slot.total_slots} vagas ocupadas
                     </p>
                   </div>
-                  {!isSlotFull(slot) && !isVolunteered(slot) ? (
-                    <Button 
-                      onClick={() => handleVolunteer(slot)}
-                      className="bg-blue-500 hover:bg-blue-600 text-white"
-                    >
-                      Voluntário
-                    </Button>
-                  ) : isVolunteered(slot) ? (
+                  {isVolunteered(slot) ? (
                     <Button 
                       onClick={() => handleUnvolunteer(slot)}
                       variant="destructive"
                     >
                       Desmarcar
                     </Button>
-                  ) : (
+                  ) : !isSlotFull(slot) ? (
+                    <Button 
+                      onClick={() => handleVolunteer(slot)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                      Voluntário
+                    </Button>
+                  ) : !isVolunteered(slot) && (
                     <Button disabled>
                       Vagas Esgotadas
                     </Button>
