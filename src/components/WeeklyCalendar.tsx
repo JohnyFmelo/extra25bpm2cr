@@ -52,8 +52,7 @@ const WeeklyCalendar = ({
   const weekStartDate = useMemo(() => {
     const date = new Date(currentDateValue);
     const day = date.getDay();
-    const diff = (day + 5) % 7; // Calculate days to subtract to reach Tuesday
-    date.setDate(date.getDate() - diff);
+    date.setDate(date.getDate() - ((day + 6) % 7)); // Adjust to start from Tuesday
     return date;
   }, [currentDateValue]);
 
@@ -349,7 +348,7 @@ const WeeklyCalendar = ({
     const days = [];
     const startDate = new Date(currentDateValue);
     const currentDay = startDate.getDay();
-    const daysToSubtract = (currentDay + 5) % 7; // Calculate days to subtract to reach Tuesday
+    const daysToSubtract = (currentDay + 6) % 7; // Calculate days to subtract to reach Tuesday
     startDate.setDate(currentDateValue.getDate() - daysToSubtract);
 
     for (let i = 0; i < 7; i++) {
