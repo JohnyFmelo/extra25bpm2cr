@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2, Eye, UserPlus, Trash } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
@@ -8,6 +8,16 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import TimeSlotDialog from "./TimeSlotDialog";
 import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface TimeSlot {
   date: Date;
@@ -44,6 +54,7 @@ const WeeklyCalendar = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showAllWeekSlots, setShowAllWeekSlots] = useState(false);
   const { toast } = useToast();
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
   const isLocked = externalIsLocked !== undefined ? externalIsLocked : internalIsLocked;
   const currentDateValue = externalCurrentDate !== undefined ? externalCurrentDate : internalCurrentDate;
@@ -350,6 +361,29 @@ const WeeklyCalendar = ({
     return days;
   };
 
+  const handleClearAllTimeSlots = async () => {
+    try {
+      const result = await dataOperations.clear();
+      if (result.success) {
+        setTimeSlots([]);
+        toast({
+          title: "Sucesso",
+          description: "Todos os horários foram removidos com sucesso.",
+        });
+        setShowDeleteAlert(false);
+      } else {
+        throw new Error('Falha ao limpar horários');
+      }
+    } catch (error) {
+      console.error('Erro ao limpar horários:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover os horários.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className={cn("bg-white rounded-xl shadow-sm p-4 md:p-6", className)}>
       <div className="flex justify-between items-center mb-4 md:mb-6">
@@ -386,6 +420,14 @@ const WeeklyCalendar = ({
               onClick={handleEyeClick}
             >
               <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 md:h-10 md:w-10"
+              onClick={() => setShowDeleteAlert(true)}
+            >
+              <Trash className="h-4 w-4" />
             </Button>
           </div>
         )}
@@ -509,6 +551,23 @@ const WeeklyCalendar = ({
           ))}
         </div>
       )}
+
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir todos os horários</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir todos os horários? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearAllTimeSlots}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {selectedDate && (
         <TimeSlotDialog
