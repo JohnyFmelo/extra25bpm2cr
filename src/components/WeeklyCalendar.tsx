@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2, Eye } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -47,16 +47,32 @@ const WeeklyCalendar = ({
 
   const isLocked = externalIsLocked !== undefined ? externalIsLocked : internalIsLocked;
   const currentDateValue = externalCurrentDate !== undefined ? externalCurrentDate : internalCurrentDate;
-  
-  const weekDays = ["ter", "qua", "qui", "sex", "sáb", "dom", "seg"];
-  const fullWeekDays = ["terça", "quarta", "quinta", "sexta", "sábado", "domingo", "segunda"];
-  const currentMonth = format(currentDateValue, "MMMM yyyy", { locale: ptBR });
-  const isMobile = useIsMobile();
 
-  const hasTimeSlotsForDate = (date: Date) => {
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    return timeSlots.some(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
-  };
+  // Store the current week's start and end dates
+  const weekStartDate = useMemo(() => {
+    const date = new Date(currentDateValue);
+    const day = date.getDay();
+    const diff = (day + 5) % 7; // Calculate days to subtract to reach Tuesday
+    date.setDate(date.getDate() - diff);
+    return date;
+  }, [currentDateValue]);
+
+  const weekEndDate = useMemo(() => {
+    const date = new Date(weekStartDate);
+    date.setDate(date.getDate() + 6); // Add 6 days to get to Monday
+    return date;
+  }, [weekStartDate]);
+
+  // Store the locked week dates in localStorage when the calendar is locked
+  useEffect(() => {
+    if (isLocked) {
+      localStorage.setItem('lockedWeekStart', weekStartDate.toISOString());
+      localStorage.setItem('lockedWeekEnd', weekEndDate.toISOString());
+    } else {
+      localStorage.removeItem('lockedWeekStart');
+      localStorage.removeItem('lockedWeekEnd');
+    }
+  }, [isLocked, weekStartDate, weekEndDate]);
 
   useEffect(() => {
     fetchTimeSlots();
@@ -340,11 +356,11 @@ const WeeklyCalendar = ({
       const currentDateInWeek = new Date(startDate);
       currentDateInWeek.setDate(startDate.getDate() + i);
       days.push({
-        dayName: isMobile ? weekDays[i] : fullWeekDays[i],
+        dayName: useIsMobile() ? ["ter", "qua", "qui", "sex", "sáb", "dom", "seg"][i] : ["terça", "quarta", "quinta", "sexta", "sábado", "domingo", "segunda"][i],
         date: currentDateInWeek.getDate(),
         fullDate: currentDateInWeek,
         isToday: currentDateInWeek.toDateString() === new Date().toDateString(),
-        hasTimeSlots: hasTimeSlotsForDate(currentDateInWeek)
+        hasTimeSlots: timeSlots.some(slot => format(slot.date, 'yyyy-MM-dd') === format(currentDateInWeek, 'yyyy-MM-dd'))
       });
     }
     return days;
@@ -353,7 +369,7 @@ const WeeklyCalendar = ({
   return (
     <div className={cn("bg-white rounded-xl shadow-sm p-4 md:p-6", className)}>
       <div className="flex justify-between items-center mb-4 md:mb-6">
-        <h2 className="text-lg md:text-xl font-semibold">{currentMonth}</h2>
+        <h2 className="text-lg md:text-xl font-semibold">{format(currentDateValue, "MMMM yyyy", { locale: ptBR })}</h2>
         {showControls && (
           <div className="flex gap-2">
             <Button 
