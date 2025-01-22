@@ -55,13 +55,27 @@ const ScheduleList = () => {
     return () => unsubscribe();
   }, [toast]);
 
+  const shouldShowTimeSlot = (slot: TimeSlot) => {
+    if (!slot.volunteers || slot.volunteers.length === 0) {
+      return false;
+    }
+
+    if (slot.total_slots === 1) {
+      return slot.volunteers.length === 1;
+    }
+
+    return slot.volunteers.length > 1;
+  };
+
   const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
     return slots.reduce((groups: GroupedTimeSlots, slot) => {
-      const date = slot.date;
-      if (!groups[date]) {
-        groups[date] = [];
+      if (shouldShowTimeSlot(slot)) {
+        const date = slot.date;
+        if (!groups[date]) {
+          groups[date] = [];
+        }
+        groups[date].push(slot);
       }
-      groups[date].push(slot);
       return groups;
     }, {});
   };
