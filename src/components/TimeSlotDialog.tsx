@@ -5,8 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { cn } from "@/lib/utils";
-import { Command, CommandGroup, CommandItem } from "./ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 interface TimeSlot {
   date: Date;
@@ -25,15 +23,6 @@ interface TimeSlotDialogProps {
   editingTimeSlot: TimeSlot | null;
 }
 
-const commonTimeSlots = [
-  "07 às 13",
-  "13 às 19",
-  "19 às 01",
-  "08 às 12",
-  "14 às 18",
-  "19 às 23",
-];
-
 const TimeSlotDialog = ({ 
   isOpen, 
   onClose, 
@@ -46,7 +35,6 @@ const TimeSlotDialog = ({
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     if (editingTimeSlot) {
@@ -95,37 +83,13 @@ const TimeSlotDialog = ({
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          <div className="relative">
-            <Popover open={showSuggestions} onOpenChange={setShowSuggestions}>
-              <PopoverTrigger asChild>
-                <Input
-                  value={timeSlot}
-                  onChange={(e) => {
-                    setTimeSlot(e.target.value);
-                    setShowSuggestions(true);
-                  }}
-                  className="text-center"
-                  placeholder="13 às 19"
-                />
-              </PopoverTrigger>
-              <PopoverContent className="p-0" align="start">
-                <Command>
-                  <CommandGroup>
-                    {commonTimeSlots.map((slot) => (
-                      <CommandItem
-                        key={slot}
-                        onSelect={() => {
-                          setTimeSlot(slot);
-                          setShowSuggestions(false);
-                        }}
-                      >
-                        {slot}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
+          <div>
+            <Input
+              value={timeSlot}
+              onChange={(e) => setTimeSlot(e.target.value)}
+              className="text-center"
+              placeholder="13 às 19"
+            />
           </div>
           <div className="flex justify-center gap-2">
             {slotOptions.map((slots) => (
