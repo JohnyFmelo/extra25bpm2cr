@@ -1,156 +1,182 @@
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { cn } from "@/lib/utils";
+import { Command, CommandGroup, CommandItem } from "./ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+
+interface TimeSlot {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  slots: number;
+  slotsUsed: number;
+}
 
 interface TimeSlotDialogProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: Date;
-  onAddTimeSlot: (timeSlot: any) => void;
-  onEditTimeSlot?: (timeSlot: any) => void;
-  editingTimeSlot?: any;
+  onAddTimeSlot: (timeSlot: TimeSlot) => void;
+  onEditTimeSlot: (timeSlot: TimeSlot) => void;
+  editingTimeSlot: TimeSlot | null;
 }
 
 const commonTimeSlots = [
-  { start: "07:00", end: "08:00" },
-  { start: "08:00", end: "09:00" },
-  { start: "09:00", end: "10:00" },
-  { start: "10:00", end: "11:00" },
-  { start: "14:00", end: "15:00" },
-  { start: "15:00", end: "16:00" },
-  { start: "16:00", end: "17:00" },
-  { start: "17:00", end: "18:00" },
+  "07 às 13",
+  "13 às 19",
+  "19 às 01",
+  "08 às 12",
+  "14 às 18",
+  "19 às 23",
 ];
 
-const TimeSlotDialog: React.FC<TimeSlotDialogProps> = ({
-  isOpen,
-  onClose,
-  selectedDate,
-  onAddTimeSlot,
+const TimeSlotDialog = ({ 
+  isOpen, 
+  onClose, 
+  selectedDate, 
+  onAddTimeSlot, 
   onEditTimeSlot,
-  editingTimeSlot,
-}) => {
-  const [startTime, setStartTime] = useState(editingTimeSlot?.startTime || "");
-  const [endTime, setEndTime] = useState(editingTimeSlot?.endTime || "");
-  const [slots, setSlots] = useState(editingTimeSlot?.slots || 1);
-  const [isTimePopoverOpen, setIsTimePopoverOpen] = useState(false);
+  editingTimeSlot 
+}: TimeSlotDialogProps) => {
+  const [timeSlot, setTimeSlot] = useState("13 às 19");
+  const [selectedSlots, setSelectedSlots] = useState<number>(2);
+  const [showCustomSlots, setShowCustomSlots] = useState(false);
+  const [customSlots, setCustomSlots] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     if (editingTimeSlot) {
-      setStartTime(editingTimeSlot.startTime);
-      setEndTime(editingTimeSlot.endTime);
-      setSlots(editingTimeSlot.slots);
+      setTimeSlot(`${editingTimeSlot.startTime} às ${editingTimeSlot.endTime}`);
+      setSelectedSlots(editingTimeSlot.slots);
+      if (!slotOptions.includes(editingTimeSlot.slots)) {
+        setShowCustomSlots(true);
+        setCustomSlots(editingTimeSlot.slots.toString());
+      }
+    } else {
+      setTimeSlot("13 às 19");
+      setSelectedSlots(2);
+      setShowCustomSlots(false);
+      setCustomSlots("");
     }
   }, [editingTimeSlot]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const timeSlot = {
+  const slotOptions = [2, 3, 4, 5];
+
+  const handleRegister = () => {
+    const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
+    const [startTime, endTime] = timeSlot.split(" às ");
+    
+    const newTimeSlot: TimeSlot = {
       date: selectedDate,
       startTime,
       endTime,
-      slots: Number(slots),
-      slotsUsed: editingTimeSlot?.slotsUsed || 0,
+      slots,
+      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0
     };
-
-    if (editingTimeSlot && onEditTimeSlot) {
-      onEditTimeSlot(timeSlot);
+    
+    if (editingTimeSlot) {
+      onEditTimeSlot(newTimeSlot);
     } else {
-      onAddTimeSlot(timeSlot);
+      onAddTimeSlot(newTimeSlot);
     }
+    onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {editingTimeSlot ? "Editar Horário" : "Novo Horário"} -{" "}
-            {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+          <DialogTitle className="text-center font-bold">
+            {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Horário inicial</label>
-            <Popover open={isTimePopoverOpen} onOpenChange={setIsTimePopoverOpen}>
+        <div className="space-y-4 py-4">
+          <div className="relative">
+            <Popover open={showSuggestions} onOpenChange={setShowSuggestions}>
               <PopoverTrigger asChild>
                 <Input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  required
+                  value={timeSlot}
+                  onChange={(e) => {
+                    setTimeSlot(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  className="text-center"
+                  placeholder="13 às 19"
                 />
               </PopoverTrigger>
               <PopoverContent className="p-0" align="start">
                 <Command>
-                  <CommandInput placeholder="Buscar horário..." />
-                  <CommandList>
-                    <CommandEmpty>Nenhum horário encontrado.</CommandEmpty>
-                    <CommandGroup>
-                      {commonTimeSlots.map((slot) => (
-                        <CommandItem
-                          key={slot.start}
-                          onSelect={() => {
-                            setStartTime(slot.start);
-                            setEndTime(slot.end);
-                            setIsTimePopoverOpen(false);
-                          }}
-                        >
-                          {slot.start} - {slot.end}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
+                  <CommandGroup>
+                    {commonTimeSlots.map((slot) => (
+                      <CommandItem
+                        key={slot}
+                        onSelect={() => {
+                          setTimeSlot(slot);
+                          setShowSuggestions(false);
+                        }}
+                      >
+                        {slot}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
                 </Command>
               </PopoverContent>
             </Popover>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Horário final</label>
-            <Input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              required
-            />
+          <div className="flex justify-center gap-2">
+            {slotOptions.map((slots) => (
+              <Button
+                key={slots}
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "w-10 h-10",
+                  selectedSlots === slots && !showCustomSlots && "bg-black text-white hover:bg-black/90"
+                )}
+                onClick={() => {
+                  setSelectedSlots(slots);
+                  setShowCustomSlots(false);
+                }}
+              >
+                {slots}
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "w-10 h-10",
+                showCustomSlots && "bg-black text-white hover:bg-black/90"
+              )}
+              onClick={() => setShowCustomSlots(true)}
+            >
+              +
+            </Button>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Número de vagas</label>
-            <Input
-              type="number"
-              min="1"
-              value={slots}
-              onChange={(e) => setSlots(Number(e.target.value))}
-              required
-            />
-          </div>
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+          {showCustomSlots && (
+            <div>
+              <Input
+                type="number"
+                value={customSlots}
+                onChange={(e) => setCustomSlots(e.target.value)}
+                className="text-center"
+                placeholder="Número de vagas"
+              />
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit">
-              {editingTimeSlot ? "Salvar" : "Adicionar"}
+            <Button onClick={handleRegister}>
+              {editingTimeSlot ? "Salvar" : "Registrar Horário"}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
