@@ -1,12 +1,12 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ScrollArea } from "./ui/scroll-area";
-import { dataOperations } from "@/lib/firebase";
-import { useQuery } from "@tanstack/react-query";
+import { collection, query, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 interface TimeSlot {
-  id: string;
+  id?: string;
   date: string;
   start_time: string;
   end_time: string;
@@ -16,85 +16,105 @@ interface TimeSlot {
 }
 
 interface GroupedTimeSlots {
-  [date: string]: TimeSlot[];
+  [key: string]: TimeSlot[];
 }
 
 const ScheduleList = () => {
-  const { data: timeSlots = [], isLoading } = useQuery({
-    queryKey: ["timeSlots"],
-    queryFn: async () => {
-      const slots = await dataOperations.fetch();
-      return slots.filter((slot: TimeSlot) => 
-        slot.slots_used === slot.total_slots || 
-        (slot.slots_used === 1 && slot.total_slots === 1)
-      );
-    },
-  });
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const timeSlotsCollection = collection(db, 'timeSlots');
+    const q = query(timeSlotsCollection);
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const formattedSlots: TimeSlot[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          date: data.date,
+          start_time: data.start_time,
+          end_time: data.end_time,
+          volunteers: data.volunteers || [],
+          slots_used: data.slots_used || 0,
+          total_slots: data.total_slots || data.slots || 0,
+        };
+      });
+      setTimeSlots(formattedSlots);
+      setIsLoading(false);
+    }, (error) => {
+      console.error('Error listening to time slots:', error);
+      toast({
+        title: "Erro ao atualizar escala",
+        description: "Não foi possível receber atualizações em tempo real.",
+        variant: "destructive"
+      });
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
+
+  const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
+    return slots.reduce((groups: GroupedTimeSlots, slot) => {
+      const date = slot.date;
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(slot);
+      return groups;
+    }, {});
+  };
+
+  const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Carregando horários...</p>
-      </div>
-    );
+    return <div className="text-center py-4">Carregando escala...</div>;
   }
 
-  const groupedSlots = timeSlots.reduce((acc: GroupedTimeSlots, slot: TimeSlot) => {
-    const date = slot.date;
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(slot);
-    return acc;
-  }, {});
-
-  const sortedDates = Object.keys(groupedSlots).sort((a, b) => 
-    new Date(a).getTime() - new Date(b).getTime()
-  );
-
-  if (sortedDates.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Nenhum horário completamente preenchido encontrado.</p>
-      </div>
-    );
+  if (Object.keys(groupedTimeSlots).length === 0) {
+    return <div className="text-center py-4">Nenhum horário encontrado.</div>;
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-12rem)] px-4">
-      <div className="space-y-6">
-        {sortedDates.map((date) => (
-          <div key={date} className="bg-white rounded-lg shadow-sm p-4">
-            <h3 className="text-lg font-semibold mb-3">
-              {format(parseISO(date), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-            </h3>
-            <div className="space-y-3">
-              {groupedSlots[date].map((slot: TimeSlot) => (
-                <div
-                  key={slot.id}
-                  className="bg-gray-50 rounded-lg p-3 border border-gray-100"
-                >
+    <div className="space-y-6">
+      {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => (
+        <div key={date} className="space-y-4">
+          <h3 className="font-medium text-lg">
+            {format(parseISO(date), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+          </h3>
+          <div className="space-y-4">
+            {slots.map((slot) => (
+              <div 
+                key={slot.id} 
+                className="border rounded-lg p-4 space-y-3"
+              >
+                <div>
                   <p className="font-medium">
-                    {slot.start_time.slice(0, 5)} às {slot.end_time.slice(0, 5)}
+                    {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}
                   </p>
-                  <div className="mt-2 text-sm text-gray-600">
-                    {slot.volunteers ? (
-                      <div className="space-y-1">
-                        {slot.volunteers.map((volunteer, index) => (
-                          <p key={index}>{volunteer}</p>
-                        ))}
-                      </div>
-                    ) : (
-                      <p>Vagas preenchidas: {slot.slots_used}/{slot.total_slots}</p>
-                    )}
-                  </div>
+                  <p className="text-sm text-gray-500">
+                    {slot.slots_used}/{slot.total_slots} vagas ocupadas
+                  </p>
                 </div>
-              ))}
-            </div>
+                {slot.volunteers && slot.volunteers.length > 0 && (
+                  <div className="pt-2 border-t">
+                    <p className="text-sm font-medium mb-1">Voluntários:</p>
+                    <div className="space-y-1">
+                      {slot.volunteers.map((volunteer, index) => (
+                        <p key={index} className="text-sm text-gray-600">
+                          {volunteer}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </ScrollArea>
+        </div>
+      ))}
+    </div>
   );
 };
 
