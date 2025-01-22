@@ -1,25 +1,30 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { LogOut } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const TopBar = () => {
   const navigate = useNavigate();
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
-  }, [navigate]);
+  };
 
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -29,20 +34,31 @@ const TopBar = () => {
         <div className="flex-1">
           <h2 className="text-lg font-semibold text-primary-foreground">Dashboard</h2>
         </div>
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-light">
-              <LogOut className="h-5 w-5" />
-              <span className="sr-only">Logout</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-popover">
-            <DropdownMenuItem onClick={handleLogout} className="hover:bg-accent hover:text-accent-foreground">
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="text-primary-foreground hover:bg-primary-light"
+          onClick={() => setShowLogoutDialog(true)}
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="sr-only">Sair</span>
+        </Button>
+
+        <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Saída</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja sair do sistema?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleLogout}>Sair</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {showProfileDialog && (
           <ProfileUpdateDialog
