@@ -32,7 +32,9 @@ const TopBar = () => {
     <header className="bg-primary shadow-md">
       <div className="flex h-16 items-center px-6 gap-4 max-w-7xl mx-auto">
         <div className="flex-1">
-          <h2 className="text-lg font-semibold text-primary-foreground">Dashboard</h2>
+          <h2 className="text-lg font-semibold text-primary-foreground">
+            {userData.rank} {userData.warName}
+          </h2>
         </div>
         
         <Button 
