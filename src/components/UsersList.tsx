@@ -96,17 +96,18 @@ const UsersList = () => {
     setIsDialogOpen(true);
   };
 
+  const formatUserName = (user: User) => {
+    return `${user.rank || ''} ${user.warName}`.trim();
+  };
+
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Usuários Cadastrados</h2>
+      <h2 className="text-2xl font-bold mb-6 text-primary">Usuários Cadastrados</h2>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nome de Guerra</TableHead>
-            <TableHead>Graduação</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Matrícula</TableHead>
-            <TableHead>Ações</TableHead>
+            <TableHead className="text-primary">Nome</TableHead>
+            <TableHead className="text-primary">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -117,12 +118,9 @@ const UsersList = () => {
                   onClick={() => handleUserClick(user)}
                   className="text-primary hover:underline"
                 >
-                  {user.warName}
+                  {formatUserName(user)}
                 </button>
               </TableCell>
-              <TableCell>{user.rank}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>{user.registration}</TableCell>
               <TableCell>
                 <div className="flex gap-2">
                   <Button
@@ -133,7 +131,7 @@ const UsersList = () => {
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant={user.blocked ? "destructive" : "outline"}
                     size="icon"
                     onClick={() => handleToggleBlock(user)}
                   >
