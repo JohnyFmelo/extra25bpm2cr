@@ -415,7 +415,7 @@ const WeeklyCalendar = ({
               size="icon" 
               className="h-8 w-8 md:h-10 md:w-10"
               onClick={handlePlusClick}
-              disabled={!selectedDate}
+              disabled={!selectedDate || isLocked}
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -424,7 +424,7 @@ const WeeklyCalendar = ({
               size="icon" 
               className="h-8 w-8 md:h-10 md:w-10"
               onClick={handleWeeklyPlusClick}
-              disabled={!selectedDate}
+              disabled={!selectedDate || isLocked}
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -444,6 +444,7 @@ const WeeklyCalendar = ({
               size="icon"
               className="h-8 w-8 md:h-10 md:w-10"
               onClick={() => setShowDeleteAlert(true)}
+              disabled={isLocked}
             >
               <Trash className="h-4 w-4" />
             </Button>
