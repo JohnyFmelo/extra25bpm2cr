@@ -33,13 +33,17 @@ interface WeeklyCalendarProps {
   currentDate?: Date;
   onDateChange?: (date: Date) => void;
   showControls?: boolean;
+  isLocked?: boolean;
+  onLockChange?: (locked: boolean) => void;
 }
 
 const WeeklyCalendar = ({ 
   className,
   currentDate: externalCurrentDate,
   onDateChange,
-  showControls = true
+  showControls = true,
+  isLocked = false,
+  onLockChange
 }: WeeklyCalendarProps) => {
   const [internalCurrentDate, setInternalCurrentDate] = useState(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -300,6 +304,11 @@ const WeeklyCalendar = ({
     }
   };
 
+  const handleClearAllTimeSlots = async () => {
+    await handleClearData();
+    setShowDeleteAlert(false);
+  };
+
   const handlePreviousWeek = () => {
     const newDate = subWeeks(currentDateValue, 1);
     if (onDateChange) {
@@ -515,7 +524,7 @@ const WeeklyCalendar = ({
                       className="h-8 w-8"
                       onClick={() => handleDeleteTimeSlot(slot)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -553,7 +562,7 @@ const WeeklyCalendar = ({
                   className="h-8 w-8"
                   onClick={() => handleDeleteTimeSlot(slot)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash className="h-4 w-4" />
                 </Button>
               </div>
             </div>
