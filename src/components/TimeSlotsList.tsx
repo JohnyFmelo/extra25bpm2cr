@@ -190,6 +190,27 @@ const TimeSlotsList = () => {
       .replace(/^\w/, (c) => c.toUpperCase());
   };
 
+  const shouldShowVolunteerButton = (slot: TimeSlot) => {
+    // If the current user is volunteered for this slot, show the unvolunteer button
+    if (isVolunteered(slot)) {
+      return true;
+    }
+
+    // If the slot is full, show the "Vagas Esgotadas" button
+    if (isSlotFull(slot)) {
+      return true;
+    }
+
+    // Check if user is volunteered for any slot on this date
+    const slotsForDate = timeSlots.filter(s => s.date === slot.date);
+    const isVolunteeredForDate = slotsForDate.some(s => 
+      s.volunteers?.includes(volunteerName)
+    );
+
+    // Only show the volunteer button if user is not volunteered for any slot on this date
+    return !isVolunteeredForDate;
+  };
+
   const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
 
   if (isLoading) {
@@ -218,26 +239,28 @@ const TimeSlotsList = () => {
                       {slot.slots_used}/{slot.total_slots} vagas ocupadas
                     </p>
                   </div>
-                  {isVolunteered(slot) ? (
-                    <Button 
-                      onClick={() => handleUnvolunteer(slot)}
-                      variant="destructive"
-                      size="sm"
-                    >
-                      Desmarcar
-                    </Button>
-                  ) : !isSlotFull(slot) ? (
-                    <Button 
-                      onClick={() => handleVolunteer(slot)}
-                      className="bg-blue-500 hover:bg-blue-600 text-white"
-                      size="sm"
-                    >
-                      Voluntário
-                    </Button>
-                  ) : !isVolunteered(slot) && (
-                    <Button disabled size="sm">
-                      Vagas Esgotadas
-                    </Button>
+                  {shouldShowVolunteerButton(slot) && (
+                    isVolunteered(slot) ? (
+                      <Button 
+                        onClick={() => handleUnvolunteer(slot)}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        Desmarcar
+                      </Button>
+                    ) : !isSlotFull(slot) ? (
+                      <Button 
+                        onClick={() => handleVolunteer(slot)}
+                        className="bg-blue-500 hover:bg-blue-600 text-white"
+                        size="sm"
+                      >
+                        Voluntário
+                      </Button>
+                    ) : (
+                      <Button disabled size="sm">
+                        Vagas Esgotadas
+                      </Button>
+                    )
                   )}
                 </div>
                 {slot.volunteers && slot.volunteers.length > 0 && (
