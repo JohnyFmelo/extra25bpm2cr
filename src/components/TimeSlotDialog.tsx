@@ -21,6 +21,7 @@ interface TimeSlotDialogProps {
   onAddTimeSlot: (timeSlot: TimeSlot) => void;
   onEditTimeSlot: (timeSlot: TimeSlot) => void;
   editingTimeSlot: TimeSlot | null;
+  isWeekly?: boolean;
 }
 
 const TimeSlotDialog = ({ 
@@ -29,7 +30,8 @@ const TimeSlotDialog = ({
   selectedDate, 
   onAddTimeSlot, 
   onEditTimeSlot,
-  editingTimeSlot 
+  editingTimeSlot,
+  isWeekly = false
 }: TimeSlotDialogProps) => {
   const [timeSlot, setTimeSlot] = useState("13 às 19");
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
@@ -79,7 +81,7 @@ const TimeSlotDialog = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center font-bold">
-            {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
+            {isWeekly ? "Criar Horário Semanal" : format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -137,7 +139,7 @@ const TimeSlotDialog = ({
               Cancelar
             </Button>
             <Button onClick={handleRegister}>
-              {editingTimeSlot ? "Salvar" : "Registrar Horário"}
+              {editingTimeSlot ? "Salvar" : isWeekly ? "Registrar Horário Semanal" : "Registrar Horário"}
             </Button>
           </div>
         </div>

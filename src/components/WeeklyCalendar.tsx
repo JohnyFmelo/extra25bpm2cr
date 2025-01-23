@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Lock, Pencil, Trash2, Eye, UserPlus, Trash } from "lucide-react";
-import { format, addWeeks, subWeeks, parseISO } from "date-fns";
+import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, UserPlus, Trash } from "lucide-react";
+import { format, addWeeks, subWeeks, parseISO, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
@@ -30,8 +30,6 @@ interface TimeSlot {
 
 interface WeeklyCalendarProps {
   className?: string;
-  isLocked?: boolean;
-  onLockChange?: (isLocked: boolean) => void;
   currentDate?: Date;
   onDateChange?: (date: Date) => void;
   showControls?: boolean;
@@ -39,13 +37,10 @@ interface WeeklyCalendarProps {
 
 const WeeklyCalendar = ({ 
   className,
-  isLocked: externalIsLocked,
-  onLockChange,
   currentDate: externalCurrentDate,
   onDateChange,
   showControls = true
 }: WeeklyCalendarProps) => {
-  const [internalIsLocked, setInternalIsLocked] = useState(false);
   const [internalCurrentDate, setInternalCurrentDate] = useState(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -53,12 +48,11 @@ const WeeklyCalendar = ({
   const [editingTimeSlot, setEditingTimeSlot] = useState<TimeSlot | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showAllWeekSlots, setShowAllWeekSlots] = useState(false);
+  const [showWeeklyDialog, setShowWeeklyDialog] = useState(false);
   const { toast } = useToast();
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-
-  const isLocked = externalIsLocked !== undefined ? externalIsLocked : internalIsLocked;
-  const currentDateValue = externalCurrentDate !== undefined ? externalCurrentDate : internalCurrentDate;
   
+  const currentDateValue = externalCurrentDate !== undefined ? externalCurrentDate : internalCurrentDate;
   const weekDays = ["ter", "qua", "qui", "sex", "sáb", "dom", "seg"];
   const fullWeekDays = ["terça", "quarta", "quinta", "sexta", "sábado", "domingo", "segunda"];
   const currentMonth = format(currentDateValue, "MMMM yyyy", { locale: ptBR });
@@ -190,6 +184,52 @@ const WeeklyCalendar = ({
     }
   };
 
+  const handleWeeklyTimeSlotAdd = async (timeSlot: TimeSlot) => {
+    try {
+      const startDate = selectedDate || currentDateValue;
+      const promises = [];
+
+      // Create time slots for the next 7 days
+      for (let i = 0; i < 7; i++) {
+        const currentDate = addDays(startDate, i);
+        const formattedDate = format(currentDate, 'yyyy-MM-dd');
+
+        promises.push(
+          dataOperations.insert({
+            date: formattedDate,
+            start_time: formatTimeForDB(timeSlot.startTime),
+            end_time: formatTimeForDB(timeSlot.endTime),
+            total_slots: timeSlot.slots,
+            slots_used: 0
+          })
+        );
+      }
+
+      const results = await Promise.all(promises);
+      const hasError = results.some(result => !result.success);
+
+      if (hasError) {
+        throw new Error('Failed to insert some time slots');
+      }
+
+      await fetchTimeSlots();
+      setIsDialogOpen(false);
+      setShowWeeklyDialog(false);
+      
+      toast({
+        title: "Sucesso",
+        description: "Horários semanais adicionados com sucesso!"
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar horários semanais:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar os horários semanais.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleTimeSlotEdit = async (updatedTimeSlot: TimeSlot) => {
     if (!editingTimeSlot) return;
     
@@ -261,36 +301,23 @@ const WeeklyCalendar = ({
   };
 
   const handlePreviousWeek = () => {
-    if (!isLocked) {
-      const newDate = subWeeks(currentDateValue, 1);
-      if (onDateChange) {
-        onDateChange(newDate);
-      } else {
-        setInternalCurrentDate(newDate);
-      }
-      setShowAllWeekSlots(false);
+    const newDate = subWeeks(currentDateValue, 1);
+    if (onDateChange) {
+      onDateChange(newDate);
+    } else {
+      setInternalCurrentDate(newDate);
     }
+    setShowAllWeekSlots(false);
   };
 
   const handleNextWeek = () => {
-    if (!isLocked) {
-      const newDate = addWeeks(currentDateValue, 1);
-      if (onDateChange) {
-        onDateChange(newDate);
-      } else {
-        setInternalCurrentDate(newDate);
-      }
-      setShowAllWeekSlots(false);
-    }
-  };
-
-  const toggleLock = () => {
-    const newLockState = !isLocked;
-    if (onLockChange) {
-      onLockChange(newLockState);
+    const newDate = addWeeks(currentDateValue, 1);
+    if (onDateChange) {
+      onDateChange(newDate);
     } else {
-      setInternalIsLocked(newLockState);
+      setInternalCurrentDate(newDate);
     }
+    setShowAllWeekSlots(false);
   };
 
   const handleDayClick = (date: Date) => {
@@ -303,6 +330,13 @@ const WeeklyCalendar = ({
     if (selectedDate) {
       setEditingTimeSlot(null);
       setIsDialogOpen(true);
+    }
+  };
+
+  const handleWeeklyPlusClick = () => {
+    if (selectedDate) {
+      setEditingTimeSlot(null);
+      setShowWeeklyDialog(true);
     }
   };
 
@@ -361,29 +395,6 @@ const WeeklyCalendar = ({
     return days;
   };
 
-  const handleClearAllTimeSlots = async () => {
-    try {
-      const result = await dataOperations.clear();
-      if (result.success) {
-        setTimeSlots([]);
-        toast({
-          title: "Sucesso",
-          description: "Todos os horários foram removidos com sucesso.",
-        });
-        setShowDeleteAlert(false);
-      } else {
-        throw new Error('Falha ao limpar horários');
-      }
-    } catch (error) {
-      console.error('Erro ao limpar horários:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível remover os horários.",
-        variant: "destructive"
-      });
-    }
-  };
-
   return (
     <div className={cn("bg-white rounded-xl shadow-sm p-4 md:p-6", className)}>
       <div className="flex justify-between items-center mb-4 md:mb-6">
@@ -393,22 +404,20 @@ const WeeklyCalendar = ({
             <Button 
               variant="outline" 
               size="icon" 
-              className={cn(
-                "h-8 w-8 md:h-10 md:w-10",
-                isLocked && "bg-black text-white hover:bg-black/90"
-              )}
-              onClick={toggleLock}
-            >
-              <Lock className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
               className="h-8 w-8 md:h-10 md:w-10"
               onClick={handlePlusClick}
               disabled={!selectedDate}
             >
               <Plus className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-8 w-8 md:h-10 md:w-10"
+              onClick={handleWeeklyPlusClick}
+              disabled={!selectedDate}
+            >
+              <Pencil className="h-4 w-4" />
             </Button>
             <Button 
               variant="outline" 
@@ -570,17 +579,31 @@ const WeeklyCalendar = ({
       </AlertDialog>
 
       {selectedDate && (
-        <TimeSlotDialog
-          isOpen={isDialogOpen}
-          onClose={() => {
-            setIsDialogOpen(false);
-            setEditingTimeSlot(null);
-          }}
-          selectedDate={selectedDate}
-          onAddTimeSlot={handleTimeSlotAdd}
-          onEditTimeSlot={handleTimeSlotEdit}
-          editingTimeSlot={editingTimeSlot}
-        />
+        <>
+          <TimeSlotDialog
+            isOpen={isDialogOpen}
+            onClose={() => {
+              setIsDialogOpen(false);
+              setEditingTimeSlot(null);
+            }}
+            selectedDate={selectedDate}
+            onAddTimeSlot={handleTimeSlotAdd}
+            onEditTimeSlot={handleTimeSlotEdit}
+            editingTimeSlot={editingTimeSlot}
+          />
+          <TimeSlotDialog
+            isOpen={showWeeklyDialog}
+            onClose={() => {
+              setShowWeeklyDialog(false);
+              setEditingTimeSlot(null);
+            }}
+            selectedDate={selectedDate}
+            onAddTimeSlot={handleWeeklyTimeSlotAdd}
+            onEditTimeSlot={handleTimeSlotEdit}
+            editingTimeSlot={editingTimeSlot}
+            isWeekly={true}
+          />
+        </>
       )}
     </div>
   );
