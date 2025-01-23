@@ -29,17 +29,41 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-// Helper function to safely clone Firestore data by removing non-serializable fields
-const safeClone = (data: DocumentData) => {
-  const cleaned = Object.entries(data).reduce((acc, [key, value]) => {
-    // Skip functions and complex objects that can't be cloned
-    if (typeof value !== 'function' && !(value instanceof ReadableStream)) {
-      acc[key] = value;
-    }
-    return acc;
-  }, {} as Record<string, any>);
+// Helper function to safely clone Firestore data
+const safeClone = (data: DocumentData): Record<string, any> => {
+  const serializableData: Record<string, any> = {};
   
-  return JSON.parse(JSON.stringify(cleaned));
+  for (const [key, value] of Object.entries(data)) {
+    // Skip functions and non-serializable objects
+    if (typeof value === 'function' || value instanceof ReadableStream) {
+      continue;
+    }
+    
+    // Handle Date objects
+    if (value instanceof Date) {
+      serializableData[key] = value.toISOString();
+      continue;
+    }
+    
+    // Handle arrays
+    if (Array.isArray(value)) {
+      serializableData[key] = value.map(item => 
+        typeof item === 'object' && item !== null ? safeClone(item) : item
+      );
+      continue;
+    }
+    
+    // Handle nested objects
+    if (typeof value === 'object' && value !== null) {
+      serializableData[key] = safeClone(value);
+      continue;
+    }
+    
+    // Handle primitive values
+    serializableData[key] = value;
+  }
+  
+  return serializableData;
 };
 
 // Helper function to safely get documents from a query snapshot
