@@ -197,17 +197,17 @@ const TimeSlotsList = () => {
   }
 
   return (
-    <div className="space-y-8 p-4">
+    <div className="space-y-6 p-4">
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => (
-        <div key={date} className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="font-medium text-lg mb-4 text-gray-800">
+        <div key={date} className="bg-white rounded-lg shadow-sm p-4 md:p-5">
+          <h3 className="font-medium text-lg mb-3 text-gray-800">
             {formatDateHeader(date)}
           </h3>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {slots.map((slot) => (
               <div 
                 key={slot.id} 
-                className={`border rounded-lg p-4 space-y-3 ${isSlotFull(slot) ? 'bg-orange-50' : 'bg-gray-50'}`}
+                className={`border rounded-lg p-3 space-y-2 ${isSlotFull(slot) ? 'bg-orange-50' : 'bg-gray-50'}`}
               >
                 <div className="flex justify-between items-center">
                   <div>
