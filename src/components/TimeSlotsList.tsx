@@ -185,6 +185,11 @@ const TimeSlotsList = () => {
     return timeSlot.slots_used === timeSlot.total_slots;
   };
 
+  const formatDateHeader = (date: string) => {
+    return format(parseISO(date), "EEEE, dd 'de' MMMM", { locale: ptBR })
+      .replace(/^\w/, (c) => c.toUpperCase());
+  };
+
   const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
 
   if (isLoading) {
@@ -192,24 +197,24 @@ const TimeSlotsList = () => {
   }
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-8 p-4">
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => (
-        <div key={date} className="space-y-4">
-          <h3 className="font-medium text-lg">
-            {format(parseISO(date), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+        <div key={date} className="bg-white rounded-xl shadow-sm p-6">
+          <h3 className="font-medium text-lg mb-4 text-gray-800">
+            {formatDateHeader(date)}
           </h3>
           <div className="space-y-4">
             {slots.map((slot) => (
               <div 
                 key={slot.id} 
-                className={`border rounded-lg p-4 space-y-3 ${isSlotFull(slot) ? 'bg-orange-100' : ''}`}
+                className={`border rounded-lg p-4 space-y-3 ${isSlotFull(slot) ? 'bg-orange-50' : 'bg-gray-50'}`}
               >
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="font-medium">
+                    <p className="font-medium text-gray-900">
                       {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-600">
                       {slot.slots_used}/{slot.total_slots} vagas ocupadas
                     </p>
                   </div>
@@ -217,6 +222,7 @@ const TimeSlotsList = () => {
                     <Button 
                       onClick={() => handleUnvolunteer(slot)}
                       variant="destructive"
+                      size="sm"
                     >
                       Desmarcar
                     </Button>
@@ -224,18 +230,19 @@ const TimeSlotsList = () => {
                     <Button 
                       onClick={() => handleVolunteer(slot)}
                       className="bg-blue-500 hover:bg-blue-600 text-white"
+                      size="sm"
                     >
                       Voluntário
                     </Button>
                   ) : !isVolunteered(slot) && (
-                    <Button disabled>
+                    <Button disabled size="sm">
                       Vagas Esgotadas
                     </Button>
                   )}
                 </div>
                 {slot.volunteers && slot.volunteers.length > 0 && (
-                  <div className="pt-2 border-t">
-                    <p className="text-sm font-medium mb-1">Voluntários:</p>
+                  <div className="pt-2 border-t border-gray-200">
+                    <p className="text-sm font-medium mb-1 text-gray-700">Voluntários:</p>
                     <div className="space-y-1">
                       {slot.volunteers.map((volunteer, index) => (
                         <p key={index} className="text-sm text-gray-600">
