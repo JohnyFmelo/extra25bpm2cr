@@ -22,6 +22,7 @@ interface TimeSlotDialogProps {
   onAddTimeSlot: (timeSlot: TimeSlot) => void;
   onEditTimeSlot: (timeSlot: TimeSlot) => void;
   editingTimeSlot: TimeSlot | null;
+  isWeekly?: boolean;
 }
 
 const TimeSlotDialog = ({ 
@@ -31,12 +32,13 @@ const TimeSlotDialog = ({
   onAddTimeSlot, 
   onEditTimeSlot,
   editingTimeSlot,
+  isWeekly = false,
 }: TimeSlotDialogProps) => {
   const [timeSlot, setTimeSlot] = useState("13 às 19");
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
-  const [selectedTab, setSelectedTab] = useState("daily");
+  const [selectedTab, setSelectedTab] = useState(isWeekly ? "weekly" : "daily");
 
   useEffect(() => {
     if (editingTimeSlot) {
