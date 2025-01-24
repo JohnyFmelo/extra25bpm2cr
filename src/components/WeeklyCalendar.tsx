@@ -338,13 +338,6 @@ const WeeklyCalendar = ({
   const handlePlusClick = () => {
     if (selectedDate) {
       setEditingTimeSlot(null);
-      setIsDialogOpen(true);
-    }
-  };
-
-  const handleWeeklyPlusClick = () => {
-    if (selectedDate) {
-      setEditingTimeSlot(null);
       setShowWeeklyDialog(true);
     }
   };
@@ -418,15 +411,6 @@ const WeeklyCalendar = ({
               disabled={!selectedDate || isLocked}
             >
               <Plus className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="h-8 w-8 md:h-10 md:w-10"
-              onClick={handleWeeklyPlusClick}
-              disabled={!selectedDate || isLocked}
-            >
-              <Pencil className="h-4 w-4" />
             </Button>
             <Button 
               variant="outline" 

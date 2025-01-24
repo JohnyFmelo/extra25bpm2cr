@@ -1,4 +1,4 @@
-import { Clock, Calendar, BookOpen, FileText, ArrowLeft, Settings, Users } from "lucide-react";
+import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -60,7 +60,7 @@ const Index = () => {
               <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
               {user.userType === "admin" && (
                 <>
-                  <IconCard icon={BookOpen} label="Editor" onClick={handleEditorClick} />
+                  <IconCard icon={Pencil} label="Editor" onClick={handleEditorClick} />
                   <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
                 </>
               )}
