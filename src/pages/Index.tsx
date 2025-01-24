@@ -1,4 +1,4 @@
-import { Clock, Calendar, Pencil, ArrowLeft, Settings, Users, FileText, Info, MessageSquare } from "lucide-react";
+import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -41,14 +41,6 @@ const Index = () => {
     setActiveTab("schedule");
   };
 
-  const handleInfoClick = () => {
-    setActiveTab("info");
-  };
-
-  const handleMessagesClick = () => {
-    setActiveTab("messages");
-  };
-
   return (
     <div className="relative min-h-screen bg-[#E8F1F2]">
       <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto">
@@ -60,8 +52,6 @@ const Index = () => {
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
-            <TabsTrigger value="info">Info</TabsTrigger>
-            <TabsTrigger value="messages">Messages</TabsTrigger>
           </TabsList>
 
           <TabsContent value="main">
@@ -72,12 +62,43 @@ const Index = () => {
                 <>
                   <IconCard icon={Pencil} label="Editor" onClick={handleEditorClick} />
                   <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
-                  <IconCard icon={MessageSquare} label="Recados" onClick={handleMessagesClick} />
                 </>
               )}
               <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
-              <IconCard icon={Info} label="Informações" onClick={handleInfoClick} />
               <IconCard icon={Settings} label="Configurações" onClick={handleSettingsClick} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <div className="relative">
+              <div className="absolute right-0 -top-12 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
+                <h2 className="text-2xl font-semibold mb-6">Configurações</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setShowProfileDialog(true)}
+                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <h3 className="font-medium">Alterar Cadastro</h3>
+                    <p className="text-sm text-gray-600">Atualize suas informações pessoais</p>
+                  </button>
+                  <button
+                    onClick={() => setShowPasswordDialog(true)}
+                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <h3 className="font-medium">Alterar Senha</h3>
+                    <p className="text-sm text-gray-600">Modifique sua senha de acesso</p>
+                  </button>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
@@ -113,42 +134,8 @@ const Index = () => {
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <TimeSlotsList />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="info">
-            <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
-                <button
-                  onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-                  aria-label="Voltar para home"
-                >
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-2xl font-semibold mb-6">Informações</h2>
-                {/* Messages will be displayed here */}
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="messages">
-            <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
-                <button
-                  onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-                  aria-label="Voltar para home"
-                >
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-2xl font-semibold mb-6">Recados</h2>
-                {/* Message management interface will be here */}
+              <div className="bg-white rounded-xl shadow-lg">
+                <TimeSlotsList />
               </div>
             </div>
           </TabsContent>
@@ -166,6 +153,24 @@ const Index = () => {
               </div>
               <div className="bg-white rounded-xl shadow-lg">
                 <UsersList />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="schedule">
+            <div className="relative">
+              <div className="absolute right-0 -top-12 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-semibold mb-6">Escala</h2>
+                <ScheduleList />
               </div>
             </div>
           </TabsContent>
