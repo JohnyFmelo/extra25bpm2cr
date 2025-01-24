@@ -1,4 +1,4 @@
-import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Info, MessageSquare } from "lucide-react";
+import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -62,24 +62,24 @@ const Index = () => {
                 <>
                   <IconCard icon={Pencil} label="Editor" onClick={handleEditorClick} />
                   <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
-                  <IconCard icon={MessageSquare} label="Recados" onClick={() => setActiveTab("messages")} />
                 </>
               )}
               <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
-              <IconCard icon={Info} label="Informações" onClick={() => setActiveTab("info")} />
               <IconCard icon={Settings} label="Configurações" onClick={handleSettingsClick} />
             </div>
           </TabsContent>
 
           <TabsContent value="settings">
             <div className="relative">
-              <button
-                onClick={handleBackClick}
-                className="absolute right-0 -top-12 p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-                aria-label="Voltar para home"
-              >
-                <ArrowLeft className="h-8 w-8" />
-              </button>
+              <div className="absolute right-0 -top-12 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
               <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
                 <h2 className="text-2xl font-semibold mb-6">Configurações</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -104,13 +104,15 @@ const Index = () => {
 
           <TabsContent value="editor">
             <div className="relative">
-              <button
-                onClick={handleBackClick}
-                className="absolute right-0 -top-12 p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-                aria-label="Voltar para home"
-              >
-                <ArrowLeft className="h-8 w-8" />
-              </button>
+              <div className="absolute right-0 -top-12 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
               <WeeklyCalendar 
                 isLocked={isLocked}
                 onLockChange={setIsLocked}
@@ -123,26 +125,32 @@ const Index = () => {
 
           <TabsContent value="extra">
             <div className="relative">
-              <button
-                onClick={handleBackClick}
-                className="absolute right-0 -top-12 p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-                aria-label="Voltar para home"
-              >
-                <ArrowLeft className="h-8 w-8" />
-              </button>
-              <TimeSlotsList />
+              <div className="absolute right-0 -top-12 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="bg-white rounded-xl shadow-lg">
+                <TimeSlotsList />
+              </div>
             </div>
           </TabsContent>
 
           <TabsContent value="users">
             <div className="relative">
-              <button
-                onClick={handleBackClick}
-                className="absolute right-0 -top-12 p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-                aria-label="Voltar para home"
-              >
-                <ArrowLeft className="h-8 w-8" />
-              </button>
+              <div className="absolute right-0 -top-12 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
               <div className="bg-white rounded-xl shadow-lg">
                 <UsersList />
               </div>
@@ -151,13 +159,15 @@ const Index = () => {
 
           <TabsContent value="schedule">
             <div className="relative">
-              <button
-                onClick={handleBackClick}
-                className="absolute right-0 -top-12 p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-                aria-label="Voltar para home"
-              >
-                <ArrowLeft className="h-8 w-8" />
-              </button>
+              <div className="absolute right-0 -top-12 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h2 className="text-2xl font-semibold mb-6">Escala</h2>
                 <ScheduleList />
