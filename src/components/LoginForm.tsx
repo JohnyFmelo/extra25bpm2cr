@@ -41,6 +41,17 @@ const LoginForm = () => {
       const userDoc = querySnapshot.docs[0];
       const userData = userDoc.data();
 
+      // Check if user is blocked
+      if (userData.blocked) {
+        toast({
+          title: "Usuário Bloqueado",
+          description: "Seu usuário está bloqueado. Por favor, contate a P1.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // Store ALL user data in localStorage
       localStorage.setItem('user', JSON.stringify({
         id: userDoc.id,
@@ -48,7 +59,8 @@ const LoginForm = () => {
         userType: userData.userType,
         warName: userData.warName,
         registration: userData.registration,
-        rank: userData.rank
+        rank: userData.rank,
+        blocked: userData.blocked
       }));
 
       toast({

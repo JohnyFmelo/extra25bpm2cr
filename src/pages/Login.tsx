@@ -5,11 +5,24 @@ import RegisterForm from "@/components/RegisterForm";
 const Login = () => {
   return (
     <div className="min-h-screen bg-[#E8F1F2] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md space-y-6">
+        <div className="flex justify-center">
+          <img src="/logo.jpg" alt="Logo" className="h-24 w-auto" />
+        </div>
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-white">
-            <TabsTrigger value="login" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Login</TabsTrigger>
-            <TabsTrigger value="register" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Cadastro</TabsTrigger>
+            <TabsTrigger 
+              value="login" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary"
+            >
+              Login
+            </TabsTrigger>
+            <TabsTrigger 
+              value="register" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary"
+            >
+              Cadastro
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="login">
             <div className="bg-white p-8 rounded-lg shadow-lg">
