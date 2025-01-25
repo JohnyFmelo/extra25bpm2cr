@@ -80,10 +80,11 @@ const TimeSlotDialog = ({
     if (editingTimeSlot) {
       onEditTimeSlot(newTimeSlot);
     } else {
-      // Call the appropriate handler based on the selected tab
-      if (selectedTab === "weekly" && isWeekly) {
-        onAddTimeSlot({ ...newTimeSlot, isWeekly: true });
+      // Se não estiver no modo semanal OU se estiver na aba diária, cria horário diário
+      if (!isWeekly || selectedTab === "daily") {
+        onAddTimeSlot(newTimeSlot);
       } else {
+        // Apenas cria horário semanal se estiver no modo semanal E na aba semanal
         onAddTimeSlot(newTimeSlot);
       }
     }
