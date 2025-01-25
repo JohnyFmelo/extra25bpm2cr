@@ -13,6 +13,7 @@ interface TimeSlot {
   endTime: string;
   slots: number;
   slotsUsed: number;
+  isWeekly?: boolean;
 }
 
 interface TimeSlotDialogProps {
