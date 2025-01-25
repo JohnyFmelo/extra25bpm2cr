@@ -65,29 +65,32 @@ const TimeSlotDialog = ({
 
   const slotOptions = [2, 3, 4, 5];
 
-  const handleRegister = () => {
+  const createTimeSlot = (): TimeSlot => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     const [startTime, endTime] = timeSlot.split(" às ");
     
-    const newTimeSlot: TimeSlot = {
+    return {
       date: selectedDate,
       startTime,
       endTime,
       slots,
       slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0
     };
+  };
+
+  const handleRegister = () => {
+    const newTimeSlot = createTimeSlot();
     
     if (editingTimeSlot) {
       onEditTimeSlot(newTimeSlot);
+    } else if (isWeekly && selectedTab === "weekly") {
+      // Criar horário semanal apenas quando estiver no modo semanal E na aba semanal
+      onAddTimeSlot({ ...newTimeSlot, isWeekly: true });
     } else {
-      // Se não estiver no modo semanal OU se estiver na aba diária, cria horário diário
-      if (!isWeekly || selectedTab === "daily") {
-        onAddTimeSlot(newTimeSlot);
-      } else {
-        // Apenas cria horário semanal se estiver no modo semanal E na aba semanal
-        onAddTimeSlot(newTimeSlot);
-      }
+      // Criar horário diário em todos os outros casos
+      onAddTimeSlot(newTimeSlot);
     }
+    
     onClose();
   };
 

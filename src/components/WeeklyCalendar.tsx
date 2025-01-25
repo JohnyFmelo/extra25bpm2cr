@@ -26,6 +26,7 @@ interface TimeSlot {
   slots: number;
   slotsUsed: number;
   id?: string;
+  isWeekly?: boolean;
 }
 
 interface WeeklyCalendarProps {
@@ -133,46 +134,77 @@ const WeeklyCalendar = ({
     try {
       const formattedDate = format(timeSlot.date, 'yyyy-MM-dd');
       
-      const existingSlots = timeSlots.filter(slot => 
-        format(slot.date, 'yyyy-MM-dd') === formattedDate
-      );
+      // Se for um horário semanal, cria para toda a semana
+      if ('isWeekly' in timeSlot && timeSlot.isWeekly) {
+        const startDate = selectedDate || currentDateValue;
+        const promises = [];
 
-      const hasOverlap = existingSlots.some(slot => {
-        const newStart = timeSlot.startTime;
-        const newEnd = timeSlot.endTime;
-        const existingStart = slot.startTime;
-        const existingEnd = slot.endTime;
+        // Create time slots for the next 7 days
+        for (let i = 0; i < 7; i++) {
+          const currentDate = addDays(startDate, i);
+          const currentFormattedDate = format(currentDate, 'yyyy-MM-dd');
 
-        return (
-          (newStart >= existingStart && newStart < existingEnd) ||
-          (newEnd > existingStart && newEnd <= existingEnd) ||
-          (newStart <= existingStart && newEnd >= existingEnd)
+          promises.push(
+            dataOperations.insert({
+              date: currentFormattedDate,
+              start_time: formatTimeForDB(timeSlot.startTime),
+              end_time: formatTimeForDB(timeSlot.endTime),
+              total_slots: timeSlot.slots,
+              slots_used: 0
+            })
+          );
+        }
+
+        const results = await Promise.all(promises);
+        const hasError = results.some(result => !result.success);
+
+        if (hasError) {
+          throw new Error('Failed to insert some time slots');
+        }
+      } else {
+        // Se for um horário diário, cria apenas para o dia selecionado
+        const existingSlots = timeSlots.filter(slot => 
+          format(slot.date, 'yyyy-MM-dd') === formattedDate
         );
-      });
 
-      if (hasOverlap) {
-        toast({
-          title: "Horário indisponível",
-          description: "Já existe um horário cadastrado que conflita com este período.",
-          variant: "destructive"
+        const hasOverlap = existingSlots.some(slot => {
+          const newStart = timeSlot.startTime;
+          const newEnd = timeSlot.endTime;
+          const existingStart = slot.startTime;
+          const existingEnd = slot.endTime;
+
+          return (
+            (newStart >= existingStart && newStart < existingEnd) ||
+            (newEnd > existingStart && newEnd <= existingEnd) ||
+            (newStart <= existingStart && newEnd >= existingEnd)
+          );
         });
-        return;
-      }
 
-      const result = await dataOperations.insert({
-        date: formattedDate,
-        start_time: formatTimeForDB(timeSlot.startTime),
-        end_time: formatTimeForDB(timeSlot.endTime),
-        total_slots: timeSlot.slots,
-        slots_used: 0
-      });
+        if (hasOverlap) {
+          toast({
+            title: "Horário indisponível",
+            description: "Já existe um horário cadastrado que conflita com este período.",
+            variant: "destructive"
+          });
+          return;
+        }
 
-      if (!result.success) {
-        throw new Error('Failed to insert time slot');
+        const result = await dataOperations.insert({
+          date: formattedDate,
+          start_time: formatTimeForDB(timeSlot.startTime),
+          end_time: formatTimeForDB(timeSlot.endTime),
+          total_slots: timeSlot.slots,
+          slots_used: 0
+        });
+
+        if (!result.success) {
+          throw new Error('Failed to insert time slot');
+        }
       }
 
       await fetchTimeSlots();
       setIsDialogOpen(false);
+      setShowWeeklyDialog(false);
       
       toast({
         title: "Sucesso",
