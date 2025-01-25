@@ -7,7 +7,7 @@ const Login = () => {
     <div className="min-h-screen bg-[#E8F1F2] flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="flex justify-center">
-          <img src="/logo.jpg" alt="Logo" className="h-24 w-auto" />
+          <img src="/logo.png" alt="Logo" className="h-24 w-auto" />
         </div>
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-white">
