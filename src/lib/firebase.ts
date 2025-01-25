@@ -87,6 +87,14 @@ const handleFirestoreOperation = async <T>(
   }
 };
 
+export const getTimeSlots = async () => {
+  return handleFirestoreOperation(async (db) => {
+    const timeSlotCollection = collection(db, 'timeSlots');
+    const querySnapshot = await getDocs(timeSlotCollection);
+    return getDocsFromSnapshot(querySnapshot);
+  });
+};
+
 export const dataOperations = {
   async fetch() {
     return handleFirestoreOperation(async (db) => {

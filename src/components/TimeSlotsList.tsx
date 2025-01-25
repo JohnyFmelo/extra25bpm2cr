@@ -3,7 +3,7 @@ import { getTimeSlots } from "@/lib/firebase";
 import { TimeSlot } from "@/types/user";
 
 const TimeSlotsList = () => {
-  const { data: timeSlots, isLoading } = useQuery({
+  const { data: timeSlots, isLoading } = useQuery<TimeSlot[]>({
     queryKey: ['timeSlots'],
     queryFn: getTimeSlots
   });
