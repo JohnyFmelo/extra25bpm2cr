@@ -607,10 +607,10 @@ const WeeklyCalendar = ({
       {selectedDate && (
         <>
           <TimeSlotDialog
-            isOpen={isDialogOpen}
-            onClose={() => {
-              setIsDialogOpen(false);
-              setEditingTimeSlot(null);
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) setEditingTimeSlot(null);
             }}
             selectedDate={selectedDate}
             onAddTimeSlot={handleTimeSlotAdd}
@@ -618,10 +618,10 @@ const WeeklyCalendar = ({
             editingTimeSlot={editingTimeSlot}
           />
           <TimeSlotDialog
-            isOpen={showWeeklyDialog}
-            onClose={() => {
-              setShowWeeklyDialog(false);
-              setEditingTimeSlot(null);
+            open={showWeeklyDialog}
+            onOpenChange={(open) => {
+              setShowWeeklyDialog(open);
+              if (!open) setEditingTimeSlot(null);
             }}
             selectedDate={selectedDate}
             onAddTimeSlot={handleWeeklyTimeSlotAdd}
