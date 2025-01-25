@@ -1,157 +1,172 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { addDoc, collection } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 interface TimeSlot {
-  title: string;
-  description: string;
-  date: string;
+  date: Date;
   startTime: string;
   endTime: string;
   slots: number;
   slotsUsed: number;
-  isWeekly?: boolean;
 }
 
 interface TimeSlotDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  selectedDate?: Date;
+  isOpen: boolean;
+  onClose: () => void;
+  selectedDate: Date;
+  onAddTimeSlot: (timeSlot: TimeSlot) => void;
+  onEditTimeSlot: (timeSlot: TimeSlot) => void;
+  editingTimeSlot: TimeSlot | null;
   isWeekly?: boolean;
-  onAddTimeSlot?: (timeSlot: TimeSlot) => Promise<void>;
-  onEditTimeSlot?: (updatedTimeSlot: TimeSlot) => Promise<void>;
-  editingTimeSlot?: TimeSlot | null;
 }
 
 const TimeSlotDialog = ({ 
-  open, 
-  onOpenChange, 
+  isOpen, 
+  onClose, 
   selectedDate, 
-  isWeekly = false,
-  onAddTimeSlot,
+  onAddTimeSlot, 
   onEditTimeSlot,
-  editingTimeSlot
+  editingTimeSlot,
+  isWeekly = false,
 }: TimeSlotDialogProps) => {
-  const { toast } = useToast();
-  const [title, setTitle] = useState(editingTimeSlot?.title || "");
-  const [description, setDescription] = useState(editingTimeSlot?.description || "");
-  const [startTime, setStartTime] = useState(editingTimeSlot?.startTime || "13:00");
-  const [endTime, setEndTime] = useState(editingTimeSlot?.endTime || "19:00");
-  const [slots, setSlots] = useState(editingTimeSlot?.slots || 2);
+  const [timeSlot, setTimeSlot] = useState("13 às 19");
+  const [selectedSlots, setSelectedSlots] = useState<number>(2);
+  const [showCustomSlots, setShowCustomSlots] = useState(false);
+  const [customSlots, setCustomSlots] = useState("");
+  const [selectedTab, setSelectedTab] = useState("daily");
 
-  const handleRegister = async () => {
-    try {
-      if (!selectedDate) {
-        toast({
-          title: "Erro",
-          description: "Selecione uma data",
-          variant: "destructive",
-        });
-        return;
+  useEffect(() => {
+    if (editingTimeSlot) {
+      setTimeSlot(`${editingTimeSlot.startTime} às ${editingTimeSlot.endTime}`);
+      setSelectedSlots(editingTimeSlot.slots);
+      if (!slotOptions.includes(editingTimeSlot.slots)) {
+        setShowCustomSlots(true);
+        setCustomSlots(editingTimeSlot.slots.toString());
       }
-
-      const formattedDate = format(selectedDate, "yyyy-MM-dd");
-
-      const timeSlotData: TimeSlot = {
-        title,
-        description,
-        date: formattedDate,
-        startTime,
-        endTime,
-        slots,
-        slotsUsed: editingTimeSlot?.slotsUsed || 0,
-        isWeekly,
-      };
-
-      // Convert the data to a plain object before sending
-      const serializedData = JSON.parse(JSON.stringify(timeSlotData));
-
-      if (editingTimeSlot && onEditTimeSlot) {
-        await onEditTimeSlot(serializedData);
-      } else if (onAddTimeSlot) {
-        await onAddTimeSlot(serializedData);
-      } else {
-        await addDoc(collection(db, "timeSlots"), serializedData);
-      }
-
-      toast({
-        title: "Sucesso",
-        description: "Horário registrado com sucesso",
-      });
-
-      onOpenChange(false);
-      
-      // Reset form
-      setTitle("");
-      setDescription("");
-      setStartTime("13:00");
-      setEndTime("19:00");
-      setSlots(2);
-    } catch (error) {
-      console.error("Error registering time slot:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao registrar horário",
-        variant: "destructive",
-      });
+    } else {
+      setTimeSlot("13 às 19");
+      setSelectedSlots(2);
+      setShowCustomSlots(false);
+      setCustomSlots("");
     }
+  }, [editingTimeSlot]);
+
+  useEffect(() => {
+    // Reset to daily tab when opening for non-weekly dialog
+    if (!isWeekly) {
+      setSelectedTab("daily");
+    }
+  }, [isOpen, isWeekly]);
+
+  const slotOptions = [2, 3, 4, 5];
+
+  const createTimeSlot = (): TimeSlot => {
+    const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
+    const [startTime, endTime] = timeSlot.split(" às ");
+    
+    return {
+      date: selectedDate,
+      startTime,
+      endTime,
+      slots,
+      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0
+    };
+  };
+
+  const handleRegister = () => {
+    const newTimeSlot = createTimeSlot();
+    
+    if (editingTimeSlot) {
+      onEditTimeSlot(newTimeSlot);
+    } else if (isWeekly && selectedTab === "weekly") {
+      // Criar horário semanal apenas quando estiver no modo semanal E na aba semanal
+      onAddTimeSlot({ ...newTimeSlot, isWeekly: true });
+    } else {
+      // Criar horário diário em todos os outros casos
+      onAddTimeSlot(newTimeSlot);
+    }
+    
+    onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Registrar Horário {isWeekly ? "Semanal" : "Diário"}</DialogTitle>
+          <DialogTitle className="text-center font-bold">
+            {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
+          </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Input
-              placeholder="Título"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Input
-              placeholder="Descrição"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="daily">Horário Diário</TabsTrigger>
+            <TabsTrigger value="weekly" disabled={!isWeekly}>Horário Semanal</TabsTrigger>
+          </TabsList>
+          <div className="space-y-4 py-4">
+            <div>
               <Input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                value={timeSlot}
+                onChange={(e) => setTimeSlot(e.target.value)}
+                className="text-center"
+                placeholder="13 às 19"
               />
             </div>
-            <div className="space-y-2">
-              <Input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
+            <div className="flex justify-center gap-2">
+              {slotOptions.map((slots) => (
+                <Button
+                  key={slots}
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "w-10 h-10",
+                    selectedSlots === slots && !showCustomSlots && "bg-black text-white hover:bg-black/90"
+                  )}
+                  onClick={() => {
+                    setSelectedSlots(slots);
+                    setShowCustomSlots(false);
+                  }}
+                >
+                  {slots}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "w-10 h-10",
+                  showCustomSlots && "bg-black text-white hover:bg-black/90"
+                )}
+                onClick={() => setShowCustomSlots(true)}
+              >
+                +
+              </Button>
+            </div>
+            {showCustomSlots && (
+              <div>
+                <Input
+                  type="number"
+                  value={customSlots}
+                  onChange={(e) => setCustomSlots(e.target.value)}
+                  className="text-center"
+                  placeholder="Número de vagas"
+                />
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button onClick={handleRegister}>
+                {editingTimeSlot ? "Salvar" : selectedTab === "weekly" ? "Registrar Horário Semanal" : "Registrar Horário"}
+              </Button>
             </div>
           </div>
-          <div className="space-y-2">
-            <Input
-              type="number"
-              placeholder="Quantidade de vagas"
-              value={slots}
-              onChange={(e) => setSlots(parseInt(e.target.value))}
-              min={1}
-            />
-          </div>
-        </div>
-        <div className="flex justify-end">
-          <Button onClick={handleRegister}>Registrar</Button>
-        </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

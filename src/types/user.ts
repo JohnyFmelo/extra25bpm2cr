@@ -11,5 +11,4 @@ export interface TimeSlot {
   title: string;
   description: string;
   date: string;
-  isWeekly?: boolean;
 }
