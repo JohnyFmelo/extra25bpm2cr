@@ -14,6 +14,7 @@ import {
   QuerySnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { TimeSlot } from '@/types/user';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -34,18 +35,15 @@ const safeClone = (data: DocumentData): Record<string, any> => {
   const serializableData: Record<string, any> = {};
   
   for (const [key, value] of Object.entries(data)) {
-    // Skip functions and non-serializable objects
     if (typeof value === 'function' || value instanceof ReadableStream) {
       continue;
     }
     
-    // Handle Date objects
     if (value instanceof Date) {
       serializableData[key] = value.toISOString();
       continue;
     }
     
-    // Handle arrays
     if (Array.isArray(value)) {
       serializableData[key] = value.map(item => 
         typeof item === 'object' && item !== null ? safeClone(item) : item
@@ -53,13 +51,11 @@ const safeClone = (data: DocumentData): Record<string, any> => {
       continue;
     }
     
-    // Handle nested objects
     if (typeof value === 'object' && value !== null) {
       serializableData[key] = safeClone(value);
       continue;
     }
     
-    // Handle primitive values
     serializableData[key] = value;
   }
   
@@ -67,9 +63,12 @@ const safeClone = (data: DocumentData): Record<string, any> => {
 };
 
 // Helper function to safely get documents from a query snapshot
-const getDocsFromSnapshot = (snapshot: QuerySnapshot) => {
+const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
   return snapshot.docs.map(doc => ({
     id: doc.id,
+    title: doc.data().title || '',
+    description: doc.data().description || '',
+    date: doc.data().date || '',
     ...safeClone(doc.data())
   }));
 };
@@ -88,7 +87,7 @@ const handleFirestoreOperation = async <T>(
 };
 
 export const dataOperations = {
-  async fetch() {
+  async fetch(): Promise<TimeSlot[]> {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
       const querySnapshot = await getDocs(timeSlotCollection);

@@ -1,9 +1,14 @@
-import { User as FirebaseUser } from 'firebase/auth';
-
-export interface CustomUser extends FirebaseUser {
-  warName?: string;
-  rank?: string;
-  registration?: string;
-  userType?: string;
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  userType: 'admin' | 'user';
   password?: string;
+}
+
+export interface TimeSlot {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
 }
