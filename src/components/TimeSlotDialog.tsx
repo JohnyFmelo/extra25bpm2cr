@@ -23,15 +23,26 @@ interface TimeSlotDialogProps {
   onOpenChange: (open: boolean) => void;
   selectedDate?: Date;
   isWeekly?: boolean;
+  onAddTimeSlot?: (timeSlot: TimeSlot) => Promise<void>;
+  onEditTimeSlot?: (updatedTimeSlot: TimeSlot) => Promise<void>;
+  editingTimeSlot?: TimeSlot | null;
 }
 
-const TimeSlotDialog = ({ open, onOpenChange, selectedDate, isWeekly = false }: TimeSlotDialogProps) => {
+const TimeSlotDialog = ({ 
+  open, 
+  onOpenChange, 
+  selectedDate, 
+  isWeekly = false,
+  onAddTimeSlot,
+  onEditTimeSlot,
+  editingTimeSlot
+}: TimeSlotDialogProps) => {
   const { toast } = useToast();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [startTime, setStartTime] = useState("13:00");
-  const [endTime, setEndTime] = useState("19:00");
-  const [slots, setSlots] = useState(2);
+  const [title, setTitle] = useState(editingTimeSlot?.title || "");
+  const [description, setDescription] = useState(editingTimeSlot?.description || "");
+  const [startTime, setStartTime] = useState(editingTimeSlot?.startTime || "13:00");
+  const [endTime, setEndTime] = useState(editingTimeSlot?.endTime || "19:00");
+  const [slots, setSlots] = useState(editingTimeSlot?.slots || 2);
 
   const handleRegister = async () => {
     try {
@@ -53,14 +64,20 @@ const TimeSlotDialog = ({ open, onOpenChange, selectedDate, isWeekly = false }: 
         startTime,
         endTime,
         slots,
-        slotsUsed: 0,
+        slotsUsed: editingTimeSlot?.slotsUsed || 0,
         isWeekly,
       };
 
       // Convert the data to a plain object before sending
       const serializedData = JSON.parse(JSON.stringify(timeSlotData));
 
-      await addDoc(collection(db, "timeSlots"), serializedData);
+      if (editingTimeSlot && onEditTimeSlot) {
+        await onEditTimeSlot(serializedData);
+      } else if (onAddTimeSlot) {
+        await onAddTimeSlot(serializedData);
+      } else {
+        await addDoc(collection(db, "timeSlots"), serializedData);
+      }
 
       toast({
         title: "Sucesso",
