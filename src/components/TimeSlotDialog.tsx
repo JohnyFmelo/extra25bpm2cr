@@ -38,7 +38,7 @@ const TimeSlotDialog = ({
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
-  const [selectedTab, setSelectedTab] = useState(isWeekly ? "weekly" : "daily");
+  const [selectedTab, setSelectedTab] = useState("daily");
 
   useEffect(() => {
     if (editingTimeSlot) {
@@ -56,9 +56,16 @@ const TimeSlotDialog = ({
     }
   }, [editingTimeSlot]);
 
+  useEffect(() => {
+    // Reset to daily tab when opening for non-weekly dialog
+    if (!isWeekly) {
+      setSelectedTab("daily");
+    }
+  }, [isOpen, isWeekly]);
+
   const slotOptions = [2, 3, 4, 5];
 
-  const handleRegister = (isWeekly: boolean = false) => {
+  const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     const [startTime, endTime] = timeSlot.split(" às ");
     
@@ -73,7 +80,12 @@ const TimeSlotDialog = ({
     if (editingTimeSlot) {
       onEditTimeSlot(newTimeSlot);
     } else {
-      onAddTimeSlot(newTimeSlot);
+      // Call the appropriate handler based on the selected tab
+      if (selectedTab === "weekly" && isWeekly) {
+        onAddTimeSlot({ ...newTimeSlot, isWeekly: true });
+      } else {
+        onAddTimeSlot(newTimeSlot);
+      }
     }
     onClose();
   };
@@ -89,7 +101,7 @@ const TimeSlotDialog = ({
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="daily">Horário Diário</TabsTrigger>
-            <TabsTrigger value="weekly">Horário Semanal</TabsTrigger>
+            <TabsTrigger value="weekly" disabled={!isWeekly}>Horário Semanal</TabsTrigger>
           </TabsList>
           <div className="space-y-4 py-4">
             <div>
@@ -145,7 +157,7 @@ const TimeSlotDialog = ({
               <Button variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button onClick={() => handleRegister(selectedTab === "weekly")}>
+              <Button onClick={handleRegister}>
                 {editingTimeSlot ? "Salvar" : selectedTab === "weekly" ? "Registrar Horário Semanal" : "Registrar Horário"}
               </Button>
             </div>
