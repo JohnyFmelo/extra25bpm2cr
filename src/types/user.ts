@@ -7,10 +7,3 @@ export interface CustomUser extends FirebaseUser {
   userType?: string;
   password?: string;
 }
-
-export interface TimeSlot {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-}

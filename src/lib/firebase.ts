@@ -87,20 +87,6 @@ const handleFirestoreOperation = async <T>(
   }
 };
 
-export const getTimeSlots = async (): Promise<TimeSlot[]> => {
-  return handleFirestoreOperation(async (db) => {
-    const timeSlotCollection = collection(db, 'timeSlots');
-    const querySnapshot = await getDocs(timeSlotCollection);
-    const docs = getDocsFromSnapshot(querySnapshot);
-    return docs.map(doc => ({
-      id: doc.id,
-      title: doc.title || '',
-      description: doc.description || '',
-      date: doc.date || new Date().toISOString()
-    }));
-  });
-};
-
 export const dataOperations = {
   async fetch() {
     return handleFirestoreOperation(async (db) => {
