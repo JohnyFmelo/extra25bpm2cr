@@ -52,7 +52,7 @@ const TopBar = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar Saída</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja sair do sistema?
+                Sair do sistema?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
