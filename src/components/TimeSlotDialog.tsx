@@ -4,6 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Switch } from "./ui/switch";
 import { cn } from "@/lib/utils";
 import { TimeSlot } from "@/types/timeSlot";
 
@@ -30,6 +31,7 @@ const TimeSlotDialog = ({
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
+  const [useAlternativeLogic, setUseAlternativeLogic] = useState(false);
 
   useEffect(() => {
     if (editingTimeSlot) {
@@ -128,6 +130,13 @@ const TimeSlotDialog = ({
               />
             </div>
           )}
+          <div className="flex items-center justify-between space-x-2">
+            <span className="text-sm text-gray-500">Usar lógica alternativa</span>
+            <Switch
+              checked={useAlternativeLogic}
+              onCheckedChange={setUseAlternativeLogic}
+            />
+          </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
