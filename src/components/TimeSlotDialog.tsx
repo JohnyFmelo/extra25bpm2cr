@@ -47,7 +47,7 @@ const TimeSlotDialog = ({
     }
   }, [editingTimeSlot]);
 
-  const slotOptions = [2, 3, 4, 5];
+  const slotOptions = [1, 2, 3, 4, 5];
 
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
