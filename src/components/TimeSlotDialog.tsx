@@ -25,7 +25,7 @@ const TimeSlotDialog = ({
   onEditTimeSlot,
   editingTimeSlot,
 }: TimeSlotDialogProps) => {
-  const [timeSlot, setTimeSlot] = useState("13 às 19");
+  const [timeSlot, setTimeSlot] = useState("07 às 13");
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
@@ -40,7 +40,7 @@ const TimeSlotDialog = ({
         setCustomSlots(editingTimeSlot.slots.toString());
       }
     } else {
-      setTimeSlot("13 às 19");
+      setTimeSlot("07 às 13");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
@@ -84,7 +84,7 @@ const TimeSlotDialog = ({
               value={timeSlot}
               onChange={(e) => setTimeSlot(e.target.value)}
               className="text-center"
-              placeholder="13 às 19"
+              placeholder="07 às 13"
             />
           </div>
           <div className="flex justify-center gap-2">
