@@ -122,54 +122,88 @@ const WeeklyCalendar = ({
 
   const handleTimeSlotAdd = async (timeSlot: TimeSlot) => {
     try {
-      const formattedDate = format(timeSlot.date, 'yyyy-MM-dd');
-      
-      const existingSlots = timeSlots.filter(slot => 
-        format(slot.date, 'yyyy-MM-dd') === formattedDate
-      );
+      if (timeSlot.isWeekly) {
+        // Lógica para horários semanais
+        const startDate = timeSlot.date;
+        const promises = [];
 
-      const hasOverlap = existingSlots.some(slot => {
-        const newStart = timeSlot.startTime;
-        const newEnd = timeSlot.endTime;
-        const existingStart = slot.startTime;
-        const existingEnd = slot.endTime;
+        for (let i = 0; i < 7; i++) {
+          const currentDate = addDays(startDate, i);
+          const formattedDate = format(currentDate, 'yyyy-MM-dd');
 
-        return (
-          (newStart >= existingStart && newStart < existingEnd) ||
-          (newEnd > existingStart && newEnd <= existingEnd) ||
-          (newStart <= existingStart && newEnd >= existingEnd)
-        );
-      });
+          promises.push(
+            dataOperations.insert({
+              date: formattedDate,
+              start_time: formatTimeForDB(timeSlot.startTime),
+              end_time: formatTimeForDB(timeSlot.endTime),
+              total_slots: timeSlot.slots,
+              slots_used: 0
+            })
+          );
+        }
 
-      if (hasOverlap) {
+        const results = await Promise.all(promises);
+        const hasError = results.some(result => !result.success);
+
+        if (hasError) {
+          throw new Error('Failed to insert some time slots');
+        }
+
+        await fetchTimeSlots();
+        
         toast({
-          title: "Horário indisponível",
-          description: "Já existe um horário cadastrado que conflita com este período.",
-          variant: "destructive"
+          title: "Sucesso",
+          description: "Horários semanais adicionados com sucesso!"
         });
-        return;
+      } else {
+        // Lógica para horário diário
+        const formattedDate = format(timeSlot.date, 'yyyy-MM-dd');
+        
+        const existingSlots = timeSlots.filter(slot => 
+          format(slot.date, 'yyyy-MM-dd') === formattedDate
+        );
+
+        const hasOverlap = existingSlots.some(slot => {
+          const newStart = timeSlot.startTime;
+          const newEnd = timeSlot.endTime;
+          const existingStart = slot.startTime;
+          const existingEnd = slot.endTime;
+
+          return (
+            (newStart >= existingStart && newStart < existingEnd) ||
+            (newEnd > existingStart && newEnd <= existingEnd) ||
+            (newStart <= existingStart && newEnd >= existingEnd)
+          );
+        });
+
+        if (hasOverlap) {
+          toast({
+            title: "Horário indisponível",
+            description: "Já existe um horário cadastrado que conflita com este período.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        const result = await dataOperations.insert({
+          date: formattedDate,
+          start_time: formatTimeForDB(timeSlot.startTime),
+          end_time: formatTimeForDB(timeSlot.endTime),
+          total_slots: timeSlot.slots,
+          slots_used: 0
+        });
+
+        if (!result.success) {
+          throw new Error('Failed to insert time slot');
+        }
+
+        await fetchTimeSlots();
+        
+        toast({
+          title: "Sucesso",
+          description: "Horário adicionado com sucesso!"
+        });
       }
-
-      const firebaseTimeSlot: FirebaseTimeSlot = {
-        date: formattedDate,
-        start_time: formatTimeForDB(timeSlot.startTime),
-        end_time: formatTimeForDB(timeSlot.endTime),
-        total_slots: timeSlot.slots,
-        slots_used: 0
-      };
-
-      const result = await dataOperations.insert(firebaseTimeSlot);
-
-      if (!result.success) {
-        throw new Error('Failed to insert time slot');
-      }
-
-      await fetchTimeSlots();
-      
-      toast({
-        title: "Sucesso",
-        description: "Horário adicionado com sucesso!"
-      });
     } catch (error) {
       console.error('Erro ao adicionar horário:', error);
       toast({

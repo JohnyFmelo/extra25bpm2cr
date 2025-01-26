@@ -29,7 +29,7 @@ const TimeSlotDialog = ({
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
-  const [useAlternativeLogic, setUseAlternativeLogic] = useState(false);
+  const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
 
   useEffect(() => {
     if (editingTimeSlot) {
@@ -58,7 +58,8 @@ const TimeSlotDialog = ({
       startTime,
       endTime,
       slots,
-      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0
+      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
+      isWeekly: useWeeklyLogic
     };
     
     if (editingTimeSlot) {
@@ -128,10 +129,14 @@ const TimeSlotDialog = ({
             </div>
           )}
           <div className="flex items-center justify-between space-x-2">
-            <span className="text-sm text-gray-500">Usar lógica alternativa</span>
+            <span className="text-sm text-gray-500">Criar horários semanais</span>
             <Switch
-              checked={useAlternativeLogic}
-              onCheckedChange={setUseAlternativeLogic}
+              checked={useWeeklyLogic}
+              onCheckedChange={setUseWeeklyLogic}
+              className={cn(
+                "data-[state=checked]:bg-green-500",
+                "data-[state=checked]:hover:bg-green-600"
+              )}
             />
           </div>
           <div className="flex justify-end gap-2 pt-4">
