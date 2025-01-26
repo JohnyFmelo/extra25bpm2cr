@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, UserPlus, Trash } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, Trash } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
@@ -8,6 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import TimeSlotDialog from "./TimeSlotDialog";
 import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,16 +19,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-interface TimeSlot {
-  date: Date;
-  startTime: string;
-  endTime: string;
-  slots: number;
-  slotsUsed: number;
-  id?: string;
-  isWeekly?: boolean;
-}
 
 interface WeeklyCalendarProps {
   className?: string;
@@ -134,77 +125,49 @@ const WeeklyCalendar = ({
     try {
       const formattedDate = format(timeSlot.date, 'yyyy-MM-dd');
       
-      // Se for um horário semanal, cria para toda a semana
-      if ('isWeekly' in timeSlot && timeSlot.isWeekly) {
-        const startDate = selectedDate || currentDateValue;
-        const promises = [];
+      // Verifica se já existe horário conflitante
+      const existingSlots = timeSlots.filter(slot => 
+        format(slot.date, 'yyyy-MM-dd') === formattedDate
+      );
 
-        // Create time slots for the next 7 days
-        for (let i = 0; i < 7; i++) {
-          const currentDate = addDays(startDate, i);
-          const currentFormattedDate = format(currentDate, 'yyyy-MM-dd');
+      // Checa sobreposição de horários
+      const hasOverlap = existingSlots.some(slot => {
+        const newStart = timeSlot.startTime;
+        const newEnd = timeSlot.endTime;
+        const existingStart = slot.startTime;
+        const existingEnd = slot.endTime;
 
-          promises.push(
-            dataOperations.insert({
-              date: currentFormattedDate,
-              start_time: formatTimeForDB(timeSlot.startTime),
-              end_time: formatTimeForDB(timeSlot.endTime),
-              total_slots: timeSlot.slots,
-              slots_used: 0
-            })
-          );
-        }
-
-        const results = await Promise.all(promises);
-        const hasError = results.some(result => !result.success);
-
-        if (hasError) {
-          throw new Error('Failed to insert some time slots');
-        }
-      } else {
-        // Se for um horário diário, cria apenas para o dia selecionado
-        const existingSlots = timeSlots.filter(slot => 
-          format(slot.date, 'yyyy-MM-dd') === formattedDate
+        return (
+          (newStart >= existingStart && newStart < existingEnd) ||
+          (newEnd > existingStart && newEnd <= existingEnd) ||
+          (newStart <= existingStart && newEnd >= existingEnd)
         );
+      });
 
-        const hasOverlap = existingSlots.some(slot => {
-          const newStart = timeSlot.startTime;
-          const newEnd = timeSlot.endTime;
-          const existingStart = slot.startTime;
-          const existingEnd = slot.endTime;
-
-          return (
-            (newStart >= existingStart && newStart < existingEnd) ||
-            (newEnd > existingStart && newEnd <= existingEnd) ||
-            (newStart <= existingStart && newEnd >= existingEnd)
-          );
+      if (hasOverlap) {
+        toast({
+          title: "Horário indisponível",
+          description: "Já existe um horário cadastrado que conflita com este período.",
+          variant: "destructive"
         });
+        return;
+      }
 
-        if (hasOverlap) {
-          toast({
-            title: "Horário indisponível",
-            description: "Já existe um horário cadastrado que conflita com este período.",
-            variant: "destructive"
-          });
-          return;
-        }
+      const firebaseTimeSlot: FirebaseTimeSlot = {
+        date: formattedDate,
+        start_time: formatTimeForDB(timeSlot.startTime),
+        end_time: formatTimeForDB(timeSlot.endTime),
+        total_slots: timeSlot.slots,
+        slots_used: 0
+      };
 
-        const result = await dataOperations.insert({
-          date: formattedDate,
-          start_time: formatTimeForDB(timeSlot.startTime),
-          end_time: formatTimeForDB(timeSlot.endTime),
-          total_slots: timeSlot.slots,
-          slots_used: 0
-        });
+      const result = await dataOperations.insert(firebaseTimeSlot);
 
-        if (!result.success) {
-          throw new Error('Failed to insert time slot');
-        }
+      if (!result.success) {
+        throw new Error('Failed to insert time slot');
       }
 
       await fetchTimeSlots();
-      setIsDialogOpen(false);
-      setShowWeeklyDialog(false);
       
       toast({
         title: "Sucesso",

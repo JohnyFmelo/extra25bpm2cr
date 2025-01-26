@@ -6,18 +6,11 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-
-interface TimeSlot {
-  date: Date;
-  startTime: string;
-  endTime: string;
-  slots: number;
-  slotsUsed: number;
-}
+import { TimeSlot } from "@/types/timeSlot";
 
 interface TimeSlotDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   selectedDate: Date;
   onAddTimeSlot: (timeSlot: TimeSlot) => void;
   onEditTimeSlot: (timeSlot: TimeSlot) => void;
@@ -25,11 +18,11 @@ interface TimeSlotDialogProps {
   isWeekly?: boolean;
 }
 
-const TimeSlotDialog = ({ 
-  isOpen, 
-  onClose, 
-  selectedDate, 
-  onAddTimeSlot, 
+const TimeSlotDialog = ({
+  open,
+  onOpenChange,
+  selectedDate,
+  onAddTimeSlot,
   onEditTimeSlot,
   editingTimeSlot,
   isWeekly = false,
@@ -57,45 +50,36 @@ const TimeSlotDialog = ({
   }, [editingTimeSlot]);
 
   useEffect(() => {
-    // Reset to daily tab when opening for non-weekly dialog
     if (!isWeekly) {
       setSelectedTab("daily");
     }
-  }, [isOpen, isWeekly]);
+  }, [open, isWeekly]);
 
   const slotOptions = [2, 3, 4, 5];
 
-  const createTimeSlot = (): TimeSlot => {
+  const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     const [startTime, endTime] = timeSlot.split(" às ");
     
-    return {
+    const newTimeSlot: TimeSlot = {
       date: selectedDate,
       startTime,
       endTime,
       slots,
-      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0
+      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
+      isWeekly: selectedTab === "weekly"
     };
-  };
-
-  const handleRegister = () => {
-    const newTimeSlot = createTimeSlot();
     
     if (editingTimeSlot) {
       onEditTimeSlot(newTimeSlot);
-    } else if (isWeekly && selectedTab === "weekly") {
-      // Criar horário semanal apenas quando estiver no modo semanal E na aba semanal
-      onAddTimeSlot({ ...newTimeSlot, isWeekly: true });
     } else {
-      // Criar horário diário em todos os outros casos
       onAddTimeSlot(newTimeSlot);
     }
-    
-    onClose();
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center font-bold">
@@ -158,7 +142,7 @@ const TimeSlotDialog = ({
               </div>
             )}
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={onClose}>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
               <Button onClick={handleRegister}>
