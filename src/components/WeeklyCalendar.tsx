@@ -48,8 +48,8 @@ const WeeklyCalendar = ({
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   
   const currentDateValue = externalCurrentDate !== undefined ? externalCurrentDate : internalCurrentDate;
-  const weekDays = ["ter", "qua", "qui", "sex", "sáb", "dom", "seg"];
-  const fullWeekDays = ["terça", "quarta", "quinta", "sexta", "sábado", "domingo", "segunda"];
+  const weekDays = ["Ter", "Qua", "Qui", "Sex", "Sáb", "Dom", "Seg"];
+  const fullWeekDays = ["Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo", "Segunda"];
   const currentMonth = format(currentDateValue, "MMMM yyyy", { locale: ptBR });
   const isMobile = useIsMobile();
 
