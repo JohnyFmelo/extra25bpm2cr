@@ -125,12 +125,10 @@ const WeeklyCalendar = ({
     try {
       const formattedDate = format(timeSlot.date, 'yyyy-MM-dd');
       
-      // Verifica se já existe horário conflitante
       const existingSlots = timeSlots.filter(slot => 
         format(slot.date, 'yyyy-MM-dd') === formattedDate
       );
 
-      // Checa sobreposição de horários
       const hasOverlap = existingSlots.some(slot => {
         const newStart = timeSlot.startTime;
         const newEnd = timeSlot.endTime;
@@ -188,7 +186,6 @@ const WeeklyCalendar = ({
       const startDate = selectedDate || currentDateValue;
       const promises = [];
 
-      // Create time slots for the next 7 days
       for (let i = 0; i < 7; i++) {
         const currentDate = addDays(startDate, i);
         const formattedDate = format(currentDate, 'yyyy-MM-dd');
