@@ -573,9 +573,10 @@ const WeeklyCalendar = ({
               setEditingTimeSlot(null);
             }}
             selectedDate={selectedDate}
-            onAddTimeSlot={handleTimeSlotAdd}
+            onAddTimeSlot={handleWeeklyTimeSlotAdd}
             onEditTimeSlot={handleTimeSlotEdit}
             editingTimeSlot={editingTimeSlot}
+            isWeekly={true}
           />
           <TimeSlotDialog
             open={showWeeklyDialog}
