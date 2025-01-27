@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff } from "lucide-react";
+import { EyeOff, Eye } from "lucide-react";
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { useNavigate } from "react-router-dom";
 
