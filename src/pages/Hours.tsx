@@ -113,16 +113,13 @@ const Hours = () => {
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
-      <div className="relative h-12">
-        <div className="absolute right-0 top-0">
-          <button
-            onClick={() => navigate('/')}
-            className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-            aria-label="Voltar para home"
-          >
-            <ArrowLeft className="h-6 w-6" />
-          </button>
-        </div>
+      <div className="mb-4 flex justify-end">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+        >
+          <ArrowLeft className="h-10 w-10" />
+        </Button>
       </div>
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="space-y-4">
