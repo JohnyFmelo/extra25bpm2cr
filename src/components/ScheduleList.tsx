@@ -24,6 +24,21 @@ const ScheduleList = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
+  const calculateTimeDifference = (startTime: string, endTime: string): string => {
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+    
+    let diffHours = endHour - startHour;
+    let diffMinutes = endMinute - startMinute;
+    
+    if (diffMinutes < 0) {
+      diffHours -= 1;
+      diffMinutes += 60;
+    }
+    
+    return diffHours > 0 ? `${diffHours}h` : '';
+  };
+
   useEffect(() => {
     const timeSlotsCollection = collection(db, 'timeSlots');
     const q = query(timeSlotsCollection);
@@ -105,7 +120,7 @@ const ScheduleList = () => {
               >
                 <div>
                   <p className="font-medium">
-                    {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}
+                    {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} - {calculateTimeDifference(slot.start_time, slot.end_time)}
                   </p>
                 </div>
                 {slot.volunteers && slot.volunteers.length > 0 && (
