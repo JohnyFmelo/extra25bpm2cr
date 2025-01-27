@@ -87,7 +87,7 @@ const TimeSlotDialog = ({
               placeholder="07 às 13"
             />
           </div>
-          <div className="flex justify-center gap-2">
+          <div className="flex justify-center items-center gap-2">
             {slotOptions.map((slots) => (
               <Button
                 key={slots}
@@ -105,17 +105,27 @@ const TimeSlotDialog = ({
                 {slots}
               </Button>
             ))}
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(
-                "w-10 h-10",
-                showCustomSlots && "bg-black text-white hover:bg-black/90"
-              )}
-              onClick={() => setShowCustomSlots(true)}
-            >
-              +
-            </Button>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={useWeeklyLogic}
+                onCheckedChange={setUseWeeklyLogic}
+                className={cn(
+                  "data-[state=checked]:bg-green-500",
+                  "data-[state=checked]:hover:bg-green-600"
+                )}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "w-10 h-10",
+                  showCustomSlots && "bg-black text-white hover:bg-black/90"
+                )}
+                onClick={() => setShowCustomSlots(true)}
+              >
+                +
+              </Button>
+            </div>
           </div>
           {showCustomSlots && (
             <div>
@@ -128,16 +138,8 @@ const TimeSlotDialog = ({
               />
             </div>
           )}
-          <div className="flex items-center justify-between space-x-2">
+          <div className="flex items-center justify-end space-x-2">
             <span className="text-sm text-gray-500">Criar horários semanais</span>
-            <Switch
-              checked={useWeeklyLogic}
-              onCheckedChange={setUseWeeklyLogic}
-              className={cn(
-                "data-[state=checked]:bg-green-500",
-                "data-[state=checked]:hover:bg-green-600"
-              )}
-            />
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
