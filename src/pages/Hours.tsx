@@ -118,7 +118,7 @@ const Hours = () => {
           variant="ghost"
           onClick={() => navigate('/')}
         >
-          <ArrowLeft className="h-6 w-6" />
+          <ArrowLeft className="h-10 w-10" />
         </Button>
       </div>
       <div className="bg-white rounded-lg shadow-sm p-6">
