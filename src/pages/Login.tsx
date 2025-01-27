@@ -10,7 +10,7 @@ const Login = () => {
           <img 
             src="/logo.png" 
             alt="Logo" 
-            className="h-24 w-auto mix-blend-multiply animate-float" 
+            className="h-24 w-auto mix-blend-multiply animate-float drop-shadow-2xl" 
           />
         </div>
         <Tabs defaultValue="login" className="w-full">
