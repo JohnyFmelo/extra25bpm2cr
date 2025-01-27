@@ -434,7 +434,7 @@ const WeeklyCalendar = ({
                 "flex flex-col items-center p-1 md:p-2 rounded-lg transition-all cursor-pointer hover:bg-gray-100",
                 day.isToday && "border border-black rounded-lg",
                 selectedDate?.toDateString() === day.fullDate.toDateString() && "bg-gray-200 hover:bg-gray-300",
-                day.hasTimeSlots && "bg-[#F2FCE2]"
+                day.hasTimeSlots && "bg-[#E8F1F2]"
               )}
               onClick={() => handleDayClick(day.fullDate)}
             >
