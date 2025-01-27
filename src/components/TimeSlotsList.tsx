@@ -31,6 +31,21 @@ const TimeSlotsList = () => {
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
 
+  const calculateTimeDifference = (startTime: string, endTime: string): string => {
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+    
+    let diffHours = endHour - startHour;
+    let diffMinutes = endMinute - startMinute;
+    
+    if (diffMinutes < 0) {
+      diffHours -= 1;
+      diffMinutes += 60;
+    }
+    
+    return diffHours > 0 ? `${diffHours}h` : '';
+  };
+
   useEffect(() => {
     // Set up real-time listener
     const timeSlotsCollection = collection(db, 'timeSlots');
@@ -233,11 +248,13 @@ const TimeSlotsList = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-medium text-gray-900">
-                      {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}
+                      {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} - {calculateTimeDifference(slot.start_time, slot.end_time)}
                     </p>
-                    <p className="text-sm text-gray-600">
-                      {slot.slots_used}/{slot.total_slots} vagas ocupadas
-                    </p>
+                    {slot.slots_used < slot.total_slots && (
+                      <p className="text-sm text-gray-600">
+                        {slot.total_slots - slot.slots_used} {slot.total_slots - slot.slots_used === 1 ? 'vaga' : 'vagas'}
+                      </p>
+                    )}
                   </div>
                   {shouldShowVolunteerButton(slot) && (
                     isVolunteered(slot) ? (
@@ -285,3 +302,5 @@ const TimeSlotsList = () => {
 };
 
 export default TimeSlotsList;
+      
+    
