@@ -95,7 +95,7 @@ const ScheduleList = () => {
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => (
         <div key={date} className="space-y-4">
           <h3 className="font-medium text-lg">
-            {format(parseISO(date), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+            {format(parseISO(date), "EEEE, dd 'de' MMMM", { locale: ptBR }).replace(/^\w/, (c) => c.toUpperCase())}
           </h3>
           <div className="space-y-4">
             {slots.map((slot) => (
@@ -106,9 +106,6 @@ const ScheduleList = () => {
                 <div>
                   <p className="font-medium">
                     {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {slot.slots_used}/{slot.total_slots} vagas ocupadas
                   </p>
                 </div>
                 {slot.volunteers && slot.volunteers.length > 0 && (
