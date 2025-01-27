@@ -106,14 +106,6 @@ const TimeSlotDialog = ({
               </Button>
             ))}
             <div className="flex items-center gap-2">
-              <Switch
-                checked={useWeeklyLogic}
-                onCheckedChange={setUseWeeklyLogic}
-                className={cn(
-                  "data-[state=checked]:bg-green-500",
-                  "data-[state=checked]:hover:bg-green-600"
-                )}
-              />
               <Button
                 variant="outline"
                 size="sm"
@@ -125,6 +117,14 @@ const TimeSlotDialog = ({
               >
                 +
               </Button>
+              <Switch
+                checked={useWeeklyLogic}
+                onCheckedChange={setUseWeeklyLogic}
+                className={cn(
+                  "data-[state=checked]:bg-green-500",
+                  "data-[state=checked]:hover:bg-green-600"
+                )}
+              />
             </div>
           </div>
           {showCustomSlots && (
@@ -138,9 +138,6 @@ const TimeSlotDialog = ({
               />
             </div>
           )}
-          <div className="flex items-center justify-end space-x-2">
-            <span className="text-sm text-gray-500">Criar horários semanais</span>
-          </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
