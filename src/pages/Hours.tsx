@@ -113,8 +113,8 @@ const Hours = () => {
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
-      <div className="relative">
-        <div className="absolute right-0 -top-12 mb-4">
+      <div className="relative h-12">
+        <div className="absolute right-0 top-0">
           <button
             onClick={() => navigate('/')}
             className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
