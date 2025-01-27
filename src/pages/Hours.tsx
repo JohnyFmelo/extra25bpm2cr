@@ -113,14 +113,12 @@ const Hours = () => {
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
-      <div className="mb-4">
+      <div className="mb-4 flex justify-end">
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
-          className="gap-2"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Voltar
+          <ArrowLeft className="h-6 w-6" />
         </Button>
       </div>
       <div className="bg-white rounded-lg shadow-sm p-6">
