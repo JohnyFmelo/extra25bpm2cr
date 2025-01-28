@@ -4,6 +4,7 @@ import { LogOut } from "lucide-react";
 import { useState } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
+import NotificationsList from "./NotificationsList";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +37,8 @@ const TopBar = () => {
             {userData.rank} {userData.warName}
           </h2>
         </div>
+        
+        <NotificationsList />
         
         <Button 
           variant="ghost" 
