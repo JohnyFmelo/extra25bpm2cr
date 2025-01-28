@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "./ui/use-toast";
+import { format } from "date-fns";
 
 interface Notification {
   id: string;
@@ -137,9 +138,9 @@ const NotificationsList = () => {
             className="relative hover:bg-blue-100" 
           >
             {hasUnread ? (
-              <BellDot className="h-5 w-5 text-blue-500" />
+              <BellDot className="h-5 w-5 text-white" />
             ) : (
-              <Bell className="h-5 w-5 text-gray-500" />
+              <Bell className="h-5 w-5 text-white" />
             )}
             {hasUnread && (
               <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500" />
@@ -173,14 +174,14 @@ const NotificationsList = () => {
                           className="flex-1 text-left"
                           onClick={() => handleMarkAsRead(notification.id)}
                         >
-                          <p className="text-sm font-medium leading-none">
+                          <p className="text-sm font-medium leading-none text-white">
                             {notification.senderName}
                           </p>
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <p className="text-sm text-white mt-1">
                             {notification.text}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {notification.timestamp?.toDate().toLocaleString()}
+                          <p className="text-xs text-blue-900 mt-1">
+                            {notification.timestamp && format(notification.timestamp.toDate(), 'HH:mm')}
                           </p>
                         </button>
                         <div className="flex gap-2 ml-2">
