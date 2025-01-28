@@ -49,9 +49,41 @@ const TimeSlotDialog = ({
 
   const slotOptions = [2, 3, 4, 5];
 
+  const validateAndFormatTime = (timeString: string): { startTime: string, endTime: string } | null => {
+    const [startTime, endTime] = timeString.split(" às ").map(t => t.trim());
+    
+    // Adiciona ":00" se o horário não tiver minutos
+    const formatTime = (time: string) => {
+      if (!time.includes(':')) return `${time}:00`;
+      return time;
+    };
+
+    const formattedStartTime = formatTime(startTime);
+    const formattedEndTime = formatTime(endTime);
+
+    // Validação básica do formato
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(formattedStartTime) || !timeRegex.test(formattedEndTime)) {
+      return null;
+    }
+
+    return {
+      startTime: formattedStartTime,
+      endTime: formattedEndTime
+    };
+  };
+
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
-    const [startTime, endTime] = timeSlot.split(" às ");
+    const validatedTimes = validateAndFormatTime(timeSlot);
+    
+    if (!validatedTimes) {
+      // Aqui você pode adicionar um toast ou alerta de erro
+      console.error("Formato de horário inválido");
+      return;
+    }
+    
+    const { startTime, endTime } = validatedTimes;
     
     const newTimeSlot: TimeSlot = {
       date: selectedDate,
