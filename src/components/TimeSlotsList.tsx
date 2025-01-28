@@ -35,7 +35,13 @@ const TimeSlotsList = () => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const [endHour, endMinute] = endTime.split(':').map(Number);
     
-    let diffHours = endHour - startHour;
+    // Ajuste para quando o horário final é 00:00 (meia-noite)
+    let adjustedEndHour = endHour;
+    if (endHour === 0) {
+      adjustedEndHour = 24;
+    }
+    
+    let diffHours = adjustedEndHour - startHour;
     let diffMinutes = endMinute - startMinute;
     
     if (diffMinutes < 0) {
@@ -43,7 +49,11 @@ const TimeSlotsList = () => {
       diffMinutes += 60;
     }
     
-    return diffHours > 0 ? `${diffHours}h` : '';
+    // Se ainda houver minutos, adiciona ao resultado
+    const hourText = diffHours > 0 ? `${diffHours}h` : '';
+    const minuteText = diffMinutes > 0 ? `${diffMinutes}min` : '';
+    
+    return `${hourText}${minuteText}`;
   };
 
   useEffect(() => {
@@ -302,5 +312,7 @@ const TimeSlotsList = () => {
 };
 
 export default TimeSlotsList;
+
       
-    
+      
+                      
