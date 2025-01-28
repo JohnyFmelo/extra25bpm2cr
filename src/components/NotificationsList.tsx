@@ -1,3 +1,4 @@
+```typescript
 import { useState, useEffect } from "react";
 import { Bell, BellDot, Trash2, Users } from "lucide-react";
 import {
@@ -131,11 +132,15 @@ const NotificationsList = () => {
     <>
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative hover:bg-blue-100" 
+          >
             {hasUnread ? (
-              <BellDot className="h-5 w-5" />
+              <BellDot className="h-5 w-5 text-blue-500" />
             ) : (
-              <Bell className="h-5 w-5" />
+              <Bell className="h-5 w-5 text-gray-500" />
             )}
             {hasUnread && (
               <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500" />
@@ -160,8 +165,8 @@ const NotificationsList = () => {
                     <div
                       key={notification.id}
                       className={cn(
-                        "relative w-full text-left px-4 py-3 hover:bg-accent transition-colors",
-                        isUnread && "bg-muted"
+                        "relative w-full text-left px-4 py-3 hover:bg-blue-100 transition-colors",
+                        isUnread && "bg-blue-50"
                       )}
                     >
                       <div className="flex justify-between items-start">
