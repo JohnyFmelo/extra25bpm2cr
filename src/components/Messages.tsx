@@ -17,11 +17,12 @@ import { Label } from "@/components/ui/label";
 const Messages = () => {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [selectedUser, setSelectedUser] = useState("all");
+  const [selectedUser, setSelectedUser] = useState<string>("all");
   const [users, setUsers] = useState<Array<{ id: string; warName: string }>>([]);
   const { toast } = useToast();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
+  // Fetch users on component mount using useEffect
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -35,7 +36,6 @@ const Messages = () => {
         console.error("Error fetching users:", error);
       }
     };
-    
     fetchUsers();
   }, []);
 
