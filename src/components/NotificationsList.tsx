@@ -1,4 +1,3 @@
-```typescript
 import { useState, useEffect } from "react";
 import { Bell, BellDot, Trash2, Users } from "lucide-react";
 import {
