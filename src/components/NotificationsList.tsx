@@ -174,14 +174,14 @@ const NotificationsList = () => {
                           className="flex-1 text-left"
                           onClick={() => handleMarkAsRead(notification.id)}
                         >
-                          <p className="text-sm font-medium leading-none text-white">
+                          <p className="text-sm font-medium leading-none text-[#2A484E]">
                             {notification.senderName}
                           </p>
-                          <p className="text-sm text-white mt-1">
+                          <p className="text-sm text-[#377375] mt-1">
                             {notification.text}
                           </p>
-                          <p className="text-xs text-blue-900 mt-1">
-                            {notification.timestamp && format(notification.timestamp.toDate(), 'HH:mm')}
+                          <p className="text-xs text-[#2A484E] mt-1">
+                            {notification.timestamp && format(notification.timestamp.toDate(), 'dd/MM/yyyy HH:mm')}
                           </p>
                         </button>
                         <div className="flex gap-2 ml-2">
