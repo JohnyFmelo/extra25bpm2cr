@@ -26,7 +26,9 @@ const ScheduleList = () => {
 
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
+    // Detecta quando é meia-noite e ajusta para 24
+    let [endHour, endMinute] = endTime.split(':').map(Number);
+    if (endHour === 0) endHour = 24;
     
     let diffHours = endHour - startHour;
     let diffMinutes = endMinute - startMinute;
@@ -36,7 +38,11 @@ const ScheduleList = () => {
       diffMinutes += 60;
     }
     
-    return diffHours > 0 ? `${diffHours}h` : '';
+    // Se ainda houver minutos, adiciona ao resultado
+    const hourText = diffHours > 0 ? `${diffHours}h` : '';
+    const minuteText = diffMinutes > 0 ? `${diffMinutes}min` : '';
+    
+    return `${hourText}${minuteText}`;
   };
 
   useEffect(() => {
