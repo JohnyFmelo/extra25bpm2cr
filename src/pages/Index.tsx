@@ -8,6 +8,7 @@ import UsersList from "@/components/UsersList";
 import ProfileUpdateDialog from "@/components/ProfileUpdateDialog";
 import PasswordChangeDialog from "@/components/PasswordChangeDialog";
 import ScheduleList from "@/components/ScheduleList";
+import MessageDialog from "@/components/MessageDialog";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -15,6 +16,7 @@ const Index = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const handleEditorClick = () => {
@@ -41,6 +43,10 @@ const Index = () => {
     setActiveTab("schedule");
   };
 
+  const handleMessageClick = () => {
+    setShowMessageDialog(true);
+  };
+
   return (
     <div className="relative min-h-screen bg-[#E8F1F2]">
       <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto">
@@ -63,7 +69,7 @@ const Index = () => {
                 <>
                   <IconCard icon={Pencil} label="Editor" onClick={handleEditorClick} />
                   <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
-                  <IconCard icon={MessageSquare} label="Recados" />
+                  <IconCard icon={MessageSquare} label="Recados" onClick={handleMessageClick} />
                 </>
               )}
               <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
@@ -174,6 +180,7 @@ const Index = () => {
               </div>
             </div>
           </TabsContent>
+
         </Tabs>
 
         {showProfileDialog && (
@@ -192,6 +199,11 @@ const Index = () => {
             currentPassword={user.password}
           />
         )}
+
+        <MessageDialog
+          open={showMessageDialog}
+          onOpenChange={setShowMessageDialog}
+        />
       </div>
     </div>
   );
