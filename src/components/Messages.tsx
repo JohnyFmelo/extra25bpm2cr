@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { SendHorizontal } from "lucide-react";
@@ -22,8 +22,8 @@ const Messages = () => {
   const { toast } = useToast();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // Fetch users on component mount using useEffect
-  useEffect(() => {
+  // Fetch users on component mount
+  useState(() => {
     const fetchUsers = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "users"));
