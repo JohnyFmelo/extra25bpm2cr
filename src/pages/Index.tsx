@@ -8,7 +8,7 @@ import UsersList from "@/components/UsersList";
 import ProfileUpdateDialog from "@/components/ProfileUpdateDialog";
 import PasswordChangeDialog from "@/components/PasswordChangeDialog";
 import ScheduleList from "@/components/ScheduleList";
-import MessageDialog from "@/components/MessageDialog";
+import Messages from "@/components/Messages";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -16,7 +16,6 @@ const Index = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [showMessageDialog, setShowMessageDialog] = useState(false);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const handleEditorClick = () => {
@@ -44,7 +43,7 @@ const Index = () => {
   };
 
   const handleMessageClick = () => {
-    setShowMessageDialog(true);
+    setActiveTab("messages");
   };
 
   return (
@@ -58,6 +57,7 @@ const Index = () => {
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
+            <TabsTrigger value="messages">Messages</TabsTrigger>
           </TabsList>
 
           <TabsContent value="main">
@@ -181,6 +181,21 @@ const Index = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="messages">
+            <div className="relative">
+              <div className="absolute right-0 -top-12 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
+              <Messages />
+            </div>
+          </TabsContent>
+
         </Tabs>
 
         {showProfileDialog && (
@@ -199,11 +214,6 @@ const Index = () => {
             currentPassword={user.password}
           />
         )}
-
-        <MessageDialog
-          open={showMessageDialog}
-          onOpenChange={setShowMessageDialog}
-        />
       </div>
     </div>
   );
