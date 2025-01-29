@@ -42,7 +42,6 @@ const Hours = () => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
     setUserData(storedUser);
 
-    // Add event listener for storage changes
     const handleStorageChange = () => {
       const updatedUser = JSON.parse(localStorage.getItem('user') || '{}');
       setUserData(updatedUser);
@@ -76,11 +75,23 @@ const Hours = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${selectedMonth}&matricula=${userData.registration}`
-      );
+      const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec`;
+      const params = new URLSearchParams({
+        mes: selectedMonth,
+        matricula: userData.registration
+      });
 
-      console.log('URL da consulta:', `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${selectedMonth}&matricula=${userData.registration}`);
+      const response = await fetch(`${apiUrl}?${params.toString()}`, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const result = await response.json();
       console.log('Resultado da consulta:', result);
@@ -101,10 +112,11 @@ const Hours = () => {
 
       setData(result[0]);
     } catch (error) {
+      console.error('Error fetching data:', error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao consultar dados",
+        description: error instanceof Error ? error.message : "Erro ao consultar dados. Por favor, tente novamente mais tarde.",
       });
     } finally {
       setLoading(false);
