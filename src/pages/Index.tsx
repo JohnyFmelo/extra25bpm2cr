@@ -9,6 +9,7 @@ import ProfileUpdateDialog from "@/components/ProfileUpdateDialog";
 import PasswordChangeDialog from "@/components/PasswordChangeDialog";
 import ScheduleList from "@/components/ScheduleList";
 import Messages from "@/components/Messages";
+import NotificationsList from "@/components/NotificationsList";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -46,6 +47,10 @@ const Index = () => {
     setActiveTab("messages");
   };
 
+  const handleNotificationsClick = () => {
+    setActiveTab("notifications");
+  };
+
   return (
     <div className="relative min-h-screen bg-[#E8F1F2]">
       <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto">
@@ -58,13 +63,14 @@ const Index = () => {
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
 
           <TabsContent value="main">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <IconCard icon={Clock} label="Horas" />
               <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
-              <IconCard icon={Bell} label="Notificações" />
+              <IconCard icon={Bell} label="Notificações" onClick={handleNotificationsClick} />
               {user.userType === "admin" && (
                 <>
                   <IconCard icon={Pencil} label="Editor" onClick={handleEditorClick} />
@@ -193,6 +199,23 @@ const Index = () => {
                 </button>
               </div>
               <Messages />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <div className="relative">
+              <div className="absolute right-0 -top-12 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="bg-white rounded-xl shadow-lg">
+                <NotificationsList />
+              </div>
             </div>
           </TabsContent>
 
