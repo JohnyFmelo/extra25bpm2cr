@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Trash2 } from "lucide-react"; // Importação do ícone de lixeira
 import {
   collection,
   query,
@@ -11,7 +12,6 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "./ui/use-toast";
@@ -84,51 +84,49 @@ const NotificationsList = () => {
   };
 
   return (
-    <ScrollArea className="h-[500px] w-full">
-      <div className="space-y-4 p-4">
-        {notifications.map((notification) => {
-          const isUnread = !notification.readBy.includes(currentUser.id);
-          return (
-            <div
-              key={notification.id}
-              className={cn(
-                "p-4 rounded-lg border transition-colors cursor-pointer",
-                isUnread ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
-              )}
-              onClick={() => {
-                handleMarkAsRead(notification.id);
-              }}
-            >
-              <div className="flex justify-between items-start">
-                <div className="space-y-1 flex-1">
-                  <p className="font-medium">{notification.senderName}</p>
-                  <p className="text-sm text-gray-600">
-                    {notification.text}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {notification.timestamp?.toDate().toLocaleString()}
-                  </p>
-                </div>
-                {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive ml-4"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteNotification(notification.id);
-                    }}
-                  >
-                    <span className="sr-only">Delete notification</span>
-                    🗑️
-                  </Button>
-                )}
+    <div className="space-y-4 p-4">
+      {notifications.map((notification) => {
+        const isUnread = !notification.readBy.includes(currentUser.id);
+        return (
+          <div
+            key={notification.id}
+            className={cn(
+              "p-4 rounded-lg border transition-colors cursor-pointer",
+              isUnread ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
+            )}
+            onClick={() => {
+              handleMarkAsRead(notification.id);
+            }}
+          >
+            <div className="flex justify-between items-start">
+              <div className="space-y-1 flex-1">
+                <p className="font-medium">{notification.senderName}</p>
+                <p className="text-sm text-gray-600">
+                  {notification.text}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {notification.timestamp?.toDate().toLocaleString()}
+                </p>
               </div>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive ml-4"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteNotification(notification.id);
+                  }}
+                >
+                  <span className="sr-only">Delete notification</span>
+                  <Trash2 className="h-5 w-5" />
+                </Button>
+              )}
             </div>
-          );
-        })}
-      </div>
-    </ScrollArea>
+          </div>
+        );
+      })}
+    </div>
   );
 };
 
