@@ -132,7 +132,6 @@ const NotificationsList = () => {
   );
 };
 
-// Hook para expor o contador de notificações não lidas
 export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -160,49 +159,3 @@ export const useNotifications = () => {
 };
 
 export default NotificationsList;
-
-          </TabsContent>
-
-          {/* ... outros TabsContent permanecem iguais ... */}
-
-          <TabsContent value="notifications">
-            <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
-                <button
-                  onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-                  aria-label="Voltar para home"
-                >
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="bg-white rounded-xl shadow-lg">
-                <NotificationsList />
-              </div>
-            </div>
-          </TabsContent>
-
-        </Tabs>
-
-        {showProfileDialog && (
-          <ProfileUpdateDialog
-            open={showProfileDialog}
-            onOpenChange={setShowProfileDialog}
-            userData={user}
-          />
-        )}
-        
-        {showPasswordDialog && (
-          <PasswordChangeDialog
-            open={showPasswordDialog}
-            onOpenChange={setShowPasswordDialog}
-            userId={user.id}
-            currentPassword={user.password}
-          />
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default Index;
