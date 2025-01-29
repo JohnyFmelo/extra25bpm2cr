@@ -42,29 +42,10 @@ interface User {
 
 const NotificationsList = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [selectedNotification, setSelectedNotification] = useState<string | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = currentUser.userType === "admin";
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "users"));
-        const usersData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          warName: doc.data().warName || "Usuário sem nome"
-        }));
-        setUsers(usersData);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
-    };
-    
-    fetchUsers();
-  }, []);
 
   useEffect(() => {
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
@@ -119,14 +100,20 @@ const NotificationsList = () => {
 
   const unreadCount = notifications.filter(n => !n.readBy.includes(currentUser.id)).length;
 
+  const handleIconClick = () => {
+    console.log("Opening notifications dialog");
+    setIsDialogOpen(true);
+  };
+
   return (
     <>
-      <IconCard 
-        icon={Bell} 
-        label="Notificações" 
-        onClick={() => setIsDialogOpen(true)}
-        badge={unreadCount > 0 ? unreadCount : undefined}
-      />
+      <div onClick={handleIconClick}>
+        <IconCard 
+          icon={Bell} 
+          label="Notificações"
+          badge={unreadCount > 0 ? unreadCount : undefined}
+        />
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl">
