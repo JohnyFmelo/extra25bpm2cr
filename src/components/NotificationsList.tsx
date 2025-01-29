@@ -14,21 +14,15 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useToast } from "./ui/use-toast";
-import { format } from "date-fns";
 
 interface Notification {
   id: string;
@@ -50,6 +44,7 @@ const NotificationsList = () => {
   const [hasUnread, setHasUnread] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = currentUser.userType === "admin";
@@ -128,114 +123,130 @@ const NotificationsList = () => {
     return user?.warName || "Usuário desconhecido";
   };
 
+  const unreadCount = notifications.filter(n => !n.readBy.includes(currentUser.id)).length;
+
   return (
     <>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="relative hover:bg-blue-100" 
-          >
-            {hasUnread ? (
-              <BellDot className="h-5 w-5 text-white" />
-            ) : (
-              <Bell className="h-5 w-5 text-white" />
-            )}
-            {hasUnread && (
-              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500" />
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80 p-0">
-          <div className="p-4 border-b">
-            <h4 className="font-semibold">Notificações</h4>
-            {hasUnread && (
-              <p className="text-sm text-muted-foreground">
-                Você tem recados não lidos
-              </p>
-            )}
-          </div>
-          <ScrollArea className="h-[300px]">
-            {notifications.length > 0 ? (
-              <div className="space-y-1">
-                {notifications.map((notification) => {
-                  const isUnread = !notification.readBy.includes(currentUser.id);
-                  return (
-                    <div
-                      key={notification.id}
-                      className={cn(
-                        "relative w-full text-left px-4 py-3 hover:bg-blue-100 transition-colors",
-                        isUnread && "bg-blue-50"
-                      )}
-                    >
-                      <div className="flex justify-between items-start">
-                        <button
-                          className="flex-1 text-left"
-                          onClick={() => handleMarkAsRead(notification.id)}
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="relative hover:bg-blue-100"
+        onClick={() => setIsDialogOpen(true)}
+      >
+        <Bell className="h-6 w-6 text-white" />
+        {hasUnread && (
+          <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-green-500 flex items-center justify-center text-xs text-white font-medium">
+            {unreadCount}
+          </span>
+        )}
+      </Button>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Recados</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[500px] w-full">
+            <div className="space-y-4 p-4">
+              {notifications.map((notification) => {
+                const isUnread = !notification.readBy.includes(currentUser.id);
+                return (
+                  <div
+                    key={notification.id}
+                    className={cn(
+                      "p-4 rounded-lg border transition-colors cursor-pointer",
+                      isUnread ? "bg-blue-50 border-blue-200" : "bg-white border-gray-200"
+                    )}
+                    onClick={() => {
+                      handleMarkAsRead(notification.id);
+                      setSelectedNotification(notification.id);
+                    }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1 flex-1">
+                        <p className="font-medium">{notification.senderName}</p>
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          {notification.text}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {notification.timestamp?.toDate().toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedNotification(notification.id);
+                          }}
                         >
-                          <p className="text-sm font-medium leading-none text-[#2A484E]">
-                            {notification.senderName}
-                          </p>
-                          <p className="text-sm text-[#377375] mt-1">
-                            {notification.text}
-                          </p>
-                          <p className="text-xs text-[#2A484E] mt-1">
-                            {notification.timestamp && format(notification.timestamp.toDate(), 'dd/MM/yyyy HH:mm')}
-                          </p>
-                        </button>
-                        <div className="flex gap-2 ml-2">
+                          <Users className="h-4 w-4" />
+                        </Button>
+                        {isAdmin && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setSelectedNotification(notification.id)}
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteNotification(notification.id);
+                            }}
                           >
-                            <Users className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                          {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteNotification(notification.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="p-4 text-center text-muted-foreground">
-                Nenhuma notificação
-              </div>
-            )}
+                  </div>
+                );
+              })}
+            </div>
           </ScrollArea>
-        </PopoverContent>
-      </Popover>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!selectedNotification} onOpenChange={() => setSelectedNotification(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Usuários que leram este recado</DialogTitle>
+            <DialogTitle>Detalhes do Recado</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+          <div className="space-y-4">
             {selectedNotification && (
-              <div className="space-y-2">
-                {notifications
-                  .find(n => n.id === selectedNotification)
-                  ?.readBy.map((userId) => (
-                    <div key={userId} className="text-sm">
-                      {getUserName(userId)}
+              <>
+                <div className="space-y-2">
+                  {(() => {
+                    const notification = notifications.find(n => n.id === selectedNotification);
+                    if (!notification) return null;
+                    return (
+                      <>
+                        <p className="font-medium">{notification.senderName}</p>
+                        <p className="text-sm">{notification.text}</p>
+                        <p className="text-xs text-gray-500">
+                          {notification.timestamp?.toDate().toLocaleString()}
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Lido por:</h4>
+                  <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                    <div className="space-y-2">
+                      {notifications
+                        .find(n => n.id === selectedNotification)
+                        ?.readBy.map((userId) => (
+                          <div key={userId} className="text-sm">
+                            {getUserName(userId)}
+                          </div>
+                        ))}
                     </div>
-                  ))}
-              </div>
+                  </ScrollArea>
+                </div>
+              </>
             )}
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </>
