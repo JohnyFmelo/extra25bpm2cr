@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, BellDot, Trash2, Users } from "lucide-react";
+import { Bell } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import {
   collection,
@@ -42,7 +42,6 @@ interface User {
 
 const NotificationsList = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [hasUnread, setHasUnread] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -80,7 +79,6 @@ const NotificationsList = () => {
       );
       
       setNotifications(notifs);
-      setHasUnread(notifs.some(n => !n.readBy.includes(currentUser.id)));
     });
 
     return () => unsubscribe();
@@ -166,32 +164,20 @@ const NotificationsList = () => {
                           {notification.timestamp?.toDate().toLocaleString()}
                         </p>
                       </div>
-                      <div className="flex gap-2 ml-4">
+                      {isAdmin && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-8 w-8 text-destructive hover:text-destructive ml-4"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedNotification(notification.id);
+                            handleDeleteNotification(notification.id);
                           }}
                         >
-                          <Users className="h-4 w-4" />
+                          <span className="sr-only">Delete notification</span>
+                          🗑️
                         </Button>
-                        {isAdmin && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteNotification(notification.id);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
                 );
