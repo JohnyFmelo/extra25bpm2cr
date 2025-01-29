@@ -128,7 +128,7 @@ const NotificationsList = () => {
                   <p className="text-sm text-gray-600">
                     {notification.text}
                   </p>
-                  <p className="font-medium text-sm">
+                  <p className="text-sm">
                     {formatDate(notification.timestamp)}
                   </p>
                 </div>
