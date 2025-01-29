@@ -21,6 +21,8 @@ interface Notification {
   text: string;
   timestamp: Timestamp;
   senderName: string;
+  graduation: string;
+  isAdmin: boolean;
   readBy: string[];
   type: 'all' | 'individual';
   recipientId: string | null;
@@ -117,11 +119,16 @@ const NotificationsList = () => {
             >
               <div className="flex justify-between items-start">
                 <div className="space-y-1 flex-1">
-                  <p className="font-medium">{notification.senderName}</p>
+                  <div className="flex items-center gap-1">
+                    <p className="font-medium">
+                      {notification.graduation} {notification.senderName}
+                      {notification.isAdmin && " - Administrador"}
+                    </p>
+                  </div>
                   <p className="text-sm text-gray-600">
                     {notification.text}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="font-medium text-sm">
                     {formatDate(notification.timestamp)}
                   </p>
                 </div>
