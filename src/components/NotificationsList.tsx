@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { Bell } from "lucide-react";
-import IconCard from "@/components/IconCard";
 import {
   collection,
   query,
@@ -11,15 +9,8 @@ import {
   arrayUnion,
   Timestamp,
   deleteDoc,
-  getDocs,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -35,36 +26,11 @@ interface Notification {
   recipientId: string | null;
 }
 
-interface User {
-  id: string;
-  warName: string;
-}
-
 const NotificationsList = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [selectedNotification, setSelectedNotification] = useState<string | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = currentUser.userType === "admin";
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "users"));
-        const usersData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          warName: doc.data().warName || "Usuário sem nome"
-        }));
-        setUsers(usersData);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
-    };
-    
-    fetchUsers();
-  }, []);
 
   useEffect(() => {
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
@@ -117,71 +83,126 @@ const NotificationsList = () => {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.readBy.includes(currentUser.id)).length;
-
   return (
-    <>
-      <IconCard 
-        icon={Bell} 
-        label="Notificações" 
-        onClick={() => setIsDialogOpen(true)}
-        badge={unreadCount > 0 ? unreadCount : undefined}
-      />
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Recados</DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="h-[500px] w-full">
-            <div className="space-y-4 p-4">
-              {notifications.map((notification) => {
-                const isUnread = !notification.readBy.includes(currentUser.id);
-                return (
-                  <div
-                    key={notification.id}
-                    className={cn(
-                      "p-4 rounded-lg border transition-colors cursor-pointer",
-                      isUnread ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
-                    )}
-                    onClick={() => {
-                      handleMarkAsRead(notification.id);
+    <ScrollArea className="h-[500px] w-full">
+      <div className="space-y-4 p-4">
+        {notifications.map((notification) => {
+          const isUnread = !notification.readBy.includes(currentUser.id);
+          return (
+            <div
+              key={notification.id}
+              className={cn(
+                "p-4 rounded-lg border transition-colors cursor-pointer",
+                isUnread ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
+              )}
+              onClick={() => {
+                handleMarkAsRead(notification.id);
+              }}
+            >
+              <div className="flex justify-between items-start">
+                <div className="space-y-1 flex-1">
+                  <p className="font-medium">{notification.senderName}</p>
+                  <p className="text-sm text-gray-600">
+                    {notification.text}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {notification.timestamp?.toDate().toLocaleString()}
+                  </p>
+                </div>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive ml-4"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteNotification(notification.id);
                     }}
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1 flex-1">
-                        <p className="font-medium">{notification.senderName}</p>
-                        <p className="text-sm text-gray-600">
-                          {notification.text}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {notification.timestamp?.toDate().toLocaleString()}
-                        </p>
-                      </div>
-                      {isAdmin && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive ml-4"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteNotification(notification.id);
-                          }}
-                        >
-                          <span className="sr-only">Delete notification</span>
-                          🗑️
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                    <span className="sr-only">Delete notification</span>
+                    🗑️
+                  </Button>
+                )}
+              </div>
             </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    </>
+          );
+        })}
+      </div>
+    </ScrollArea>
   );
 };
 
+// Hook para expor o contador de notificações não lidas
+export const useNotifications = () => {
+  const [unreadCount, setUnreadCount] = useState(0);
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+  useEffect(() => {
+    const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const notifs = snapshot.docs.map(doc => ({
+        readBy: doc.data().readBy || [],
+        type: doc.data().type,
+        recipientId: doc.data().recipientId,
+      })).filter(notif => 
+        notif.type === 'all' || notif.recipientId === currentUser.id
+      );
+      
+      const count = notifs.filter(n => !n.readBy.includes(currentUser.id)).length;
+      setUnreadCount(count);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser.id]);
+
+  return unreadCount;
+};
+
 export default NotificationsList;
+
+          </TabsContent>
+
+          {/* ... outros TabsContent permanecem iguais ... */}
+
+          <TabsContent value="notifications">
+            <div className="relative">
+              <div className="absolute right-0 -top-12 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="bg-white rounded-xl shadow-lg">
+                <NotificationsList />
+              </div>
+            </div>
+          </TabsContent>
+
+        </Tabs>
+
+        {showProfileDialog && (
+          <ProfileUpdateDialog
+            open={showProfileDialog}
+            onOpenChange={setShowProfileDialog}
+            userData={user}
+          />
+        )}
+        
+        {showPasswordDialog && (
+          <PasswordChangeDialog
+            open={showPasswordDialog}
+            onOpenChange={setShowPasswordDialog}
+            userId={user.id}
+            currentPassword={user.password}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Index;
