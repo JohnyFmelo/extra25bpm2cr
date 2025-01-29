@@ -58,13 +58,14 @@ const Index = () => {
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
 
           <TabsContent value="main">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <IconCard icon={Clock} label="Horas" />
               <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
-              <IconCard icon={Bell} label="Notificações" />
+              <IconCard icon={Bell} label="Notificações" onClick={() => setActiveTab("notifications")} />
               {user.userType === "admin" && (
                 <>
                   <IconCard icon={Pencil} label="Editor" onClick={handleEditorClick} />
@@ -193,6 +194,30 @@ const Index = () => {
                 </button>
               </div>
               <Messages />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <div className="relative">
+              <div className="absolute right-0 -top-12 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-semibold mb-6">Notificações</h2>
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <p className="font-medium">Título da Notificação</p>
+                    <p className="text-sm text-gray-600">Descrição da notificação</p>
+                    <p className="text-xs text-gray-400 mt-2">Há 2 horas</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
