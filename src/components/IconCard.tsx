@@ -5,9 +5,10 @@ interface IconCardProps {
   icon: LucideIcon;
   label: string;
   onClick?: () => void;
+  badge?: number;
 }
 
-const IconCard = ({ icon: Icon, label, onClick }: IconCardProps) => {
+const IconCard = ({ icon: Icon, label, onClick, badge }: IconCardProps) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -21,8 +22,13 @@ const IconCard = ({ icon: Icon, label, onClick }: IconCardProps) => {
   return (
     <button
       onClick={handleClick}
-      className="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all space-y-3 group hover:bg-primary hover:text-primary-foreground"
+      className="relative flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all space-y-3 group hover:bg-primary hover:text-primary-foreground"
     >
+      {badge !== undefined && badge > 0 && (
+        <span className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 bg-green-500 text-white text-xs font-bold rounded-full">
+          {badge}
+        </span>
+      )}
       <Icon className="h-10 w-10 text-primary group-hover:text-primary-foreground transition-colors" />
       <span className="text-base font-medium">{label}</span>
     </button>
