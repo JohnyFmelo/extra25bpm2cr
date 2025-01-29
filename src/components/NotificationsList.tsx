@@ -117,11 +117,6 @@ const NotificationsList = () => {
     }
   };
 
-  const getUserName = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    return user?.warName || "Usuário desconhecido";
-  };
-
   const unreadCount = notifications.filter(n => !n.readBy.includes(currentUser.id)).length;
 
   return (
@@ -147,17 +142,16 @@ const NotificationsList = () => {
                     key={notification.id}
                     className={cn(
                       "p-4 rounded-lg border transition-colors cursor-pointer",
-                      isUnread ? "bg-blue-50 border-blue-200" : "bg-white border-gray-200"
+                      isUnread ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
                     )}
                     onClick={() => {
                       handleMarkAsRead(notification.id);
-                      setSelectedNotification(notification.id);
                     }}
                   >
                     <div className="flex justify-between items-start">
                       <div className="space-y-1 flex-1">
                         <p className="font-medium">{notification.senderName}</p>
-                        <p className="text-sm text-gray-600 line-clamp-2">
+                        <p className="text-sm text-gray-600">
                           {notification.text}
                         </p>
                         <p className="text-xs text-gray-500">
@@ -184,49 +178,6 @@ const NotificationsList = () => {
               })}
             </div>
           </ScrollArea>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!selectedNotification} onOpenChange={() => setSelectedNotification(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Detalhes do Recado</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {selectedNotification && (
-              <>
-                <div className="space-y-2">
-                  {(() => {
-                    const notification = notifications.find(n => n.id === selectedNotification);
-                    if (!notification) return null;
-                    return (
-                      <>
-                        <p className="font-medium">{notification.senderName}</p>
-                        <p className="text-sm">{notification.text}</p>
-                        <p className="text-xs text-gray-500">
-                          {notification.timestamp?.toDate().toLocaleString()}
-                        </p>
-                      </>
-                    );
-                  })()}
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">Lido por:</h4>
-                  <ScrollArea className="h-[200px] w-full rounded-md border p-4">
-                    <div className="space-y-2">
-                      {notifications
-                        .find(n => n.id === selectedNotification)
-                        ?.readBy.map((userId) => (
-                          <div key={userId} className="text-sm">
-                            {getUserName(userId)}
-                          </div>
-                        ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              </>
-            )}
-          </div>
         </DialogContent>
       </Dialog>
     </>
