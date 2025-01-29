@@ -127,19 +127,12 @@ const NotificationsList = () => {
 
   return (
     <>
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="relative hover:bg-blue-100"
+      <IconCard 
+        icon={Bell} 
+        label="Notificações" 
         onClick={() => setIsDialogOpen(true)}
-      >
-        <Bell className="h-6 w-6 text-white" />
-        {hasUnread && (
-          <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-green-500 flex items-center justify-center text-xs text-white font-medium">
-            {unreadCount}
-          </span>
-        )}
-      </Button>
+        badge={unreadCount > 0 ? unreadCount : undefined}
+      />
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl">
