@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Trash2 } from "lucide-react"; // Importação do ícone de lixeira
+import { Trash2 } from "lucide-react";
 import {
   collection,
   query,
@@ -83,49 +83,67 @@ const NotificationsList = () => {
     }
   };
 
+  const formatDate = (timestamp: Timestamp) => {
+    const date = timestamp.toDate();
+    const weekDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const weekDay = weekDays[date.getDay()];
+    const formattedDate = date.toLocaleDateString('pt-BR');
+    const formattedTime = date.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    return `${weekDay} ${formattedDate} às ${formattedTime}`;
+  };
+
   return (
     <div className="space-y-4 p-4">
-      {notifications.map((notification) => {
-        const isUnread = !notification.readBy.includes(currentUser.id);
-        return (
-          <div
-            key={notification.id}
-            className={cn(
-              "p-4 rounded-lg border transition-colors cursor-pointer",
-              isUnread ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
-            )}
-            onClick={() => {
-              handleMarkAsRead(notification.id);
-            }}
-          >
-            <div className="flex justify-between items-start">
-              <div className="space-y-1 flex-1">
-                <p className="font-medium">{notification.senderName}</p>
-                <p className="text-sm text-gray-600">
-                  {notification.text}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {notification.timestamp?.toDate().toLocaleString()}
-                </p>
-              </div>
-              {isAdmin && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive ml-4"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteNotification(notification.id);
-                  }}
-                >
-                  <span className="sr-only">Delete notification</span>
-                  <Trash2 className="h-5 w-5" />
-                </Button>
+      {notifications.length === 0 ? (
+        <div className="p-4 rounded-lg border border-gray-200 bg-white text-center">
+          <p className="text-gray-600">Você ainda não possui recados.</p>
+        </div>
+      ) : (
+        notifications.map((notification) => {
+          const isUnread = !notification.readBy.includes(currentUser.id);
+          return (
+            <div
+              key={notification.id}
+              className={cn(
+                "p-4 rounded-lg border transition-colors cursor-pointer",
+                isUnread ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
               )}
+              onClick={() => {
+                handleMarkAsRead(notification.id);
+              }}
+            >
+              <div className="flex justify-between items-start">
+                <div className="space-y-1 flex-1">
+                  <p className="font-medium">{notification.senderName}</p>
+                  <p className="text-sm text-gray-600">
+                    {notification.text}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {formatDate(notification.timestamp)}
+                  </p>
+                </div>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive ml-4"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteNotification(notification.id);
+                    }}
+                  >
+                    <span className="sr-only">Delete notification</span>
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })
+      )}
     </div>
   );
 };
