@@ -2,7 +2,7 @@ import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, Me
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UsersList from "@/components/UsersList";
 import ProfileUpdateDialog from "@/components/ProfileUpdateDialog";
@@ -10,8 +10,6 @@ import PasswordChangeDialog from "@/components/PasswordChangeDialog";
 import ScheduleList from "@/components/ScheduleList";
 import Messages from "@/components/Messages";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -19,32 +17,8 @@ const Index = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem("user");
-    return savedUser ? JSON.parse(savedUser) : {};
-  });
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        const userData = {
-          id: firebaseUser.uid,
-          email: firebaseUser.email,
-          ...user
-        };
-        setUser(userData);
-        localStorage.setItem("user", JSON.stringify(userData));
-      } else {
-        setUser({});
-        localStorage.removeItem("user");
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
 
   const handleEditorClick = () => {
     setActiveTab("editor");
