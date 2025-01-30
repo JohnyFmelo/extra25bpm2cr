@@ -11,7 +11,9 @@ import {
   updateDoc,
   Firestore,
   DocumentData,
-  QuerySnapshot
+  QuerySnapshot,
+  setDoc,
+  getDoc
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { TimeSlot } from '@/types/user';
@@ -170,5 +172,49 @@ export const dataOperations = {
       console.error('Error clearing data:', error);
       return { success: false };
     });
+  }
+};
+
+export const limitOperations = {
+  async setGlobalLimit(limit: number) {
+    try {
+      const limitRef = doc(db, 'limits', 'global');
+      await setDoc(limitRef, { value: limit });
+      return { success: true };
+    } catch (error) {
+      console.error('Error setting global limit:', error);
+      return { success: false };
+    }
+  },
+
+  async setUserLimit(userId: string, limit: number) {
+    try {
+      const limitRef = doc(db, 'limits', userId);
+      await setDoc(limitRef, { value: limit });
+      return { success: true };
+    } catch (error) {
+      console.error('Error setting user limit:', error);
+      return { success: false };
+    }
+  },
+
+  async getLimit(userId: string) {
+    try {
+      const globalLimitDoc = await getDoc(doc(db, 'limits', 'global'));
+      const userLimitDoc = await getDoc(doc(db, 'limits', userId));
+      
+      if (userLimitDoc.exists()) {
+        return userLimitDoc.data().value;
+      }
+      
+      if (globalLimitDoc.exists()) {
+        return globalLimitDoc.data().value;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting limit:', error);
+      return null;
+    }
   }
 };

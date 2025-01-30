@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, limitOperations } from "@/lib/firebase";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserLimitDialogProps {
   open: boolean;
@@ -52,7 +52,7 @@ const UserLimitDialog = ({ open, onOpenChange }: UserLimitDialogProps) => {
   }, [open, limitType, toast]);
 
   const handleSubmit = async () => {
-    if (limitType === "all" && (!limit || isNaN(Number(limit)) || Number(limit) < 1)) {
+    if (!limit || isNaN(Number(limit)) || Number(limit) < 1) {
       toast({
         variant: "destructive",
         title: "Erro",
@@ -71,7 +71,19 @@ const UserLimitDialog = ({ open, onOpenChange }: UserLimitDialogProps) => {
     }
 
     try {
-      // Here you would implement the logic to save the limit
+      const limitValue = Number(limit);
+      let result;
+      
+      if (limitType === "all") {
+        result = await limitOperations.setGlobalLimit(limitValue);
+      } else {
+        result = await limitOperations.setUserLimit(selectedUser, limitValue);
+      }
+
+      if (!result.success) {
+        throw new Error('Failed to set limit');
+      }
+
       toast({
         title: "Sucesso",
         description: `Limite ${limitType === "all" ? "global" : "individual"} definido com sucesso.`
@@ -129,19 +141,17 @@ const UserLimitDialog = ({ open, onOpenChange }: UserLimitDialogProps) => {
             </ScrollArea>
           )}
 
-          {limitType === "all" && (
-            <div className="space-y-2">
-              <Label htmlFor="limit">Limite de Vagas</Label>
-              <Input
-                id="limit"
-                type="number"
-                min="1"
-                value={limit}
-                onChange={(e) => setLimit(e.target.value)}
-                placeholder="Digite o número de vagas"
-              />
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="limit">Limite de Vagas</Label>
+            <Input
+              id="limit"
+              type="number"
+              min="1"
+              value={limit}
+              onChange={(e) => setLimit(e.target.value)}
+              placeholder="Digite o número de vagas"
+            />
+          </div>
 
           <Button onClick={handleSubmit} className="w-full">
             Definir Limite
