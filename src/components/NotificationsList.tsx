@@ -95,7 +95,7 @@ const NotificationsList = () => {
                     date.getFullYear() === today.getFullYear();
 
     if (isToday) {
-      return `hoje às ${date.toLocaleTimeString('pt-BR', {
+      return `Hoje às ${date.toLocaleTimeString('pt-BR', {
         hour: '2-digit',
         minute: '2-digit'
       })}`;
