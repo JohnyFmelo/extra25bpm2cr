@@ -1,4 +1,4 @@
-\\Notificacoes
+//Notificacoes
 import { useState, useEffect } from "react";
 import { Trash2 } from "lucide-react";
 import {
