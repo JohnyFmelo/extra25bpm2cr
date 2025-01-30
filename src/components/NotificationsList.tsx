@@ -141,7 +141,7 @@ const NotificationsList = () => {
                     </p>
                   </div>
                   <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                    {firstLine}{!isExpanded && ' ...'}{isExpanded && remainingText && `\n${remainingText}`}
+                    {firstLine} {remainingText && `... ${remainingText}`}
                   </p>
                   <p className="text-sm">
                     {formatDate(notification.timestamp)}
@@ -162,7 +162,7 @@ const NotificationsList = () => {
                   </Button>
                 )}
               </div>
-              <div className="flex justify-center mt-6">
+              <div className="flex justify-center mt-4">
                 {isExpanded ? (
                   <ChevronUp className="h-5 w-5 text-gray-500" />
                 ) : (
