@@ -1,4 +1,4 @@
-import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare } from "lucide-react";
+import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, CircleCheckBig } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -10,6 +10,7 @@ import PasswordChangeDialog from "@/components/PasswordChangeDialog";
 import ScheduleList from "@/components/ScheduleList";
 import Messages from "@/components/Messages";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
+import UserLimitDialog from "@/components/UserLimitDialog";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -17,6 +18,7 @@ const Index = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showLimitDialog, setShowLimitDialog] = useState(false);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
 
@@ -139,7 +141,14 @@ const Index = () => {
 
           <TabsContent value="editor">
             <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
+              <div className="absolute right-0 -top-12 mb-4 flex space-x-2">
+                <button
+                  onClick={() => setShowLimitDialog(true)}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Definir limite de vagas"
+                >
+                  <CircleCheckBig className="h-6 w-6" />
+                </button>
                 <button
                   onClick={handleBackClick}
                   className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
@@ -244,6 +253,11 @@ const Index = () => {
             currentPassword={user.password}
           />
         )}
+
+        <UserLimitDialog 
+          open={showLimitDialog}
+          onOpenChange={setShowLimitDialog}
+        />
       </div>
     </div>
   );
