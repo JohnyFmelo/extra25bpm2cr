@@ -118,7 +118,7 @@ const NotificationsList = () => {
             ? notification.text.indexOf('\n')
             : notification.text.length;
           const firstLine = notification.text.slice(0, firstLineEndIndex);
-          const remainingText = isExpanded ? notification.text.slice(firstLineEndIndex).trim() : '';
+          const remainingText = notification.text.slice(firstLineEndIndex).trim();
           
           return (
             <div
@@ -140,14 +140,26 @@ const NotificationsList = () => {
                       {notification.isAdmin && " - Administrador"}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                    {firstLine} {remainingText && `... ${remainingText}`}
+                  <p className="text-sm text-gray-600 text-justify whitespace-pre-wrap">
+                    {isExpanded ? notification.text : (
+                      <>
+                        {firstLine}
+                        {remainingText && "..."}
+                      </>
+                    )}
                   </p>
-                  <p className="text-sm">
-                    {formatDate(notification.timestamp)}
-                  </p>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-sm">
+                      {formatDate(notification.timestamp)}
+                    </p>
+                    {isExpanded ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </div>
                 </div>
-                {isAdmin && (
+                {isAdmin && !isExpanded && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -160,13 +172,6 @@ const NotificationsList = () => {
                     <span className="sr-only">Delete notification</span>
                     <Trash2 className="h-5 w-5" />
                   </Button>
-                )}
-              </div>
-              <div className="flex justify-center mt-4">
-                {isExpanded ? (
-                  <ChevronUp className="h-5 w-5 text-gray-500" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-500" />
                 )}
               </div>
             </div>
