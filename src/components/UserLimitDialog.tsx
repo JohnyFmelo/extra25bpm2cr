@@ -52,20 +52,11 @@ const UserLimitDialog = ({ open, onOpenChange }: UserLimitDialogProps) => {
   }, [open, limitType, toast]);
 
   const handleSubmit = async () => {
-    if (limitType === "all" && (!limit || isNaN(Number(limit)) || Number(limit) < 1)) {
+    if (!limit || isNaN(Number(limit)) || Number(limit) < 1) {
       toast({
         variant: "destructive",
         title: "Erro",
         description: "Por favor, insira um número válido maior que zero."
-      });
-      return;
-    }
-
-    if (limitType === "individual" && !selectedUser) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Por favor, selecione um usuário."
       });
       return;
     }
@@ -97,11 +88,7 @@ const UserLimitDialog = ({ open, onOpenChange }: UserLimitDialogProps) => {
         <div className="grid gap-4 py-4">
           <RadioGroup
             value={limitType}
-            onValueChange={(value: "all" | "individual") => {
-              setLimitType(value);
-              setSelectedUser("");
-              setLimit("");
-            }}
+            onValueChange={(value: "all" | "individual") => setLimitType(value)}
             className="grid grid-cols-2 gap-4"
           >
             <div className="flex items-center space-x-2">
@@ -137,19 +124,17 @@ const UserLimitDialog = ({ open, onOpenChange }: UserLimitDialogProps) => {
             </ScrollArea>
           )}
 
-          {limitType === "all" && (
-            <div className="space-y-2">
-              <Label htmlFor="limit">Limite de Vagas</Label>
-              <Input
-                id="limit"
-                type="number"
-                min="1"
-                value={limit}
-                onChange={(e) => setLimit(e.target.value)}
-                placeholder="Digite o número de vagas"
-              />
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="limit">Limite de Vagas</Label>
+            <Input
+              id="limit"
+              type="number"
+              min="1"
+              value={limit}
+              onChange={(e) => setLimit(e.target.value)}
+              placeholder="Digite o número de vagas"
+            />
+          </div>
 
           <Button onClick={handleSubmit} className="w-full">
             Definir Limite
