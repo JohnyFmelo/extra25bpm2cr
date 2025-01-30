@@ -118,21 +118,18 @@ const UserLimitDialog = ({ open, onOpenChange }: UserLimitDialogProps) => {
 
           {limitType === "individual" && (
             <ScrollArea className="h-[200px] rounded-md border p-4">
-              <div className="space-y-2">
-                {users.map((user) => (
-                  <div key={user.id} className="flex items-center space-x-2">
-                    <RadioGroupItem
-                      value={user.id}
-                      id={user.id}
-                      checked={selectedUser === user.id}
-                      onClick={() => setSelectedUser(user.id)}
-                    />
-                    <Label htmlFor={user.id}>
-                      {user.rank ? `${user.rank} ${user.warName}` : user.warName}
-                    </Label>
-                  </div>
-                ))}
-              </div>
+              <RadioGroup value={selectedUser} onValueChange={setSelectedUser}>
+                <div className="space-y-2">
+                  {users.map((user) => (
+                    <div key={user.id} className="flex items-center space-x-2">
+                      <RadioGroupItem value={user.id} id={user.id} />
+                      <Label htmlFor={user.id}>
+                        {user.rank ? `${user.rank} ${user.warName}` : user.warName}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </RadioGroup>
             </ScrollArea>
           )}
 
