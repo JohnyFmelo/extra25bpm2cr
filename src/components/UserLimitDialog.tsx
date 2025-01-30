@@ -72,7 +72,6 @@ const UserLimitDialog = ({ open, onOpenChange }: UserLimitDialogProps) => {
 
     try {
       // Here you would implement the logic to save the limit
-      // For all users or for the selected individual user
       toast({
         title: "Sucesso",
         description: `Limite ${limitType === "all" ? "global" : "individual"} definido com sucesso.`
@@ -100,35 +99,32 @@ const UserLimitDialog = ({ open, onOpenChange }: UserLimitDialogProps) => {
             onValueChange={(value: "all" | "individual") => {
               setLimitType(value);
               setSelectedUser("");
-              if (value === "individual") {
-                setLimit("");
-              }
+              setLimit("");
             }}
-            className="grid grid-cols-2 gap-4"
           >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="all" id="all" />
-              <Label htmlFor="all">Todos</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="individual" id="individual" />
-              <Label htmlFor="individual">Individual</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="all" />
+                <Label htmlFor="all">Todos</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="individual" id="individual" />
+                <Label htmlFor="individual">Individual</Label>
+              </div>
             </div>
           </RadioGroup>
 
           {limitType === "individual" && (
             <ScrollArea className="h-[200px] rounded-md border p-4">
               <RadioGroup value={selectedUser} onValueChange={setSelectedUser}>
-                <div className="space-y-2">
-                  {users.map((user) => (
-                    <div key={user.id} className="flex items-center space-x-2">
-                      <RadioGroupItem value={user.id} id={user.id} />
-                      <Label htmlFor={user.id}>
-                        {user.rank ? `${user.rank} ${user.warName}` : user.warName}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
+                {users.map((user) => (
+                  <div key={user.id} className="flex items-center space-x-2 mb-2">
+                    <RadioGroupItem value={user.id} id={user.id} />
+                    <Label htmlFor={user.id}>
+                      {user.rank ? `${user.rank} ${user.warName}` : user.warName}
+                    </Label>
+                  </div>
+                ))}
               </RadioGroup>
             </ScrollArea>
           )}
