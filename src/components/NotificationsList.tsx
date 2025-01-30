@@ -1,3 +1,4 @@
+// Recados apenas o texto
 import { useState, useEffect } from "react";
 import { Trash2 } from "lucide-react";
 import {
@@ -125,7 +126,7 @@ const NotificationsList = () => {
                       {notification.isAdmin && " - Administrador"}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
                     {notification.text}
                   </p>
                   <p className="text-sm">
