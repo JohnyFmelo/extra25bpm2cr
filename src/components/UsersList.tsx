@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Ban, Trash2, Pencil } from "lucide-react";
+import { Ban, Trash2 } from "lucide-react";
 import UserDetailsDialog from "./UserDetailsDialog";
 
 interface User {
@@ -113,23 +113,16 @@ const UsersList = () => {
         <TableBody>
           {users.map((user) => (
             <TableRow key={user.id}>
-              <TableCell>
+              <TableCell className="w-full">
                 <button
                   onClick={() => handleUserClick(user)}
-                  className="text-primary hover:underline"
+                  className="text-primary hover:underline text-left w-full"
                 >
                   {formatUserName(user)}
                 </button>
               </TableCell>
-              <TableCell>
+              <TableCell className="whitespace-nowrap">
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleUserClick(user)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
                   <Button
                     variant={user.blocked ? "destructive" : "outline"}
                     size="icon"
