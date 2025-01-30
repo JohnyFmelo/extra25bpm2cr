@@ -132,47 +132,49 @@ const NotificationsList = () => {
                 toggleExpand(notification.id);
               }}
             >
-              <div className="flex justify-between items-start">
-                <div className="space-y-1 flex-1">
-                  <div className="flex items-center gap-1">
-                    <p className="font-medium">
-                      {notification.graduation} {notification.senderName}
-                      {notification.isAdmin && " - Administrador"}
+              <div className="flex flex-col">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-1">
+                      <p className="font-medium">
+                        {notification.graduation} {notification.senderName}
+                        {notification.isAdmin && " - Administrador"}
+                      </p>
+                    </div>
+                    <p className="text-sm text-gray-600 text-justify whitespace-pre-wrap">
+                      {isExpanded ? notification.text : (
+                        <>
+                          {firstLine}
+                          {remainingText && "..."}
+                        </>
+                      )}
                     </p>
-                  </div>
-                  <p className="text-sm text-gray-600 text-justify whitespace-pre-wrap">
-                    {isExpanded ? notification.text : (
-                      <>
-                        {firstLine}
-                        {remainingText && "..."}
-                      </>
-                    )}
-                  </p>
-                  <div className="flex items-center justify-between mt-1">
                     <p className="text-sm">
                       {formatDate(notification.timestamp)}
                     </p>
-                    {isExpanded ? (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    )}
                   </div>
+                  {isAdmin && !isExpanded && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive ml-4"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteNotification(notification.id);
+                      }}
+                    >
+                      <span className="sr-only">Delete notification</span>
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                  )}
                 </div>
-                {isAdmin && !isExpanded && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive ml-4"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteNotification(notification.id);
-                    }}
-                  >
-                    <span className="sr-only">Delete notification</span>
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
-                )}
+                <div className="flex justify-end mt-2">
+                  {isExpanded ? (
+                    <ChevronUp className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
               </div>
             </div>
           );
