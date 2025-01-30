@@ -52,8 +52,8 @@ const LoginForm = () => {
         return;
       }
 
-      // Store ALL user data in localStorage
-      localStorage.setItem('user', JSON.stringify({
+      // Store only serializable user data
+      const serializableUser = {
         id: userDoc.id,
         email: userData.email,
         userType: userData.userType,
@@ -61,7 +61,10 @@ const LoginForm = () => {
         registration: userData.registration,
         rank: userData.rank,
         blocked: userData.blocked
-      }));
+      };
+
+      // Store serialized data
+      localStorage.setItem('user', JSON.stringify(serializableUser));
 
       toast({
         title: "Login realizado",
@@ -77,6 +80,7 @@ const LoginForm = () => {
       navigate("/");
 
     } catch (error) {
+      console.error('Login error:', error);
       toast({
         title: "Erro no login",
         description: "Ocorreu um erro ao tentar fazer login.",
