@@ -114,6 +114,12 @@ const NotificationsList = () => {
         notifications.map((notification) => {
           const isUnread = !notification.readBy.includes(currentUser.id);
           const isExpanded = expandedNotification === notification.id;
+          const firstLineEndIndex = notification.text.indexOf('\n') !== -1
+            ? notification.text.indexOf('\n')
+            : notification.text.length;
+          const firstLine = notification.text.slice(0, firstLineEndIndex);
+          const remainingText = isExpanded ? notification.text.slice(firstLineEndIndex).trim() : '';
+          
           return (
             <div
               key={notification.id}
@@ -135,7 +141,7 @@ const NotificationsList = () => {
                     </p>
                   </div>
                   <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                    {notification.text.split('\n')[0]} ... {isExpanded && notification.text}
+                    {firstLine} {remainingText && `... ${remainingText}`}
                   </p>
                   <p className="text-sm">
                     {formatDate(notification.timestamp)}
@@ -156,7 +162,7 @@ const NotificationsList = () => {
                   </Button>
                 )}
               </div>
-              <div className="flex justify-center mt-2">
+              <div className="flex justify-center mt-4">
                 {isExpanded ? (
                   <ChevronUp className="h-5 w-5 text-gray-500" />
                 ) : (
