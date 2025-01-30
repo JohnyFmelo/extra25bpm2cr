@@ -1,4 +1,3 @@
-//Notificações
 import { useState, useEffect } from "react";
 import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import {
@@ -136,7 +135,7 @@ const NotificationsList = () => {
                     </p>
                   </div>
                   <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                    {notification.text.split('\n')[0]}...
+                    {notification.text.split('\n')[0]} ... {isExpanded && notification.text}
                   </p>
                   <p className="text-sm">
                     {formatDate(notification.timestamp)}
@@ -157,14 +156,7 @@ const NotificationsList = () => {
                   </Button>
                 )}
               </div>
-              {isExpanded && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap text-justify">
-                    {notification.text}
-                  </p>
-                </div>
-              )}
-              <div className="flex justify-end mt-2">
+              <div className="flex justify-center mt-2">
                 {isExpanded ? (
                   <ChevronUp className="h-5 w-5 text-gray-500" />
                 ) : (
