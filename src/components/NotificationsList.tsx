@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import {
   collection,
   query,
@@ -88,6 +88,19 @@ const NotificationsList = () => {
 
   const formatDate = (timestamp: Timestamp) => {
     const date = timestamp.toDate();
+    const today = new Date();
+    
+    const isToday = date.getDate() === today.getDate() &&
+                    date.getMonth() === today.getMonth() &&
+                    date.getFullYear() === today.getFullYear();
+
+    if (isToday) {
+      return `hoje às ${date.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`;
+    }
+
     const weekDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const weekDay = weekDays[date.getDay()];
     const formattedDate = date.toLocaleDateString('pt-BR');
@@ -140,24 +153,22 @@ const NotificationsList = () => {
                       {notification.isAdmin && " - Administrador"}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-600 text-justify whitespace-pre-wrap">
-                    {isExpanded ? notification.text : (
-                      <>
-                        {firstLine}
-                        {remainingText && "..."}
-                      </>
-                    )}
-                  </p>
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="text-sm">
-                      {formatDate(notification.timestamp)}
+                  <div className="space-y-1">
+                    <p className="text-sm text-gray-600 text-justify">
+                      {firstLine}
                     </p>
-                    {isExpanded ? (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    {!isExpanded && remainingText && (
+                      <p className="text-sm text-gray-600">...</p>
+                    )}
+                    {isExpanded && (
+                      <p className="text-sm text-gray-600 text-justify whitespace-pre-wrap">
+                        {remainingText}
+                      </p>
                     )}
                   </div>
+                  <p className="text-sm">
+                    {formatDate(notification.timestamp)}
+                  </p>
                 </div>
                 {isAdmin && !isExpanded && (
                   <Button
