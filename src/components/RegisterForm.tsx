@@ -36,7 +36,8 @@ const RegisterForm = () => {
     "2° Sgt PM",
     "3° Sgt PM",
     "Cb PM",
-    "Sd PM"
+    "Sd PM",
+    "Estágio"
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -216,6 +216,15 @@ const TimeSlotsList = () => {
   };
 
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
+    // Get user data from localStorage
+    const userDataString = localStorage.getItem('user');
+    const userData = userDataString ? JSON.parse(userDataString) : null;
+    
+    // If user is in "Estágio", don't show the volunteer button
+    if (userData?.rank === "Estágio") {
+      return false;
+    }
+
     // If the current user is volunteered for this slot, show the unvolunteer button
     if (isVolunteered(slot)) {
       return true;
@@ -312,7 +321,3 @@ const TimeSlotsList = () => {
 };
 
 export default TimeSlotsList;
-
-      
-      
-                      
