@@ -10,17 +10,19 @@ import {
   arrayUnion,
   Timestamp,
   deleteDoc,
+  where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useToast } from "./ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface Notification {
   id: string;
   text: string;
   timestamp: Timestamp;
   senderName: string;
+  senderId: string;
   graduation: string;
   isAdmin: boolean;
   readBy: string[];
@@ -36,24 +38,35 @@ const NotificationsList = () => {
   const isAdmin = currentUser.userType === "admin";
 
   useEffect(() => {
-    const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
+    // Criar query baseada no tipo de usuário
+    const q = query(
+      collection(db, "recados"),
+      where("type", "in", ["all", "individual"]),
+      orderBy("timestamp", "desc")
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        readBy: doc.data().readBy || [],
-      } as Notification)).filter(notif => 
-        notif.type === 'all' || notif.recipientId === currentUser.id
-      );
+      const notifs = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          readBy: doc.data().readBy || [],
+        } as Notification))
+        .filter(notif => 
+          notif.type === 'all' || 
+          (notif.type === 'individual' && notif.recipientId === currentUser.id) ||
+          (isAdmin && notif.type === 'individual')
+        );
       
       setNotifications(notifs);
     });
 
     return () => unsubscribe();
-  }, [currentUser.id]);
+  }, [currentUser.id, isAdmin]);
 
   const handleMarkAsRead = async (notificationId: string) => {
+    if (!currentUser.id) return;
+
     try {
       const notifRef = doc(db, "recados", notificationId);
       await updateDoc(notifRef, {
@@ -141,7 +154,9 @@ const NotificationsList = () => {
                 isUnread ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
               )}
               onClick={() => {
-                handleMarkAsRead(notification.id);
+                if (isUnread) {
+                  handleMarkAsRead(notification.id);
+                }
                 toggleExpand(notification.id);
               }}
             >
@@ -151,6 +166,7 @@ const NotificationsList = () => {
                     <p className="font-medium">
                       {notification.graduation} {notification.senderName}
                       {notification.isAdmin && " - Administrador"}
+                      {notification.type === 'individual' && !isAdmin && " (Mensagem Privada)"}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -160,17 +176,17 @@ const NotificationsList = () => {
                     {!isExpanded && remainingText && (
                       <p className="text-sm text-gray-600">...</p>
                     )}
-                    {isExpanded && (
+                    {isExpanded && remainingText && (
                       <p className="text-sm text-gray-600 text-justify whitespace-pre-wrap">
                         {remainingText}
                       </p>
                     )}
                   </div>
-                  <p className="text-sm">
+                  <p className="text-sm text-gray-500">
                     {formatDate(notification.timestamp)}
                   </p>
                 </div>
-                {isAdmin && !isExpanded && (
+                {isAdmin && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -197,25 +213,34 @@ const NotificationsList = () => {
 export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAdmin = currentUser.userType === "admin";
 
   useEffect(() => {
-    const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
+    const q = query(
+      collection(db, "recados"),
+      where("type", "in", ["all", "individual"]),
+      orderBy("timestamp", "desc")
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifs = snapshot.docs.map(doc => ({
-        readBy: doc.data().readBy || [],
-        type: doc.data().type,
-        recipientId: doc.data().recipientId,
-      })).filter(notif => 
-        notif.type === 'all' || notif.recipientId === currentUser.id
-      );
+      const notifs = snapshot.docs
+        .map(doc => ({
+          readBy: doc.data().readBy || [],
+          type: doc.data().type,
+          recipientId: doc.data().recipientId,
+        }))
+        .filter(notif => 
+          notif.type === 'all' || 
+          (notif.type === 'individual' && notif.recipientId === currentUser.id) ||
+          (isAdmin && notif.type === 'individual')
+        );
       
       const count = notifs.filter(n => !n.readBy.includes(currentUser.id)).length;
       setUnreadCount(count);
     });
 
     return () => unsubscribe();
-  }, [currentUser.id]);
+  }, [currentUser.id, isAdmin]);
 
   return unreadCount;
 };
