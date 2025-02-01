@@ -1,6 +1,6 @@
-//Notificações
+// Notificações 
 import { useState, useEffect } from "react";
-import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import {
   collection,
   query,
@@ -31,7 +31,6 @@ interface Notification {
 
 const NotificationsList = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [expandedNotification, setExpandedNotification] = useState<string | null>(null);
   const { toast } = useToast();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = currentUser.userType === "admin";
@@ -99,6 +98,8 @@ const NotificationsList = () => {
     return `${weekDay} ${formattedDate} às ${formattedTime}`;
   };
 
+  const [expandedNotification, setExpandedNotification] = useState<string | null>(null);
+
   const toggleExpand = (notificationId: string) => {
     setExpandedNotification(prev =>
       prev === notificationId ? null : notificationId
@@ -135,12 +136,14 @@ const NotificationsList = () => {
                       {notification.isAdmin && " - Administrador"}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                    {notification.text.split('\n')[0]}...
-                  </p>
                   <p className="text-sm">
                     {formatDate(notification.timestamp)}
                   </p>
+                  {isExpanded && (
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap text-justify">
+                      {notification.text}
+                    </p>
+                  )}
                 </div>
                 {isAdmin && (
                   <Button
@@ -155,20 +158,6 @@ const NotificationsList = () => {
                     <span className="sr-only">Delete notification</span>
                     <Trash2 className="h-5 w-5" />
                   </Button>
-                )}
-              </div>
-              {isExpanded && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap text-justify">
-                    {notification.text}
-                  </p>
-                </div>
-              )}
-              <div className="flex justify-end mt-2">
-                {isExpanded ? (
-                  <ChevronUp className="h-5 w-5 text-gray-500" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-500" />
                 )}
               </div>
             </div>
