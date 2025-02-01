@@ -1,4 +1,4 @@
-// Notificações 
+// Recados apenas o texto
 import { useState, useEffect } from "react";
 import { Trash2 } from "lucide-react";
 import {
@@ -98,14 +98,6 @@ const NotificationsList = () => {
     return `${weekDay} ${formattedDate} às ${formattedTime}`;
   };
 
-  const [expandedNotification, setExpandedNotification] = useState<string | null>(null);
-
-  const toggleExpand = (notificationId: string) => {
-    setExpandedNotification(prev =>
-      prev === notificationId ? null : notificationId
-    );
-  };
-
   return (
     <div className="space-y-4 p-4">
       {notifications.length === 0 ? (
@@ -115,7 +107,6 @@ const NotificationsList = () => {
       ) : (
         notifications.map((notification) => {
           const isUnread = !notification.readBy.includes(currentUser.id);
-          const isExpanded = expandedNotification === notification.id;
           return (
             <div
               key={notification.id}
@@ -125,7 +116,6 @@ const NotificationsList = () => {
               )}
               onClick={() => {
                 handleMarkAsRead(notification.id);
-                toggleExpand(notification.id);
               }}
             >
               <div className="flex justify-between items-start">
@@ -136,14 +126,12 @@ const NotificationsList = () => {
                       {notification.isAdmin && " - Administrador"}
                     </p>
                   </div>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    {notification.text}
+                  </p>
                   <p className="text-sm">
                     {formatDate(notification.timestamp)}
                   </p>
-                  {isExpanded && (
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap text-justify">
-                      {notification.text}
-                    </p>
-                  )}
                 </div>
                 {isAdmin && (
                   <Button
@@ -168,7 +156,6 @@ const NotificationsList = () => {
   );
 };
 
-// Hook para obter a contagem de notificações não lidas
 export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
