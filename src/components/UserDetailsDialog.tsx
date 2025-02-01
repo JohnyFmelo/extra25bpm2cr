@@ -54,14 +54,28 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
     setIsLoading(true);
     try {
       const userRef = doc(db, "users", userData.id);
-      await updateDoc(userRef, {
+      const updatedData = {
         email,
         warName,
         rank,
         registration,
         userType,
         updatedAt: new Date().toISOString(),
-      });
+      };
+
+      await updateDoc(userRef, updatedData);
+
+      // Update localStorage if the updated user is the currently logged-in user
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (currentUser.id === userData.id) {
+        const updatedUser = {
+          ...currentUser,
+          ...updatedData,
+        };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        // Force a page reload to update all components with new user data
+        window.location.reload();
+      }
 
       toast({
         title: "Sucesso",
