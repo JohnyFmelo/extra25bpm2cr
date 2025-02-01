@@ -127,6 +127,7 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
                 <SelectItem value="Maj PM">Maj PM</SelectItem>
                 <SelectItem value="Ten Cel PM">Ten Cel PM</SelectItem>
                 <SelectItem value="Cel PM">Cel PM</SelectItem>
+                <SelectItem value="Estágio">Estágio</SelectItem>
               </SelectContent>
             </Select>
           </div>
