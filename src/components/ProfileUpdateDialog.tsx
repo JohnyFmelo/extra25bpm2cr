@@ -60,14 +60,16 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
 
       await updateDoc(userRef, updatedData);
 
+      // Update localStorage with the new data
       const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          ...currentUser,
-          ...updatedData,
-        })
-      );
+      const updatedUser = {
+        ...currentUser,
+        ...updatedData,
+      };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      // Force a page reload to update all components with new user data
+      window.location.reload();
 
       toast({
         title: "Perfil atualizado",
