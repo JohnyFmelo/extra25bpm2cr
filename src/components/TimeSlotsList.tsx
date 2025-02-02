@@ -60,9 +60,9 @@ const TimeSlotsList = () => {
     }
     
     const hourText = diffHours > 0 ? `${diffHours}h` : '';
-    const minuteText = diffMinutes > 0 ? `${minuteText}min` : '';
+    const minText = diffMinutes > 0 ? `${diffMinutes}min` : '';
     
-    return `${hourText}${minuteText}`;
+    return `${hourText}${minText}`;
   };
 
   useEffect(() => {
