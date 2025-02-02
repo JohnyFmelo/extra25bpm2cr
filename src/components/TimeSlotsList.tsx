@@ -14,14 +14,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 interface TimeSlot {
   id?: string;
@@ -37,20 +29,12 @@ interface GroupedTimeSlots {
   [key: string]: TimeSlot[];
 }
 
-interface UserLimit {
-  warName: string;
-  limit: number;
-}
-
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [slotLimit, setSlotLimit] = useState<number>(0);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
-  const [showIndividualLimitsDialog, setShowIndividualLimitsDialog] = useState(false);
   const [newLimit, setNewLimit] = useState("");
-  const [individualLimits, setIndividualLimits] = useState<UserLimit[]>([]);
-  const [newUserLimit, setNewUserLimit] = useState({ warName: "", limit: "" });
   const { toast } = useToast();
   
   const userDataString = localStorage.getItem('user');
@@ -88,13 +72,8 @@ const TimeSlotsList = () => {
         if (settingsDoc.exists()) {
           setSlotLimit(settingsDoc.data().value || 0);
         }
-
-        const individualLimitsDoc = await getDoc(doc(db, 'settings', 'individualLimits'));
-        if (individualLimitsDoc.exists()) {
-          setIndividualLimits(individualLimitsDoc.data().limits || []);
-        }
       } catch (error) {
-        console.error('Error fetching limits:', error);
+        console.error('Error fetching slot limit:', error);
       }
     };
 
@@ -104,15 +83,18 @@ const TimeSlotsList = () => {
     const q = query(timeSlotsCollection);
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const formattedSlots: TimeSlot[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        date: doc.data().date,
-        start_time: doc.data().start_time,
-        end_time: doc.data().end_time,
-        volunteers: doc.data().volunteers || [],
-        slots_used: doc.data().slots_used || 0,
-        total_slots: doc.data().total_slots || doc.data().slots || 0,
-      }));
+      const formattedSlots: TimeSlot[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          date: data.date,
+          start_time: data.start_time,
+          end_time: data.end_time,
+          volunteers: data.volunteers || [],
+          slots_used: data.slots_used || 0,
+          total_slots: data.total_slots || data.slots || 0,
+        };
+      });
       setTimeSlots(formattedSlots);
       setIsLoading(false);
     }, (error) => {
@@ -141,11 +123,10 @@ const TimeSlotsList = () => {
       slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
     );
 
-    const userLimit = getUserLimit(volunteerName);
-    if (userSlotCount >= userLimit && !isAdmin) {
+    if (userSlotCount >= slotLimit && !isAdmin) {
       toast({
         title: "Limite atingido",
-        description: `Você atingiu o limite de ${userLimit} horário${userLimit === 1 ? '' : 's'} por usuário.`,
+        description: `Você atingiu o limite de ${slotLimit} horário${slotLimit === 1 ? '' : 's'} por usuário.`,
         variant: "destructive"
       });
       return;
@@ -272,64 +253,6 @@ const TimeSlotsList = () => {
     }
   };
 
-  const handleAddIndividualLimit = async () => {
-    const limit = parseInt(newUserLimit.limit);
-    if (isNaN(limit) || limit < 0 || !newUserLimit.warName) {
-      toast({
-        title: "Erro",
-        description: "Por favor, preencha todos os campos corretamente.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const updatedLimits = [
-        ...individualLimits.filter(l => l.warName !== newUserLimit.warName),
-        { warName: newUserLimit.warName, limit }
-      ];
-
-      await setDoc(doc(db, 'settings', 'individualLimits'), { limits: updatedLimits });
-      setIndividualLimits(updatedLimits);
-      setNewUserLimit({ warName: "", limit: "" });
-      toast({
-        title: "Sucesso",
-        description: "Limite individual atualizado com sucesso!"
-      });
-    } catch (error) {
-      console.error('Error updating individual limit:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o limite individual.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const removeIndividualLimit = async (warName: string) => {
-    try {
-      const updatedLimits = individualLimits.filter(l => l.warName !== warName);
-      await setDoc(doc(db, 'settings', 'individualLimits'), { limits: updatedLimits });
-      setIndividualLimits(updatedLimits);
-      toast({
-        title: "Sucesso",
-        description: "Limite individual removido com sucesso!"
-      });
-    } catch (error) {
-      console.error('Error removing individual limit:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível remover o limite individual.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const getUserLimit = (volunteerName: string) => {
-    const individualLimit = individualLimits.find(l => volunteerName.includes(l.warName));
-    return individualLimit?.limit || slotLimit;
-  };
-
   const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
     return slots.reduce((groups: GroupedTimeSlots, slot) => {
       const date = slot.date;
@@ -374,8 +297,7 @@ const TimeSlotsList = () => {
       s.volunteers?.includes(volunteerName) ? count + 1 : count, 0
     );
 
-    const userLimit = getUserLimit(volunteerName);
-    if (userSlotCount >= userLimit && !isAdmin) {
+    if (userSlotCount >= slotLimit && !isAdmin) {
       return false;
     }
 
@@ -394,8 +316,7 @@ const TimeSlotsList = () => {
       s.volunteers?.includes(volunteerName) ? count + 1 : count, 0
     );
 
-    const userLimit = getUserLimit(volunteerName);
-    return userSlotCount < userLimit;
+    return userSlotCount < slotLimit;
   };
 
   const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
@@ -407,49 +328,19 @@ const TimeSlotsList = () => {
   return (
     <div className="space-y-6 p-4">
       {isAdmin && (
-        <div className="mb-4 space-y-4">
-          <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
-            <div>
-              <h3 className="font-medium">Limite de horários por usuário: {slotLimit}</h3>
-              <p className="text-sm text-gray-600">
-                {slotLimit === 0 ? "Sem limite definido" : `Cada usuário pode escolher até ${slotLimit} horário${slotLimit === 1 ? '' : 's'}`}
-              </p>
-            </div>
-            <div className="space-x-2">
-              <Button
-                onClick={() => setShowLimitDialog(true)}
-                variant="outline"
-              >
-                Alterar Limite Geral
-              </Button>
-              <Button
-                onClick={() => setShowIndividualLimitsDialog(true)}
-                variant="outline"
-              >
-                Limites Individuais
-              </Button>
-            </div>
+        <div className="mb-4 flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
+          <div>
+            <h3 className="font-medium">Limite de horários por usuário: {slotLimit}</h3>
+            <p className="text-sm text-gray-600">
+              {slotLimit === 0 ? "Sem limite definido" : `Cada usuário pode escolher até ${slotLimit} horário${slotLimit === 1 ? '' : 's'}`}
+            </p>
           </div>
-
-          {individualLimits.length > 0 && (
-            <div className="bg-white p-4 rounded-lg shadow-sm">
-              <h3 className="font-medium mb-2">Limites Individuais Ativos</h3>
-              <div className="space-y-2">
-                {individualLimits.map((limit, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span>{limit.warName}: {limit.limit} horários</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeIndividualLimit(limit.warName)}
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <Button
+            onClick={() => setShowLimitDialog(true)}
+            variant="outline"
+          >
+            Alterar Limite
+          </Button>
         </div>
       )}
 
@@ -547,68 +438,6 @@ const TimeSlotsList = () => {
                 Salvar
               </Button>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showIndividualLimitsDialog} onOpenChange={setShowIndividualLimitsDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Definir Limites Individuais</DialogTitle>
-            <DialogDescription>
-              Define limites específicos para usuários individuais.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Input
-                type="text"
-                value={newUserLimit.warName}
-                onChange={(e) => setNewUserLimit(prev => ({ ...prev, warName: e.target.value }))}
-                placeholder="Nome de Guerra"
-              />
-              <Input
-                type="number"
-                min="0"
-                value={newUserLimit.limit}
-                onChange={(e) => setNewUserLimit(prev => ({ ...prev, limit: e.target.value }))}
-                placeholder="Limite de horários"
-              />
-            </div>
-            <Button onClick={handleAddIndividualLimit} className="w-full">
-              Adicionar Limite Individual
-            </Button>
-            {individualLimits.length > 0 && (
-              <div>
-                <h4 className="font-medium mb-2">Limites Atuais</h4>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Limite</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {individualLimits.map((limit, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{limit.warName}</TableCell>
-                        <TableCell>{limit.limit}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeIndividualLimit(limit.warName)}
-                          >
-                            Remover
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
           </div>
         </DialogContent>
       </Dialog>
