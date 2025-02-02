@@ -28,6 +28,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -259,6 +260,9 @@ const NotificationsList = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Visualizações</DialogTitle>
+            <DialogDescription>
+              Lista de usuários que visualizaram este recado
+            </DialogDescription>
           </DialogHeader>
           <div className="max-h-[300px] overflow-y-auto">
             {viewers.length === 0 ? (
