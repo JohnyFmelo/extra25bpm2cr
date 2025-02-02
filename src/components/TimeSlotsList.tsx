@@ -293,12 +293,30 @@ const TimeSlotsList = () => {
       return true;
     }
 
+    const userSlotCount = timeSlots.reduce((count, s) => 
+      s.volunteers?.includes(volunteerName) ? count + 1 : count, 0
+    );
+
+    if (userSlotCount >= slotLimit && !isAdmin) {
+      return false;
+    }
+
     const slotsForDate = timeSlots.filter(s => s.date === slot.date);
     const isVolunteeredForDate = slotsForDate.some(s => 
       s.volunteers?.includes(volunteerName)
     );
 
     return !isVolunteeredForDate;
+  };
+
+  const canVolunteerForSlot = (slot: TimeSlot) => {
+    if (isAdmin) return true;
+    
+    const userSlotCount = timeSlots.reduce((count, s) => 
+      s.volunteers?.includes(volunteerName) ? count + 1 : count, 0
+    );
+
+    return userSlotCount < slotLimit;
   };
 
   const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
@@ -357,7 +375,7 @@ const TimeSlotsList = () => {
                       >
                         Desmarcar
                       </Button>
-                    ) : !isSlotFull(slot) ? (
+                    ) : !isSlotFull(slot) && canVolunteerForSlot(slot) ? (
                       <Button 
                         onClick={() => handleVolunteer(slot)}
                         className="bg-blue-500 hover:bg-blue-600 text-white"
