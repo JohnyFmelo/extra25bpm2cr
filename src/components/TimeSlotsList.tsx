@@ -4,7 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { collection, query, onSnapshot, doc, getDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   Dialog,
@@ -46,7 +46,6 @@ const TimeSlotsList = () => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const [endHour, endMinute] = endTime.split(':').map(Number);
     
-    // Ajuste para quando o horário final é 00:00 (meia-noite)
     let adjustedEndHour = endHour;
     if (endHour === 0) {
       adjustedEndHour = 24;
@@ -60,15 +59,13 @@ const TimeSlotsList = () => {
       diffMinutes += 60;
     }
     
-    // Se ainda houver minutos, adiciona ao resultado
     const hourText = diffHours > 0 ? `${diffHours}h` : '';
-    const minuteText = diffMinutes > 0 ? `${diffMinutes}min` : '';
+    const minuteText = diffMinutes > 0 ? `${minuteText}min` : '';
     
     return `${hourText}${minuteText}`;
   };
 
   useEffect(() => {
-    // Fetch slot limit from settings
     const fetchSlotLimit = async () => {
       try {
         const settingsDoc = await getDoc(doc(db, 'settings', 'slotLimit'));
@@ -82,7 +79,6 @@ const TimeSlotsList = () => {
 
     fetchSlotLimit();
 
-    // Set up real-time listener for time slots
     const timeSlotsCollection = collection(db, 'timeSlots');
     const q = query(timeSlotsCollection);
     
@@ -123,7 +119,6 @@ const TimeSlotsList = () => {
       return;
     }
 
-    // Check if user has reached their slot limit
     const userSlotCount = timeSlots.reduce((count, slot) => 
       slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
     );
@@ -137,7 +132,6 @@ const TimeSlotsList = () => {
       return;
     }
 
-    // Check if user is already registered in any slot for this date
     const slotsForDate = timeSlots.filter(slot => slot.date === timeSlot.date);
     const isAlreadyRegistered = slotsForDate.some(slot => 
       slot.volunteers?.includes(volunteerName)
@@ -242,7 +236,7 @@ const TimeSlotsList = () => {
     }
 
     try {
-      await doc(db, 'settings', 'slotLimit').set({ value: limit });
+      await setDoc(doc(db, 'settings', 'slotLimit'), { value: limit });
       setSlotLimit(limit);
       setShowLimitDialog(false);
       toast({
@@ -284,32 +278,26 @@ const TimeSlotsList = () => {
   };
 
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
-    // Get user data from localStorage
     const userDataString = localStorage.getItem('user');
     const userData = userDataString ? JSON.parse(userDataString) : null;
     
-    // If user is in "Estágio", don't show the volunteer button
     if (userData?.rank === "Estágio") {
       return false;
     }
 
-    // If the current user is volunteered for this slot, show the unvolunteer button
     if (isVolunteered(slot)) {
       return true;
     }
 
-    // If the slot is full, show the "Vagas Esgotadas" button
     if (isSlotFull(slot)) {
       return true;
     }
 
-    // Check if user is volunteered for any slot on this date
     const slotsForDate = timeSlots.filter(s => s.date === slot.date);
     const isVolunteeredForDate = slotsForDate.some(s => 
       s.volunteers?.includes(volunteerName)
     );
 
-    // Only show the volunteer button if user is not volunteered for any slot on this date
     return !isVolunteeredForDate;
   };
 
