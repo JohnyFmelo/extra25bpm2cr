@@ -439,8 +439,8 @@ const TimeSlotsList = () => {
       <TimeSlotLimitControl
         slotLimit={slotLimit}
         onUpdateLimit={handleUpdateSlotLimit}
-        userSlotCount={userSlotCount}</antArtifact>
-    isAdmin={isAdmin}
+        userSlotCount={userSlotCount}
+        isAdmin={isAdmin}
       />
 
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => (
