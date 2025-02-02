@@ -4,8 +4,16 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { collection, query, onSnapshot } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 interface TimeSlot {
   id?: string;
@@ -24,12 +32,15 @@ interface GroupedTimeSlots {
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [slotLimit, setSlotLimit] = useState<number>(0);
+  const [showLimitDialog, setShowLimitDialog] = useState(false);
+  const [newLimit, setNewLimit] = useState("");
   const { toast } = useToast();
   
-  // Get logged in user data from localStorage
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
+  const isAdmin = userData?.userType === 'admin';
 
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
@@ -57,7 +68,21 @@ const TimeSlotsList = () => {
   };
 
   useEffect(() => {
-    // Set up real-time listener
+    // Fetch slot limit from settings
+    const fetchSlotLimit = async () => {
+      try {
+        const settingsDoc = await getDoc(doc(db, 'settings', 'slotLimit'));
+        if (settingsDoc.exists()) {
+          setSlotLimit(settingsDoc.data().value || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching slot limit:', error);
+      }
+    };
+
+    fetchSlotLimit();
+
+    // Set up real-time listener for time slots
     const timeSlotsCollection = collection(db, 'timeSlots');
     const q = query(timeSlotsCollection);
     
@@ -93,6 +118,20 @@ const TimeSlotsList = () => {
       toast({
         title: "Erro",
         description: "Usuário não encontrado. Por favor, faça login novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if user has reached their slot limit
+    const userSlotCount = timeSlots.reduce((count, slot) => 
+      slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
+    );
+
+    if (userSlotCount >= slotLimit && !isAdmin) {
+      toast({
+        title: "Limite atingido",
+        description: `Você atingiu o limite de ${slotLimit} horário${slotLimit === 1 ? '' : 's'} por usuário.`,
         variant: "destructive"
       });
       return;
@@ -191,6 +230,35 @@ const TimeSlotsList = () => {
     }
   };
 
+  const handleUpdateSlotLimit = async () => {
+    const limit = parseInt(newLimit);
+    if (isNaN(limit) || limit < 0) {
+      toast({
+        title: "Erro",
+        description: "Por favor, insira um número válido.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await doc(db, 'settings', 'slotLimit').set({ value: limit });
+      setSlotLimit(limit);
+      setShowLimitDialog(false);
+      toast({
+        title: "Sucesso",
+        description: "Limite de horários atualizado com sucesso!"
+      });
+    } catch (error) {
+      console.error('Error updating slot limit:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o limite de horários.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
     return slots.reduce((groups: GroupedTimeSlots, slot) => {
       const date = slot.date;
@@ -253,6 +321,23 @@ const TimeSlotsList = () => {
 
   return (
     <div className="space-y-6 p-4">
+      {isAdmin && (
+        <div className="mb-4 flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
+          <div>
+            <h3 className="font-medium">Limite de horários por usuário: {slotLimit}</h3>
+            <p className="text-sm text-gray-600">
+              {slotLimit === 0 ? "Sem limite definido" : `Cada usuário pode escolher até ${slotLimit} horário${slotLimit === 1 ? '' : 's'}`}
+            </p>
+          </div>
+          <Button
+            onClick={() => setShowLimitDialog(true)}
+            variant="outline"
+          >
+            Alterar Limite
+          </Button>
+        </div>
+      )}
+
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => (
         <div key={date} className="bg-white rounded-lg shadow-sm p-4 md:p-5">
           <h3 className="font-medium text-lg mb-3 text-gray-800">
@@ -316,6 +401,40 @@ const TimeSlotsList = () => {
           </div>
         </div>
       ))}
+
+      <Dialog open={showLimitDialog} onOpenChange={setShowLimitDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Definir Limite de Horários</DialogTitle>
+            <DialogDescription>
+              Define quantos horários cada usuário poderá escolher.
+              Use 0 para remover o limite.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Input
+                type="number"
+                min="0"
+                value={newLimit}
+                onChange={(e) => setNewLimit(e.target.value)}
+                placeholder="Digite o novo limite"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowLimitDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleUpdateSlotLimit}>
+                Salvar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
