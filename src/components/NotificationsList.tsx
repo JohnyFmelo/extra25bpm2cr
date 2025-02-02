@@ -1,6 +1,5 @@
-// Recados apenas o texto
 import { useState, useEffect } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import {
   collection,
   query,
@@ -16,6 +15,22 @@ import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useToast } from "./ui/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Notification {
   id: string;
@@ -31,6 +46,12 @@ interface Notification {
 
 const NotificationsList = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<string | null>(null);
+  const [viewersDialogOpen, setViewersDialogOpen] = useState(false);
+  const [viewers, setViewers] = useState<string[]>([]);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = currentUser.userType === "admin";
@@ -72,6 +93,7 @@ const NotificationsList = () => {
   const handleDeleteNotification = async (notificationId: string) => {
     try {
       await deleteDoc(doc(db, "recados", notificationId));
+      setDeleteDialogOpen(false);
       toast({
         title: "Sucesso",
         description: "Recado excluído com sucesso.",
@@ -88,14 +110,63 @@ const NotificationsList = () => {
 
   const formatDate = (timestamp: Timestamp) => {
     const date = timestamp.toDate();
-    const weekDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    const weekDay = weekDays[date.getDay()];
-    const formattedDate = date.toLocaleDateString('pt-BR');
-    const formattedTime = date.toLocaleTimeString('pt-BR', {
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const isToday = date.toDateString() === now.toDateString();
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+    
+    const timeStr = date.toLocaleTimeString('pt-BR', {
       hour: '2-digit',
       minute: '2-digit'
     });
-    return `${weekDay} ${formattedDate} às ${formattedTime}`;
+
+    if (isToday) {
+      return `Hoje às ${timeStr}`;
+    } else if (isYesterday) {
+      return `Ontem às ${timeStr}`;
+    } else {
+      const weekDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+      const weekDay = weekDays[date.getDay()];
+      const formattedDate = date.toLocaleDateString('pt-BR');
+      return `${weekDay} ${formattedDate} às ${timeStr}`;
+    }
+  };
+
+  const handleContainerClick = (notification: Notification) => {
+    handleMarkAsRead(notification.id);
+    setExpandedId(expandedId === notification.id ? null : notification.id);
+  };
+
+  const handleViewers = (readBy: string[]) => {
+    setViewers(readBy);
+    setViewersDialogOpen(true);
+  };
+
+  const handleMouseDown = (notificationId: string) => {
+    if (!isAdmin) return;
+    
+    const timer = setTimeout(() => {
+      setSelectedNotification(notificationId);
+      setDeleteDialogOpen(true);
+    }, 1000);
+    
+    setLongPressTimer(timer);
+  };
+
+  const handleMouseUp = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleDoubleClick = (notificationId: string) => {
+    if (isAdmin) {
+      setSelectedNotification(notificationId);
+      setDeleteDialogOpen(true);
+    }
   };
 
   return (
@@ -107,51 +178,103 @@ const NotificationsList = () => {
       ) : (
         notifications.map((notification) => {
           const isUnread = !notification.readBy.includes(currentUser.id);
+          const isExpanded = expandedId === notification.id;
+          
           return (
             <div
               key={notification.id}
               className={cn(
-                "p-4 rounded-lg border transition-colors cursor-pointer",
+                "p-4 rounded-lg border transition-colors cursor-pointer select-none",
                 isUnread ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
               )}
-              onClick={() => {
-                handleMarkAsRead(notification.id);
-              }}
+              onClick={() => handleContainerClick(notification)}
+              onMouseDown={() => handleMouseDown(notification.id)}
+              onMouseUp={handleMouseUp}
+              onDoubleClick={() => handleDoubleClick(notification.id)}
             >
-              <div className="flex justify-between items-start">
-                <div className="space-y-1 flex-1">
-                  <div className="flex items-center gap-1">
+              <div className="space-y-2">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1 flex-1">
                     <p className="font-medium">
                       {notification.graduation} {notification.senderName}
-                      {notification.isAdmin && " - Administrador"}
+                      {notification.isAdmin ? " - Administrador" : " - Usuário"}
+                    </p>
+                    <p className={cn(
+                      "text-sm text-gray-600 whitespace-pre-wrap",
+                      isExpanded ? "text-justify" : "line-clamp-1"
+                    )}>
+                      {notification.text}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {formatDate(notification.timestamp)}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                    {notification.text}
-                  </p>
-                  <p className="text-sm">
-                    {formatDate(notification.timestamp)}
-                  </p>
+                  <div className="flex items-center gap-2 ml-4">
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewers(notification.readBy);
+                        }}
+                      >
+                        <Eye className="h-5 w-5" />
+                      </Button>
+                    )}
+                    {isExpanded ? (
+                      <ChevronUp className="h-5 w-5" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5" />
+                    )}
+                  </div>
                 </div>
-                {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive ml-4"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteNotification(notification.id);
-                    }}
-                  >
-                    <span className="sr-only">Delete notification</span>
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
-                )}
               </div>
             </div>
           );
         })
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja excluir esta mensagem?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => selectedNotification && handleDeleteNotification(selectedNotification)}
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={viewersDialogOpen} onOpenChange={setViewersDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Visualizações</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[300px] overflow-y-auto">
+            {viewers.length === 0 ? (
+              <p className="text-center text-gray-500">Nenhuma visualização ainda</p>
+            ) : (
+              <ul className="space-y-2">
+                {viewers.map((viewer, index) => (
+                  <li key={index} className="p-2 bg-gray-50 rounded">
+                    {viewer}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
