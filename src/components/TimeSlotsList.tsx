@@ -60,7 +60,7 @@ const TimeSlotLimitControl = ({
                 <p className="text-orange-600 font-medium">Horários esgotados</p>
               ) : (
                 <p className="text-gray-700">
-                  Escolha mais {slotLimit - userSlotCount} {slotLimit - userSlotCount === 1 ? 'horário' : 'horários'}
+                  Escolha {slotLimit - userSlotCount} {slotLimit - userSlotCount === 1 ? 'horário' : 'horários'}
                 </p>
               )}
               <p className="text-sm text-gray-500">
