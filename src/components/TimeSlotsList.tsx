@@ -6,6 +6,7 @@ import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { UserRoundCog } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,12 +30,118 @@ interface GroupedTimeSlots {
   [key: string]: TimeSlot[];
 }
 
+const TimeSlotLimitControl = ({ 
+  slotLimit, 
+  onUpdateLimit, 
+  userSlotCount = 0,
+  isAdmin = false 
+}) => {
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customLimit, setCustomLimit] = useState("");
+  
+  const predefinedLimits = [1, 2, 3, 4];
+
+  const handleCustomLimitSubmit = () => {
+    const limit = parseInt(customLimit);
+    if (!isNaN(limit) && limit > 0) {
+      onUpdateLimit(limit);
+      setShowCustomInput(false);
+      setCustomLimit("");
+    }
+  };
+
+  return (
+    <div className="w-full space-y-4">
+      {!isAdmin && (
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              {userSlotCount >= slotLimit ? (
+                <p className="text-orange-600 font-medium">Horários esgotados</p>
+              ) : (
+                <p className="text-gray-700">
+                  Escolha mais {slotLimit - userSlotCount} {slotLimit - userSlotCount === 1 ? 'horário' : 'horários'}
+                </p>
+              )}
+              <p className="text-sm text-gray-500">
+                {userSlotCount} de {slotLimit} horários preenchidos
+              </p>
+            </div>
+            <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
+              <span className="text-gray-700 font-medium">{userSlotCount}/{slotLimit}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-gray-900">Limite de horários por usuário</h3>
+              <UserRoundCog className="h-5 w-5 text-gray-500" />
+            </div>
+            
+            <div className="flex gap-2">
+              {predefinedLimits.map((limit) => (
+                <Button
+                  key={limit}
+                  onClick={() => onUpdateLimit(limit)}
+                  variant={slotLimit === limit ? "default" : "outline"}
+                  className="flex-1"
+                >
+                  {limit}
+                </Button>
+              ))}
+              <Button
+                onClick={() => setShowCustomInput(true)}
+                variant="outline"
+                className="flex-1"
+              >
+                +
+              </Button>
+            </div>
+          </div>
+
+          <Dialog open={showCustomInput} onOpenChange={setShowCustomInput}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Definir limite personalizado</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    value={customLimit}
+                    onChange={(e) => setCustomLimit(e.target.value)}
+                    placeholder="Digite o limite de horários"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCustomInput(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleCustomLimitSubmit}>
+                    Confirmar
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [slotLimit, setSlotLimit] = useState<number>(0);
-  const [showLimitDialog, setShowLimitDialog] = useState(false);
-  const [newLimit, setNewLimit] = useState("");
   const { toast } = useToast();
   
   const userDataString = localStorage.getItem('user');
@@ -224,8 +331,7 @@ const TimeSlotsList = () => {
     }
   };
 
-  const handleUpdateSlotLimit = async () => {
-    const limit = parseInt(newLimit);
+  const handleUpdateSlotLimit = async (limit: number) => {
     if (isNaN(limit) || limit < 0) {
       toast({
         title: "Erro",
@@ -238,7 +344,6 @@ const TimeSlotsList = () => {
     try {
       await setDoc(doc(db, 'settings', 'slotLimit'), { value: limit });
       setSlotLimit(limit);
-      setShowLimitDialog(false);
       toast({
         title: "Sucesso",
         description: "Limite de horários atualizado com sucesso!"
@@ -321,28 +426,22 @@ const TimeSlotsList = () => {
 
   const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
 
+  const userSlotCount = timeSlots.reduce((count, slot) => 
+    slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
+  );
+
   if (isLoading) {
     return <div className="p-4">Carregando horários...</div>;
   }
 
   return (
     <div className="space-y-6 p-4">
-      {isAdmin && (
-        <div className="mb-4 flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
-          <div>
-            <h3 className="font-medium">Limite de horários por usuário: {slotLimit}</h3>
-            <p className="text-sm text-gray-600">
-              {slotLimit === 0 ? "Sem limite definido" : `Cada usuário pode escolher até ${slotLimit} horário${slotLimit === 1 ? '' : 's'}`}
-            </p>
-          </div>
-          <Button
-            onClick={() => setShowLimitDialog(true)}
-            variant="outline"
-          >
-            Alterar Limite
-          </Button>
-        </div>
-      )}
+      <TimeSlotLimitControl
+        slotLimit={slotLimit}
+        onUpdateLimit={handleUpdateSlotLimit}
+        userSlotCount={userSlotCount}</antArtifact>
+    isAdmin={isAdmin}
+      />
 
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => (
         <div key={date} className="bg-white rounded-lg shadow-sm p-4 md:p-5">
@@ -407,40 +506,6 @@ const TimeSlotsList = () => {
           </div>
         </div>
       ))}
-
-      <Dialog open={showLimitDialog} onOpenChange={setShowLimitDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Definir Limite de Horários</DialogTitle>
-            <DialogDescription>
-              Define quantos horários cada usuário poderá escolher.
-              Use 0 para remover o limite.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Input
-                type="number"
-                min="0"
-                value={newLimit}
-                onChange={(e) => setNewLimit(e.target.value)}
-                placeholder="Digite o novo limite"
-              />
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowLimitDialog(false)}
-              >
-                Cancelar
-              </Button>
-              <Button onClick={handleUpdateSlotLimit}>
-                Salvar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
