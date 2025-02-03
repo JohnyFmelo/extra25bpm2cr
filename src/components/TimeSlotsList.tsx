@@ -318,8 +318,8 @@ const TimeSlotsList = () => {
       }
 
       toast({
-        title: "Sucesso",
-        description: "Extra desmarcada!"
+        title: "Desmarcado",
+        description: "Extra desmarcada com sucesso!"
       });
     } catch (error) {
       console.error('Erro ao desmarcar:', error);
