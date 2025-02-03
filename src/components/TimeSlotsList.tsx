@@ -362,43 +362,26 @@ const TimeSlotsList = () => {
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
   const isAdmin = userData?.userType === 'admin';
-
-  const calculateTimeDifference = (startTime: string, endTime: string): string => {
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
-    
-    let adjustedEndHour = endHour;
-    if (endHour === 0) {
-      adjustedEndHour = 24;
-    }
-    
-    let diffHours = adjustedEndHour - startHour;
-    let diffMinutes = endMinute - startMinute;
-    
-    if (diffMinutes < 0) {
-      diffHours -= 1;
-      diffMinutes += 60;
-    }
-    
-    const hourText = diffHours > 0 ? `${diffHours}h` : '';
-    const minText = diffMinutes > 0 ? `${diffMinutes}min` : '';
-    
-    return `${hourText}${minText}`;
-  };
+  const [userLimits, setUserLimits] = useState<UserLimit[]>([]);
 
   useEffect(() => {
-    const fetchSlotLimit = async () => {
+    const fetchData = async () => {
       try {
         const settingsDoc = await getDoc(doc(db, 'settings', 'slotLimit'));
         if (settingsDoc.exists()) {
           setSlotLimit(settingsDoc.data().value || 0);
         }
+
+        const userLimitsDoc = await getDoc(doc(db, 'settings', 'userLimits'));
+        if (userLimitsDoc.exists()) {
+          setUserLimits(userLimitsDoc.data().limits || []);
+        }
       } catch (error) {
-        console.error('Error fetching slot limit:', error);
+        console.error('Error fetching settings:', error);
       }
     };
 
-    fetchSlotLimit();
+    fetchData();
 
     const timeSlotsCollection = collection(db, 'timeSlots');
     const q = query(timeSlotsCollection);
@@ -430,8 +413,13 @@ const TimeSlotsList = () => {
     return () => unsubscribe();
   }, [toast]);
 
+  const getUserSlotLimit = (userId: string): number => {
+    const userLimit = userLimits.find(limit => limit.userId === userId);
+    return userLimit ? userLimit.limit : slotLimit;
+  };
+
   const handleVolunteer = async (timeSlot: TimeSlot) => {
-    if (!volunteerName) {
+    if (!volunteerName || !userData?.id) {
       toast({
         title: "Erro",
         description: "Usuário não encontrado. Por favor, faça login novamente.",
@@ -440,14 +428,15 @@ const TimeSlotsList = () => {
       return;
     }
 
+    const userLimit = getUserSlotLimit(userData.id);
     const userSlotCount = timeSlots.reduce((count, slot) => 
       slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
     );
 
-    if (userSlotCount >= slotLimit && !isAdmin) {
+    if (userSlotCount >= userLimit) {
       toast({
         title: "Limite atingido",
-        description: `Você atingiu o limite de ${slotLimit} horário${slotLimit === 1 ? '' : 's'} por usuário.`,
+        description: `Você atingiu o limite de ${userLimit} horário${userLimit === 1 ? '' : 's'}.`,
         variant: "destructive"
       });
       return;
