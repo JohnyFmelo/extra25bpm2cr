@@ -198,7 +198,7 @@ const NotificationsList = () => {
                   <div className="space-y-1 flex-1">
                     <p className="font-medium">
                       {notification.graduation} {notification.senderName}
-                      {notification.isAdmin ? " - Administrador" : " - Usuário"}
+                      {notification.isAdmin ? " - Usuário" : " - Administrador"}
                     </p>
                     <p className={cn(
                       "text-sm text-gray-600 whitespace-pre-wrap",
