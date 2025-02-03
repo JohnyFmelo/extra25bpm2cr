@@ -9,12 +9,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 
-interface AppSidebarProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-export function AppSidebar({ open, onClose }: AppSidebarProps) {
+export function AppSidebar() {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -56,7 +51,6 @@ export function AppSidebar({ open, onClose }: AppSidebarProps) {
           variant="outline"
           className="w-full justify-start"
           onClick={() => {
-            onClose();
             // Add profile update dialog logic here
           }}
         >
@@ -66,7 +60,6 @@ export function AppSidebar({ open, onClose }: AppSidebarProps) {
           variant="outline"
           className="w-full justify-start"
           onClick={() => {
-            onClose();
             // Add password change dialog logic here
           }}
         >

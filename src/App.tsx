@@ -49,37 +49,39 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <SidebarProvider>
-          <BrowserRouter>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route 
-                  path="/" 
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <Index />
-                      </Layout>
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/hours" 
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <Hours />
-                      </Layout>
-                    </ProtectedRoute>
-                  } 
-                />
-                {/* Redirect any unknown routes to login */}
-                <Route path="*" element={<Navigate to="/login" replace />} />
-              </Routes>
-            </TooltipProvider>
-          </BrowserRouter>
+          <div className="min-h-screen flex w-full">
+            <BrowserRouter>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route 
+                    path="/" 
+                    element={
+                      <ProtectedRoute>
+                        <Layout>
+                          <Index />
+                        </Layout>
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/hours" 
+                    element={
+                      <ProtectedRoute>
+                        <Layout>
+                          <Hours />
+                        </Layout>
+                      </ProtectedRoute>
+                    } 
+                  />
+                  {/* Redirect any unknown routes to login */}
+                  <Route path="*" element={<Navigate to="/login" replace />} />
+                </Routes>
+              </TooltipProvider>
+            </BrowserRouter>
+          </div>
         </SidebarProvider>
       </ThemeProvider>
     </QueryClientProvider>
