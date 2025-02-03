@@ -4,9 +4,9 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { collection, query, onSnapshot, doc, getDoc, setDoc, getDocs } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { UserRoundCog, Plus, X } from "lucide-react";
+import { UserRoundCog } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,13 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface TimeSlot {
   id?: string;
@@ -41,12 +34,6 @@ interface UserLimit {
   userId: string;
   userName: string;
   limit: number;
-}
-
-interface User {
-  id: string;
-  rank?: string;
-  warName?: string;
 }
 
 const TimeSlotLimitControl = ({ 
@@ -363,6 +350,29 @@ const TimeSlotsList = () => {
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
   const isAdmin = userData?.userType === 'admin';
   const [userLimits, setUserLimits] = useState<UserLimit[]>([]);
+
+  const calculateTimeDifference = (startTime: string, endTime: string): string => {
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+    
+    let adjustedEndHour = endHour;
+    if (endHour === 0) {
+      adjustedEndHour = 24;
+    }
+    
+    let diffHours = adjustedEndHour - startHour;
+    let diffMinutes = endMinute - startMinute;
+    
+    if (diffMinutes < 0) {
+      diffHours -= 1;
+      diffMinutes += 60;
+    }
+    
+    const hourText = diffHours > 0 ? `${diffHours}h` : '';
+    const minText = diffMinutes > 0 ? `${diffMinutes}min` : '';
+    
+    return `${hourText}${minText}`;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
