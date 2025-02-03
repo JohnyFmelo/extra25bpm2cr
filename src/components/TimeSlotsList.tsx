@@ -4,9 +4,9 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, getDoc, setDoc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { UserRoundCog } from "lucide-react";
+import { UserRoundCog, Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TimeSlot {
   id?: string;
@@ -30,6 +37,18 @@ interface GroupedTimeSlots {
   [key: string]: TimeSlot[];
 }
 
+interface UserLimit {
+  userId: string;
+  userName: string;
+  limit: number;
+}
+
+interface User {
+  id: string;
+  rank?: string;
+  warName?: string;
+}
+
 const TimeSlotLimitControl = ({ 
   slotLimit, 
   onUpdateLimit, 
@@ -38,8 +57,46 @@ const TimeSlotLimitControl = ({
 }) => {
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customLimit, setCustomLimit] = useState("");
+  const [showUserLimits, setShowUserLimits] = useState(false);
+  const [userLimits, setUserLimits] = useState<UserLimit[]>([]);
+  const [selectedUser, setSelectedUser] = useState("");
+  const [selectedLimit, setSelectedLimit] = useState("");
+  const [users, setUsers] = useState<User[]>([]);
+  const { toast } = useToast();
   
   const predefinedLimits = [1, 2, 3, 4];
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const usersCollection = collection(db, 'users');
+        const snapshot = await getDocs(usersCollection);
+        const usersData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as User[];
+        setUsers(usersData);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+
+    const fetchUserLimits = async () => {
+      try {
+        const limitsDoc = await getDoc(doc(db, 'settings', 'userLimits'));
+        if (limitsDoc.exists()) {
+          setUserLimits(limitsDoc.data().limits || []);
+        }
+      } catch (error) {
+        console.error('Error fetching user limits:', error);
+      }
+    };
+
+    if (isAdmin) {
+      fetchUsers();
+      fetchUserLimits();
+    }
+  }, [isAdmin]);
 
   const handleCustomLimitSubmit = () => {
     const limit = parseInt(customLimit);
@@ -50,26 +107,95 @@ const TimeSlotLimitControl = ({
     }
   };
 
+  const handleAddUserLimit = async () => {
+    if (!selectedUser || !selectedLimit) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um usuário e um limite.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const selectedUserData = users.find(u => u.id === selectedUser);
+    if (!selectedUserData) return;
+
+    const newLimit: UserLimit = {
+      userId: selectedUser,
+      userName: `${selectedUserData.rank} ${selectedUserData.warName}`,
+      limit: parseInt(selectedLimit)
+    };
+
+    const updatedLimits = [...userLimits, newLimit];
+
+    try {
+      await setDoc(doc(db, 'settings', 'userLimits'), {
+        limits: updatedLimits
+      });
+      setUserLimits(updatedLimits);
+      setSelectedUser("");
+      setSelectedLimit("");
+      toast({
+        title: "Sucesso",
+        description: "Limite individual adicionado com sucesso!"
+      });
+    } catch (error) {
+      console.error('Error saving user limit:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar o limite individual.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRemoveUserLimit = async (userId: string) => {
+    const updatedLimits = userLimits.filter(limit => limit.userId !== userId);
+    try {
+      await setDoc(doc(db, 'settings', 'userLimits'), {
+        limits: updatedLimits
+      });
+      setUserLimits(updatedLimits);
+      toast({
+        title: "Sucesso",
+        description: "Limite individual removido com sucesso!"
+      });
+    } catch (error) {
+      console.error('Error removing user limit:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover o limite individual.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="w-full space-y-4">
       {!isAdmin && (
         <div className="bg-white p-4 rounded-lg shadow-sm">
           <div className="flex items-center justify-between">
-            <div>
-              {userSlotCount >= slotLimit ? (
-                <p className="text-orange-600 font-medium">Horários esgotados</p>
-              ) : (
-                <p className="text-gray-700">
-                  Escolha {slotLimit - userSlotCount} {slotLimit - userSlotCount === 1 ? 'horário' : 'horários'}
-                </p>
-              )}
-              <p className="text-sm text-gray-500">
-                {userSlotCount} de {slotLimit} horários preenchidos
-              </p>
-            </div>
-            <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
-              <span className="text-gray-700 font-medium">{userSlotCount}/{slotLimit}</span>
-            </div>
+            <h3 className="font-medium text-gray-900">Limite de horários por usuário</h3>
+            <UserRoundCog className="h-5 w-5 text-gray-500" />
+          </div>
+          <div className="flex gap-2">
+            {predefinedLimits.map((limit) => (
+              <Button
+                key={limit}
+                onClick={() => onUpdateLimit(limit)}
+                variant={slotLimit === limit ? "default" : "outline"}
+                className="flex-1"
+              >
+                {limit}
+              </Button>
+            ))}
+            <Button
+              onClick={() => setShowCustomInput(true)}
+              variant="outline"
+              className="flex-1"
+            >
+              +
+            </Button>
           </div>
         </div>
       )}
@@ -101,6 +227,43 @@ const TimeSlotLimitControl = ({
                 +
               </Button>
             </div>
+
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-medium text-gray-900">Limites individuais</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowUserLimits(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar exceção
+                </Button>
+              </div>
+
+              {userLimits.length > 0 && (
+                <div className="space-y-2">
+                  {userLimits.map((userLimit) => (
+                    <div
+                      key={userLimit.userId}
+                      className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                    >
+                      <div>
+                        <p className="font-medium">{userLimit.userName}</p>
+                        <p className="text-sm text-gray-500">Limite: {userLimit.limit} horários</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveUserLimit(userLimit.userId)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <Dialog open={showCustomInput} onOpenChange={setShowCustomInput}>
@@ -126,6 +289,57 @@ const TimeSlotLimitControl = ({
                     Cancelar
                   </Button>
                   <Button onClick={handleCustomLimitSubmit}>
+                    Confirmar
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showUserLimits} onOpenChange={setShowUserLimits}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Adicionar limite individual</DialogTitle>
+                <DialogDescription>
+                  Defina um limite específico para um usuário
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Select value={selectedUser} onValueChange={setSelectedUser}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um usuário" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.rank} {user.warName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    value={selectedLimit}
+                    onChange={(e) => setSelectedLimit(e.target.value)}
+                    placeholder="Digite o limite de horários"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowUserLimits(false);
+                      setSelectedUser("");
+                      setSelectedLimit("");
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleAddUserLimit}>
                     Confirmar
                   </Button>
                 </div>
