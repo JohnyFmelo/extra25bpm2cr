@@ -274,7 +274,7 @@ const TimeSlotsList = () => {
       }
 
       toast({
-        title: "Sucesso \o/",
+        title: "Sucesso 😃",
         description: "Extra marcada com sucesso! Aguarde a escala."
       });
     } catch (error) {
