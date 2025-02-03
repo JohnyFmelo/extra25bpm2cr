@@ -274,13 +274,13 @@ const TimeSlotsList = () => {
       }
 
       toast({
-        title: "Sucesso 😃",
-        description: "Extra marcada com sucesso! Aguarde a escala."
+        title: "Sucesso ✅!",
+        description: "Extra marcada, Aguarde a escala."
       });
     } catch (error) {
       console.error('Erro ao voluntariar:', error);
       toast({
-        title: "Erro",
+        title: "Erro 🔥",
         description: "Não foi possível reservar a Extra.",
         variant: "destructive"
       });
@@ -290,7 +290,7 @@ const TimeSlotsList = () => {
   const handleUnvolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
       toast({
-        title: "Erro",
+        title: "Erro 🔥",
         description: "Usuário não encontrado. Por favor, faça login novamente.",
         variant: "destructive"
       });
@@ -324,7 +324,7 @@ const TimeSlotsList = () => {
     } catch (error) {
       console.error('Erro ao desmarcar:', error);
       toast({
-        title: "Erro",
+        title: "Erro ⛔",
         description: "Não foi possível desmarcar a Extra.",
         variant: "destructive"
       });
@@ -334,7 +334,7 @@ const TimeSlotsList = () => {
   const handleUpdateSlotLimit = async (limit: number) => {
     if (isNaN(limit) || limit < 0) {
       toast({
-        title: "Erro",
+        title: "Erro 😵‍💫",
         description: "Por favor, insira um número válido.",
         variant: "destructive"
       });
