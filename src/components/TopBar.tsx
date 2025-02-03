@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Menu } from "lucide-react";
-import { useState } from "react";
 import { AppSidebar } from "./AppSidebar";
+import { useSidebar } from "./ui/sidebar";
 
 const TopBar = () => {
   const navigate = useNavigate();
-  const [showSidebar, setShowSidebar] = useState(false);
+  const { setOpenMobile } = useSidebar();
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
 
   const handleLogout = () => {
@@ -22,7 +22,7 @@ const TopBar = () => {
             variant="ghost"
             size="icon"
             className="text-primary-foreground hover:bg-primary-light"
-            onClick={() => setShowSidebar(true)}
+            onClick={() => setOpenMobile(true)}
           >
             <Menu className="h-5 w-5" />
             <span className="sr-only">Menu</span>
@@ -46,7 +46,7 @@ const TopBar = () => {
         </div>
       </header>
 
-      <AppSidebar open={showSidebar} onClose={() => setShowSidebar(false)} />
+      <AppSidebar />
     </>
   );
 };
