@@ -318,7 +318,7 @@ const TimeSlotsList = () => {
       }
 
       toast({
-        title: "Desmarcado!👀",
+        title: "Desmarcado! 👀🤔",
         description: "Extra desmarcada com sucesso!"
       });
     } catch (error) {
