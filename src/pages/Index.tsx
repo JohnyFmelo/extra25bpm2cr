@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UsersList from "@/components/UsersList";
 import ProfileUpdateDialog from "@/components/ProfileUpdateDialog";
 import PasswordChangeDialog from "@/components/PasswordChangeDialog";
+import InformationDialog from "@/components/InformationDialog";
 import ScheduleList from "@/components/ScheduleList";
 import Messages from "@/components/Messages";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
@@ -17,6 +18,7 @@ const Index = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showInformationDialog, setShowInformationDialog] = useState(false);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
 
@@ -132,6 +134,13 @@ const Index = () => {
                     <h3 className="font-medium">Alterar Senha</h3>
                     <p className="text-sm text-gray-600">Modifique sua senha de acesso</p>
                   </button>
+                  <button
+                    onClick={() => setShowInformationDialog(true)}
+                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <h3 className="font-medium">Informações</h3>
+                    <p className="text-sm text-gray-600">Visualize a estrutura funcional do sistema</p>
+                  </button>
                 </div>
               </div>
             </div>
@@ -242,6 +251,14 @@ const Index = () => {
             onOpenChange={setShowPasswordDialog}
             userId={user.id}
             currentPassword={user.password}
+          />
+        )}
+
+        {showInformationDialog && (
+          <InformationDialog
+            open={showInformationDialog}
+            onOpenChange={setShowInformationDialog}
+            isAdmin={user.userType === "admin"}
           />
         )}
       </div>
