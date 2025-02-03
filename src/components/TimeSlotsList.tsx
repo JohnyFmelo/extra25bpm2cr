@@ -274,14 +274,14 @@ const TimeSlotsList = () => {
       }
 
       toast({
-        title: "Sucesso",
-        description: "Vaga reservada com sucesso!"
+        title: "Sucesso \o/",
+        description: "Extra marcada com sucesso! Aguarde a escala."
       });
     } catch (error) {
       console.error('Erro ao voluntariar:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível reservar a vaga.",
+        description: "Não foi possível reservar a Extra.",
         variant: "destructive"
       });
     }
@@ -319,13 +319,13 @@ const TimeSlotsList = () => {
 
       toast({
         title: "Sucesso",
-        description: "Vaga desmarcada com sucesso!"
+        description: "Extra desmarcada!"
       });
     } catch (error) {
       console.error('Erro ao desmarcar:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível desmarcar a vaga.",
+        description: "Não foi possível desmarcar a Extra.",
         variant: "destructive"
       });
     }
