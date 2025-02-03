@@ -25,7 +25,7 @@ export function AppSidebar({ open, onClose }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar open={open} onClose={onClose}>
+    <Sidebar>
       <SidebarHeader className="p-4">
         <div className="space-y-2">
           <p className="text-lg font-medium text-foreground">{user.email}</p>
