@@ -4,8 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState } from "react";
-import { ThemeProvider } from "@/hooks/use-theme";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Hours from "./pages/Hours";
@@ -47,43 +45,37 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <SidebarProvider>
-          <div className="min-h-screen flex w-full">
-            <BrowserRouter>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route 
-                    path="/" 
-                    element={
-                      <ProtectedRoute>
-                        <Layout>
-                          <Index />
-                        </Layout>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/hours" 
-                    element={
-                      <ProtectedRoute>
-                        <Layout>
-                          <Hours />
-                        </Layout>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  {/* Redirect any unknown routes to login */}
-                  <Route path="*" element={<Navigate to="/login" replace />} />
-                </Routes>
-              </TooltipProvider>
-            </BrowserRouter>
-          </div>
-        </SidebarProvider>
-      </ThemeProvider>
+      <BrowserRouter>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Index />
+                  </Layout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/hours" 
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Hours />
+                  </Layout>
+                </ProtectedRoute>
+              } 
+            />
+            {/* Redirect any unknown routes to login */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </TooltipProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 };
