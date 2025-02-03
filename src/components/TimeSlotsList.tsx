@@ -232,7 +232,7 @@ const TimeSlotsList = () => {
 
     if (userSlotCount >= slotLimit && !isAdmin) {
       toast({
-        title: "Limite atingido",
+        title: "Limite atingido!🚫",
         description: `Você atingiu o limite de ${slotLimit} horário${slotLimit === 1 ? '' : 's'} por usuário.`,
         variant: "destructive"
       });
@@ -246,7 +246,7 @@ const TimeSlotsList = () => {
 
     if (isAlreadyRegistered) {
       toast({
-        title: "Erro",
+        title: "Erro ⛔",
         description: "Você já está registrado em um horário nesta data.",
         variant: "destructive"
       });
@@ -274,13 +274,13 @@ const TimeSlotsList = () => {
       }
 
       toast({
-        title: "Sucesso ✅!",
-        description: "Extra marcada, Aguarde a escala."
+        title: "Sucesso!✅🤠",
+        description: "Extra marcada. Aguarde a escala."
       });
     } catch (error) {
       console.error('Erro ao voluntariar:', error);
       toast({
-        title: "Erro 🔥",
+        title: "Erro 🤔",
         description: "Não foi possível reservar a Extra.",
         variant: "destructive"
       });
@@ -290,7 +290,7 @@ const TimeSlotsList = () => {
   const handleUnvolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
       toast({
-        title: "Erro 🔥",
+        title: "Erro 🤔",
         description: "Usuário não encontrado. Por favor, faça login novamente.",
         variant: "destructive"
       });
@@ -318,7 +318,7 @@ const TimeSlotsList = () => {
       }
 
       toast({
-        title: "Desmarcado",
+        title: "Desmarcado!👀",
         description: "Extra desmarcada com sucesso!"
       });
     } catch (error) {
