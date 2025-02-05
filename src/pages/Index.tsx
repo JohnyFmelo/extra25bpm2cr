@@ -68,8 +68,6 @@ const Index = () => {
     setActiveTab("travel");
   };
 
-  // ... keep existing code (rest of the component logic)
-
   return (
     <div className="relative min-h-screen bg-[#E8F1F2]">
       <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto">
