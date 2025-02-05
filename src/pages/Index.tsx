@@ -11,6 +11,8 @@ import InformationDialog from "@/components/InformationDialog";
 import ScheduleList from "@/components/ScheduleList";
 import Messages from "@/components/Messages";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
+import TravelManagement from "@/components/TravelManagement";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -19,6 +21,7 @@ const Index = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showInformationDialog, setShowInformationDialog] = useState(false);
+  const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
 
@@ -55,7 +58,7 @@ const Index = () => {
   };
 
   const handleTravelClick = () => {
-    if (!user.userType === "admin") {
+    if (user.userType !== "admin") {
       toast({
         title: "Aviso",
         description: "Funcionalidade ainda em desenvolvimento.",
@@ -64,6 +67,8 @@ const Index = () => {
     }
     setActiveTab("travel");
   };
+
+  // ... keep existing code (rest of the component logic)
 
   return (
     <div className="relative min-h-screen bg-[#E8F1F2]">
