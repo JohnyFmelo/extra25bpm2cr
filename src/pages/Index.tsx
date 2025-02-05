@@ -11,7 +11,7 @@ import InformationDialog from "@/components/InformationDialog";
 import ScheduleList from "@/components/ScheduleList";
 import Messages from "@/components/Messages";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
-import TravelManagement from "@/components/TravelManagement";
+import { TravelManagement } from "@/components/TravelManagement";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
