@@ -1,4 +1,4 @@
-import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare } from "lucide-react";
+import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -54,6 +54,17 @@ const Index = () => {
     setActiveTab("notifications");
   };
 
+  const handleTravelClick = () => {
+    if (!user.userType === "admin") {
+      toast({
+        title: "Aviso",
+        description: "Funcionalidade ainda em desenvolvimento.",
+      });
+      return;
+    }
+    setActiveTab("travel");
+  };
+
   return (
     <div className="relative min-h-screen bg-[#E8F1F2]">
       <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto">
@@ -67,6 +78,7 @@ const Index = () => {
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="travel">Travel</TabsTrigger>
           </TabsList>
 
           <TabsContent value="main">
@@ -88,6 +100,7 @@ const Index = () => {
               )}
               <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
               <IconCard icon={Settings} label="Configurações" onClick={handleSettingsClick} />
+              <IconCard icon={MapPinned} label="Viagem" onClick={handleTravelClick} />
             </div>
           </TabsContent>
 
@@ -232,6 +245,23 @@ const Index = () => {
               </div>
               <div className="bg-white rounded-xl shadow-lg">
                 <NotificationsList />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="travel">
+            <div className="relative">
+              <div className="absolute right-0 -top-12 mb-4">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="bg-white rounded-xl shadow-lg">
+                <TravelManagement />
               </div>
             </div>
           </TabsContent>
