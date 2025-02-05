@@ -42,6 +42,27 @@ const RegisterForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate all required fields
+    if (!email || !warName || !rank || !registration || !password) {
+      toast({
+        title: "Erro no cadastro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Additional validation for admin registration
+    if (userType === "admin" && !adminPassword) {
+      toast({
+        title: "Erro no cadastro",
+        description: "Por favor, insira a senha de administrador.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     if (userType === "admin" && adminPassword !== "010355") {
@@ -116,7 +137,7 @@ const RegisterForm = () => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="register-email" className="block text-sm font-medium text-gray-700">
-          Email
+          Email *
         </label>
         <Input
           id="register-email"
@@ -128,7 +149,7 @@ const RegisterForm = () => {
       </div>
       <div>
         <label htmlFor="war-name" className="block text-sm font-medium text-gray-700">
-          Nome de Guerra
+          Nome de Guerra *
         </label>
         <Input
           id="war-name"
@@ -140,7 +161,7 @@ const RegisterForm = () => {
       </div>
       <div>
         <label htmlFor="rank" className="block text-sm font-medium text-gray-700">
-          Graduação
+          Graduação *
         </label>
         <Select value={rank} onValueChange={setRank} required>
           <SelectTrigger>
@@ -157,7 +178,7 @@ const RegisterForm = () => {
       </div>
       <div>
         <label htmlFor="registration" className="block text-sm font-medium text-gray-700">
-          Matrícula
+          Matrícula *
         </label>
         <Input
           id="registration"
@@ -169,7 +190,7 @@ const RegisterForm = () => {
       </div>
       <div>
         <label htmlFor="register-password" className="block text-sm font-medium text-gray-700">
-          Senha
+          Senha *
         </label>
         <Input
           id="register-password"
@@ -181,7 +202,7 @@ const RegisterForm = () => {
       </div>
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          Tipo de Usuário
+          Tipo de Usuário *
         </label>
         <RadioGroup value={userType} onValueChange={setUserType} className="flex gap-4">
           <div className="flex items-center space-x-2">
@@ -197,7 +218,7 @@ const RegisterForm = () => {
       {userType === "admin" && (
         <div>
           <label htmlFor="admin-password" className="block text-sm font-medium text-gray-700">
-            Senha do Administrador
+            Senha do Administrador *
           </label>
           <Input
             id="admin-password"
