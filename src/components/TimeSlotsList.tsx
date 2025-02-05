@@ -151,25 +151,29 @@ const TimeSlotsList = () => {
 
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
+    let [endHour, endMinute] = endTime.split(':').map(Number);
     
-    let adjustedEndHour = endHour;
-    if (endHour === 0) {
-      adjustedEndHour = 24;
+    // Se o horário final for menor que o inicial, significa que passou para o próximo dia
+    // Então adicionamos 24 horas ao horário final
+    if (endHour < startHour || (endHour === 0 && startHour > 0)) {
+      endHour += 24;
     }
     
-    let diffHours = adjustedEndHour - startHour;
+    // Calcula diferença de horas e minutos
+    let diffHours = endHour - startHour;
     let diffMinutes = endMinute - startMinute;
     
+    // Ajusta quando os minutos são negativos
     if (diffMinutes < 0) {
       diffHours -= 1;
       diffMinutes += 60;
     }
     
+    // Formata o texto de retorno
     const hourText = diffHours > 0 ? `${diffHours}h` : '';
     const minText = diffMinutes > 0 ? `${diffMinutes}min` : '';
     
-    return `${hourText}${minText}`;
+    return `${hourText}${minText}`.trim();
   };
 
   useEffect(() => {
@@ -427,7 +431,7 @@ const TimeSlotsList = () => {
   const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
 
   const userSlotCount = timeSlots.reduce((count, slot) => 
-    slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
+    slot.volunteers?.includes(volunteerName) ? count + 1 slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
   );
 
   if (isLoading) {
