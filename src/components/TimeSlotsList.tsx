@@ -431,7 +431,7 @@ const TimeSlotsList = () => {
   const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
 
   const userSlotCount = timeSlots.reduce((count, slot) => 
-    slot.volunteers?.includes(volunteerName) ? count + 1 slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
+    slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
   );
 
   if (isLoading) {
