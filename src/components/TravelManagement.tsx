@@ -35,7 +35,6 @@ export const TravelManagement = () => {
   const [travels, setTravels] = useState<any[]>([]);
   const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
   const [editingTravel, setEditingTravel] = useState<any>(null);
-  // Estado para controlar a expansão dos contêineres arquivados
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -100,7 +99,6 @@ export const TravelManagement = () => {
           destination,
           dailyAllowance: Number(dailyAllowance),
           updatedAt: new Date(),
-          // Mantém o status de arquivamento, se existir
           archived: editingTravel.archived || false,
         });
 
@@ -201,10 +199,8 @@ export const TravelManagement = () => {
       const travelData = travelSnap.data();
       console.log("Travel Data:", travelData);
 
-      // Assegure-se de que travelData.slots seja um número
       const totalSlots = Number(travelData.slots);
 
-      // Garantindo que o campo volunteers seja um array
       const currentVolunteers: string[] = Array.isArray(travelData.volunteers)
         ? travelData.volunteers
         : [];
@@ -279,13 +275,19 @@ export const TravelManagement = () => {
     });
   };
 
-  // Função para alternar a expansão dos contêineres de viagens arquivadas
   const toggleExpansion = (travelId: string) => {
     setExpandedTravels((prev) =>
       prev.includes(travelId)
         ? prev.filter((id) => id !== travelId)
         : [...prev, travelId]
     );
+  };
+
+  const formattedTravelCount = (count: number) => {
+    if (count === 1) {
+      return "1 viagem";
+    }
+    return `${count} viagens`;
   };
 
   return (
@@ -382,7 +384,6 @@ export const TravelManagement = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {travels.map((travel) => {
-          // Se a viagem estiver arquivada, usamos o estado para definir se ela está expandida
           const isArchived = travel.archived;
           const isExpanded = expandedTravels.includes(travel.id);
           const travelDate = new Date(travel.startDate);
@@ -390,7 +391,6 @@ export const TravelManagement = () => {
           const showVolunteerButton = travelDate > today && !isArchived;
           const sortedVolunteers = travel.volunteers ? sortVolunteers(travel.volunteers) : [];
 
-          // Para viagens arquivadas, se não estiver expandida, mostra apenas informações mínimas
           const minimalContent = (
             <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
               <h3 className="text-xl font-semibold">{travel.destination}</h3>
@@ -399,7 +399,6 @@ export const TravelManagement = () => {
             </div>
           );
 
-          // Conteúdo completo (similar ao atual) com as demais informações
           const fullContent = (
             <div>
               <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
@@ -407,7 +406,7 @@ export const TravelManagement = () => {
               </div>
               <div className="mt-2 space-y-1 text-sm text-gray-600">
                 <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
-                <p>Data Final: {new Date(travel.endDate).toLocaleDateString()}</p>
+                <p>Data Final: {new Date(new Date(travel.endDate).setDate(new Date(travel.endDate).getDate() + 1)).toLocaleDateString()}</p>
                 <p>Vagas: {travel.slots}</p>
                 <p>Diárias: {travel.dailyAllowance}</p>
                 {travel.volunteers && travel.volunteers.length > 0 && (
@@ -423,7 +422,7 @@ export const TravelManagement = () => {
                         >
                           <span>{volunteerName}</span>
                           <span className="text-xs text-gray-500">
-                            {volunteerCounts[volunteerName] || 0} viagem(ns)
+                            {volunteerCounts[volunteerName] || 0} {formattedTravelCount(volunteerCounts[volunteerName] || 0)}
                           </span>
                         </li>
                       ))}
@@ -473,7 +472,6 @@ export const TravelManagement = () => {
                       <Trash2 className="mr-2 h-4 w-4" />
                       Excluir
                     </DropdownMenuItem>
-                    {/* Item de arquivar */}
                     <DropdownMenuItem
                       onClick={() => handleArchive(travel.id, true)}
                     >
