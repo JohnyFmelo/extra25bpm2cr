@@ -23,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive } from "lucide-react";
 
 export const TravelManagement = () => {
   const [startDate, setStartDate] = useState("");
@@ -35,6 +35,8 @@ export const TravelManagement = () => {
   const [travels, setTravels] = useState<any[]>([]);
   const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
   const [editingTravel, setEditingTravel] = useState<any>(null);
+  // Estado para controlar a expansão dos contêineres arquivados
+  const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -98,6 +100,8 @@ export const TravelManagement = () => {
           destination,
           dailyAllowance: Number(dailyAllowance),
           updatedAt: new Date(),
+          // Mantém o status de arquivamento, se existir
+          archived: editingTravel.archived || false,
         });
 
         toast({
@@ -114,6 +118,7 @@ export const TravelManagement = () => {
           dailyAllowance: Number(dailyAllowance),
           createdAt: new Date(),
           volunteers: [],
+          archived: false,
         });
 
         toast({
@@ -163,6 +168,26 @@ export const TravelManagement = () => {
     }
   };
 
+  const handleArchive = async (travelId: string, archived: boolean) => {
+    try {
+      const travelRef = doc(db, "travels", travelId);
+      await updateDoc(travelRef, { archived });
+      toast({
+        title: "Sucesso",
+        description: archived
+          ? "Viagem arquivada com sucesso!"
+          : "Viagem desarquivada com sucesso!",
+      });
+    } catch (error) {
+      console.error("Error archiving travel:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao arquivar a viagem.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleVolunteer = async (travelId: string) => {
     console.log("User:", user);
     try {
@@ -175,7 +200,7 @@ export const TravelManagement = () => {
 
       const travelData = travelSnap.data();
       console.log("Travel Data:", travelData);
-      
+
       // Assegure-se de que travelData.slots seja um número
       const totalSlots = Number(travelData.slots);
 
@@ -252,6 +277,15 @@ export const TravelManagement = () => {
       const countB = volunteerCounts[b] || 0;
       return countA - countB;
     });
+  };
+
+  // Função para alternar a expansão dos contêineres de viagens arquivadas
+  const toggleExpansion = (travelId: string) => {
+    setExpandedTravels((prev) =>
+      prev.includes(travelId)
+        ? prev.filter((id) => id !== travelId)
+        : [...prev, travelId]
+    );
   };
 
   return (
@@ -348,15 +382,77 @@ export const TravelManagement = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {travels.map((travel) => {
+          // Se a viagem estiver arquivada, usamos o estado para definir se ela está expandida
+          const isArchived = travel.archived;
+          const isExpanded = expandedTravels.includes(travel.id);
           const travelDate = new Date(travel.startDate);
           const today = new Date();
-          const showVolunteerButton = travelDate > today;
+          const showVolunteerButton = travelDate > today && !isArchived;
           const sortedVolunteers = travel.volunteers ? sortVolunteers(travel.volunteers) : [];
+
+          // Para viagens arquivadas, se não estiver expandida, mostra apenas informações mínimas
+          const minimalContent = (
+            <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
+              <h3 className="text-xl font-semibold">{travel.destination}</h3>
+              <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
+              <p>Diárias: {travel.dailyAllowance}</p>
+            </div>
+          );
+
+          // Conteúdo completo (similar ao atual) com as demais informações
+          const fullContent = (
+            <div>
+              <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
+                <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
+              </div>
+              <div className="mt-2 space-y-1 text-sm text-gray-600">
+                <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
+                <p>Data Final: {new Date(travel.endDate).toLocaleDateString()}</p>
+                <p>Vagas: {travel.slots}</p>
+                <p>Diárias: {travel.dailyAllowance}</p>
+                {travel.volunteers && travel.volunteers.length > 0 && (
+                  <div className="pt-4 border-t border-gray-100">
+                    <h4 className="font-medium text-sm text-gray-700 mb-2">
+                      Voluntários (ordenados por menor número de viagens):
+                    </h4>
+                    <ul className="space-y-1">
+                      {sortedVolunteers.map((volunteerName: string) => (
+                        <li
+                          key={volunteerName}
+                          className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
+                        >
+                          <span>{volunteerName}</span>
+                          <span className="text-xs text-gray-500">
+                            {volunteerCounts[volunteerName] || 0} viagem(ns)
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              {showVolunteerButton && (
+                <div className="mt-4">
+                  <Button
+                    onClick={() => handleVolunteer(travel.id)}
+                    className="w-full"
+                    variant={travel.volunteers?.includes(user.name) ? "secondary" : "default"}
+                    disabled={travel.volunteers?.includes(user.name)}
+                  >
+                    {travel.volunteers?.includes(user.name) ? "Já Inscrito" : "Quero ser Voluntário"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
 
           return (
             <Card
               key={travel.id}
-              className="p-6 bg-white shadow-lg hover:shadow-xl transition-shadow relative"
+              onClick={isArchived ? () => toggleExpansion(travel.id) : undefined}
+              className={`p-6 hover:shadow-xl transition-shadow relative ${
+                isArchived ? "bg-gray-200 cursor-pointer" : "bg-white"
+              }`}
             >
               {user.userType === "admin" && (
                 <DropdownMenu>
@@ -377,80 +473,19 @@ export const TravelManagement = () => {
                       <Trash2 className="mr-2 h-4 w-4" />
                       Excluir
                     </DropdownMenuItem>
+                    {/* Item de arquivar */}
+                    <DropdownMenuItem
+                      onClick={() => handleArchive(travel.id, true)}
+                    >
+                      <Archive className="mr-2 h-4 w-4" />
+                      Arquivar
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
 
               <div className="space-y-4">
-                <div>
-                  <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
-                  <div className="mt-2 space-y-1 text-sm text-gray-600">
-                    <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
-                    <p>Data Final: {new Date(travel.endDate).toLocaleDateString()}</p>
-                    <p>Vagas: {travel.slots}</p>
-                    <div className="flex items-center gap-2">
-                      <p>Diárias: {travel.dailyAllowance}</p>
-                      {user.userType === "admin" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2"
-                          onClick={() => setIsEditingAllowance(true)}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                    {isEditingAllowance && user.userType === "admin" && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <Input
-                          type="number"
-                          value={dailyAllowance}
-                          onChange={(e) => setDailyAllowance(e.target.value)}
-                          className="w-24"
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => handleUpdateDailyAllowance(travel.id, dailyAllowance)}
-                        >
-                          Salvar
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {showVolunteerButton && (
-                  <Button
-                    onClick={() => handleVolunteer(travel.id)}
-                    className="w-full"
-                    variant={travel.volunteers?.includes(user.name) ? "secondary" : "default"}
-                    disabled={travel.volunteers?.includes(user.name)}
-                  >
-                    {travel.volunteers?.includes(user.name) ? "Já Inscrito" : "Quero ser Voluntário"}
-                  </Button>
-                )}
-
-                {sortedVolunteers.length > 0 && (
-                  <div className="pt-4 border-t border-gray-100">
-                    <h4 className="font-medium text-sm text-gray-700 mb-2">
-                      Voluntários (ordenados por menor número de viagens):
-                    </h4>
-                    <ul className="space-y-1">
-                      {sortedVolunteers.map((volunteerName: string) => (
-                        <li
-                          key={volunteerName}
-                          className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
-                        >
-                          <span>{volunteerName}</span>
-                          <span className="text-xs text-gray-500">
-                            {volunteerCounts[volunteerName] || 0} viagem(ns)
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                {isArchived && !isExpanded ? minimalContent : fullContent}
               </div>
             </Card>
           );
