@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -16,6 +16,19 @@ export const TravelManagement = () => {
   const [travels, setTravels] = useState<any[]>([]);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  useEffect(() => {
+    const q = query(collection(db, "travels"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const travelsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setTravels(travelsData);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleCreateTravel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,6 +184,18 @@ export const TravelManagement = () => {
                 >
                   {travel.volunteers?.includes(user.id) ? "Já Inscrito" : "Voluntário"}
                 </Button>
+              )}
+              {travel.volunteers && travel.volunteers.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-medium mb-2">Voluntários:</h4>
+                  <ul className="space-y-1">
+                    {travel.volunteers.map((volunteerId: string) => (
+                      <li key={volunteerId} className="text-sm text-gray-600">
+                        {volunteerId}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </Card>
           );
