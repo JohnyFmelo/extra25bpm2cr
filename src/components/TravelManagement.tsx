@@ -370,7 +370,7 @@ export const TravelManagement = () => {
                   <div className="mt-2 space-y-1 text-sm text-gray-600">
                     <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
                     <p>Data Final: {new Date(travel.endDate).toLocaleDateString()}</p>
-                    <p>Voluntários: {travel.volunteers?.length || 0} vagas</p>
+                    <p>Vagas: {travel.slots}</p>
                     <div className="flex items-center gap-2">
                       <p>Diárias: {travel.dailyAllowance}</p>
                       {user.userType === "admin" && (
