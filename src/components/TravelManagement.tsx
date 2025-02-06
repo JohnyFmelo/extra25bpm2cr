@@ -31,6 +31,7 @@ export const TravelManagement = () => {
   const [slots, setSlots] = useState("");
   const [destination, setDestination] = useState("");
   const [dailyAllowance, setDailyAllowance] = useState("");
+  const [isEditingAllowance, setIsEditingAllowance] = useState(false);
   const [travels, setTravels] = useState<any[]>([]);
   const [volunteerCounts, setVolunteerCounts] = useState<{[key: string]: number}>({});
   const [editingTravel, setEditingTravel] = useState<any>(null);
@@ -159,10 +160,16 @@ export const TravelManagement = () => {
   const handleVolunteer = async (travelId: string) => {
     try {
       const travelRef = doc(db, "travels", travelId);
-      const travelSnapshot = await getDocs(query(collection(db, "travels"), where("id", "==", travelId)));
-      const travelData = travelSnapshot.docs[0].data();
+      const travelDoc = await getDocs(query(collection(db, "travels"), where("id", "==", travelId)));
+      
+      if (travelDoc.empty) {
+        throw new Error("Viagem não encontrada");
+      }
 
-      if (travelData.volunteers?.includes(user.name)) {
+      const travelData = travelDoc.docs[0].data();
+      const currentVolunteers = travelData.volunteers || [];
+
+      if (currentVolunteers.includes(user.name)) {
         toast({
           title: "Aviso",
           description: "Você já é voluntário desta viagem.",
@@ -170,7 +177,7 @@ export const TravelManagement = () => {
         return;
       }
 
-      if (travelData.volunteers?.length >= travelData.slots) {
+      if (currentVolunteers.length >= travelData.slots) {
         toast({
           title: "Aviso",
           description: "Não há mais vagas disponíveis.",
@@ -178,12 +185,11 @@ export const TravelManagement = () => {
         return;
       }
 
-      const updatedVolunteers = [...(travelData.volunteers || []), user.name];
+      const updatedVolunteers = [...currentVolunteers, user.name];
       await updateDoc(travelRef, {
         volunteers: updatedVolunteers,
       });
 
-      // Update volunteer counts
       setVolunteerCounts(prev => ({
         ...prev,
         [user.name]: (prev[user.name] || 0) + 1
@@ -203,11 +209,31 @@ export const TravelManagement = () => {
     }
   };
 
+  const handleUpdateDailyAllowance = async (travelId: string, newAllowance: string) => {
+    try {
+      const travelRef = doc(db, "travels", travelId);
+      await updateDoc(travelRef, {
+        dailyAllowance: Number(newAllowance)
+      });
+      setIsEditingAllowance(false);
+      toast({
+        title: "Sucesso",
+        description: "Diárias atualizadas com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar diárias.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const sortVolunteers = (volunteers: string[]) => {
     return [...volunteers].sort((a, b) => {
       const countA = volunteerCounts[a] || 0;
       const countB = volunteerCounts[b] || 0;
-      return countA - countB; // Menor número de viagens primeiro
+      return countA - countB;
     });
   };
 
@@ -267,13 +293,13 @@ export const TravelManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dailyAllowance">Diárias (calculado automaticamente)</Label>
+                <Label htmlFor="dailyAllowance">Diárias</Label>
                 <Input
                   id="dailyAllowance"
                   type="number"
                   value={dailyAllowance}
-                  readOnly
-                  className="w-full bg-gray-50"
+                  onChange={(e) => setDailyAllowance(e.target.value)}
+                  className="w-full"
                 />
               </div>
             </div>
@@ -344,8 +370,36 @@ export const TravelManagement = () => {
                   <div className="mt-2 space-y-1 text-sm text-gray-600">
                     <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
                     <p>Data Final: {new Date(travel.endDate).toLocaleDateString()}</p>
-                    <p>Vagas Disponíveis: {travel.slots - (travel.volunteers?.length || 0)} de {travel.slots}</p>
-                    <p>Diárias: {travel.dailyAllowance}</p>
+                    <p>Voluntários: {travel.volunteers?.length || 0} vagas</p>
+                    <div className="flex items-center gap-2">
+                      <p>Diárias: {travel.dailyAllowance}</p>
+                      {user.userType === "admin" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2"
+                          onClick={() => setIsEditingAllowance(true)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                    {isEditingAllowance && user.userType === "admin" && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Input
+                          type="number"
+                          value={dailyAllowance}
+                          onChange={(e) => setDailyAllowance(e.target.value)}
+                          className="w-24"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleUpdateDailyAllowance(travel.id, dailyAllowance)}
+                        >
+                          Salvar
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
