@@ -16,7 +16,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { differenceInDays } from "date-fns";
+// Removemos o import do differenceInDays, pois não iremos recalcular diárias automaticamente.
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,16 +30,18 @@ export const TravelManagement = () => {
   const [endDate, setEndDate] = useState("");
   const [slots, setSlots] = useState("");
   const [destination, setDestination] = useState("");
+  // O valor de diárias é agora definido manualmente (ou calculado uma única vez, se desejado)
   const [dailyAllowance, setDailyAllowance] = useState("");
   const [isEditingAllowance, setIsEditingAllowance] = useState(false);
   const [travels, setTravels] = useState<any[]>([]);
   const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
   const [editingTravel, setEditingTravel] = useState<any>(null);
-  // Estado para controlar a expansão dos contêineres arquivados
+  // Estado para controlar a expansão dos contêineres de viagens arquivadas
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+  // Busca a contagem de voluntários (permanece igual)
   useEffect(() => {
     const fetchVolunteerCounts = async () => {
       try {
@@ -65,6 +67,7 @@ export const TravelManagement = () => {
     fetchVolunteerCounts();
   }, []);
 
+  // Escuta em tempo real dos documentos
   useEffect(() => {
     const q = query(collection(db, "travels"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -78,29 +81,37 @@ export const TravelManagement = () => {
     return () => unsubscribe();
   }, []);
 
+  // Removemos o useEffect que recalculava dailyAllowance a partir das datas
+
+  // Efeito para arquivar automaticamente viagens que já terminaram (data final < hoje)
   useEffect(() => {
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const days = differenceInDays(end, start) + 1;
-      setDailyAllowance(String(days));
-    }
-  }, [startDate, endDate]);
+    const now = new Date();
+    travels.forEach(travel => {
+      if (!travel.archived) {
+        const end = new Date(travel.endDate);
+        if (end < now) {
+          const travelRef = doc(db, "travels", travel.id);
+          updateDoc(travelRef, { archived: true })
+            .catch(err => console.error("Erro ao arquivar automaticamente:", err));
+        }
+      }
+    });
+  }, [travels]);
 
   const handleCreateTravel = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       if (editingTravel) {
+        // Nas edições, as datas permanecem inalteradas (o usuário pode alterar outros campos, como diárias)
         const travelRef = doc(db, "travels", editingTravel.id);
         await updateDoc(travelRef, {
-          startDate,
-          endDate,
+          // Não atualizamos as datas se o objetivo é mantê-las imutáveis
+          // startDate e endDate permanecem os mesmos
           slots: Number(slots),
           destination,
           dailyAllowance: Number(dailyAllowance),
           updatedAt: new Date(),
-          // Mantém o status de arquivamento, se existir
           archived: editingTravel.archived || false,
         });
 
@@ -115,6 +126,7 @@ export const TravelManagement = () => {
           endDate,
           slots: Number(slots),
           destination,
+          // Aqui, você pode optar por calcular a diária uma única vez no momento da criação
           dailyAllowance: Number(dailyAllowance),
           createdAt: new Date(),
           volunteers: [],
@@ -144,6 +156,7 @@ export const TravelManagement = () => {
 
   const handleEditTravel = (travel: any) => {
     setEditingTravel(travel);
+    // Ao editar, as datas não são alteradas
     setStartDate(travel.startDate);
     setEndDate(travel.endDate);
     setSlots(String(travel.slots));
@@ -201,10 +214,7 @@ export const TravelManagement = () => {
       const travelData = travelSnap.data();
       console.log("Travel Data:", travelData);
 
-      // Assegure-se de que travelData.slots seja um número
       const totalSlots = Number(travelData.slots);
-
-      // Garantindo que o campo volunteers seja um array
       const currentVolunteers: string[] = Array.isArray(travelData.volunteers)
         ? travelData.volunteers
         : [];
@@ -287,6 +297,11 @@ export const TravelManagement = () => {
         : [...prev, travelId]
     );
   };
+
+  // Separa as viagens não arquivadas e as arquivadas
+  const now = new Date();
+  const nonArchivedTravels = travels.filter(travel => !travel.archived);
+  const archivedTravels = travels.filter(travel => travel.archived);
 
   return (
     <div className="p-6 space-y-8">
@@ -380,29 +395,22 @@ export const TravelManagement = () => {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {travels.map((travel) => {
-          // Se a viagem estiver arquivada, usamos o estado para definir se ela está expandida
-          const isArchived = travel.archived;
-          const isExpanded = expandedTravels.includes(travel.id);
-          const travelDate = new Date(travel.startDate);
-          const today = new Date();
-          const showVolunteerButton = travelDate > today && !isArchived;
-          const sortedVolunteers = travel.volunteers ? sortVolunteers(travel.volunteers) : [];
-
-          // Para viagens arquivadas, se não estiver expandida, mostra apenas informações mínimas
-          const minimalContent = (
-            <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
-              <h3 className="text-xl font-semibold">{travel.destination}</h3>
-              <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
-              <p>Diárias: {travel.dailyAllowance}</p>
-            </div>
-          );
-
-          // Conteúdo completo (similar ao atual) com as demais informações
+      {/* Seção de viagens não arquivadas (inclui viagens em vigor e próximas) */}
+      <div className="space-y-4">
+        {nonArchivedTravels.map((travel) => {
+          const start = new Date(travel.startDate);
+          const end = new Date(travel.endDate);
+          // Viagem em vigor: já começou e ainda não terminou
+          const isOngoing = start <= now && end >= now;
+          // Viagem que ainda não começou
+          const isUpcoming = start > now;
+          // Define a cor do contêiner: verde para viagens em vigor, branco para as demais
+          const containerClass = isOngoing ? "bg-green-200" : "bg-white";
+          
+          // Para viagens não arquivadas, exibimos o conteúdo completo
           const fullContent = (
             <div>
-              <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
+              <div className="mb-2">
                 <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
               </div>
               <div className="mt-2 space-y-1 text-sm text-gray-600">
@@ -416,7 +424,7 @@ export const TravelManagement = () => {
                       Voluntários (ordenados por menor número de viagens):
                     </h4>
                     <ul className="space-y-1">
-                      {sortedVolunteers.map((volunteerName: string) => (
+                      {sortVolunteers(travel.volunteers).map((volunteerName: string) => (
                         <li
                           key={volunteerName}
                           className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
@@ -431,7 +439,8 @@ export const TravelManagement = () => {
                   </div>
                 )}
               </div>
-              {showVolunteerButton && (
+              {/* Exibe o botão de voluntariado apenas para viagens que ainda não iniciaram */}
+              {isUpcoming && (
                 <div className="mt-4">
                   <Button
                     onClick={() => handleVolunteer(travel.id)}
@@ -449,10 +458,7 @@ export const TravelManagement = () => {
           return (
             <Card
               key={travel.id}
-              onClick={isArchived ? () => toggleExpansion(travel.id) : undefined}
-              className={`p-6 hover:shadow-xl transition-shadow relative ${
-                isArchived ? "bg-gray-200 cursor-pointer" : "bg-white"
-              }`}
+              className={`p-6 hover:shadow-xl transition-shadow relative ${containerClass}`}
             >
               {user.userType === "admin" && (
                 <DropdownMenu>
@@ -473,24 +479,85 @@ export const TravelManagement = () => {
                       <Trash2 className="mr-2 h-4 w-4" />
                       Excluir
                     </DropdownMenuItem>
-                    {/* Item de arquivar */}
-                    <DropdownMenuItem
-                      onClick={() => handleArchive(travel.id, true)}
-                    >
+                    <DropdownMenuItem onClick={() => handleArchive(travel.id, true)}>
                       <Archive className="mr-2 h-4 w-4" />
                       Arquivar
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-
-              <div className="space-y-4">
-                {isArchived && !isExpanded ? minimalContent : fullContent}
-              </div>
+              <div className="space-y-4">{fullContent}</div>
             </Card>
           );
         })}
       </div>
+
+      {/* Seção de viagens arquivadas */}
+      {archivedTravels.length > 0 && (
+        <div className="pt-8">
+          <h2 className="text-2xl font-semibold text-gray-700 mb-4">Viagens Arquivadas</h2>
+          <div className="space-y-4">
+            {archivedTravels.map((travel) => {
+              const isExpanded = expandedTravels.includes(travel.id);
+              // Conteúdo mínimo: apenas nome, data inicial e diárias
+              const minimalContent = (
+                <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
+                  <h3 className="text-xl font-semibold">{travel.destination}</h3>
+                  <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
+                  <p>Diárias: {travel.dailyAllowance}</p>
+                </div>
+              );
+
+              // Conteúdo completo: todas as informações da viagem
+              const fullContent = (
+                <div>
+                  <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
+                    <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
+                  </div>
+                  <div className="mt-2 space-y-1 text-sm text-gray-600">
+                    <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
+                    <p>Data Final: {new Date(travel.endDate).toLocaleDateString()}</p>
+                    <p>Vagas: {travel.slots}</p>
+                    <p>Diárias: {travel.dailyAllowance}</p>
+                    {travel.volunteers && travel.volunteers.length > 0 && (
+                      <div className="pt-4 border-t border-gray-100">
+                        <h4 className="font-medium text-sm text-gray-700 mb-2">
+                          Voluntários (ordenados por menor número de viagens):
+                        </h4>
+                        <ul className="space-y-1">
+                          {sortVolunteers(travel.volunteers).map((volunteerName: string) => (
+                            <li
+                              key={volunteerName}
+                              className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
+                            >
+                              <span>{volunteerName}</span>
+                              <span className="text-xs text-gray-500">
+                                {volunteerCounts[volunteerName] || 0} viagem(ns)
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+
+              return (
+                <Card
+                  key={travel.id}
+                  className="p-6 bg-gray-200 hover:shadow-xl transition-shadow relative cursor-pointer"
+                  onClick={() => toggleExpansion(travel.id)}
+                >
+                  <div className="space-y-4">
+                    {isExpanded ? fullContent : minimalContent}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
