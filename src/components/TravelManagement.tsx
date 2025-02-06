@@ -8,7 +8,6 @@ import {
   addDoc, 
   onSnapshot, 
   query, 
-  where, 
   getDocs, 
   doc, 
   getDoc,
@@ -34,7 +33,7 @@ export const TravelManagement = () => {
   const [dailyAllowance, setDailyAllowance] = useState("");
   const [isEditingAllowance, setIsEditingAllowance] = useState(false);
   const [travels, setTravels] = useState<any[]>([]);
-  const [volunteerCounts, setVolunteerCounts] = useState<{[key: string]: number}>({});
+  const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
   const [editingTravel, setEditingTravel] = useState<any>(null);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -43,9 +42,9 @@ export const TravelManagement = () => {
     const fetchVolunteerCounts = async () => {
       const travelsRef = collection(db, "travels");
       const travelsSnapshot = await getDocs(travelsRef);
-      const counts: {[key: string]: number} = {};
-      
-      travelsSnapshot.docs.forEach(doc => {
+      const counts: { [key: string]: number } = {};
+
+      travelsSnapshot.docs.forEach((doc) => {
         const travel = doc.data();
         if (travel.volunteers) {
           travel.volunteers.forEach((volunteer: string) => {
@@ -53,7 +52,7 @@ export const TravelManagement = () => {
           });
         }
       });
-      
+
       setVolunteerCounts(counts);
     };
 
@@ -63,9 +62,9 @@ export const TravelManagement = () => {
   useEffect(() => {
     const q = query(collection(db, "travels"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const travelsData = querySnapshot.docs.map(doc => ({
+      const travelsData = querySnapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
       setTravels(travelsData);
     });
@@ -84,7 +83,7 @@ export const TravelManagement = () => {
 
   const handleCreateTravel = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       if (editingTravel) {
         const travelRef = doc(db, "travels", editingTravel.id);
@@ -161,10 +160,11 @@ export const TravelManagement = () => {
   };
 
   const handleVolunteer = async (travelId: string) => {
+    console.log("User:", user);
     try {
       const travelRef = doc(db, "travels", travelId);
       const travelSnap = await getDoc(travelRef);
-      
+
       if (!travelSnap.exists()) {
         throw new Error("Viagem não encontrada");
       }
@@ -193,9 +193,9 @@ export const TravelManagement = () => {
         volunteers: updatedVolunteers,
       });
 
-      setVolunteerCounts(prev => ({
+      setVolunteerCounts((prev) => ({
         ...prev,
-        [user.name]: (prev[user.name] || 0) + 1
+        [user.name]: (prev[user.name] || 0) + 1,
       }));
 
       toast({
@@ -216,7 +216,7 @@ export const TravelManagement = () => {
     try {
       const travelRef = doc(db, "travels", travelId);
       await updateDoc(travelRef, {
-        dailyAllowance: Number(newAllowance)
+        dailyAllowance: Number(newAllowance),
       });
       setIsEditingAllowance(false);
       toast({
@@ -341,14 +341,14 @@ export const TravelManagement = () => {
           const sortedVolunteers = travel.volunteers ? sortVolunteers(travel.volunteers) : [];
 
           return (
-            <Card key={travel.id} className="p-6 bg-white shadow-lg hover:shadow-xl transition-shadow relative">
+            <Card
+              key={travel.id}
+              className="p-6 bg-white shadow-lg hover:shadow-xl transition-shadow relative"
+            >
               {user.userType === "admin" && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="absolute top-2 right-2 h-8 w-8 p-0"
-                    >
+                    <Button variant="ghost" className="absolute top-2 right-2 h-8 w-8 p-0">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -406,15 +406,11 @@ export const TravelManagement = () => {
                     )}
                   </div>
                 </div>
-                
+
                 {showVolunteerButton && (
-                  <Button 
+                  <Button
                     onClick={() => handleVolunteer(travel.id)}
                     className="w-full"
-                    const handleVolunteer = async (travelId: string) => {
-                     console.log("User:", user);
-                    try {
-
                     variant={travel.volunteers?.includes(user.name) ? "secondary" : "default"}
                     disabled={travel.volunteers?.includes(user.name)}
                   >
@@ -429,8 +425,8 @@ export const TravelManagement = () => {
                     </h4>
                     <ul className="space-y-1">
                       {sortedVolunteers.map((volunteerName: string) => (
-                        <li 
-                          key={volunteerName} 
+                        <li
+                          key={volunteerName}
                           className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
                         >
                           <span>{volunteerName}</span>
