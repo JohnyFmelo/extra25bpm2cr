@@ -411,6 +411,10 @@ export const TravelManagement = () => {
                   <Button 
                     onClick={() => handleVolunteer(travel.id)}
                     className="w-full"
+                    const handleVolunteer = async (travelId: string) => {
+  console.log("User:", user);
+  try {
+
                     variant={travel.volunteers?.includes(user.name) ? "secondary" : "default"}
                     disabled={travel.volunteers?.includes(user.name)}
                   >
