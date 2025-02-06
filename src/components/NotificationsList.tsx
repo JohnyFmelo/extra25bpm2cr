@@ -10,6 +10,7 @@ import {
   arrayUnion,
   Timestamp,
   deleteDoc,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -59,7 +60,7 @@ const NotificationsList = () => {
 
   useEffect(() => {
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
-    
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const notifs = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -68,7 +69,7 @@ const NotificationsList = () => {
       } as Notification)).filter(notif => 
         notif.type === 'all' || notif.recipientId === currentUser.id
       );
-      
+
       setNotifications(notifs);
     });
 
@@ -114,10 +115,10 @@ const NotificationsList = () => {
     const now = new Date();
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const isToday = date.toDateString() === now.toDateString();
     const isYesterday = date.toDateString() === yesterday.toDateString();
-    
+
     const timeStr = date.toLocaleTimeString('pt-BR', {
       hour: '2-digit',
       minute: '2-digit'
@@ -140,19 +141,39 @@ const NotificationsList = () => {
     setExpandedId(expandedId === notification.id ? null : notification.id);
   };
 
-  const handleViewers = (readBy: string[]) => {
-    setViewers(readBy);
-    setViewersDialogOpen(true);
+  const handleViewers = async (readBy: string[]) => {
+    try {
+      const viewerNames: string[] = [];
+
+      for (const userId of readBy) {
+        const userDoc = await getDoc(doc(db, "users", userId));
+        if (userDoc.exists()) {
+          viewerNames.push(userDoc.data().name); // Substitua "name" pelo campo correto
+        } else {
+          viewerNames.push("Usuário desconhecido");
+        }
+      }
+
+      setViewers(viewerNames);
+      setViewersDialogOpen(true);
+    } catch (error) {
+      console.error("Erro ao buscar nomes dos visualizadores:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível carregar os nomes dos visualizadores.",
+      });
+    }
   };
 
   const handleMouseDown = (notificationId: string) => {
     if (!isAdmin) return;
-    
+
     const timer = setTimeout(() => {
       setSelectedNotification(notificationId);
       setDeleteDialogOpen(true);
     }, 1000);
-    
+
     setLongPressTimer(timer);
   };
 
@@ -180,7 +201,7 @@ const NotificationsList = () => {
         notifications.map((notification) => {
           const isUnread = !notification.readBy.includes(currentUser.id);
           const isExpanded = expandedId === notification.id;
-          
+
           return (
             <div
               key={notification.id}
@@ -215,72 +236,11 @@ const NotificationsList = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewers(notification.readBy);
-                        }}
-                      >
-                        <Eye className="h-5 w-5" />
-                      </Button>
-                    )}
-                    {isExpanded ? (
-                      <ChevronUp className="h-5 w-5" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5" />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })
-      )}
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Deseja excluir esta mensagem?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => selectedNotification && handleDeleteNotification(selectedNotification)}
-            >
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <Dialog open={viewersDialogOpen} onOpenChange={setViewersDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Visualizações</DialogTitle>
-            <DialogDescription>
-              Lista de usuários que visualizaram este recado
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[300px] overflow-y-auto">
-            {viewers.length === 0 ? (
-              <p className="text-center text-gray-500">Nenhuma visualização ainda</p>
-            ) : (
-              <ul className="space-y-2">
-                {viewers.map((viewer, index) => (
-                  <li key={index} className="p-2 bg-gray-50 rounded">
-                    {viewer}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+                        className="h-8
+                              </DialogContent>
+    </Dialog>
+  </div>
+);
 };
 
 export const useNotifications = () => {
@@ -289,17 +249,20 @@ export const useNotifications = () => {
 
   useEffect(() => {
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
-    
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifs = snapshot.docs.map(doc => ({
+      const notifs = snapshot.docs.map((doc) => ({
         readBy: doc.data().readBy || [],
         type: doc.data().type,
         recipientId: doc.data().recipientId,
-      })).filter(notif => 
-        notif.type === 'all' || notif.recipientId === currentUser.id
+      })).filter(
+        (notif) =>
+          notif.type === "all" || notif.recipientId === currentUser.id
       );
-      
-      const count = notifs.filter(n => !n.readBy.includes(currentUser.id)).length;
+
+      const count = notifs.filter(
+        (n) => !n.readBy.includes(currentUser.id)
+      ).length;
       setUnreadCount(count);
     });
 
@@ -310,3 +273,4 @@ export const useNotifications = () => {
 };
 
 export default NotificationsList;
+
