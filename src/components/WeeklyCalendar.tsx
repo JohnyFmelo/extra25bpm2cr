@@ -1,4 +1,3 @@
-//EDITOR
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, Trash } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO, addDays } from "date-fns";
@@ -163,6 +162,28 @@ const WeeklyCalendar = ({
         const existingSlots = timeSlots.filter(slot => 
           format(slot.date, 'yyyy-MM-dd') === formattedDate
         );
+
+        const hasOverlap = existingSlots.some(slot => {
+          const newStart = timeSlot.startTime;
+          const newEnd = timeSlot.endTime;
+          const existingStart = slot.startTime;
+          const existingEnd = slot.endTime;
+
+          return (
+            (newStart >= existingStart && newStart < existingEnd) ||
+            (newEnd > existingStart && newEnd <= existingEnd) ||
+            (newStart <= existingStart && newEnd >= existingEnd)
+          );
+        });
+
+        if (hasOverlap) {
+          toast({
+            title: "Horário indisponível",
+            description: "Já existe um horário cadastrado que conflita com este período.",
+            variant: "destructive"
+          });
+          return;
+        }
 
         const result = await dataOperations.insert({
           date: formattedDate,
