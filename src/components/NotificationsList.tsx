@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Trash2, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import {
   collection,
@@ -57,24 +57,30 @@ const NotificationsList = () => {
   const { toast } = useToast();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = currentUser.userType === "admin";
+  const currentUserIdRef = useRef(currentUser.id);
 
   useEffect(() => {
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        readBy: doc.data().readBy || [],
-      } as Notification)).filter(notif => 
-        notif.type === 'all' || notif.recipientId === currentUser.id
-      );
+      const notifs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        if (data.type === 'all' || data.recipientId === currentUser.id) {
+          return {
+            id: doc.id,
+            ...data,
+            readBy: data.readBy || [],
+          } as Notification;
+        }
+        return null;
+      }).filter(notif => notif !== null) as Notification[];
 
       setNotifications(notifs);
     });
 
     return () => unsubscribe();
   }, [currentUser.id]);
+
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
@@ -113,26 +119,16 @@ const NotificationsList = () => {
   const formatDate = (timestamp: Timestamp) => {
     const date = timestamp.toDate();
     const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
 
     const isToday = date.toDateString() === now.toDateString();
-    const isYesterday = date.toDateString() === yesterday.toDateString();
-
-    const timeStr = date.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const isYesterday = new Date(now.setDate(now.getDate() - 1)).toDateString() === date.toDateString();
 
     if (isToday) {
-      return `Hoje às ${timeStr}`;
+      return `Hoje às ${new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(date)}`;
     } else if (isYesterday) {
-      return `Ontem às ${timeStr}`;
+      return `Ontem às ${new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(date)}`;
     } else {
-      const weekDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-      const weekDay = weekDays[date.getDay()];
-      const formattedDate = date.toLocaleDateString('pt-BR');
-      return `${weekDay} ${formattedDate} às ${timeStr}`;
+      return new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date);
     }
   };
 
@@ -192,60 +188,92 @@ const NotificationsList = () => {
   };
 
   return (
-    <div className="space-y-4 p-4">
+    
       {notifications.length === 0 ? (
-        <div className="p-4 rounded-lg border border-gray-200 bg-white text-center">
-          <p className="text-gray-600">Você ainda não possui recados.</p>
-        </div>
+         Você ainda não possui recados.
       ) : (
         notifications.map((notification) => {
           const isUnread = !notification.readBy.includes(currentUser.id);
           const isExpanded = expandedId === notification.id;
 
           return (
-            <div
-              key={notification.id}
-              className={cn(
-                "p-4 rounded-lg border transition-colors cursor-pointer select-none",
-                isUnread ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
+            
+              
+                
+                  
+                    {notification.graduation} {notification.senderName}
+                    {notification.isAdmin ? " - Usuário" : " - Administrador"}
+                  
+                  
+                    {notification.text}
+                  
+                  {formatDate(notification.timestamp)}
+                
+                
+                  {isAdmin && (
+                     
+                      
+                    
+                  )}
+                  
+                     
+                      {isExpanded ? (
+                         
+                      ) : (
+                         
+                      )}
+                    
+                  
+                
+              
+            
+          );
+        })
+      )}
+
+      
+        
+          Excluir Recado
+          
+            Tem certeza de que deseja excluir este recado? Esta ação não pode ser desfeita.
+          
+          
+            
+              Cancelar
+              Excluir
+            
+          
+        
+      
+
+      
+        
+          
+            Visualizadores
+          
+          
+            
+              {viewers.length > 0 ? (
+                viewers.map((viewer, index) => (
+                  
+                    {viewer}
+                  
+                ))
+              ) : (
+                Ninguém visualizou este recado ainda.
               )}
-              onClick={() => handleContainerClick(notification)}
-              onMouseDown={() => handleMouseDown(notification.id)}
-              onMouseUp={handleMouseUp}
-              onDoubleClick={() => handleDoubleClick(notification.id)}
-            >
-              <div className="space-y-2">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1 flex-1">
-                    <p className="font-medium">
-                      {notification.graduation} {notification.senderName}
-                      {notification.isAdmin ? " - Usuário" : " - Administrador"}
-                    </p>
-                    <p className={cn(
-                      "text-sm text-gray-600 whitespace-pre-wrap",
-                      isExpanded ? "text-justify" : "line-clamp-1"
-                    )}>
-                      {notification.text}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {formatDate(notification.timestamp)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    {isAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8
-                              </DialogContent>
-    </Dialog>
-  </div>
-);
+            
+          
+        
+      
+    
+  );
 };
 
 export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const currentUserIdRef = useRef(currentUser.id);
 
   useEffect(() => {
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
@@ -273,4 +301,3 @@ export const useNotifications = () => {
 };
 
 export default NotificationsList;
-
