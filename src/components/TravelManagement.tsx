@@ -11,6 +11,7 @@ import {
   where, 
   getDocs, 
   doc, 
+  getDoc,
   updateDoc,
   deleteDoc 
 } from "firebase/firestore";
@@ -124,6 +125,7 @@ export const TravelManagement = () => {
       setDestination("");
       setDailyAllowance("");
     } catch (error) {
+      console.error("Error creating/updating travel:", error);
       toast({
         title: "Erro",
         description: "Erro ao salvar viagem.",
@@ -149,6 +151,7 @@ export const TravelManagement = () => {
         description: "Viagem excluída com sucesso!",
       });
     } catch (error) {
+      console.error("Error deleting travel:", error);
       toast({
         title: "Erro",
         description: "Erro ao excluir viagem.",
@@ -160,13 +163,13 @@ export const TravelManagement = () => {
   const handleVolunteer = async (travelId: string) => {
     try {
       const travelRef = doc(db, "travels", travelId);
-      const travelDoc = await getDocs(query(collection(db, "travels"), where("id", "==", travelId)));
+      const travelSnap = await getDoc(travelRef);
       
-      if (travelDoc.empty) {
+      if (!travelSnap.exists()) {
         throw new Error("Viagem não encontrada");
       }
 
-      const travelData = travelDoc.docs[0].data();
+      const travelData = travelSnap.data();
       const currentVolunteers = travelData.volunteers || [];
 
       if (currentVolunteers.includes(user.name)) {
@@ -221,6 +224,7 @@ export const TravelManagement = () => {
         description: "Diárias atualizadas com sucesso!",
       });
     } catch (error) {
+      console.error("Error updating daily allowance:", error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar diárias.",
@@ -416,10 +420,15 @@ export const TravelManagement = () => {
 
                 {sortedVolunteers.length > 0 && (
                   <div className="pt-4 border-t border-gray-100">
-                    <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntários (ordenados por menor número de viagens):</h4>
+                    <h4 className="font-medium text-sm text-gray-700 mb-2">
+                      Voluntários (ordenados por menor número de viagens):
+                    </h4>
                     <ul className="space-y-1">
                       {sortedVolunteers.map((volunteerName: string) => (
-                        <li key={volunteerName} className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center">
+                        <li 
+                          key={volunteerName} 
+                          className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
+                        >
                           <span>{volunteerName}</span>
                           <span className="text-xs text-gray-500">
                             {volunteerCounts[volunteerName] || 0} viagem(ns)
