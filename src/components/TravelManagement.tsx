@@ -3,10 +3,27 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card } from "./ui/card";
-import { collection, addDoc, onSnapshot, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
+import { 
+  collection, 
+  addDoc, 
+  onSnapshot, 
+  query, 
+  where, 
+  getDocs, 
+  doc, 
+  updateDoc,
+  deleteDoc 
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
 
 export const TravelManagement = () => {
   const [startDate, setStartDate] = useState("");
@@ -16,6 +33,7 @@ export const TravelManagement = () => {
   const [dailyAllowance, setDailyAllowance] = useState("");
   const [travels, setTravels] = useState<any[]>([]);
   const [volunteerCounts, setVolunteerCounts] = useState<{[key: string]: number}>({});
+  const [editingTravel, setEditingTravel] = useState<any>(null);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -66,20 +84,38 @@ export const TravelManagement = () => {
     e.preventDefault();
     
     try {
-      await addDoc(collection(db, "travels"), {
-        startDate,
-        endDate,
-        slots: Number(slots),
-        destination,
-        dailyAllowance: Number(dailyAllowance),
-        createdAt: new Date(),
-        volunteers: [],
-      });
+      if (editingTravel) {
+        const travelRef = doc(db, "travels", editingTravel.id);
+        await updateDoc(travelRef, {
+          startDate,
+          endDate,
+          slots: Number(slots),
+          destination,
+          dailyAllowance: Number(dailyAllowance),
+          updatedAt: new Date(),
+        });
 
-      toast({
-        title: "Sucesso",
-        description: "Viagem criada com sucesso!",
-      });
+        toast({
+          title: "Sucesso",
+          description: "Viagem atualizada com sucesso!",
+        });
+        setEditingTravel(null);
+      } else {
+        await addDoc(collection(db, "travels"), {
+          startDate,
+          endDate,
+          slots: Number(slots),
+          destination,
+          dailyAllowance: Number(dailyAllowance),
+          createdAt: new Date(),
+          volunteers: [],
+        });
+
+        toast({
+          title: "Sucesso",
+          description: "Viagem criada com sucesso!",
+        });
+      }
 
       setStartDate("");
       setEndDate("");
@@ -89,7 +125,32 @@ export const TravelManagement = () => {
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao criar viagem.",
+        description: "Erro ao salvar viagem.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditTravel = (travel: any) => {
+    setEditingTravel(travel);
+    setStartDate(travel.startDate);
+    setEndDate(travel.endDate);
+    setSlots(String(travel.slots));
+    setDestination(travel.destination);
+    setDailyAllowance(String(travel.dailyAllowance));
+  };
+
+  const handleDeleteTravel = async (travelId: string) => {
+    try {
+      await deleteDoc(doc(db, "travels", travelId));
+      toast({
+        title: "Sucesso",
+        description: "Viagem excluída com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir viagem.",
         variant: "destructive",
       });
     }
@@ -155,7 +216,9 @@ export const TravelManagement = () => {
       {user.userType === "admin" && (
         <Card className="p-6 bg-white shadow-lg">
           <form onSubmit={handleCreateTravel} className="space-y-6">
-            <h2 className="text-2xl font-semibold text-primary">Criar Nova Viagem</h2>
+            <h2 className="text-2xl font-semibold text-primary">
+              {editingTravel ? "Editar Viagem" : "Criar Nova Viagem"}
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="destination">Destino</Label>
@@ -214,7 +277,28 @@ export const TravelManagement = () => {
                 />
               </div>
             </div>
-            <Button type="submit" className="w-full md:w-auto">Criar Viagem</Button>
+            <div className="flex gap-4">
+              <Button type="submit" className="w-full md:w-auto">
+                {editingTravel ? "Salvar Alterações" : "Criar Viagem"}
+              </Button>
+              {editingTravel && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditingTravel(null);
+                    setStartDate("");
+                    setEndDate("");
+                    setSlots("");
+                    setDestination("");
+                    setDailyAllowance("");
+                  }}
+                  className="w-full md:w-auto"
+                >
+                  Cancelar
+                </Button>
+              )}
+            </div>
           </form>
         </Card>
       )}
@@ -227,7 +311,33 @@ export const TravelManagement = () => {
           const sortedVolunteers = travel.volunteers ? sortVolunteers(travel.volunteers) : [];
 
           return (
-            <Card key={travel.id} className="p-6 bg-white shadow-lg hover:shadow-xl transition-shadow">
+            <Card key={travel.id} className="p-6 bg-white shadow-lg hover:shadow-xl transition-shadow relative">
+              {user.userType === "admin" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="absolute top-2 right-2 h-8 w-8 p-0"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleEditTravel(travel)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-red-600"
+                      onClick={() => handleDeleteTravel(travel.id)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
               <div className="space-y-4">
                 <div>
                   <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
