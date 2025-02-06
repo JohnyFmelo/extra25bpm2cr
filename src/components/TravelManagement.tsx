@@ -40,20 +40,24 @@ export const TravelManagement = () => {
 
   useEffect(() => {
     const fetchVolunteerCounts = async () => {
-      const travelsRef = collection(db, "travels");
-      const travelsSnapshot = await getDocs(travelsRef);
-      const counts: { [key: string]: number } = {};
+      try {
+        const travelsRef = collection(db, "travels");
+        const travelsSnapshot = await getDocs(travelsRef);
+        const counts: { [key: string]: number } = {};
 
-      travelsSnapshot.docs.forEach((doc) => {
-        const travel = doc.data();
-        if (travel.volunteers) {
-          travel.volunteers.forEach((volunteer: string) => {
-            counts[volunteer] = (counts[volunteer] || 0) + 1;
-          });
-        }
-      });
+        travelsSnapshot.docs.forEach((doc) => {
+          const travel = doc.data();
+          if (travel.volunteers) {
+            travel.volunteers.forEach((volunteer: string) => {
+              counts[volunteer] = (counts[volunteer] || 0) + 1;
+            });
+          }
+        });
 
-      setVolunteerCounts(counts);
+        setVolunteerCounts(counts);
+      } catch (error) {
+        console.error("Erro ao buscar contagem de voluntários:", error);
+      }
     };
 
     fetchVolunteerCounts();
@@ -170,7 +174,15 @@ export const TravelManagement = () => {
       }
 
       const travelData = travelSnap.data();
-      const currentVolunteers = travelData.volunteers || [];
+      console.log("Travel Data:", travelData);
+      
+      // Assegure-se de que travelData.slots seja um número
+      const totalSlots = Number(travelData.slots);
+
+      // Garantindo que o campo volunteers seja um array
+      const currentVolunteers: string[] = Array.isArray(travelData.volunteers)
+        ? travelData.volunteers
+        : [];
 
       if (currentVolunteers.includes(user.name)) {
         toast({
@@ -180,7 +192,7 @@ export const TravelManagement = () => {
         return;
       }
 
-      if (currentVolunteers.length >= travelData.slots) {
+      if (currentVolunteers.length >= totalSlots) {
         toast({
           title: "Aviso",
           description: "Não há mais vagas disponíveis.",
@@ -189,6 +201,7 @@ export const TravelManagement = () => {
       }
 
       const updatedVolunteers = [...currentVolunteers, user.name];
+      console.log("Updated Volunteers:", updatedVolunteers);
       await updateDoc(travelRef, {
         volunteers: updatedVolunteers,
       });
