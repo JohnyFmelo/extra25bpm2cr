@@ -15,8 +15,30 @@ export const TravelManagement = () => {
   const [destination, setDestination] = useState("");
   const [dailyAllowance, setDailyAllowance] = useState("");
   const [travels, setTravels] = useState<any[]>([]);
+  const [volunteerCounts, setVolunteerCounts] = useState<{[key: string]: number}>({});
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  useEffect(() => {
+    const fetchVolunteerCounts = async () => {
+      const travelsRef = collection(db, "travels");
+      const travelsSnapshot = await getDocs(travelsRef);
+      const counts: {[key: string]: number} = {};
+      
+      travelsSnapshot.docs.forEach(doc => {
+        const travel = doc.data();
+        if (travel.volunteers) {
+          travel.volunteers.forEach((volunteer: string) => {
+            counts[volunteer] = (counts[volunteer] || 0) + 1;
+          });
+        }
+      });
+      
+      setVolunteerCounts(counts);
+    };
+
+    fetchVolunteerCounts();
+  }, []);
 
   useEffect(() => {
     const q = query(collection(db, "travels"));
@@ -76,10 +98,10 @@ export const TravelManagement = () => {
   const handleVolunteer = async (travelId: string) => {
     try {
       const travelRef = doc(db, "travels", travelId);
-      const travelDoc = await getDocs(query(collection(db, "travels"), where("id", "==", travelId)));
-      const travelData = travelDoc.docs[0].data();
+      const travelSnapshot = await getDocs(query(collection(db, "travels"), where("id", "==", travelId)));
+      const travelData = travelSnapshot.docs[0].data();
 
-      if (travelData.volunteers.includes(user.id)) {
+      if (travelData.volunteers?.includes(user.name)) {
         toast({
           title: "Aviso",
           description: "Você já é voluntário desta viagem.",
@@ -87,7 +109,7 @@ export const TravelManagement = () => {
         return;
       }
 
-      if (travelData.volunteers.length >= travelData.slots) {
+      if (travelData.volunteers?.length >= travelData.slots) {
         toast({
           title: "Aviso",
           description: "Não há mais vagas disponíveis.",
@@ -95,21 +117,37 @@ export const TravelManagement = () => {
         return;
       }
 
+      const updatedVolunteers = [...(travelData.volunteers || []), user.name];
       await updateDoc(travelRef, {
-        volunteers: [...travelData.volunteers, user.name || user.id],
+        volunteers: updatedVolunteers,
       });
+
+      // Update volunteer counts
+      setVolunteerCounts(prev => ({
+        ...prev,
+        [user.name]: (prev[user.name] || 0) + 1
+      }));
 
       toast({
         title: "Sucesso",
         description: "Você se candidatou com sucesso!",
       });
     } catch (error) {
+      console.error("Error volunteering:", error);
       toast({
         title: "Erro",
         description: "Erro ao se candidatar.",
         variant: "destructive",
       });
     }
+  };
+
+  const sortVolunteers = (volunteers: string[]) => {
+    return [...volunteers].sort((a, b) => {
+      const countA = volunteerCounts[a] || 0;
+      const countB = volunteerCounts[b] || 0;
+      return countA - countB; // Menor número de viagens primeiro
+    });
   };
 
   return (
@@ -186,6 +224,7 @@ export const TravelManagement = () => {
           const travelDate = new Date(travel.startDate);
           const today = new Date();
           const showVolunteerButton = travelDate > today;
+          const sortedVolunteers = travel.volunteers ? sortVolunteers(travel.volunteers) : [];
 
           return (
             <Card key={travel.id} className="p-6 bg-white shadow-lg hover:shadow-xl transition-shadow">
@@ -204,20 +243,23 @@ export const TravelManagement = () => {
                   <Button 
                     onClick={() => handleVolunteer(travel.id)}
                     className="w-full"
-                    variant={travel.volunteers?.includes(user.name || user.id) ? "secondary" : "default"}
-                    disabled={travel.volunteers?.includes(user.name || user.id)}
+                    variant={travel.volunteers?.includes(user.name) ? "secondary" : "default"}
+                    disabled={travel.volunteers?.includes(user.name)}
                   >
-                    {travel.volunteers?.includes(user.name || user.id) ? "Já Inscrito" : "Quero ser Voluntário"}
+                    {travel.volunteers?.includes(user.name) ? "Já Inscrito" : "Quero ser Voluntário"}
                   </Button>
                 )}
 
-                {travel.volunteers && travel.volunteers.length > 0 && (
+                {sortedVolunteers.length > 0 && (
                   <div className="pt-4 border-t border-gray-100">
-                    <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntários:</h4>
+                    <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntários (ordenados por menor número de viagens):</h4>
                     <ul className="space-y-1">
-                      {travel.volunteers.map((volunteerName: string) => (
-                        <li key={volunteerName} className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                          {volunteerName}
+                      {sortedVolunteers.map((volunteerName: string) => (
+                        <li key={volunteerName} className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center">
+                          <span>{volunteerName}</span>
+                          <span className="text-xs text-gray-500">
+                            {volunteerCounts[volunteerName] || 0} viagem(ns)
+                          </span>
                         </li>
                       ))}
                     </ul>
