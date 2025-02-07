@@ -58,6 +58,7 @@ export const TravelManagement = () => {
   const [lockedTravels, setLockedTravels] = useState<string[]>([]);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAdmin = user.userType === "admin";
 
   // Busca a contagem de viagens dos voluntários em tempo real
   useEffect(() => {
@@ -71,9 +72,16 @@ export const TravelManagement = () => {
       snapshot.docs.forEach((doc) => {
         const travel = doc.data() as DocumentData;
         const travelStart = new Date(travel.startDate + "T00:00:00");
-        
-        // Só conta viagens que já começaram ou já passaram
-        if (today >= travelStart && travel.volunteers) {
+        const travelEnd = new Date(travel.endDate + "T00:00:00");
+
+        // Contar somente viagens em "Encerrada", "Em transito" ou "Processando diária"
+        if (
+          travel.volunteers && (
+            (today < travelStart && travel.isLocked) ||
+            (today >= travelStart && today <= travelEnd) ||
+            (today > travelEnd)
+          )
+        ) {
           travel.volunteers.forEach((volunteer: string) => {
             counts[volunteer] = (counts[volunteer] || 0) + 1;
           });
@@ -376,16 +384,19 @@ export const TravelManagement = () => {
 
             let cardBg = "bg-white";
             let statusBadge = null;
+            // Define o posicionamento do status conforme o tipo de usuário
+            const rightPos = isAdmin ? "right-12" : "right-2";
+
             if (today < travelStart) {
               if (isLocked) {
                 statusBadge = (
-                  <div className="absolute top-2 right-12 bg-orange-500 text-white px-2 py-1 text-xs rounded">
+                  <div className={`absolute top-2 ${rightPos} bg-orange-500 text-white px-2 py-1 text-xs rounded`}>
                     Processando diária
                   </div>
                 );
               } else {
                 statusBadge = (
-                  <div className="absolute top-2 right-12 bg-[#3B82F6] text-white px-2 py-1 text-xs rounded">
+                  <div className={`absolute top-2 ${rightPos} bg-[#3B82F6] text-white px-2 py-1 text-xs rounded`}>
                     Em aberto
                   </div>
                 );
@@ -393,14 +404,14 @@ export const TravelManagement = () => {
             } else if (today >= travelStart && today <= travelEnd) {
               cardBg = "bg-green-100";
               statusBadge = (
-                <div className="absolute top-2 right-12 bg-green-500 text-white px-2 py-1 text-xs rounded">
+                <div className={`absolute top-2 ${rightPos} bg-green-500 text-white px-2 py-1 text-xs rounded`}>
                   Em transito
                 </div>
               );
             } else if (today > travelEnd) {
               cardBg = "bg-gray-100";
               statusBadge = (
-                <div className="absolute top-2 right-12 bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded">
+                <div className={`absolute top-2 ${rightPos} bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded`}>
                   Encerrada
                 </div>
               );
@@ -500,7 +511,7 @@ export const TravelManagement = () => {
                 onClick={travel.archived ? () => toggleExpansion(travel.id) : undefined}
               >
                 {statusBadge}
-                {user.userType === "admin" && (
+                {isAdmin && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="absolute top-2 right-2 h-8 w-8 p-0">
@@ -683,7 +694,7 @@ export const TravelManagement = () => {
       )}
 
       {/* Botão flutuante para administradores */}
-      {user.userType === "admin" && (
+      {isAdmin && (
         <Button
           onClick={() => setIsModalOpen(true)}
           className="fixed bottom-4 right-4 rounded-full p-4 bg-[#3B82F6] hover:bg-[#2563eb] text-white shadow-lg"
