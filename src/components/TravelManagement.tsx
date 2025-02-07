@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -386,17 +387,17 @@ export const TravelManagement = () => {
             // Calcula o número de diárias
             const numDays = differenceInDays(travelEnd, travelStart) + 1;
             const count = travel.halfLastDay ? numDays - 0.5 : numDays;
-            const formattedCount = count.toLocaleString("pt-BR", {\
-              minimumFractionDigits: count % 1 !== 0 ? 1 : 0,\
-              maximumFractionDigits: 1,\
+            const formattedCount = count.toLocaleString("pt-BR", {
+              minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
+              maximumFractionDigits: 1,
             });
             const totalCost = count * Number(travel.dailyRate);
             const diariasLine = travel.dailyRate
-              ? `Diárias: ${formattedCount} (${totalCost.toLocaleString("pt-BR", {\
-                  style: "currency",\
-                  currency: "BRL",\
-                  minimumFractionDigits: 0,\
-                  maximumFractionDigits: 0,\
+              ? `Diárias: ${formattedCount} (${totalCost.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
                 })})`
               : `Diárias: ${formattedCount}`;
 
