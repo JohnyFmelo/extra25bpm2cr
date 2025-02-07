@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -43,34 +44,31 @@ export const TravelManagement = () => {
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // Busca a contagem de viagens dos voluntários
+  // Busca a contagem de viagens dos voluntários em tempo real
   useEffect(() => {
-    const fetchVolunteerCounts = async () => {
-      try {
-        const travelsRef = collection(db, "travels");
-        const travelsSnapshot = await getDocs(travelsRef);
-        const counts: { [key: string]: number } = {};
-        const today = new Date();
+    const travelsRef = collection(db, "travels");
+    const q = query(travelsRef);
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const counts: { [key: string]: number } = {};
+      const today = new Date();
 
-        travelsSnapshot.docs.forEach((doc) => {
-          const travel = doc.data();
-          const travelStart = new Date(travel.startDate + "T00:00:00");
-          
-          // Só conta viagens que já começaram ou já passaram
-          if (today >= travelStart && travel.volunteers) {
-            travel.volunteers.forEach((volunteer: string) => {
-              counts[volunteer] = (counts[volunteer] || 0) + 1;
-            });
-          }
-        });
+      snapshot.docs.forEach((doc) => {
+        const travel = doc.data();
+        const travelStart = new Date(travel.startDate + "T00:00:00");
+        
+        // Só conta viagens que já começaram ou já passaram
+        if (today >= travelStart && travel.volunteers) {
+          travel.volunteers.forEach((volunteer: string) => {
+            counts[volunteer] = (counts[volunteer] || 0) + 1;
+          });
+        }
+      });
 
-        setVolunteerCounts(counts);
-      } catch (error) {
-        console.error("Erro ao buscar contagem de voluntários:", error);
-      }
-    };
+      setVolunteerCounts(counts);
+    });
 
-    fetchVolunteerCounts();
+    return () => unsubscribe();
   }, []);
 
   // Atualiza a lista de viagens em tempo real
@@ -82,24 +80,16 @@ export const TravelManagement = () => {
         ...doc.data(),
       }));
       setTravels(travelsData);
+      
+      // Atualiza o estado dos travels bloqueados
+      const lockedTravelIds = travelsData
+        .filter(travel => travel.isLocked)
+        .map(travel => travel.id);
+      setLockedTravels(lockedTravelIds);
     });
 
     return () => unsubscribe();
   }, []);
-
-  // Calcula o total (valor em R$) com base nas datas, no valor da diária e se o último dia vale meia
-  useEffect(() => {
-    if (startDate && endDate && dailyRate) {
-      const start = new Date(startDate + "T00:00:00");
-      const end = new Date(endDate + "T00:00:00");
-      const numDays = differenceInDays(end, start) + 1;
-      const count = halfLastDay ? numDays - 0.5 : numDays;
-      const totalCost = count * Number(dailyRate);
-      setDailyAllowance(String(totalCost));
-    } else {
-      setDailyAllowance("");
-    }
-  }, [startDate, endDate, dailyRate, halfLastDay]);
 
   const handleCreateTravel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,6 +126,7 @@ export const TravelManagement = () => {
           createdAt: new Date(),
           volunteers: [],
           archived: false,
+          isLocked: false,
         });
 
         toast({
@@ -245,17 +236,6 @@ export const TravelManagement = () => {
           volunteers: updatedVolunteers,
         });
 
-        const today = new Date();
-        const travelStart = new Date(travelData.startDate + "T00:00:00");
-        
-        // Atualiza a contagem apenas se a viagem já começou
-        if (today >= travelStart) {
-          setVolunteerCounts((prev) => ({
-            ...prev,
-            [volunteerInfo]: Math.max((prev[volunteerInfo] || 0) - 1, 0),
-          }));
-        }
-
         toast({
           title: "Sucesso",
           description: "Você desistiu da viagem com sucesso.",
@@ -267,17 +247,6 @@ export const TravelManagement = () => {
       await updateDoc(travelRef, {
         volunteers: updatedVolunteers,
       });
-
-      const today = new Date();
-      const travelStart = new Date(travelData.startDate + "T00:00:00");
-      
-      // Atualiza a contagem apenas se a viagem já começou
-      if (today >= travelStart) {
-        setVolunteerCounts((prev) => ({
-          ...prev,
-          [volunteerInfo]: (prev[volunteerInfo] || 0) + 1,
-        }));
-      }
 
       toast({
         title: "Sucesso",
@@ -293,12 +262,32 @@ export const TravelManagement = () => {
     }
   };
 
-  const handleToggleLock = (travelId: string) => {
-    setLockedTravels(prev => 
-      prev.includes(travelId)
-        ? prev.filter(id => id !== travelId)
-        : [...prev, travelId]
-    );
+  const handleToggleLock = async (travelId: string) => {
+    try {
+      const travelRef = doc(db, "travels", travelId);
+      const travelSnap = await getDoc(travelRef);
+      
+      if (travelSnap.exists()) {
+        const isCurrentlyLocked = travelSnap.data().isLocked || false;
+        await updateDoc(travelRef, {
+          isLocked: !isCurrentlyLocked
+        });
+        
+        toast({
+          title: "Sucesso",
+          description: !isCurrentlyLocked 
+            ? "Viagem bloqueada com sucesso!" 
+            : "Viagem desbloqueada com sucesso!",
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling lock:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar o status da viagem.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getMilitaryRankWeight = (rank: string): number => {
@@ -369,7 +358,7 @@ export const TravelManagement = () => {
             const travelStart = new Date(travel.startDate + "T00:00:00");
             const travelEnd = new Date(travel.endDate + "T00:00:00");
             const today = new Date();
-            const isLocked = lockedTravels.includes(travel.id);
+            const isLocked = travel.isLocked;
 
             let cardBg = "bg-white";
             let statusBadge = null;
@@ -692,3 +681,4 @@ export const TravelManagement = () => {
     </div>
   );
 };
+
