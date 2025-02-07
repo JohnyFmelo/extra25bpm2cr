@@ -30,9 +30,9 @@ export const TravelManagement = () => {
   const [endDate, setEndDate] = useState("");
   const [slots, setSlots] = useState("");
   const [destination, setDestination] = useState("");
-  // dailyAllowance armazenará o total calculado (em R$) a partir do valor da diária e do número (possivelmente fracionário) de diárias
+  // dailyAllowance armazenará o total (R$) calculado a partir do valor da diária e do número (possivelmente fracionário) de diárias
   const [dailyAllowance, setDailyAllowance] = useState("");
-  // Novo campo: valor da diária (custo por dia) – não é obrigatório
+  // Novo campo: valor da diária (custo por dia) – não obrigatório
   const [dailyRate, setDailyRate] = useState("");
   // Toggle: se ativado, o último dia conta como meia diária
   const [halfLastDay, setHalfLastDay] = useState(false);
@@ -45,7 +45,6 @@ export const TravelManagement = () => {
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // Busca a contagem de viagens dos voluntários
   useEffect(() => {
     const fetchVolunteerCounts = async () => {
       try {
@@ -71,7 +70,6 @@ export const TravelManagement = () => {
     fetchVolunteerCounts();
   }, []);
 
-  // Atualiza a lista de viagens em tempo real
   useEffect(() => {
     const q = query(collection(db, "travels"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -85,7 +83,7 @@ export const TravelManagement = () => {
     return () => unsubscribe();
   }, []);
 
-  // Calcula o total (valor em R$) com base nas datas, no valor da diária e se o último dia vale meia
+  // Calcula o total com base nas datas, no valor da diária e se o último dia vale meia
   useEffect(() => {
     if (startDate && endDate && dailyRate) {
       const start = new Date(startDate + "T00:00:00");
@@ -292,20 +290,30 @@ export const TravelManagement = () => {
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
           .map((travel) => {
-            const isArchived = travel.archived;
-            const isExpanded = expandedTravels.includes(travel.id);
-            // Calcula o número total de dias (usando "T00:00:00" para evitar problemas de fuso)
+            // Para o status, calcula as datas considerando "T00:00:00"
+            const tripStart = new Date(travel.startDate + "T00:00:00");
+            const tripEnd = new Date(travel.endDate + "T00:00:00");
+            const today = new Date();
+            let cardBg = "bg-white";
+            let statusLabel = "";
+            if (today >= tripStart && today <= tripEnd) {
+              cardBg = "bg-green-200";
+              statusLabel = "Em vigor";
+            } else if (today > tripEnd) {
+              cardBg = "bg-gray-100";
+              statusLabel = "Encerrada";
+            }
+
+            // Cálculo das diárias e total (caso exista valor da diária)
             const start = new Date(travel.startDate + "T00:00:00");
             const end = new Date(travel.endDate + "T00:00:00");
             const numDays = differenceInDays(end, start) + 1;
             const count = travel.halfLastDay ? numDays - 0.5 : numDays;
-            const totalCost = count * Number(travel.dailyRate);
-            // Formata o número de diárias (possivelmente com meio dia)
             const formattedCount = count.toLocaleString("pt-BR", {
               minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
               maximumFractionDigits: 1,
             });
-            // Se houver valor de diária, formata o total; caso contrário, mostra apenas o número de diárias
+            const totalCost = count * Number(travel.dailyRate);
             const diariasLine = travel.dailyRate
               ? `Diárias: ${formattedCount} (${totalCost.toLocaleString("pt-BR", {
                   style: "currency",
@@ -354,7 +362,7 @@ export const TravelManagement = () => {
                     </div>
                   )}
                 </div>
-                {new Date(travel.startDate + "T00:00:00") > new Date() && !isArchived && (
+                {new Date(travel.startDate + "T00:00:00") > new Date() && (
                   <div className="mt-4">
                     <Button
                       onClick={() => handleVolunteer(travel.id)}
@@ -373,40 +381,18 @@ export const TravelManagement = () => {
             return (
               <Card
                 key={travel.id}
-                onClick={isArchived ? () => toggleExpansion(travel.id) : undefined}
-                className={`p-6 hover:shadow-xl transition-shadow relative ${
-                  isArchived ? "bg-gray-200 cursor-pointer" : "bg-white"
-                }`}
+                onClick={() => toggleExpansion(travel.id)}
+                className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg}`}
               >
-                {user.userType === "admin" && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="absolute top-2 right-2 h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditTravel(travel)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-red-600"
-                        onClick={() => handleDeleteTravel(travel.id)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Excluir
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleArchive(travel.id, true)}>
-                        <Archive className="mr-2 h-4 w-4" />
-                        Arquivar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                {statusLabel && (
+                  <div className="absolute top-2 left-2 bg-white text-sm text-gray-800 px-2 py-1 rounded shadow">
+                    {statusLabel}
+                  </div>
                 )}
-
                 <div className="space-y-4">
-                  {isArchived && !isExpanded ? minimalContent : fullContent}
+                  {minimalContent && !expandedTravels.includes(travel.id)
+                    ? minimalContent
+                    : fullContent}
                 </div>
               </Card>
             );
@@ -558,3 +544,4 @@ export const TravelManagement = () => {
     </div>
   );
 };
+
