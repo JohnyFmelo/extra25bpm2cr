@@ -38,10 +38,10 @@ export const TravelManagement = () => {
   const [halfLastDay, setHalfLastDay] = useState(false);
   const [isEditingAllowance, setIsEditingAllowance] = useState(false);
   const [travels, setTravels] = useState<any[]>([]);
-  const [volunteerCounts, setVolunteerCounts<{ [key: string]: number }>({});
+  const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
   const [editingTravel, setEditingTravel] = useState<any>(null);
-  const [expandedTravels, setExpandedTravels<string[]>([]);
-  const [isModalOpen, setIsModalOpen(false);
+  const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -386,17 +386,17 @@ export const TravelManagement = () => {
             // Calcula o número de diárias
             const numDays = differenceInDays(travelEnd, travelStart) + 1;
             const count = travel.halfLastDay ? numDays - 0.5 : numDays;
-            const formattedCount = count.toLocaleString("pt-BR", {
-              minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
-              maximumFractionDigits: 1,
+            const formattedCount = count.toLocaleString("pt-BR", {\
+              minimumFractionDigits: count % 1 !== 0 ? 1 : 0,\
+              maximumFractionDigits: 1,\
             });
             const totalCost = count * Number(travel.dailyRate);
             const diariasLine = travel.dailyRate
-              ? `Diárias: ${formattedCount} (${totalCost.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
+              ? `Diárias: ${formattedCount} (${totalCost.toLocaleString("pt-BR", {\
+                  style: "currency",\
+                  currency: "BRL",\
+                  minimumFractionDigits: 0,\
+                  maximumFractionDigits: 0,\
                 })})`
               : `Diárias: ${formattedCount}`;
 
