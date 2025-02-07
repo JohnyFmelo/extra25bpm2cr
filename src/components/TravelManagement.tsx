@@ -351,12 +351,54 @@ export const TravelManagement = () => {
     }
   };
 
-  const sortVolunteers = (volunteers: string[]) => {
-    return [...volunteers].sort((a, b) => {
-      const countA = volunteerCounts[a] || 0;
-      const countB = volunteerCounts[b] || 0;
-      return countA - countB;
+  const getMilitaryRankWeight = (rank: string): number => {
+    const rankWeights: { [key: string]: number } = {
+      "Cel PM": 12,
+      "Ten Cel PM": 11,
+      "Maj PM": 10,
+      "Cap PM": 9,
+      "1° Ten PM": 8,
+      "2° Ten PM": 7,
+      "Sub Ten PM": 6,
+      "1° Sgt PM": 5,
+      "2° Sgt PM": 4,
+      "3° Sgt PM": 3,
+      "Cb PM": 2,
+      "Sd PM": 1,
+      "Estágio": 0
+    };
+    
+    return rankWeights[rank] || 0;
+  };
+
+  const sortVolunteers = (volunteers: string[], slots: number) => {
+    if (!volunteers?.length) return [];
+    
+    // Estrutura para armazenar voluntários processados
+    const processedVolunteers = volunteers.map(volunteer => {
+      const [rank, ...nameParts] = volunteer.split(' ');
+      const name = nameParts.join(' ');
+      return {
+        fullName: volunteer,
+        rank,
+        count: volunteerCounts[volunteer] || 0,
+        rankWeight: getMilitaryRankWeight(rank)
+      };
     });
+
+    // Ordena por: menor número de viagens, depois por maior patente (rankWeight)
+    const sortedVolunteers = processedVolunteers.sort((a, b) => {
+      if (a.count !== b.count) {
+        return a.count - b.count; // Menor número de viagens primeiro
+      }
+      return b.rankWeight - a.rankWeight; // Maior patente primeiro em caso de empate
+    });
+
+    // Marca os primeiros 'slots' voluntários como selecionados
+    return sortedVolunteers.map((volunteer, index) => ({
+      ...volunteer,
+      selected: index < slots
+    }));
   };
 
   const toggleExpansion = (travelId: string) => {
@@ -447,16 +489,27 @@ export const TravelManagement = () => {
                   <p>{diariasLine}</p>
                   {travel.volunteers && travel.volunteers.length > 0 && (
                     <div className="pt-4 border-t border-gray-100">
-                      <h4 className="font-medium text-sm text-gray-700 mb-2">Viajante:</h4>
+                      <h4 className="font-medium text-sm text-gray-700 mb-2">Classificação:</h4>
                       <ul className="space-y-1">
-                        {sortVolunteers(travel.volunteers).map((volunteerName: string) => (
+                        {sortVolunteers(travel.volunteers, travel.slots).map((volunteer) => (
                           <li
-                            key={volunteerName}
-                            className="text-sm text-gray-600 p-2 rounded flex justify-between items-center"
+                            key={volunteer.fullName}
+                            className={`text-sm p-2 rounded flex justify-between items-center ${
+                              volunteer.selected 
+                                ? 'bg-green-100 border border-green-200'
+                                : 'bg-gray-50 border border-gray-100'
+                            }`}
                           >
-                            <span>{volunteerName}</span>
-                            <span className="text-xs text-gray-500">
-                              {formattedTravelCount(volunteerCounts[volunteerName] || 0)}
+                            <div className="flex items-center space-x-2">
+                              {volunteer.selected && (
+                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              )}
+                              <span className={`${volunteer.selected ? 'font-medium' : ''}`}>
+                                {volunteer.fullName}
+                              </span>
+                            </div>
+                            <span className={`text-xs ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
+                              {formattedTravelCount(volunteer.count)}
                             </span>
                           </li>
                         ))}
