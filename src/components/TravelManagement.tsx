@@ -59,9 +59,6 @@ export const TravelManagement = () => {
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // Define a classe de posicionamento do badge de status conforme o tipo de usuário
-  const badgePositionClass = user.userType === "admin" ? "right-12" : "right-2";
-
   // Atualiza a contagem de viagens dos voluntários em tempo real
   useEffect(() => {
     const travelsRef = collection(db, "travels");
@@ -107,7 +104,7 @@ export const TravelManagement = () => {
     return () => unsubscribe();
   }, []);
 
-  // Calcula o total (valor em R$) com base nas datas, no valor da diária e se o último dia vale meia
+  // Calcula o total com base nas datas e valor da diária
   useEffect(() => {
     if (startDate && endDate && dailyRate) {
       const start = new Date(startDate + "T00:00:00");
@@ -395,25 +392,25 @@ export const TravelManagement = () => {
             let statusBadge = null;
             if (status === "Em aberto") {
               statusBadge = isLocked ? (
-                <div className={`absolute top-2 ${badgePositionClass} bg-orange-500 text-white px-2 py-1 text-xs rounded`}>
+                <div className="absolute top-2 right-12 bg-orange-500 text-white px-2 py-1 text-xs rounded">
                   Processando diária
                 </div>
               ) : (
-                <div className={`absolute top-2 ${badgePositionClass} bg-[#3B82F6] text-white px-2 py-1 text-xs rounded`}>
+                <div className="absolute top-2 right-12 bg-[#3B82F6] text-white px-2 py-1 text-xs rounded">
                   Em aberto
                 </div>
               );
             } else if (status === "Em transito") {
               cardBg = "bg-green-100";
               statusBadge = (
-                <div className={`absolute top-2 ${badgePositionClass} bg-green-500 text-white px-2 py-1 text-xs rounded`}>
+                <div className="absolute top-2 right-12 bg-green-500 text-white px-2 py-1 text-xs rounded">
                   Em transito
                 </div>
               );
             } else if (status === "Encerrada") {
               cardBg = "bg-gray-100";
               statusBadge = (
-                <div className={`absolute top-2 ${badgePositionClass} bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded`}>
+                <div className="absolute top-2 right-12 bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded">
                   Encerrada
                 </div>
               );
