@@ -75,21 +75,17 @@ export const TravelManagement = () => {
         const travel = doc.data() as DocumentData;
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
-
-        // Somente viagens encerradas ou que estão processando diária são contadas:
-        // - Processando diária: viagens futuras com bloqueio (today < travelStart && travel.isLocked)
-        // - Encerradas: viagens cujo término já passou (today > travelEnd)
-        if (
-          (today < travelStart && travel.isLocked) ||
-          (today > travelEnd)
-        ) {
-          // Se houver voluntários, incrementa o contador para cada um
+        // Se a viagem já começou (incluindo em trânsito ou encerrada)
+        // ou se ela está em "Processando diária" (ainda não iniciou, mas está bloqueada),
+        // ela deve ser contabilizada.
+        if ((today < travelStart && travel.isLocked) || (today >= travelStart)) {
+          // Para viagens encerradas ou em transito, conta somente os voluntários que constam na lista
           if (Array.isArray(travel.volunteers)) {
             travel.volunteers.forEach((volunteer: string) => {
               counts[volunteer] = (counts[volunteer] || 0) + 1;
             });
           }
-          // Para viagens em "Processando diária", se o usuário atual ainda não consta na lista,
+          // Para viagens em "Processando diária", se o usuário atual ainda não estiver na lista,
           // soma automaticamente a viagem para ele.
           if (today < travelStart && travel.isLocked) {
             if (currentVolunteer && (!travel.volunteers || !travel.volunteers.includes(currentVolunteer))) {
