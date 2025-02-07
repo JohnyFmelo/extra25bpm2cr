@@ -8,9 +8,8 @@ import {
   addDoc,
   onSnapshot,
   query,
-  getDocs,
-  doc,
   getDoc,
+  doc,
   updateDoc,
   deleteDoc,
   DocumentData,
@@ -25,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen } from "lucide-react";
-import { Switch } from "./ui/switch"; // Importa o novo componente Switch
+import { Switch } from "./ui/switch"; // Importa o componente Switch
 
 // Defina a interface para tipar os dados da viagem
 interface Travel {
@@ -50,7 +49,6 @@ export const TravelManagement = () => {
   const [dailyAllowance, setDailyAllowance] = useState("");
   const [dailyRate, setDailyRate] = useState("");
   const [halfLastDay, setHalfLastDay] = useState(false);
-  const [isEditingAllowance, setIsEditingAllowance] = useState(false);
   const [travels, setTravels] = useState<Travel[]>([]);
   const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
   const [editingTravel, setEditingTravel] = useState<any>(null);
@@ -61,7 +59,7 @@ export const TravelManagement = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
 
-  // Busca a contagem de viagens dos voluntários em tempo real
+  // Atualiza a contagem de viagens dos voluntários em tempo real
   useEffect(() => {
     const travelsRef = collection(db, "travels");
     const q = query(travelsRef);
@@ -506,10 +504,9 @@ export const TravelManagement = () => {
             return (
               <Card
                 key={travel.id}
-                className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg} ${
-                  travel.archived ? "cursor-pointer" : ""
-                }`}
+                className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg} ${travel.archived ? "cursor-pointer" : ""}`}
                 onClick={travel.archived ? () => toggleExpansion(travel.id) : undefined}
+                onDoubleClick={today > travelEnd ? () => toggleExpansion(travel.id) : undefined}
               >
                 {statusBadge}
                 {isAdmin && (
