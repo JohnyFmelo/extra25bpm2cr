@@ -103,7 +103,7 @@ const Index = () => {
               )}
               <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
               <IconCard icon={Settings} label="Configurações" onClick={handleSettingsClick} />
-              <IconCard icon={MapPinned} label="Viagem" onClick={handleTravelClick} />
+              <IconCard icon={MapPinned} label="Viagens" onClick={handleTravelClick} />
             </div>
           </TabsContent>
 
