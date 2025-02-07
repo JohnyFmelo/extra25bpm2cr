@@ -385,7 +385,9 @@ export const TravelManagement = () => {
           .map((travel) => {
             const isArchived = travel.archived;
             const isExpanded = expandedTravels.includes(travel.id);
-            const travelDate = new Date(travel.startDate);
+            // Ao acrescentar "T00:00:00" garantimos que a data seja interpretada no horário local,
+            // evitando o erro de exibição com 1 dia a menos.
+            const travelDate = new Date(travel.startDate + "T00:00:00");
             const today = new Date();
             const showVolunteerButton = travelDate > today && !isArchived;
             const sortedVolunteers = travel.volunteers ? sortVolunteers(travel.volunteers) : [];
@@ -393,7 +395,7 @@ export const TravelManagement = () => {
             const minimalContent = (
               <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
                 <h3 className="text-xl font-semibold">{travel.destination}</h3>
-                <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
+                <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
                 <p>Diárias: {travel.dailyAllowance}</p>
               </div>
             );
@@ -404,12 +406,9 @@ export const TravelManagement = () => {
                   <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
                 </div>
                 <div className="mt-2 space-y-1 text-sm text-gray-600">
-                  <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
+                  <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
                   <p>
-                    Data Final:{" "}
-                    {new Date(
-                      new Date(travel.endDate).setDate(new Date(travel.endDate).getDate() + 1)
-                    ).toLocaleDateString()}
+                    Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}
                   </p>
                   <p>Vagas: {travel.slots}</p>
                   <p>Diárias: {travel.dailyAllowance}</p>
@@ -438,11 +437,13 @@ export const TravelManagement = () => {
                   <div className="mt-4">
                     <Button
                       onClick={() => handleVolunteer(travel.id)}
-                      className="w-full"
-                      variant={travel.volunteers?.includes(user.name) ? "secondary" : "default"}
+                      // Botão configurado para usar a cor #3B82F6 com hover em #2563eb e texto branco
+                      className="w-full bg-[#3B82F6] hover:bg-[#2563eb] text-white"
                       disabled={travel.volunteers?.includes(user.name)}
                     >
-                      {travel.volunteers?.includes(user.name) ? "Já Inscrito" : "Quero ser Voluntário"}
+                      {travel.volunteers?.includes(user.name)
+                        ? "Já Inscrito"
+                        : "Quero ser Voluntário"}
                     </Button>
                   </div>
                 )}
