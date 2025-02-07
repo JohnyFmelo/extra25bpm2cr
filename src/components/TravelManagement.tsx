@@ -59,6 +59,9 @@ export const TravelManagement = () => {
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+  // Define a classe de posicionamento do badge de status conforme o tipo de usuário
+  const badgePositionClass = user.userType === "admin" ? "right-12" : "right-2";
+
   // Atualiza a contagem de viagens dos voluntários em tempo real
   useEffect(() => {
     const travelsRef = collection(db, "travels");
@@ -104,7 +107,7 @@ export const TravelManagement = () => {
     return () => unsubscribe();
   }, []);
 
-  // Calcula o total com base nas datas e valor da diária
+  // Calcula o total (valor em R$) com base nas datas, no valor da diária e se o último dia vale meia
   useEffect(() => {
     if (startDate && endDate && dailyRate) {
       const start = new Date(startDate + "T00:00:00");
@@ -392,25 +395,25 @@ export const TravelManagement = () => {
             let statusBadge = null;
             if (status === "Em aberto") {
               statusBadge = isLocked ? (
-                <div className="absolute top-2 right-12 bg-orange-500 text-white px-2 py-1 text-xs rounded">
+                <div className={`absolute top-2 ${badgePositionClass} bg-orange-500 text-white px-2 py-1 text-xs rounded`}>
                   Processando diária
                 </div>
               ) : (
-                <div className="absolute top-2 right-12 bg-[#3B82F6] text-white px-2 py-1 text-xs rounded">
+                <div className={`absolute top-2 ${badgePositionClass} bg-[#3B82F6] text-white px-2 py-1 text-xs rounded`}>
                   Em aberto
                 </div>
               );
             } else if (status === "Em transito") {
               cardBg = "bg-green-100";
               statusBadge = (
-                <div className="absolute top-2 right-12 bg-green-500 text-white px-2 py-1 text-xs rounded">
+                <div className={`absolute top-2 ${badgePositionClass} bg-green-500 text-white px-2 py-1 text-xs rounded`}>
                   Em transito
                 </div>
               );
             } else if (status === "Encerrada") {
               cardBg = "bg-gray-100";
               statusBadge = (
-                <div className="absolute top-2 right-12 bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded">
+                <div className={`absolute top-2 ${badgePositionClass} bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded`}>
                   Encerrada
                 </div>
               );
@@ -420,7 +423,7 @@ export const TravelManagement = () => {
               <div className="cursor-default">
                 <h3 className="text-xl font-semibold">{travel.destination}</h3>
                 <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
-                <p>{`Diárias: ${differenceInDays(travelEnd, travelStart) + (travel.halfLastDay ? -0.5 : 0)}`}</p>
+                <p>{`Diárias: ${differenceInDays(travelEnd, travelStart) + 1 + (travel.halfLastDay ? -0.5 : 0)}`}</p>
               </div>
             );
 
@@ -433,15 +436,15 @@ export const TravelManagement = () => {
                   <p>Vagas: {travel.slots}</p>
                   <p>
                     {travel.dailyRate
-                      ? `Diárias: ${differenceInDays(travelEnd, travelStart) + (travel.halfLastDay ? -0.5 : 0)} (${(differenceInDays(travelEnd, travelStart) + (travel.halfLastDay ? -0.5 : 0)) *
+                      ? `Diárias: ${differenceInDays(travelEnd, travelStart) + 1 + (travel.halfLastDay ? -0.5 : 0)} (${(differenceInDays(travelEnd, travelStart) + 1 + (travel.halfLastDay ? -0.5 : 0)) *
                           Number(travel.dailyRate)
-                        .toLocaleString("pt-BR", {
+                        ).toLocaleString("pt-BR", {
                           style: "currency",
                           currency: "BRL",
                           minimumFractionDigits: 0,
                           maximumFractionDigits: 0,
                         })})`
-                      : `Diárias: ${differenceInDays(travelEnd, travelStart) + (travel.halfLastDay ? -0.5 : 0)}`}
+                      : `Diárias: ${differenceInDays(travelEnd, travelStart) + 1 + (travel.halfLastDay ? -0.5 : 0)}`}
                   </p>
                   {travel.volunteers && travel.volunteers.length > 0 && (
                     <div className="pt-4 border-t border-gray-100">
@@ -629,19 +632,14 @@ export const TravelManagement = () => {
                   <Label htmlFor="halfLastDay" className="mr-2 text-sm">
                     Último dia meia diária
                   </Label>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      id="halfLastDay"
-                      checked={halfLastDay}
-                      onChange={(e) => setHalfLastDay(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600"></div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">
-                      {halfLastDay ? "On" : "Off"}
-                    </span>
-                  </label>
+                  <Button
+                    id="halfLastDay"
+                    variant={halfLastDay ? "primary" : "outline"}
+                    onClick={() => setHalfLastDay(!halfLastDay)}
+                    className="transition-colors"
+                  >
+                    {halfLastDay ? "Ativo" : "Inativo"}
+                  </Button>
                 </div>
               </div>
               <div className="flex gap-4 mt-4">
