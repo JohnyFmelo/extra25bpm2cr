@@ -444,10 +444,8 @@ export const TravelManagement = () => {
                 })})`
               : `Diárias: ${formattedCount}`;
 
-            // Para viagens arquivadas, usamos o conteúdo mínimo sem evento de clique,
-            // pois a ação de toggle ocorrerá pelo duplo clique no Card.
             const minimalContent = (
-              <div className="cursor-pointer">
+              <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
                 <h3 className="text-xl font-semibold">{travel.destination}</h3>
                 <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
                 <p>{diariasLine}</p>
@@ -521,7 +519,7 @@ export const TravelManagement = () => {
                 className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg} ${
                   travel.archived ? "cursor-pointer" : ""
                 }`}
-                onDoubleClick={travel.archived ? () => toggleExpansion(travel.id) : undefined}
+                onClick={travel.archived ? () => toggleExpansion(travel.id) : undefined}
               >
                 {statusBadge}
                 {isAdmin && (
@@ -659,12 +657,11 @@ export const TravelManagement = () => {
                     />
                   </div>
                 </div>
-                {/* Botão Switch para ativar a função Último dia meia diária */}
                 <div className="flex items-center">
                   <Label htmlFor="halfLastDay" className="mr-2 text-sm">
                     Último dia meia diária
                   </Label>
-                  <label htmlFor="halfLastDay" className="relative inline-flex items-center cursor-pointer">
+                  <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       id="halfLastDay"
@@ -672,9 +669,10 @@ export const TravelManagement = () => {
                       onChange={(e) => setHalfLastDay(e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600">
-                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 transform peer-checked:translate-x-5"></div>
-                    </div>
+                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600"></div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">
+                      {halfLastDay ? "On" : "Off"}
+                    </span>
                   </label>
                 </div>
               </div>
