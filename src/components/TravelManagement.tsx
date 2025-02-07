@@ -68,7 +68,7 @@ export const TravelManagement = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const counts: { [key: string]: number } = {};
       const today = new Date();
-      // Obtemos os dados do usuário para compor a string que representa o voluntário
+      // Monta a string que representa o usuário atual
       const currentVolunteer = `${user.rank} ${user.warName}`;
 
       snapshot.docs.forEach((doc) => {
@@ -76,13 +76,11 @@ export const TravelManagement = () => {
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
 
-        // Verifica se a viagem está em um dos estados desejados:
-        // - Processando diária (viagens futuras com bloqueio),
-        // - Em transito (viagens em andamento) ou
-        // - Encerrada (viagens já finalizadas).
+        // Somente viagens encerradas ou que estão processando diária são contadas:
+        // - Processando diária: viagens futuras com bloqueio (today < travelStart && travel.isLocked)
+        // - Encerradas: viagens cujo término já passou (today > travelEnd)
         if (
           (today < travelStart && travel.isLocked) ||
-          (today >= travelStart && today <= travelEnd) ||
           (today > travelEnd)
         ) {
           // Se houver voluntários, incrementa o contador para cada um
