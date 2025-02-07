@@ -23,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2, Archive } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus } from "lucide-react";
 
 export const TravelManagement = () => {
   const [startDate, setStartDate] = useState("");
@@ -36,6 +36,7 @@ export const TravelManagement = () => {
   const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
   const [editingTravel, setEditingTravel] = useState<any>(null);
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -125,11 +126,13 @@ export const TravelManagement = () => {
         });
       }
 
+      // Limpa os campos e fecha o modal
       setStartDate("");
       setEndDate("");
       setSlots("");
       setDestination("");
       setDailyAllowance("");
+      setIsModalOpen(false);
     } catch (error) {
       console.error("Error creating/updating travel:", error);
       toast({
@@ -147,6 +150,8 @@ export const TravelManagement = () => {
     setSlots(String(travel.slots));
     setDestination(travel.destination);
     setDailyAllowance(String(travel.dailyAllowance));
+    // Abre o modal para edição
+    setIsModalOpen(true);
   };
 
   const handleDeleteTravel = async (travelId: string) => {
@@ -187,7 +192,6 @@ export const TravelManagement = () => {
   };
 
   const handleVolunteer = async (travelId: string) => {
-    console.log("User:", user);
     try {
       const travelRef = doc(db, "travels", travelId);
       const travelSnap = await getDoc(travelRef);
@@ -197,10 +201,7 @@ export const TravelManagement = () => {
       }
 
       const travelData = travelSnap.data();
-      console.log("Travel Data:", travelData);
-
       const totalSlots = Number(travelData.slots);
-
       const currentVolunteers: string[] = Array.isArray(travelData.volunteers)
         ? travelData.volunteers
         : [];
@@ -222,7 +223,6 @@ export const TravelManagement = () => {
       }
 
       const updatedVolunteers = [...currentVolunteers, user.name];
-      console.log("Updated Volunteers:", updatedVolunteers);
       await updateDoc(travelRef, {
         volunteers: updatedVolunteers,
       });
@@ -288,105 +288,15 @@ export const TravelManagement = () => {
   };
 
   return (
-    <div className="p-6 space-y-8">
-      {user.userType === "admin" && (
-        <Card className="p-6 bg-white shadow-lg">
-          <form onSubmit={handleCreateTravel} className="space-y-6">
-            <h2 className="text-2xl font-semibold text-primary">
-              {editingTravel ? "Editar Viagem" : "Criar Nova Viagem"}
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="destination">Destino</Label>
-                <Input
-                  id="destination"
-                  type="text"
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  required
-                  className="w-full"
-                  placeholder="Digite o destino"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Data Inicial</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  required
-                  className="w-full"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endDate">Data Final</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  required
-                  className="w-full"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="slots">Número de Vagas</Label>
-                <Input
-                  id="slots"
-                  type="number"
-                  value={slots}
-                  onChange={(e) => setSlots(e.target.value)}
-                  required
-                  className="w-full"
-                  min="1"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dailyAllowance">Diárias</Label>
-                <Input
-                  id="dailyAllowance"
-                  type="number"
-                  value={dailyAllowance}
-                  onChange={(e) => setDailyAllowance(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <Button type="submit" className="w-full md:w-auto">
-                {editingTravel ? "Salvar Alterações" : "Criar Viagem"}
-              </Button>
-              {editingTravel && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setEditingTravel(null);
-                    setStartDate("");
-                    setEndDate("");
-                    setSlots("");
-                    setDestination("");
-                    setDailyAllowance("");
-                  }}
-                  className="w-full md:w-auto"
-                >
-                  Cancelar
-                </Button>
-              )}
-            </div>
-          </form>
-        </Card>
-      )}
-
+    <div className="p-6 space-y-8 relative">
+      {/* Lista de viagens */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
           .map((travel) => {
             const isArchived = travel.archived;
             const isExpanded = expandedTravels.includes(travel.id);
-            // Ao acrescentar "T00:00:00" garantimos que a data seja interpretada no horário local,
-            // evitando o erro de exibição com 1 dia a menos.
+            // Ao acrescentar "T00:00:00", garantimos que a data seja interpretada corretamente
             const travelDate = new Date(travel.startDate + "T00:00:00");
             const today = new Date();
             const showVolunteerButton = travelDate > today && !isArchived;
@@ -407,9 +317,7 @@ export const TravelManagement = () => {
                 </div>
                 <div className="mt-2 space-y-1 text-sm text-gray-600">
                   <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
-                  <p>
-                    Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}
-                  </p>
+                  <p>Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</p>
                   <p>Vagas: {travel.slots}</p>
                   <p>Diárias: {travel.dailyAllowance}</p>
                   {travel.volunteers && travel.volunteers.length > 0 && (
@@ -437,7 +345,6 @@ export const TravelManagement = () => {
                   <div className="mt-4">
                     <Button
                       onClick={() => handleVolunteer(travel.id)}
-                      // Botão configurado para usar a cor #3B82F6 com hover em #2563eb e texto branco
                       className="w-full bg-[#3B82F6] hover:bg-[#2563eb] text-white"
                       disabled={travel.volunteers?.includes(user.name)}
                     >
@@ -492,6 +399,122 @@ export const TravelManagement = () => {
             );
           })}
       </div>
+
+      {/* Modal para criar/editar viagem */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <Card className="p-6 bg-white shadow-lg max-w-lg w-full relative">
+            <button
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingTravel(null);
+                setStartDate("");
+                setEndDate("");
+                setSlots("");
+                setDestination("");
+                setDailyAllowance("");
+              }}
+              className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
+            >
+              X
+            </button>
+            <form onSubmit={handleCreateTravel} className="space-y-6">
+              <h2 className="text-2xl font-semibold text-primary">
+                {editingTravel ? "Editar Viagem" : "Criar Nova Viagem"}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="destination">Destino</Label>
+                  <Input
+                    id="destination"
+                    type="text"
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    required
+                    className="w-full"
+                    placeholder="Digite o destino"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Data Inicial</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    required
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">Data Final</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    required
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="slots">Número de Vagas</Label>
+                  <Input
+                    id="slots"
+                    type="number"
+                    value={slots}
+                    onChange={(e) => setSlots(e.target.value)}
+                    required
+                    className="w-full"
+                    min="1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dailyAllowance">Diárias</Label>
+                  <Input
+                    id="dailyAllowance"
+                    type="number"
+                    value={dailyAllowance}
+                    onChange={(e) => setDailyAllowance(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <Button type="submit" className="w-full md:w-auto">
+                  {editingTravel ? "Salvar Alterações" : "Criar Viagem"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingTravel(null);
+                    setStartDate("");
+                    setEndDate("");
+                    setSlots("");
+                    setDestination("");
+                    setDailyAllowance("");
+                  }}
+                  className="w-full md:w-auto"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Botão flutuante para administradores */}
+      {user.userType === "admin" && (
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          className="fixed bottom-4 right-4 rounded-full p-4 bg-[#3B82F6] hover:bg-[#2563eb] text-white shadow-lg"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      )}
     </div>
   );
 };
