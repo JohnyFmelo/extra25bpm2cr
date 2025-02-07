@@ -30,9 +30,9 @@ export const TravelManagement = () => {
   const [endDate, setEndDate] = useState("");
   const [slots, setSlots] = useState("");
   const [destination, setDestination] = useState("");
-  // dailyAllowance aqui armazenará o total (R$) calculado a partir do valor da diária e do número (possivelmente fracionário) de diárias
+  // dailyAllowance armazenará o total calculado (em R$) a partir do valor da diária e do número (possivelmente fracionário) de diárias
   const [dailyAllowance, setDailyAllowance] = useState("");
-  // Novo campo: valor da diária (custo por dia)
+  // Novo campo: valor da diária (custo por dia) – não é obrigatório
   const [dailyRate, setDailyRate] = useState("");
   // Toggle: se ativado, o último dia conta como meia diária
   const [halfLastDay, setHalfLastDay] = useState(false);
@@ -45,6 +45,7 @@ export const TravelManagement = () => {
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+  // Busca a contagem de viagens dos voluntários
   useEffect(() => {
     const fetchVolunteerCounts = async () => {
       try {
@@ -70,6 +71,7 @@ export const TravelManagement = () => {
     fetchVolunteerCounts();
   }, []);
 
+  // Atualiza a lista de viagens em tempo real
   useEffect(() => {
     const q = query(collection(db, "travels"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -83,7 +85,7 @@ export const TravelManagement = () => {
     return () => unsubscribe();
   }, []);
 
-  // Calcula o total (valor em R$) com base na data, no valor da diária e se o último dia vale meia
+  // Calcula o total (valor em R$) com base nas datas, no valor da diária e se o último dia vale meia
   useEffect(() => {
     if (startDate && endDate && dailyRate) {
       const start = new Date(startDate + "T00:00:00");
@@ -108,8 +110,8 @@ export const TravelManagement = () => {
           endDate,
           slots: Number(slots),
           destination,
-          dailyAllowance: Number(dailyAllowance),
-          dailyRate: Number(dailyRate),
+          dailyAllowance: dailyAllowance ? Number(dailyAllowance) : null,
+          dailyRate: dailyRate ? Number(dailyRate) : null,
           halfLastDay,
           updatedAt: new Date(),
           archived: editingTravel.archived || false,
@@ -126,8 +128,8 @@ export const TravelManagement = () => {
           endDate,
           slots: Number(slots),
           destination,
-          dailyAllowance: Number(dailyAllowance),
-          dailyRate: Number(dailyRate),
+          dailyAllowance: dailyAllowance ? Number(dailyAllowance) : null,
+          dailyRate: dailyRate ? Number(dailyRate) : null,
           halfLastDay,
           createdAt: new Date(),
           volunteers: [],
@@ -292,27 +294,25 @@ export const TravelManagement = () => {
           .map((travel) => {
             const isArchived = travel.archived;
             const isExpanded = expandedTravels.includes(travel.id);
-            // Calcula o número total de dias (utilizando "T00:00:00" para evitar problemas de fuso)
+            // Calcula o número total de dias (usando "T00:00:00" para evitar problemas de fuso)
             const start = new Date(travel.startDate + "T00:00:00");
             const end = new Date(travel.endDate + "T00:00:00");
             const numDays = differenceInDays(end, start) + 1;
             const count = travel.halfLastDay ? numDays - 0.5 : numDays;
             const totalCost = count * Number(travel.dailyRate);
-            // Formata o número de diárias com uma casa decimal (caso haja meio dia)
+            // Formata o número de diárias (possivelmente com meio dia)
             const formattedCount = count.toLocaleString("pt-BR", {
               minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
               maximumFractionDigits: 1,
             });
-            // Formata o total em moeda brasileira (sem casas decimais)
-            const formattedTotal = totalCost.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 0,
-            });
-            // Se não houver valor da diária, não exibe o total
+            // Se houver valor de diária, formata o total; caso contrário, mostra apenas o número de diárias
             const diariasLine = travel.dailyRate
-              ? `Diárias: ${formattedCount} (${formattedTotal})`
+              ? `Diárias: ${formattedCount} (${totalCost.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })})`
               : `Diárias: ${formattedCount}`;
 
             const minimalContent = (
@@ -429,15 +429,15 @@ export const TravelManagement = () => {
                 setDailyRate("");
                 setHalfLastDay(false);
               }}
-              className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
+              className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 text-xl"
             >
-              X
+              &times;
             </button>
             <form onSubmit={handleCreateTravel} className="space-y-6">
               <h2 className="text-2xl font-semibold text-primary">
                 {editingTravel ? "Editar Viagem" : "Criar Nova Viagem"}
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="destination">Destino</Label>
                   <Input
@@ -446,61 +446,63 @@ export const TravelManagement = () => {
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
                     required
-                    className="w-full"
                     placeholder="Digite o destino"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Data Inicial</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    required
                     className="w-full"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">Data Final</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    required
-                    className="w-full"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate">Data Inicial</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      required
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endDate">Data Final</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      required
+                      className="w-full"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slots">Número de Vagas</Label>
-                  <Input
-                    id="slots"
-                    type="number"
-                    value={slots}
-                    onChange={(e) => setSlots(e.target.value)}
-                    required
-                    className="w-full"
-                    min="1"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="slots">Número de Vagas</Label>
+                    <Input
+                      id="slots"
+                      type="number"
+                      value={slots}
+                      onChange={(e) => setSlots(e.target.value)}
+                      required
+                      min="1"
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dailyRate">Valor da Diária</Label>
+                    <Input
+                      id="dailyRate"
+                      type="number"
+                      value={dailyRate}
+                      onChange={(e) => setDailyRate(e.target.value)}
+                      placeholder="Opcional"
+                      className="w-full"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dailyRate">Valor da Diária</Label>
-                  <Input
-                    id="dailyRate"
-                    type="number"
-                    value={dailyRate}
-                    onChange={(e) => setDailyRate(e.target.value)}
-                    required
-                    className="w-full"
-                    placeholder="Digite o valor da diária"
-                  />
-                </div>
-                <div className="col-span-1 flex items-center">
+                <div className="flex items-center">
                   <Label htmlFor="halfLastDay" className="mr-2 text-sm">
                     Último dia meia diária
                   </Label>
-                  {/* Toggle switch estilizado */}
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -516,7 +518,7 @@ export const TravelManagement = () => {
                   </label>
                 </div>
               </div>
-              <div className="flex gap-4">
+              <div className="flex gap-4 mt-4">
                 <Button type="submit" className="w-full md:w-auto">
                   {editingTravel ? "Salvar Alterações" : "Criar Viagem"}
                 </Button>
