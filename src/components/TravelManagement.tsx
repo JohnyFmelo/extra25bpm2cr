@@ -525,12 +525,12 @@ export const TravelManagement = () => {
                         {isLocked ? (
                           <>
                             <LockOpen className="mr-2 h-4 w-4" />
-                            Mostrar Voluntários
+                            Reabrir vagas
                           </>
                         ) : (
                           <>
                             <Lock className="mr-2 h-4 w-4" />
-                            Ocultar Não Selecionadas
+                            Processar diária
                           </>
                         )}
                       </DropdownMenuItem>
