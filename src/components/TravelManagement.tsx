@@ -30,7 +30,12 @@ export const TravelManagement = () => {
   const [endDate, setEndDate] = useState("");
   const [slots, setSlots] = useState("");
   const [destination, setDestination] = useState("");
+  // dailyAllowance passará a representar o total calculado (diárias) com base na data e no valor da diária
   const [dailyAllowance, setDailyAllowance] = useState("");
+  // Novo campo para o valor da diária (custo por dia)
+  const [dailyRate, setDailyRate] = useState("");
+  // Toggle para considerar o último dia como meia diária
+  const [halfLastDay, setHalfLastDay] = useState(false);
   const [isEditingAllowance, setIsEditingAllowance] = useState(false);
   const [travels, setTravels] = useState<any[]>([]);
   const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
@@ -79,13 +84,20 @@ export const TravelManagement = () => {
   }, []);
 
   useEffect(() => {
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const days = differenceInDays(end, start) + 1;
-      setDailyAllowance(String(days));
+    // Calcula o total das diárias com base na data, valor da diária e se o último dia vale meia
+    if (startDate && endDate && dailyRate) {
+      const start = new Date(startDate + "T00:00:00");
+      const end = new Date(endDate + "T00:00:00");
+      const numDays = differenceInDays(end, start) + 1;
+      let total = numDays * Number(dailyRate);
+      if (halfLastDay && numDays > 0) {
+        total = total - Number(dailyRate) / 2;
+      }
+      setDailyAllowance(String(total));
+    } else {
+      setDailyAllowance("");
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, dailyRate, halfLastDay]);
 
   const handleCreateTravel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +111,8 @@ export const TravelManagement = () => {
           slots: Number(slots),
           destination,
           dailyAllowance: Number(dailyAllowance),
+          dailyRate: Number(dailyRate),
+          halfLastDay,
           updatedAt: new Date(),
           archived: editingTravel.archived || false,
         });
@@ -115,6 +129,8 @@ export const TravelManagement = () => {
           slots: Number(slots),
           destination,
           dailyAllowance: Number(dailyAllowance),
+          dailyRate: Number(dailyRate),
+          halfLastDay,
           createdAt: new Date(),
           volunteers: [],
           archived: false,
@@ -132,6 +148,8 @@ export const TravelManagement = () => {
       setSlots("");
       setDestination("");
       setDailyAllowance("");
+      setDailyRate("");
+      setHalfLastDay(false);
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error creating/updating travel:", error);
@@ -150,7 +168,8 @@ export const TravelManagement = () => {
     setSlots(String(travel.slots));
     setDestination(travel.destination);
     setDailyAllowance(String(travel.dailyAllowance));
-    // Abre o modal para edição
+    setDailyRate(String(travel.dailyRate));
+    setHalfLastDay(travel.halfLastDay || false);
     setIsModalOpen(true);
   };
 
@@ -296,7 +315,6 @@ export const TravelManagement = () => {
           .map((travel) => {
             const isArchived = travel.archived;
             const isExpanded = expandedTravels.includes(travel.id);
-            // Ao acrescentar "T00:00:00", garantimos que a data seja interpretada corretamente
             const travelDate = new Date(travel.startDate + "T00:00:00");
             const today = new Date();
             const showVolunteerButton = travelDate > today && !isArchived;
@@ -306,7 +324,9 @@ export const TravelManagement = () => {
               <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
                 <h3 className="text-xl font-semibold">{travel.destination}</h3>
                 <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
-                <p>Diárias: {travel.dailyAllowance}</p>
+                <p>
+                  Diárias: {travel.dailyAllowance} (Valor da diária: {travel.dailyRate})
+                </p>
               </div>
             );
 
@@ -319,7 +339,9 @@ export const TravelManagement = () => {
                   <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
                   <p>Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</p>
                   <p>Vagas: {travel.slots}</p>
-                  <p>Diárias: {travel.dailyAllowance}</p>
+                  <p>
+                    Diárias: {travel.dailyAllowance} (Valor da diária: {travel.dailyRate})
+                  </p>
                   {travel.volunteers && travel.volunteers.length > 0 && (
                     <div className="pt-4 border-t border-gray-100">
                       <h4 className="font-medium text-sm text-gray-700 mb-2">
@@ -413,6 +435,8 @@ export const TravelManagement = () => {
                 setSlots("");
                 setDestination("");
                 setDailyAllowance("");
+                setDailyRate("");
+                setHalfLastDay(false);
               }}
               className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
             >
@@ -470,13 +494,26 @@ export const TravelManagement = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="dailyAllowance">Diárias</Label>
+                  <Label htmlFor="dailyRate">Valor da Diária</Label>
                   <Input
-                    id="dailyAllowance"
+                    id="dailyRate"
                     type="number"
-                    value={dailyAllowance}
-                    onChange={(e) => setDailyAllowance(e.target.value)}
+                    value={dailyRate}
+                    onChange={(e) => setDailyRate(e.target.value)}
+                    required
                     className="w-full"
+                    placeholder="Digite o valor da diária"
+                  />
+                </div>
+                <div className="col-span-1 flex items-center space-x-2">
+                  <Label htmlFor="halfLastDay" className="text-sm">
+                    Último dia meia diária
+                  </Label>
+                  <input
+                    id="halfLastDay"
+                    type="checkbox"
+                    checked={halfLastDay}
+                    onChange={(e) => setHalfLastDay(e.target.checked)}
                   />
                 </div>
               </div>
@@ -495,6 +532,8 @@ export const TravelManagement = () => {
                     setSlots("");
                     setDestination("");
                     setDailyAllowance("");
+                    setDailyRate("");
+                    setHalfLastDay(false);
                   }}
                   className="w-full md:w-auto"
                 >
