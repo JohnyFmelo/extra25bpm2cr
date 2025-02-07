@@ -10,6 +10,7 @@ import {
   arrayUnion,
   Timestamp,
   deleteDoc,
+  getDoc, // Importação do getDoc para buscar detalhes do usuário
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ interface Notification {
   senderName: string;
   graduation: string;
   isAdmin: boolean;
-  readBy: string[];
+  readBy: string[]; // Lista de IDs dos usuários que visualizaram
   type: 'all' | 'individual';
   recipientId: string | null;
 }
@@ -51,7 +52,7 @@ const NotificationsList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<string | null>(null);
   const [viewersDialogOpen, setViewersDialogOpen] = useState(false);
-  const [viewers, setViewers] = useState<string[]>([]);
+  const [viewers, setViewers] = useState<{ name: string, graduation: string }[]>([]); // Alterado para armazenar nome e graduação
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -140,9 +141,29 @@ const NotificationsList = () => {
     setExpandedId(expandedId === notification.id ? null : notification.id);
   };
 
-  const handleViewers = (readBy: string[]) => {
-    setViewers(readBy);
-    setViewersDialogOpen(true);
+  const handleViewers = async (readBy: string[]) => {
+    try {
+      // Buscar os detalhes dos usuários que visualizaram a notificação
+      const usersSnapshot = await Promise.all(
+        readBy.map(async (userId) => {
+          const userDoc = await getDoc(doc(db, "users", userId)); // Supondo que você tenha uma coleção 'users' no Firebase
+          return userDoc.exists() ? userDoc.data() : null;
+        })
+      );
+
+      // Filtra usuários não encontrados (caso algum ID seja inválido ou o usuário não exista)
+      const viewersList = usersSnapshot.filter((user) => user !== null) as { name: string, graduation: string }[];
+      
+      setViewers(viewersList);
+      setViewersDialogOpen(true);
+    } catch (error) {
+      console.error("Erro ao carregar os visualizadores:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível carregar a lista de visualizadores.",
+      });
+    }
   };
 
   const handleMouseDown = (notificationId: string) => {
@@ -271,7 +292,7 @@ const NotificationsList = () => {
               <ul className="space-y-2">
                 {viewers.map((viewer, index) => (
                   <li key={index} className="p-2 bg-gray-50 rounded">
-                    {viewer}
+                    {viewer.graduation} {viewer.name} {/* Exibe a graduação e o nome */}
                   </li>
                 ))}
               </ul>
