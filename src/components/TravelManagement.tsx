@@ -374,11 +374,20 @@ export const TravelManagement = () => {
             let cardBg = "bg-white";
             let statusBadge = null;
             if (today < travelStart) {
-              statusBadge = (
-                <div className="absolute top-2 right-12 bg-[#3B82F6] text-white px-2 py-1 text-xs rounded">
-                  Em aberto
-                </div>
-              );
+              // Se estiver bloqueado, exibe "Processando Diária" com fundo laranja
+              if (isLocked) {
+                statusBadge = (
+                  <div className="absolute top-2 right-12 bg-orange-500 text-white px-2 py-1 text-xs rounded">
+                    Processando Diária
+                  </div>
+                );
+              } else {
+                statusBadge = (
+                  <div className="absolute top-2 right-12 bg-[#3B82F6] text-white px-2 py-1 text-xs rounded">
+                    Em aberto
+                  </div>
+                );
+              }
             } else if (today >= travelStart && today <= travelEnd) {
               cardBg = "bg-green-100";
               statusBadge = (
@@ -521,7 +530,7 @@ export const TravelManagement = () => {
                         ) : (
                           <>
                             <Lock className="mr-2 h-4 w-4" />
-                            Ocultar Não Selecionados
+                            Ocultar Não Selecionadas
                           </>
                         )}
                       </DropdownMenuItem>
