@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -14,6 +13,7 @@ import {
   getDoc,
   updateDoc,
   deleteDoc,
+  DocumentData,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +26,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen } from "lucide-react";
 
+// Defina a interface para tipar os dados da viagem
+interface Travel {
+  id: string;
+  startDate: string;
+  endDate: string;
+  slots: number;
+  destination: string;
+  dailyAllowance?: number | null;
+  dailyRate?: number | null;
+  halfLastDay: boolean;
+  volunteers: string[];
+  archived: boolean;
+  isLocked?: boolean;
+}
+
 export const TravelManagement = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -35,7 +50,7 @@ export const TravelManagement = () => {
   const [dailyRate, setDailyRate] = useState("");
   const [halfLastDay, setHalfLastDay] = useState(false);
   const [isEditingAllowance, setIsEditingAllowance] = useState(false);
-  const [travels, setTravels] = useState<any[]>([]);
+  const [travels, setTravels] = useState<Travel[]>([]);
   const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
   const [editingTravel, setEditingTravel] = useState<any>(null);
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
@@ -54,7 +69,7 @@ export const TravelManagement = () => {
       const today = new Date();
 
       snapshot.docs.forEach((doc) => {
-        const travel = doc.data();
+        const travel = doc.data() as DocumentData;
         const travelStart = new Date(travel.startDate + "T00:00:00");
         
         // Só conta viagens que já começaram ou já passaram
@@ -78,7 +93,7 @@ export const TravelManagement = () => {
       const travelsData = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      }));
+      })) as Travel[];
       setTravels(travelsData);
       
       // Atualiza o estado dos travels bloqueados
@@ -154,7 +169,7 @@ export const TravelManagement = () => {
     }
   };
 
-  const handleEditTravel = (travel: any) => {
+  const handleEditTravel = (travel: Travel) => {
     setEditingTravel(travel);
     setStartDate(travel.startDate);
     setEndDate(travel.endDate);
@@ -315,7 +330,6 @@ export const TravelManagement = () => {
     
     const processedVolunteers = volunteers.map(volunteer => {
       const [rank, ...nameParts] = volunteer.split(' ');
-      const name = nameParts.join(' ');
       return {
         fullName: volunteer,
         rank,
@@ -363,7 +377,6 @@ export const TravelManagement = () => {
             let cardBg = "bg-white";
             let statusBadge = null;
             if (today < travelStart) {
-              // Se estiver bloqueado, exibe "Processando diária" com fundo laranja
               if (isLocked) {
                 statusBadge = (
                   <div className="absolute top-2 right-12 bg-orange-500 text-white px-2 py-1 text-xs rounded">
@@ -681,4 +694,3 @@ export const TravelManagement = () => {
     </div>
   );
 };
-
