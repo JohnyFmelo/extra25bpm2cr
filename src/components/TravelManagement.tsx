@@ -292,20 +292,37 @@ export const TravelManagement = () => {
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
           .map((travel) => {
-            const isArchived = travel.archived;
-            const isExpanded = expandedTravels.includes(travel.id);
-            // Calcula o número total de dias (usando "T00:00:00" para evitar problemas de fuso)
-            const start = new Date(travel.startDate + "T00:00:00");
-            const end = new Date(travel.endDate + "T00:00:00");
-            const numDays = differenceInDays(end, start) + 1;
+            const travelStart = new Date(travel.startDate + "T00:00:00");
+            const travelEnd = new Date(travel.endDate + "T00:00:00");
+            const today = new Date();
+
+            // Determina a cor do container e a badge de status
+            let cardBg = "bg-white";
+            let statusBadge = null;
+            if (today >= travelStart && today <= travelEnd) {
+              cardBg = "bg-green-100";
+              statusBadge = (
+                <div className="absolute top-2 right-12 bg-green-500 text-white px-2 py-1 text-xs rounded">
+                  Em vigor
+                </div>
+              );
+            } else if (today > travelEnd) {
+              cardBg = "bg-gray-100";
+              statusBadge = (
+                <div className="absolute top-2 right-12 bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded">
+                  Encerrada
+                </div>
+              );
+            }
+
+            // Calcula o número de diárias
+            const numDays = differenceInDays(travelEnd, travelStart) + 1;
             const count = travel.halfLastDay ? numDays - 0.5 : numDays;
-            const totalCost = count * Number(travel.dailyRate);
-            // Formata o número de diárias (possivelmente com meio dia)
             const formattedCount = count.toLocaleString("pt-BR", {
               minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
               maximumFractionDigits: 1,
             });
-            // Se houver valor de diária, formata o total; caso contrário, mostra apenas o número de diárias
+            const totalCost = count * Number(travel.dailyRate);
             const diariasLine = travel.dailyRate
               ? `Diárias: ${formattedCount} (${totalCost.toLocaleString("pt-BR", {
                   style: "currency",
@@ -318,19 +335,33 @@ export const TravelManagement = () => {
             const minimalContent = (
               <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
                 <h3 className="text-xl font-semibold">{travel.destination}</h3>
-                <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
+                <p>
+                  Data Inicial:{" "}
+                  {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}
+                </p>
                 <p>{diariasLine}</p>
               </div>
             );
 
             const fullContent = (
               <div>
-                <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
-                  <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
+                <div
+                  className="mb-2 cursor-pointer"
+                  onClick={() => toggleExpansion(travel.id)}
+                >
+                  <h3 className="text-xl font-semibold text-primary">
+                    {travel.destination}
+                  </h3>
                 </div>
                 <div className="mt-2 space-y-1 text-sm text-gray-600">
-                  <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
-                  <p>Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</p>
+                  <p>
+                    Data Inicial:{" "}
+                    {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}
+                  </p>
+                  <p>
+                    Data Final:{" "}
+                    {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}
+                  </p>
                   <p>Vagas: {travel.slots}</p>
                   <p>{diariasLine}</p>
                   {travel.volunteers && travel.volunteers.length > 0 && (
@@ -354,7 +385,7 @@ export const TravelManagement = () => {
                     </div>
                   )}
                 </div>
-                {new Date(travel.startDate + "T00:00:00") > new Date() && !isArchived && (
+                {travelStart > today && !travel.archived ? null : (
                   <div className="mt-4">
                     <Button
                       onClick={() => handleVolunteer(travel.id)}
@@ -373,11 +404,13 @@ export const TravelManagement = () => {
             return (
               <Card
                 key={travel.id}
-                onClick={isArchived ? () => toggleExpansion(travel.id) : undefined}
-                className={`p-6 hover:shadow-xl transition-shadow relative ${
-                  isArchived ? "bg-gray-200 cursor-pointer" : "bg-white"
+                className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg} ${
+                  travel.archived ? "cursor-pointer" : ""
                 }`}
+                onClick={travel.archived ? () => toggleExpansion(travel.id) : undefined}
               >
+                {/* Badge de status, se aplicável */}
+                {statusBadge}
                 {user.userType === "admin" && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -406,7 +439,9 @@ export const TravelManagement = () => {
                 )}
 
                 <div className="space-y-4">
-                  {isArchived && !isExpanded ? minimalContent : fullContent}
+                  {travel.archived && !expandedTravels.includes(travel.id)
+                    ? minimalContent
+                    : fullContent}
                 </div>
               </Card>
             );
