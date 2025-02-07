@@ -296,17 +296,26 @@ export const TravelManagement = () => {
             const travelEnd = new Date(travel.endDate + "T00:00:00");
             const today = new Date();
 
-            // Determina a cor do container e a badge de status
+            // Define cor de fundo e badge de status conforme a situação da viagem
             let cardBg = "bg-white";
             let statusBadge = null;
-            if (today >= travelStart && today <= travelEnd) {
+            if (today < travelStart) {
+              // Viagem ainda não iniciou
+              statusBadge = (
+                <div className="absolute top-2 right-12 bg-[#3B82F6] text-white px-2 py-1 text-xs rounded">
+                  Em aberto
+                </div>
+              );
+            } else if (today >= travelStart && today <= travelEnd) {
+              // Viagem em andamento
               cardBg = "bg-green-100";
               statusBadge = (
                 <div className="absolute top-2 right-12 bg-green-500 text-white px-2 py-1 text-xs rounded">
-                  Em vigor
+                  Em transito
                 </div>
               );
             } else if (today > travelEnd) {
+              // Viagem encerrada
               cardBg = "bg-gray-100";
               statusBadge = (
                 <div className="absolute top-2 right-12 bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded">
@@ -335,45 +344,29 @@ export const TravelManagement = () => {
             const minimalContent = (
               <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
                 <h3 className="text-xl font-semibold">{travel.destination}</h3>
-                <p>
-                  Data Inicial:{" "}
-                  {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}
-                </p>
+                <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
                 <p>{diariasLine}</p>
               </div>
             );
 
             const fullContent = (
               <div>
-                <div
-                  className="mb-2 cursor-pointer"
-                  onClick={() => toggleExpansion(travel.id)}
-                >
-                  <h3 className="text-xl font-semibold text-primary">
-                    {travel.destination}
-                  </h3>
+                <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
+                  <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
                 </div>
                 <div className="mt-2 space-y-1 text-sm text-gray-600">
-                  <p>
-                    Data Inicial:{" "}
-                    {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}
-                  </p>
-                  <p>
-                    Data Final:{" "}
-                    {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}
-                  </p>
+                  <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
+                  <p>Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</p>
                   <p>Vagas: {travel.slots}</p>
                   <p>{diariasLine}</p>
                   {travel.volunteers && travel.volunteers.length > 0 && (
                     <div className="pt-4 border-t border-gray-100">
-                      <h4 className="font-medium text-sm text-gray-700 mb-2">
-                        Voluntários (ordenados por menor número de viagens):
-                      </h4>
+                      <h4 className="font-medium text-sm text-gray-700 mb-2">Viajante:</h4>
                       <ul className="space-y-1">
                         {sortVolunteers(travel.volunteers).map((volunteerName: string) => (
                           <li
                             key={volunteerName}
-                            className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
+                            className="text-sm text-gray-600 p-2 rounded flex justify-between items-center"
                           >
                             <span>{volunteerName}</span>
                             <span className="text-xs text-gray-500">
@@ -385,7 +378,8 @@ export const TravelManagement = () => {
                     </div>
                   )}
                 </div>
-                {travelStart > today && !travel.archived ? null : (
+                {/* O botão de "Quero ser Voluntário" só aparece se a viagem ainda não iniciou */}
+                {today < travelStart && !travel.archived && (
                   <div className="mt-4">
                     <Button
                       onClick={() => handleVolunteer(travel.id)}
@@ -409,7 +403,7 @@ export const TravelManagement = () => {
                 }`}
                 onClick={travel.archived ? () => toggleExpansion(travel.id) : undefined}
               >
-                {/* Badge de status, se aplicável */}
+                {/* Badge de status */}
                 {statusBadge}
                 {user.userType === "admin" && (
                   <DropdownMenu>
@@ -437,7 +431,6 @@ export const TravelManagement = () => {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
-
                 <div className="space-y-4">
                   {travel.archived && !expandedTravels.includes(travel.id)
                     ? minimalContent
