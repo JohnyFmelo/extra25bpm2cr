@@ -1,4 +1,4 @@
-import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned } from "lucide-react";
+import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned } from "lucide-react"; 
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -57,14 +57,8 @@ const Index = () => {
     setActiveTab("notifications");
   };
 
+  // Removemos a verificação do tipo de usuário para que qualquer um possa acessar a aba "travel"
   const handleTravelClick = () => {
-    if (user.userType !== "admin") {
-      toast({
-        title: "Aviso",
-        description: "Funcionalidade ainda em desenvolvimento.",
-      });
-      return;
-    }
     setActiveTab("travel");
   };
 
