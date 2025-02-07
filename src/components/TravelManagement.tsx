@@ -60,7 +60,7 @@ export const TravelManagement = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
 
-  // Atualiza a contagem de viagens dos voluntários em tempo real
+  // Busca a contagem de viagens dos voluntários em tempo real
   useEffect(() => {
     const travelsRef = collection(db, "travels");
     const q = query(travelsRef);
@@ -68,36 +68,23 @@ export const TravelManagement = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const counts: { [key: string]: number } = {};
       const today = new Date();
-      // Obtemos os dados do usuário para compor a string que representa o voluntário
-      const currentVolunteer = `${user.rank} ${user.warName}`;
 
       snapshot.docs.forEach((doc) => {
         const travel = doc.data() as DocumentData;
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
 
-        // Verifica se a viagem está em um dos estados desejados:
-        // - Processando diária (viagens futuras com bloqueio),
-        // - Em transito (viagens em andamento) ou
-        // - Encerrada (viagens já finalizadas).
+        // Contar somente viagens em "Encerrada", "Em transito" ou "Processando diária"
         if (
-          (today < travelStart && travel.isLocked) ||
-          (today >= travelStart && today <= travelEnd) ||
-          (today > travelEnd)
+          travel.volunteers && (
+            (today < travelStart && travel.isLocked) ||
+            (today >= travelStart && today <= travelEnd) ||
+            (today > travelEnd)
+          )
         ) {
-          // Se houver voluntários, incrementa o contador para cada um
-          if (Array.isArray(travel.volunteers)) {
-            travel.volunteers.forEach((volunteer: string) => {
-              counts[volunteer] = (counts[volunteer] || 0) + 1;
-            });
-          }
-          // Para viagens em "Processando diária", se o usuário atual ainda não consta na lista,
-          // soma automaticamente a viagem para ele.
-          if (today < travelStart && travel.isLocked) {
-            if (currentVolunteer && (!travel.volunteers || !travel.volunteers.includes(currentVolunteer))) {
-              counts[currentVolunteer] = (counts[currentVolunteer] || 0) + 1;
-            }
-          }
+          travel.volunteers.forEach((volunteer: string) => {
+            counts[volunteer] = (counts[volunteer] || 0) + 1;
+          });
         }
       });
 
