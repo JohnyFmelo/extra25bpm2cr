@@ -75,17 +75,21 @@ export const TravelManagement = () => {
         const travel = doc.data() as DocumentData;
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
-        // Se a viagem já começou (incluindo em trânsito ou encerrada)
-        // ou se ela está em "Processando diária" (ainda não iniciou, mas está bloqueada),
-        // ela deve ser contabilizada.
-        if ((today < travelStart && travel.isLocked) || (today >= travelStart)) {
-          // Para viagens encerradas ou em transito, conta somente os voluntários que constam na lista
+
+        // Somente viagens encerradas ou que estão processando diária são contadas:
+        // - Processando diária: viagens futuras com bloqueio (today < travelStart && travel.isLocked)
+        // - Encerradas: viagens cujo término já passou (today > travelEnd)
+        if (
+          (today < travelStart && travel.isLocked) ||
+          (today > travelEnd)
+        ) {
+          // Se houver voluntários, incrementa o contador para cada um
           if (Array.isArray(travel.volunteers)) {
             travel.volunteers.forEach((volunteer: string) => {
               counts[volunteer] = (counts[volunteer] || 0) + 1;
             });
           }
-          // Para viagens em "Processando diária", se o usuário atual ainda não estiver na lista,
+          // Para viagens em "Processando diária", se o usuário atual ainda não consta na lista,
           // soma automaticamente a viagem para ele.
           if (today < travelStart && travel.isLocked) {
             if (currentVolunteer && (!travel.volunteers || !travel.volunteers.includes(currentVolunteer))) {
@@ -660,25 +664,17 @@ export const TravelManagement = () => {
                   <Label htmlFor="halfLastDay" className="mr-2 text-sm">
                     Último dia meia diária
                   </Label>
-                  <label htmlFor="halfLastDay" className="flex items-center cursor-pointer">
-                    <div className="relative">
-                      <input
-                        type="checkbox"
-                        id="halfLastDay"
-                        checked={halfLastDay}
-                        onChange={(e) => setHalfLastDay(e.target.checked)}
-                        className="sr-only"
-                      />
-                      <div className="block bg-gray-200 w-14 h-8 rounded-full"></div>
-                      <div
-                        className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform duration-200 ${
-                          halfLastDay ? "translate-x-6" : ""
-                        }`}
-                      ></div>
+                  <label htmlFor="halfLastDay" className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      id="halfLastDay"
+                      checked={halfLastDay}
+                      onChange={(e) => setHalfLastDay(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 rounded-full peer focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600">
+                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 transform peer-checked:translate-x-5"></div>
                     </div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">
-                      {halfLastDay ? "On" : "Off"}
-                    </span>
                   </label>
                 </div>
               </div>
