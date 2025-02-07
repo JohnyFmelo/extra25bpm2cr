@@ -14,7 +14,7 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { db, dataOperations } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 import {
@@ -23,18 +23,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2, Archive, Plus } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen } from "lucide-react";
 
 export const TravelManagement = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [slots, setSlots] = useState("");
   const [destination, setDestination] = useState("");
-  // dailyAllowance armazenará o total calculado (em R$) a partir do valor da diária e do número (possivelmente fracionário) de diárias
   const [dailyAllowance, setDailyAllowance] = useState("");
-  // Novo campo: valor da diária (custo por dia) – não é obrigatório
   const [dailyRate, setDailyRate] = useState("");
-  // Toggle: se ativado, o último dia conta como meia diária
   const [halfLastDay, setHalfLastDay] = useState(false);
   const [isEditingAllowance, setIsEditingAllowance] = useState(false);
   const [travels, setTravels] = useState<any[]>([]);
@@ -42,6 +39,7 @@ export const TravelManagement = () => {
   const [editingTravel, setEditingTravel] = useState<any>(null);
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [lockedTravels, setLockedTravels] = useState<string[]>([]);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -236,7 +234,6 @@ export const TravelManagement = () => {
       }
 
       const travelData = travelSnap.data();
-      const totalSlots = Number(travelData.slots);
       const currentVolunteers: string[] = Array.isArray(travelData.volunteers)
         ? travelData.volunteers
         : [];
@@ -262,14 +259,6 @@ export const TravelManagement = () => {
         toast({
           title: "Sucesso",
           description: "Você desistiu da viagem com sucesso.",
-        });
-        return;
-      }
-
-      if (currentVolunteers.length >= totalSlots) {
-        toast({
-          title: "Aviso",
-          description: "Não há mais vagas disponíveis.",
         });
         return;
       }
@@ -304,51 +293,12 @@ export const TravelManagement = () => {
     }
   };
 
-  const handleUnvolunteer = async (timeSlot: any) => {
-    try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const volunteerInfo = `${user.rank} ${user.warName}`; // Using the same format as when volunteering
-
-      if (!volunteerInfo) {
-        toast({
-          title: "Erro",
-          description: "Usuário não encontrado. Por favor, faça login novamente.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const updatedSlot = {
-        ...timeSlot,
-        slots_used: timeSlot.slots_used - 1,
-        volunteers: (timeSlot.volunteers || []).filter((v: string) => v !== volunteerInfo)
-      };
-
-      const result = await dataOperations.update(
-        updatedSlot,
-        {
-          date: timeSlot.date,
-          start_time: timeSlot.start_time,
-          end_time: timeSlot.end_time
-        }
-      );
-
-      if (!result.success) {
-        throw new Error('Failed to update time slot');
-      }
-
-      toast({
-        title: "Desmarcado!",
-        description: "Extra desmarcada com sucesso!"
-      });
-    } catch (error) {
-      console.error('Erro ao desmarcar:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível desmarcar a Extra.",
-        variant: "destructive"
-      });
-    }
+  const handleToggleLock = (travelId: string) => {
+    setLockedTravels(prev => 
+      prev.includes(travelId)
+        ? prev.filter(id => id !== travelId)
+        : [...prev, travelId]
+    );
   };
 
   const getMilitaryRankWeight = (rank: string): number => {
@@ -374,7 +324,6 @@ export const TravelManagement = () => {
   const sortVolunteers = (volunteers: string[], slots: number) => {
     if (!volunteers?.length) return [];
     
-    // Estrutura para armazenar voluntários processados
     const processedVolunteers = volunteers.map(volunteer => {
       const [rank, ...nameParts] = volunteer.split(' ');
       const name = nameParts.join(' ');
@@ -386,15 +335,13 @@ export const TravelManagement = () => {
       };
     });
 
-    // Ordena por: menor número de viagens, depois por maior patente (rankWeight)
     const sortedVolunteers = processedVolunteers.sort((a, b) => {
       if (a.count !== b.count) {
-        return a.count - b.count; // Menor número de viagens primeiro
+        return a.count - b.count;
       }
-      return b.rankWeight - a.rankWeight; // Maior patente primeiro em caso de empate
+      return b.rankWeight - a.rankWeight;
     });
 
-    // Marca os primeiros 'slots' voluntários como selecionados
     return sortedVolunteers.map((volunteer, index) => ({
       ...volunteer,
       selected: index < slots
@@ -415,7 +362,6 @@ export const TravelManagement = () => {
 
   return (
     <div className="p-6 space-y-8 relative">
-      {/* Lista de viagens */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
@@ -423,19 +369,17 @@ export const TravelManagement = () => {
             const travelStart = new Date(travel.startDate + "T00:00:00");
             const travelEnd = new Date(travel.endDate + "T00:00:00");
             const today = new Date();
+            const isLocked = lockedTravels.includes(travel.id);
 
-            // Define cor de fundo e badge de status conforme a situação da viagem
             let cardBg = "bg-white";
             let statusBadge = null;
             if (today < travelStart) {
-              // Viagem ainda não iniciou
               statusBadge = (
                 <div className="absolute top-2 right-12 bg-[#3B82F6] text-white px-2 py-1 text-xs rounded">
                   Em aberto
                 </div>
               );
             } else if (today >= travelStart && today <= travelEnd) {
-              // Viagem em andamento
               cardBg = "bg-green-100";
               statusBadge = (
                 <div className="absolute top-2 right-12 bg-green-500 text-white px-2 py-1 text-xs rounded">
@@ -443,7 +387,6 @@ export const TravelManagement = () => {
                 </div>
               );
             } else if (today > travelEnd) {
-              // Viagem encerrada
               cardBg = "bg-gray-100";
               statusBadge = (
                 <div className="absolute top-2 right-12 bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded">
@@ -452,7 +395,6 @@ export const TravelManagement = () => {
               );
             }
 
-            // Calcula o número de diárias
             const numDays = differenceInDays(travelEnd, travelStart) + 1;
             const count = travel.halfLastDay ? numDays - 0.5 : numDays;
             const formattedCount = count.toLocaleString("pt-BR", {
@@ -487,7 +429,7 @@ export const TravelManagement = () => {
                   <p>Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</p>
                   <p>Vagas: {travel.slots}</p>
                   <p>{diariasLine}</p>
-                  {travel.volunteers && travel.volunteers.length > 0 && (
+                  {travel.volunteers && travel.volunteers.length > 0 && !isLocked && (
                     <div className="pt-4 border-t border-gray-100">
                       <h4 className="font-medium text-sm text-gray-700 mb-2">Classificação:</h4>
                       <ul className="space-y-1">
@@ -517,8 +459,7 @@ export const TravelManagement = () => {
                     </div>
                   )}
                 </div>
-                {/* O botão de "Quero ser Voluntário" só aparece se a viagem ainda não iniciou */}
-                {today < travelStart && !travel.archived && (
+                {today < travelStart && !travel.archived && !isLocked && (
                   <div className="mt-4">
                     <Button
                       onClick={() => handleVolunteer(travel.id)}
@@ -545,7 +486,6 @@ export const TravelManagement = () => {
                 }`}
                 onClick={travel.archived ? () => toggleExpansion(travel.id) : undefined}
               >
-                {/* Badge de status */}
                 {statusBadge}
                 {user.userType === "admin" && (
                   <DropdownMenu>
@@ -569,6 +509,19 @@ export const TravelManagement = () => {
                       <DropdownMenuItem onClick={() => handleArchive(travel.id, true)}>
                         <Archive className="mr-2 h-4 w-4" />
                         Arquivar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}>
+                        {isLocked ? (
+                          <>
+                            <LockOpen className="mr-2 h-4 w-4" />
+                            Mostrar Voluntários
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="mr-2 h-4 w-4" />
+                            Ocultar Não Selecionados
+                          </>
+                        )}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
