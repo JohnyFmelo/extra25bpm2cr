@@ -23,18 +23,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2, Archive, Plus } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen } from "lucide-react";
 
 export const TravelManagement = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [slots, setSlots] = useState("");
   const [destination, setDestination] = useState("");
-  // Armazena o total calculado (em R$) a partir do valor da diária e do número (possivelmente fracionário) de diárias
   const [dailyAllowance, setDailyAllowance] = useState("");
-  // Valor da diária (não obrigatório)
   const [dailyRate, setDailyRate] = useState("");
-  // Toggle: se ativado, o último dia conta como meia diária
   const [halfLastDay, setHalfLastDay] = useState(false);
   const [isEditingAllowance, setIsEditingAllowance] = useState(false);
   const [travels, setTravels] = useState<any[]>([]);
@@ -42,8 +39,7 @@ export const TravelManagement = () => {
   const [editingTravel, setEditingTravel] = useState<any>(null);
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // Novo estado para a função "Ocultar Não Selecionadas"
-  const [hideNonSelected, setHideNonSelected] = useState(false);
+  const [lockedTravels, setLockedTravels] = useState<string[]>([]);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -54,10 +50,14 @@ export const TravelManagement = () => {
         const travelsRef = collection(db, "travels");
         const travelsSnapshot = await getDocs(travelsRef);
         const counts: { [key: string]: number } = {};
+        const today = new Date();
 
         travelsSnapshot.docs.forEach((doc) => {
           const travel = doc.data();
-          if (travel.volunteers) {
+          const travelStart = new Date(travel.startDate + "T00:00:00");
+          
+          // Só conta viagens que já começaram ou já passaram
+          if (today >= travelStart && travel.volunteers) {
             travel.volunteers.forEach((volunteer: string) => {
               counts[volunteer] = (counts[volunteer] || 0) + 1;
             });
@@ -87,7 +87,7 @@ export const TravelManagement = () => {
     return () => unsubscribe();
   }, []);
 
-  // Calcula o total (valor em R$) com base nas datas, valor da diária e toggle "halfLastDay"
+  // Calcula o total (valor em R$) com base nas datas, no valor da diária e se o último dia vale meia
   useEffect(() => {
     if (startDate && endDate && dailyRate) {
       const start = new Date(startDate + "T00:00:00");
@@ -214,6 +214,18 @@ export const TravelManagement = () => {
 
   const handleVolunteer = async (travelId: string) => {
     try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const volunteerInfo = `${user.rank} ${user.warName}`;
+
+      if (!volunteerInfo) {
+        toast({
+          title: "Erro",
+          description: "Usuário não encontrado. Por favor, faça login novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const travelRef = doc(db, "travels", travelId);
       const travelSnap = await getDoc(travelRef);
 
@@ -222,36 +234,50 @@ export const TravelManagement = () => {
       }
 
       const travelData = travelSnap.data();
-      const totalSlots = Number(travelData.slots);
       const currentVolunteers: string[] = Array.isArray(travelData.volunteers)
         ? travelData.volunteers
         : [];
 
-      if (currentVolunteers.includes(user.name)) {
+      if (currentVolunteers.includes(volunteerInfo)) {
+        // Se já é voluntário, remove da lista
+        const updatedVolunteers = currentVolunteers.filter(v => v !== volunteerInfo);
+        await updateDoc(travelRef, {
+          volunteers: updatedVolunteers,
+        });
+
+        const today = new Date();
+        const travelStart = new Date(travelData.startDate + "T00:00:00");
+        
+        // Atualiza a contagem apenas se a viagem já começou
+        if (today >= travelStart) {
+          setVolunteerCounts((prev) => ({
+            ...prev,
+            [volunteerInfo]: Math.max((prev[volunteerInfo] || 0) - 1, 0),
+          }));
+        }
+
         toast({
-          title: "Aviso",
-          description: "Você já é voluntário desta viagem.",
+          title: "Sucesso",
+          description: "Você desistiu da viagem com sucesso.",
         });
         return;
       }
 
-      if (currentVolunteers.length >= totalSlots) {
-        toast({
-          title: "Aviso",
-          description: "Não há mais vagas disponíveis.",
-        });
-        return;
-      }
-
-      const updatedVolunteers = [...currentVolunteers, user.name];
+      const updatedVolunteers = [...currentVolunteers, volunteerInfo];
       await updateDoc(travelRef, {
         volunteers: updatedVolunteers,
       });
 
-      setVolunteerCounts((prev) => ({
-        ...prev,
-        [user.name]: (prev[user.name] || 0) + 1,
-      }));
+      const today = new Date();
+      const travelStart = new Date(travelData.startDate + "T00:00:00");
+      
+      // Atualiza a contagem apenas se a viagem já começou
+      if (today >= travelStart) {
+        setVolunteerCounts((prev) => ({
+          ...prev,
+          [volunteerInfo]: (prev[volunteerInfo] || 0) + 1,
+        }));
+      }
 
       toast({
         title: "Sucesso",
@@ -267,12 +293,59 @@ export const TravelManagement = () => {
     }
   };
 
-  const sortVolunteers = (volunteers: string[]) => {
-    return [...volunteers].sort((a, b) => {
-      const countA = volunteerCounts[a] || 0;
-      const countB = volunteerCounts[b] || 0;
-      return countA - countB;
+  const handleToggleLock = (travelId: string) => {
+    setLockedTravels(prev => 
+      prev.includes(travelId)
+        ? prev.filter(id => id !== travelId)
+        : [...prev, travelId]
+    );
+  };
+
+  const getMilitaryRankWeight = (rank: string): number => {
+    const rankWeights: { [key: string]: number } = {
+      "Cel PM": 12,
+      "Ten Cel PM": 11,
+      "Maj PM": 10,
+      "Cap PM": 9,
+      "1° Ten PM": 8,
+      "2° Ten PM": 7,
+      "Sub Ten PM": 6,
+      "1° Sgt PM": 5,
+      "2° Sgt PM": 4,
+      "3° Sgt PM": 3,
+      "Cb PM": 2,
+      "Sd PM": 1,
+      "Estágio": 0
+    };
+    
+    return rankWeights[rank] || 0;
+  };
+
+  const sortVolunteers = (volunteers: string[], slots: number) => {
+    if (!volunteers?.length) return [];
+    
+    const processedVolunteers = volunteers.map(volunteer => {
+      const [rank, ...nameParts] = volunteer.split(' ');
+      const name = nameParts.join(' ');
+      return {
+        fullName: volunteer,
+        rank,
+        count: volunteerCounts[volunteer] || 0,
+        rankWeight: getMilitaryRankWeight(rank)
+      };
     });
+
+    const sortedVolunteers = processedVolunteers.sort((a, b) => {
+      if (a.count !== b.count) {
+        return a.count - b.count;
+      }
+      return b.rankWeight - a.rankWeight;
+    });
+
+    return sortedVolunteers.map((volunteer, index) => ({
+      ...volunteer,
+      selected: index < slots
+    }));
   };
 
   const toggleExpansion = (travelId: string) => {
@@ -289,22 +362,6 @@ export const TravelManagement = () => {
 
   return (
     <div className="p-6 space-y-8 relative">
-      {/* Toggle para "Ocultar Não Selecionadas" (visível para administradores) */}
-      {user.userType === "admin" && (
-        <div className="mb-4">
-          <label className="inline-flex items-center">
-            <input
-              type="checkbox"
-              checked={hideNonSelected}
-              onChange={(e) => setHideNonSelected(e.target.checked)}
-              className="form-checkbox"
-            />
-            <span className="ml-2 text-sm">Ocultar Não Selecionadas</span>
-          </label>
-        </div>
-      )}
-
-      {/* Lista de viagens */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
@@ -312,27 +369,17 @@ export const TravelManagement = () => {
             const travelStart = new Date(travel.startDate + "T00:00:00");
             const travelEnd = new Date(travel.endDate + "T00:00:00");
             const today = new Date();
+            const isLocked = lockedTravels.includes(travel.id);
 
-            // Define cor de fundo e badge de status conforme a situação da viagem
             let cardBg = "bg-white";
             let statusBadge = null;
             if (today < travelStart) {
-              // Viagem ainda não iniciou
-              if (hideNonSelected) {
-                statusBadge = (
-                  <div className="absolute top-2 right-12 bg-orange-500 text-white px-2 py-1 text-xs rounded">
-                    Processando Diária
-                  </div>
-                );
-              } else {
-                statusBadge = (
-                  <div className="absolute top-2 right-12 bg-[#3B82F6] text-white px-2 py-1 text-xs rounded">
-                    Em aberto
-                  </div>
-                );
-              }
+              statusBadge = (
+                <div className="absolute top-2 right-12 bg-[#3B82F6] text-white px-2 py-1 text-xs rounded">
+                  Em aberto
+                </div>
+              );
             } else if (today >= travelStart && today <= travelEnd) {
-              // Viagem em andamento
               cardBg = "bg-green-100";
               statusBadge = (
                 <div className="absolute top-2 right-12 bg-green-500 text-white px-2 py-1 text-xs rounded">
@@ -340,7 +387,6 @@ export const TravelManagement = () => {
                 </div>
               );
             } else if (today > travelEnd) {
-              // Viagem encerrada
               cardBg = "bg-gray-100";
               statusBadge = (
                 <div className="absolute top-2 right-12 bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded">
@@ -349,7 +395,6 @@ export const TravelManagement = () => {
               );
             }
 
-            // Calcula o número de diárias
             const numDays = differenceInDays(travelEnd, travelStart) + 1;
             const count = travel.halfLastDay ? numDays - 0.5 : numDays;
             const formattedCount = count.toLocaleString("pt-BR", {
@@ -386,16 +431,29 @@ export const TravelManagement = () => {
                   <p>{diariasLine}</p>
                   {travel.volunteers && travel.volunteers.length > 0 && (
                     <div className="pt-4 border-t border-gray-100">
-                      <h4 className="font-medium text-sm text-gray-700 mb-2">Viajante:</h4>
+                      <h4 className="font-medium text-sm text-gray-700 mb-2">Classificação:</h4>
                       <ul className="space-y-1">
-                        {sortVolunteers(travel.volunteers).map((volunteerName: string) => (
+                        {sortVolunteers(travel.volunteers, travel.slots)
+                          .filter(volunteer => !isLocked || volunteer.selected)
+                          .map((volunteer) => (
                           <li
-                            key={volunteerName}
-                            className="text-sm text-gray-600 p-2 rounded flex justify-between items-center"
+                            key={volunteer.fullName}
+                            className={`text-sm p-2 rounded flex justify-between items-center ${
+                              volunteer.selected 
+                                ? 'bg-green-100 border border-green-200'
+                                : 'bg-gray-50 border border-gray-100'
+                            }`}
                           >
-                            <span>{volunteerName}</span>
-                            <span className="text-xs text-gray-500">
-                              {formattedTravelCount(volunteerCounts[volunteerName] || 0)}
+                            <div className="flex items-center space-x-2">
+                              {volunteer.selected && (
+                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              )}
+                              <span className={`${volunteer.selected ? 'font-medium' : ''}`}>
+                                {volunteer.fullName}
+                              </span>
+                            </div>
+                            <span className={`text-xs ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
+                              {formattedTravelCount(volunteer.count)}
                             </span>
                           </li>
                         ))}
@@ -403,16 +461,18 @@ export const TravelManagement = () => {
                     </div>
                   )}
                 </div>
-                {/* Botão "Quero ser Voluntário" aparece somente se a viagem ainda não iniciou */}
-                {today < travelStart && !travel.archived && (
+                {today < travelStart && !travel.archived && !isLocked && (
                   <div className="mt-4">
                     <Button
                       onClick={() => handleVolunteer(travel.id)}
-                      className="w-full bg-[#3B82F6] hover:bg-[#2563eb] text-white"
-                      disabled={travel.volunteers?.includes(user.name)}
+                      className={`w-full ${
+                        travel.volunteers?.includes(`${user.rank} ${user.warName}`)
+                          ? "bg-red-500 hover:bg-red-600"
+                          : "bg-[#3B82F6] hover:bg-[#2563eb]"
+                      } text-white`}
                     >
-                      {travel.volunteers?.includes(user.name)
-                        ? "Já Inscrito"
+                      {travel.volunteers?.includes(`${user.rank} ${user.warName}`)
+                        ? "Desistir"
                         : "Quero ser Voluntário"}
                     </Button>
                   </div>
@@ -451,6 +511,19 @@ export const TravelManagement = () => {
                       <DropdownMenuItem onClick={() => handleArchive(travel.id, true)}>
                         <Archive className="mr-2 h-4 w-4" />
                         Arquivar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}>
+                        {isLocked ? (
+                          <>
+                            <LockOpen className="mr-2 h-4 w-4" />
+                            Mostrar Voluntários
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="mr-2 h-4 w-4" />
+                            Ocultar Não Selecionados
+                          </>
+                        )}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
