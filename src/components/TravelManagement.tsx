@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen } from "lucide-react";
+import { Switch } from "./ui/switch"; // Importa o novo componente Switch
 
 // Defina a interface para tipar os dados da viagem
 interface Travel {
@@ -650,19 +651,13 @@ export const TravelManagement = () => {
                   <Label htmlFor="halfLastDay" className="mr-2 text-sm">
                     Último dia meia diária
                   </Label>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      id="halfLastDay"
-                      checked={halfLastDay}
-                      onChange={(e) => setHalfLastDay(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600"></div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">
-                      {halfLastDay ? "On" : "Off"}
-                    </span>
-                  </label>
+                  <Switch
+                    id="halfLastDay"
+                    checked={halfLastDay}
+                    onCheckedChange={setHalfLastDay}
+                    labelOn="On"
+                    labelOff="Off"
+                  />
                 </div>
               </div>
               <div className="flex gap-4 mt-4">
