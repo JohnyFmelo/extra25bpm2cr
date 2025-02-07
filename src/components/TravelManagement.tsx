@@ -104,7 +104,7 @@ export const TravelManagement = () => {
     return () => unsubscribe();
   }, []);
 
-  // Calcula o total (valor em R$) com base nas datas, no valor da diária e se o último dia vale meia
+  // Calcula o total com base nas datas e valor da diária
   useEffect(() => {
     if (startDate && endDate && dailyRate) {
       const start = new Date(startDate + "T00:00:00");
@@ -162,7 +162,6 @@ export const TravelManagement = () => {
         });
       }
 
-      // Limpa os campos e fecha o modal
       setStartDate("");
       setEndDate("");
       setSlots("");
@@ -295,9 +294,7 @@ export const TravelManagement = () => {
       
       if (travelSnap.exists()) {
         const isCurrentlyLocked = travelSnap.data().isLocked || false;
-        await updateDoc(travelRef, {
-          isLocked: !isCurrentlyLocked
-        });
+        await updateDoc(travelRef, { isLocked: !isCurrentlyLocked });
         
         toast({
           title: "Sucesso",
@@ -383,8 +380,7 @@ export const TravelManagement = () => {
             const travelEnd = new Date(travel.endDate + "T00:00:00");
             const today = new Date();
             const isLocked = travel.isLocked;
-
-            // Definir status baseado na data
+            
             const status =
               today < travelStart
                 ? "Em aberto"
@@ -392,7 +388,6 @@ export const TravelManagement = () => {
                 ? "Em transito"
                 : "Encerrada";
 
-            // Ajusta cor e badge com base no status
             let cardBg = "bg-white";
             let statusBadge = null;
             if (status === "Em aberto") {
@@ -421,7 +416,6 @@ export const TravelManagement = () => {
               );
             }
 
-            // Para viagens encerradas, usamos conteúdo mínimo por padrão
             const minimalContent = (
               <div className="cursor-default">
                 <h3 className="text-xl font-semibold">{travel.destination}</h3>
@@ -488,7 +482,7 @@ export const TravelManagement = () => {
               <Card
                 key={travel.id}
                 className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg} ${travel.archived ? "cursor-pointer" : ""}`}
-                // Para viagens encerradas, a expansão é feita via double-click
+                // Para viagens encerradas, a expansão é via double-click
                 {...(status === "Encerrada" ? { onDoubleClick: () => toggleExpansion(travel.id) } : {})}
               >
                 {statusBadge}
@@ -536,7 +530,6 @@ export const TravelManagement = () => {
                   </DropdownMenu>
                 )}
                 <div className="space-y-4">
-                  {/* Se a viagem estiver encerrada, mostramos conteúdo mínimo até que seja expandido por double-click */}
                   {status === "Encerrada" && !expandedTravels.includes(travel.id)
                     ? minimalContent
                     : fullContent}
