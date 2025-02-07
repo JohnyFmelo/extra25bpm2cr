@@ -52,10 +52,14 @@ export const TravelManagement = () => {
         const travelsRef = collection(db, "travels");
         const travelsSnapshot = await getDocs(travelsRef);
         const counts: { [key: string]: number } = {};
+        const today = new Date();
 
         travelsSnapshot.docs.forEach((doc) => {
           const travel = doc.data();
-          if (travel.volunteers) {
+          const travelStart = new Date(travel.startDate + "T00:00:00");
+          
+          // Só conta viagens que já começaram ou já passaram
+          if (today >= travelStart && travel.volunteers) {
             travel.volunteers.forEach((volunteer: string) => {
               counts[volunteer] = (counts[volunteer] || 0) + 1;
             });
@@ -213,7 +217,7 @@ export const TravelManagement = () => {
   const handleVolunteer = async (travelId: string) => {
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const volunteerInfo = `${user.rank} ${user.warName}`; // Combining rank and name
+      const volunteerInfo = `${user.rank} ${user.warName}`;
 
       if (!volunteerInfo) {
         toast({
@@ -238,9 +242,26 @@ export const TravelManagement = () => {
         : [];
 
       if (currentVolunteers.includes(volunteerInfo)) {
+        // Se já é voluntário, remove da lista
+        const updatedVolunteers = currentVolunteers.filter(v => v !== volunteerInfo);
+        await updateDoc(travelRef, {
+          volunteers: updatedVolunteers,
+        });
+
+        const today = new Date();
+        const travelStart = new Date(travelData.startDate + "T00:00:00");
+        
+        // Atualiza a contagem apenas se a viagem já começou
+        if (today >= travelStart) {
+          setVolunteerCounts((prev) => ({
+            ...prev,
+            [volunteerInfo]: Math.max((prev[volunteerInfo] || 0) - 1, 0),
+          }));
+        }
+
         toast({
-          title: "Aviso",
-          description: "Você já é voluntário desta viagem.",
+          title: "Sucesso",
+          description: "Você desistiu da viagem com sucesso.",
         });
         return;
       }
@@ -258,10 +279,16 @@ export const TravelManagement = () => {
         volunteers: updatedVolunteers,
       });
 
-      setVolunteerCounts((prev) => ({
-        ...prev,
-        [volunteerInfo]: (prev[volunteerInfo] || 0) + 1,
-      }));
+      const today = new Date();
+      const travelStart = new Date(travelData.startDate + "T00:00:00");
+      
+      // Atualiza a contagem apenas se a viagem já começou
+      if (today >= travelStart) {
+        setVolunteerCounts((prev) => ({
+          ...prev,
+          [volunteerInfo]: (prev[volunteerInfo] || 0) + 1,
+        }));
+      }
 
       toast({
         title: "Sucesso",
@@ -442,11 +469,14 @@ export const TravelManagement = () => {
                   <div className="mt-4">
                     <Button
                       onClick={() => handleVolunteer(travel.id)}
-                      className="w-full bg-[#3B82F6] hover:bg-[#2563eb] text-white"
-                      disabled={travel.volunteers?.includes(user.name)}
+                      className={`w-full ${
+                        travel.volunteers?.includes(`${user.rank} ${user.warName}`)
+                          ? "bg-red-500 hover:bg-red-600"
+                          : "bg-[#3B82F6] hover:bg-[#2563eb]"
+                      } text-white`}
                     >
-                      {travel.volunteers?.includes(user.name)
-                        ? "Já Inscrito"
+                      {travel.volunteers?.includes(`${user.rank} ${user.warName}`)
+                        ? "Desistir"
                         : "Quero ser Voluntário"}
                     </Button>
                   </div>
