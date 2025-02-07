@@ -374,11 +374,11 @@ export const TravelManagement = () => {
             let cardBg = "bg-white";
             let statusBadge = null;
             if (today < travelStart) {
-              // Se estiver bloqueado, exibe "Processando Diária" com fundo laranja
+              // Se estiver bloqueado, exibe "Processando diária" com fundo laranja
               if (isLocked) {
                 statusBadge = (
                   <div className="absolute top-2 right-12 bg-orange-500 text-white px-2 py-1 text-xs rounded">
-                    Processando Diária
+                    Processando diária
                   </div>
                 );
               } else {
