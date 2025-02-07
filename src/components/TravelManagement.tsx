@@ -38,10 +38,10 @@ export const TravelManagement = () => {
   const [halfLastDay, setHalfLastDay] = useState(false);
   const [isEditingAllowance, setIsEditingAllowance] = useState(false);
   const [travels, setTravels] = useState<any[]>([]);
-  const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
+  const [volunteerCounts, setVolunteerCounts<{ [key: string]: number }>({});
   const [editingTravel, setEditingTravel] = useState<any>(null);
-  const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [expandedTravels, setExpandedTravels<string[]>([]);
+  const [isModalOpen, setIsModalOpen(false);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -212,6 +212,18 @@ export const TravelManagement = () => {
 
   const handleVolunteer = async (travelId: string) => {
     try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const volunteerInfo = `${user.rank} ${user.warName}`; // Combining rank and name
+
+      if (!volunteerInfo) {
+        toast({
+          title: "Erro",
+          description: "Usuário não encontrado. Por favor, faça login novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const travelRef = doc(db, "travels", travelId);
       const travelSnap = await getDoc(travelRef);
 
@@ -225,7 +237,7 @@ export const TravelManagement = () => {
         ? travelData.volunteers
         : [];
 
-      if (currentVolunteers.includes(user.name)) {
+      if (currentVolunteers.includes(volunteerInfo)) {
         toast({
           title: "Aviso",
           description: "Você já é voluntário desta viagem.",
@@ -241,14 +253,14 @@ export const TravelManagement = () => {
         return;
       }
 
-      const updatedVolunteers = [...currentVolunteers, user.name];
+      const updatedVolunteers = [...currentVolunteers, volunteerInfo];
       await updateDoc(travelRef, {
         volunteers: updatedVolunteers,
       });
 
       setVolunteerCounts((prev) => ({
         ...prev,
-        [user.name]: (prev[user.name] || 0) + 1,
+        [volunteerInfo]: (prev[volunteerInfo] || 0) + 1,
       }));
 
       toast({
@@ -261,6 +273,53 @@ export const TravelManagement = () => {
         title: "Erro",
         description: "Erro ao se candidatar.",
         variant: "destructive",
+      });
+    }
+  };
+
+  const handleUnvolunteer = async (timeSlot: any) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const volunteerInfo = `${user.rank} ${user.warName}`; // Using the same format as when volunteering
+
+      if (!volunteerInfo) {
+        toast({
+          title: "Erro",
+          description: "Usuário não encontrado. Por favor, faça login novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const updatedSlot = {
+        ...timeSlot,
+        slots_used: timeSlot.slots_used - 1,
+        volunteers: (timeSlot.volunteers || []).filter((v: string) => v !== volunteerInfo)
+      };
+
+      const result = await dataOperations.update(
+        updatedSlot,
+        {
+          date: timeSlot.date,
+          start_time: timeSlot.start_time,
+          end_time: timeSlot.end_time
+        }
+      );
+
+      if (!result.success) {
+        throw new Error('Failed to update time slot');
+      }
+
+      toast({
+        title: "Desmarcado!",
+        description: "Extra desmarcada com sucesso!"
+      });
+    } catch (error) {
+      console.error('Erro ao desmarcar:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível desmarcar a Extra.",
+        variant: "destructive"
       });
     }
   };
