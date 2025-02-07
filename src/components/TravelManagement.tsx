@@ -3,16 +3,16 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card } from "./ui/card";
-import { 
-  collection, 
-  addDoc, 
-  onSnapshot, 
-  query, 
-  getDocs, 
-  doc, 
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  getDocs,
+  doc,
   getDoc,
   updateDoc,
-  deleteDoc 
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -30,11 +30,11 @@ export const TravelManagement = () => {
   const [endDate, setEndDate] = useState("");
   const [slots, setSlots] = useState("");
   const [destination, setDestination] = useState("");
-  // dailyAllowance passará a representar o total calculado (diárias) com base na data e no valor da diária
+  // dailyAllowance aqui armazenará o total (R$) calculado a partir do valor da diária e do número (possivelmente fracionário) de diárias
   const [dailyAllowance, setDailyAllowance] = useState("");
-  // Novo campo para o valor da diária (custo por dia)
+  // Novo campo: valor da diária (custo por dia)
   const [dailyRate, setDailyRate] = useState("");
-  // Toggle para considerar o último dia como meia diária
+  // Toggle: se ativado, o último dia conta como meia diária
   const [halfLastDay, setHalfLastDay] = useState(false);
   const [isEditingAllowance, setIsEditingAllowance] = useState(false);
   const [travels, setTravels] = useState<any[]>([]);
@@ -45,6 +45,7 @@ export const TravelManagement = () => {
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+  // Busca a contagem de viagens dos voluntários
   useEffect(() => {
     const fetchVolunteerCounts = async () => {
       try {
@@ -70,6 +71,7 @@ export const TravelManagement = () => {
     fetchVolunteerCounts();
   }, []);
 
+  // Atualiza a lista de viagens em tempo real
   useEffect(() => {
     const q = query(collection(db, "travels"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -83,17 +85,15 @@ export const TravelManagement = () => {
     return () => unsubscribe();
   }, []);
 
+  // Calcula o total (valor em R$) com base na data, no valor da diária e se o último dia vale meia
   useEffect(() => {
-    // Calcula o total das diárias com base na data, valor da diária e se o último dia vale meia
     if (startDate && endDate && dailyRate) {
       const start = new Date(startDate + "T00:00:00");
       const end = new Date(endDate + "T00:00:00");
       const numDays = differenceInDays(end, start) + 1;
-      let total = numDays * Number(dailyRate);
-      if (halfLastDay && numDays > 0) {
-        total = total - Number(dailyRate) / 2;
-      }
-      setDailyAllowance(String(total));
+      const count = halfLastDay ? numDays - 0.5 : numDays;
+      const totalCost = count * Number(dailyRate);
+      setDailyAllowance(String(totalCost));
     } else {
       setDailyAllowance("");
     }
@@ -265,27 +265,6 @@ export const TravelManagement = () => {
     }
   };
 
-  const handleUpdateDailyAllowance = async (travelId: string, newAllowance: string) => {
-    try {
-      const travelRef = doc(db, "travels", travelId);
-      await updateDoc(travelRef, {
-        dailyAllowance: Number(newAllowance),
-      });
-      setIsEditingAllowance(false);
-      toast({
-        title: "Sucesso",
-        description: "Diárias atualizadas com sucesso!",
-      });
-    } catch (error) {
-      console.error("Error updating daily allowance:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar diárias.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const sortVolunteers = (volunteers: string[]) => {
     return [...volunteers].sort((a, b) => {
       const countA = volunteerCounts[a] || 0;
@@ -315,32 +294,60 @@ export const TravelManagement = () => {
           .map((travel) => {
             const isArchived = travel.archived;
             const isExpanded = expandedTravels.includes(travel.id);
-            const travelDate = new Date(travel.startDate + "T00:00:00");
-            const today = new Date();
-            const showVolunteerButton = travelDate > today && !isArchived;
-            const sortedVolunteers = travel.volunteers ? sortVolunteers(travel.volunteers) : [];
+            // Calcula o número total de dias (considerando as datas com T00:00:00 para evitar problemas de fuso)
+            const start = new Date(travel.startDate + "T00:00:00");
+            const end = new Date(travel.endDate + "T00:00:00");
+            const numDays = differenceInDays(end, start) + 1;
+            const count = travel.halfLastDay ? numDays - 0.5 : numDays;
+            const totalCost = count * Number(travel.dailyRate);
+            // Formata o número de diárias com uma casa decimal (caso haja meio dia)
+            const formattedCount = count.toLocaleString("pt-BR", {
+              minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
+              maximumFractionDigits: 1,
+            });
+            // Formata o total em moeda brasileira (sem casas decimais, conforme exemplo)
+            const formattedTotal = totalCost.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0,
+            });
 
             const minimalContent = (
               <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
                 <h3 className="text-xl font-semibold">{travel.destination}</h3>
-                <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
                 <p>
-                  Diárias: {travel.dailyAllowance} (Valor da diária: {travel.dailyRate})
+                  Data Inicial:{" "}
+                  {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}
+                </p>
+                <p>
+                  Diárias: {formattedCount} ({formattedTotal})
                 </p>
               </div>
             );
 
             const fullContent = (
               <div>
-                <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
-                  <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
+                <div
+                  className="mb-2 cursor-pointer"
+                  onClick={() => toggleExpansion(travel.id)}
+                >
+                  <h3 className="text-xl font-semibold text-primary">
+                    {travel.destination}
+                  </h3>
                 </div>
                 <div className="mt-2 space-y-1 text-sm text-gray-600">
-                  <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
-                  <p>Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</p>
+                  <p>
+                    Data Inicial:{" "}
+                    {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}
+                  </p>
+                  <p>
+                    Data Final:{" "}
+                    {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}
+                  </p>
                   <p>Vagas: {travel.slots}</p>
                   <p>
-                    Diárias: {travel.dailyAllowance} (Valor da diária: {travel.dailyRate})
+                    Diárias: {formattedCount} ({formattedTotal})
                   </p>
                   {travel.volunteers && travel.volunteers.length > 0 && (
                     <div className="pt-4 border-t border-gray-100">
@@ -348,22 +355,24 @@ export const TravelManagement = () => {
                         Voluntários (ordenados por menor número de viagens):
                       </h4>
                       <ul className="space-y-1">
-                        {sortedVolunteers.map((volunteerName: string) => (
-                          <li
-                            key={volunteerName}
-                            className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
-                          >
-                            <span>{volunteerName}</span>
-                            <span className="text-xs text-gray-500">
-                              {formattedTravelCount(volunteerCounts[volunteerName] || 0)}
-                            </span>
-                          </li>
-                        ))}
+                        {sortVolunteers(travel.volunteers).map(
+                          (volunteerName: string) => (
+                            <li
+                              key={volunteerName}
+                              className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
+                            >
+                              <span>{volunteerName}</span>
+                              <span className="text-xs text-gray-500">
+                                {formattedTravelCount(volunteerCounts[volunteerName] || 0)}
+                              </span>
+                            </li>
+                          )
+                        )}
                       </ul>
                     </div>
                   )}
                 </div>
-                {showVolunteerButton && (
+                {new Date(travel.startDate + "T00:00:00") > new Date() && !isArchived && (
                   <div className="mt-4">
                     <Button
                       onClick={() => handleVolunteer(travel.id)}
@@ -505,16 +514,24 @@ export const TravelManagement = () => {
                     placeholder="Digite o valor da diária"
                   />
                 </div>
-                <div className="col-span-1 flex items-center space-x-2">
-                  <Label htmlFor="halfLastDay" className="text-sm">
+                <div className="col-span-1 flex items-center">
+                  <Label htmlFor="halfLastDay" className="mr-2 text-sm">
                     Último dia meia diária
                   </Label>
-                  <input
-                    id="halfLastDay"
-                    type="checkbox"
-                    checked={halfLastDay}
-                    onChange={(e) => setHalfLastDay(e.target.checked)}
-                  />
+                  {/* Toggle switch estilizado */}
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      id="halfLastDay"
+                      checked={halfLastDay}
+                      onChange={(e) => setHalfLastDay(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600"></div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">
+                      {halfLastDay ? "On" : "Off"}
+                    </span>
+                  </label>
                 </div>
               </div>
               <div className="flex gap-4">
