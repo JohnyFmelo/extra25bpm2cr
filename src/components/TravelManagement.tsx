@@ -66,7 +66,6 @@ export const TravelManagement = () => {
   useEffect(() => {
     const travelsRef = collection(db, "travels");
     const q = query(travelsRef);
-    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const counts: { [key: string]: number } = {};
       const today = new Date();
@@ -99,8 +98,8 @@ export const TravelManagement = () => {
 
       // Atualiza os IDs dos travels bloqueados
       const lockedTravelIds = travelsData
-        .filter(travel => travel.isLocked)
-        .map(travel => travel.id);
+        .filter((travel) => travel.isLocked)
+        .map((travel) => travel.id);
       setLockedTravels(lockedTravelIds);
     });
 
@@ -259,11 +258,8 @@ export const TravelManagement = () => {
         : [];
 
       if (currentVolunteers.includes(volunteerInfo)) {
-        const updatedVolunteers = currentVolunteers.filter(v => v !== volunteerInfo);
-        await updateDoc(travelRef, {
-          volunteers: updatedVolunteers,
-        });
-
+        const updatedVolunteers = currentVolunteers.filter((v) => v !== volunteerInfo);
+        await updateDoc(travelRef, { volunteers: updatedVolunteers });
         toast({
           title: "Sucesso",
           description: "Você desistiu da viagem com sucesso.",
@@ -272,10 +268,7 @@ export const TravelManagement = () => {
       }
 
       const updatedVolunteers = [...currentVolunteers, volunteerInfo];
-      await updateDoc(travelRef, {
-        volunteers: updatedVolunteers,
-      });
-
+      await updateDoc(travelRef, { volunteers: updatedVolunteers });
       toast({
         title: "Sucesso",
         description: "Você se candidatou com sucesso!",
@@ -294,15 +287,14 @@ export const TravelManagement = () => {
     try {
       const travelRef = doc(db, "travels", travelId);
       const travelSnap = await getDoc(travelRef);
-      
+
       if (travelSnap.exists()) {
         const isCurrentlyLocked = travelSnap.data().isLocked || false;
         await updateDoc(travelRef, { isLocked: !isCurrentlyLocked });
-        
         toast({
           title: "Sucesso",
-          description: !isCurrentlyLocked 
-            ? "Viagem bloqueada com sucesso!" 
+          description: !isCurrentlyLocked
+            ? "Viagem bloqueada com sucesso!"
             : "Viagem desbloqueada com sucesso!",
         });
       }
@@ -330,21 +322,20 @@ export const TravelManagement = () => {
       "3° Sgt PM": 3,
       "Cb PM": 2,
       "Sd PM": 1,
-      "Estágio": 0
+      "Estágio": 0,
     };
     return rankWeights[rank] || 0;
   };
 
   const sortVolunteers = (volunteers: string[], slots: number) => {
     if (!volunteers?.length) return [];
-    
-    const processedVolunteers = volunteers.map(volunteer => {
-      const [rank, ...nameParts] = volunteer.split(' ');
+    const processedVolunteers = volunteers.map((volunteer) => {
+      const [rank, ...nameParts] = volunteer.split(" ");
       return {
         fullName: volunteer,
         rank,
         count: volunteerCounts[volunteer] || 0,
-        rankWeight: getMilitaryRankWeight(rank)
+        rankWeight: getMilitaryRankWeight(rank),
       };
     });
 
@@ -357,15 +348,13 @@ export const TravelManagement = () => {
 
     return sortedVolunteers.map((volunteer, index) => ({
       ...volunteer,
-      selected: index < slots
+      selected: index < slots,
     }));
   };
 
   const toggleExpansion = (travelId: string) => {
     setExpandedTravels((prev) =>
-      prev.includes(travelId)
-        ? prev.filter((id) => id !== travelId)
-        : [...prev, travelId]
+      prev.includes(travelId) ? prev.filter((id) => id !== travelId) : [...prev, travelId]
     );
   };
 
@@ -377,13 +366,14 @@ export const TravelManagement = () => {
     <div className="p-6 space-y-8 relative">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {travels
-          .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+          .sort(
+            (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+          )
           .map((travel) => {
             const travelStart = new Date(travel.startDate + "T00:00:00");
             const travelEnd = new Date(travel.endDate + "T00:00:00");
             const today = new Date();
             const isLocked = travel.isLocked;
-            
             const status =
               today < travelStart
                 ? "Em aberto"
@@ -393,27 +383,36 @@ export const TravelManagement = () => {
 
             let cardBg = "bg-white";
             let statusBadge = null;
+
             if (status === "Em aberto") {
               statusBadge = isLocked ? (
-                <div className={`absolute top-2 ${badgePositionClass} bg-orange-500 text-white px-2 py-1 text-xs rounded`}>
+                <div
+                  className={`absolute top-2 ${badgePositionClass} bg-orange-500 text-white px-2 py-1 text-xs rounded`}
+                >
                   Processando diária
                 </div>
               ) : (
-                <div className={`absolute top-2 ${badgePositionClass} bg-[#3B82F6] text-white px-2 py-1 text-xs rounded`}>
+                <div
+                  className={`absolute top-2 ${badgePositionClass} bg-[#3B82F6] text-white px-2 py-1 text-xs rounded`}
+                >
                   Em aberto
                 </div>
               );
             } else if (status === "Em transito") {
               cardBg = "bg-green-100";
               statusBadge = (
-                <div className={`absolute top-2 ${badgePositionClass} bg-green-500 text-white px-2 py-1 text-xs rounded`}>
+                <div
+                  className={`absolute top-2 ${badgePositionClass} bg-green-500 text-white px-2 py-1 text-xs rounded`}
+                >
                   Em transito
                 </div>
               );
             } else if (status === "Encerrada") {
               cardBg = "bg-gray-100";
               statusBadge = (
-                <div className={`absolute top-2 ${badgePositionClass} bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded`}>
+                <div
+                  className={`absolute top-2 ${badgePositionClass} bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded`}
+                >
                   Encerrada
                 </div>
               );
@@ -422,54 +421,76 @@ export const TravelManagement = () => {
             const minimalContent = (
               <div className="cursor-default">
                 <h3 className="text-xl font-semibold">{travel.destination}</h3>
-                <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
-                <p>{`Diárias: ${differenceInDays(travelEnd, travelStart) + (travel.halfLastDay ? -0.5 : 0)}`}</p>
+                <p>
+                  Data Inicial:{" "}
+                  {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}
+                </p>
+                <p>{`Diárias: ${differenceInDays(travelEnd, travelStart) + 1 + (travel.halfLastDay ? -0.5 : 0)}`}</p>
               </div>
             );
 
             const fullContent = (
               <div className="cursor-default">
-                <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
+                <h3 className="text-xl font-semibold text-primary">
+                  {travel.destination}
+                </h3>
                 <div className="mt-2 space-y-1 text-sm text-gray-600">
-                  <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
-                  <p>Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</p>
+                  <p>
+                    Data Inicial:{" "}
+                    {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}
+                  </p>
+                  <p>
+                    Data Final:{" "}
+                    {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}
+                  </p>
                   <p>Vagas: {travel.slots}</p>
                   <p>
                     {travel.dailyRate
-                      ? `Diárias: ${differenceInDays(travelEnd, travelStart) + (travel.halfLastDay ? -0.5 : 0)} (${(differenceInDays(travelEnd, travelStart) + (travel.halfLastDay ? -0.5 : 0)) *
+                      ? `Diárias: ${
+                          differenceInDays(travelEnd, travelStart) + 1 + (travel.halfLastDay ? -0.5 : 0)
+                        } (${(
+                          (differenceInDays(travelEnd, travelStart) + 1 + (travel.halfLastDay ? -0.5 : 0)) *
                           Number(travel.dailyRate)
-                        .toLocaleString("pt-BR", {
+                        ).toLocaleString("pt-BR", {
                           style: "currency",
                           currency: "BRL",
                           minimumFractionDigits: 0,
                           maximumFractionDigits: 0,
                         })})`
-                      : `Diárias: ${differenceInDays(travelEnd, travelStart) + (travel.halfLastDay ? -0.5 : 0)}`}
+                      : `Diárias: ${
+                          differenceInDays(travelEnd, travelStart) + 1 + (travel.halfLastDay ? -0.5 : 0)
+                        }`}
                   </p>
                   {travel.volunteers && travel.volunteers.length > 0 && (
                     <div className="pt-4 border-t border-gray-100">
-                      <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntário:</h4>
+                      <h4 className="font-medium text-sm text-gray-700 mb-2">
+                        Voluntário:
+                      </h4>
                       <ul className="space-y-1">
                         {sortVolunteers(travel.volunteers, travel.slots)
-                          .filter(volunteer => !isLocked || volunteer.selected)
+                          .filter((volunteer) => !isLocked || volunteer.selected)
                           .map((volunteer) => (
                             <li
                               key={volunteer.fullName}
                               className={`text-sm p-2 rounded flex justify-between items-center ${
-                                volunteer.selected 
-                                  ? 'bg-green-100 border border-green-200'
-                                  : 'bg-gray-50 border border-gray-100'
+                                volunteer.selected
+                                  ? "bg-green-100 border border-green-200"
+                                  : "bg-gray-50 border border-gray-100"
                               }`}
                             >
                               <div className="flex items-center space-x-2">
                                 {volunteer.selected && (
                                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
                                 )}
-                                <span className={`${volunteer.selected ? 'font-medium' : ''}`}>
+                                <span className={volunteer.selected ? "font-medium" : ""}>
                                   {volunteer.fullName}
                                 </span>
                               </div>
-                              <span className={`text-xs ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
+                              <span
+                                className={`text-xs ${
+                                  volunteer.selected ? "text-green-700" : "text-gray-500"
+                                }`}
+                              >
                                 {formattedTravelCount(volunteer.count)}
                               </span>
                             </li>
@@ -484,8 +505,9 @@ export const TravelManagement = () => {
             return (
               <Card
                 key={travel.id}
-                className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg} ${travel.archived ? "cursor-pointer" : ""}`}
-                // Para viagens encerradas, a expansão é via double-click
+                className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg} ${
+                  travel.archived ? "cursor-pointer" : ""
+                }`}
                 {...(status === "Encerrada" ? { onDoubleClick: () => toggleExpansion(travel.id) } : {})}
               >
                 {statusBadge}
@@ -632,19 +654,14 @@ export const TravelManagement = () => {
                   <Label htmlFor="halfLastDay" className="mr-2 text-sm">
                     Último dia meia diária
                   </Label>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      id="halfLastDay"
-                      checked={halfLastDay}
-                      onChange={(e) => setHalfLastDay(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600"></div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">
-                      {halfLastDay ? "On" : "Off"}
-                    </span>
-                  </label>
+                  <Button
+                    id="halfLastDay"
+                    variant={halfLastDay ? "primary" : "outline"}
+                    onClick={() => setHalfLastDay(!halfLastDay)}
+                    className="transition-colors"
+                  >
+                    {halfLastDay ? "Ativo" : "Inativo"}
+                  </Button>
                 </div>
               </div>
               <div className="flex gap-4 mt-4">
