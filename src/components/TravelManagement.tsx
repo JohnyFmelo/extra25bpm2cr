@@ -284,10 +284,7 @@ export const TravelManagement = () => {
   };
 
   const formattedTravelCount = (count: number) => {
-    if (count === 1) {
-      return "1 viagem";
-    }
-    return `${count} viagens`;
+    return count === 1 ? "1 viagem" : `${count} viagens`;
   };
 
   return (
@@ -383,111 +380,116 @@ export const TravelManagement = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {travels.map((travel) => {
-          const isArchived = travel.archived;
-          const isExpanded = expandedTravels.includes(travel.id);
-          const travelDate = new Date(travel.startDate);
-          const today = new Date();
-          const showVolunteerButton = travelDate > today && !isArchived;
-          const sortedVolunteers = travel.volunteers ? sortVolunteers(travel.volunteers) : [];
+        {travels
+          .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+          .map((travel) => {
+            const isArchived = travel.archived;
+            const isExpanded = expandedTravels.includes(travel.id);
+            const travelDate = new Date(travel.startDate);
+            const today = new Date();
+            const showVolunteerButton = travelDate > today && !isArchived;
+            const sortedVolunteers = travel.volunteers ? sortVolunteers(travel.volunteers) : [];
 
-          const minimalContent = (
-            <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
-              <h3 className="text-xl font-semibold">{travel.destination}</h3>
-              <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
-              <p>Diárias: {travel.dailyAllowance}</p>
-            </div>
-          );
-
-          const fullContent = (
-            <div>
-              <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
-                <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
-              </div>
-              <div className="mt-2 space-y-1 text-sm text-gray-600">
+            const minimalContent = (
+              <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
+                <h3 className="text-xl font-semibold">{travel.destination}</h3>
                 <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
-                <p>Data Final: {new Date(new Date(travel.endDate).setDate(new Date(travel.endDate).getDate() + 1)).toLocaleDateString()}</p>
-                <p>Vagas: {travel.slots}</p>
                 <p>Diárias: {travel.dailyAllowance}</p>
-                {travel.volunteers && travel.volunteers.length > 0 && (
-                  <div className="pt-4 border-t border-gray-100">
-                    <h4 className="font-medium text-sm text-gray-700 mb-2">
-                      Voluntários (ordenados por menor número de viagens):
-                    </h4>
-                    <ul className="space-y-1">
-                      {sortedVolunteers.map((volunteerName: string) => (
-                        <li
-                          key={volunteerName}
-                          className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
-                        >
-                          <span>{volunteerName}</span>
-                          <span className="text-xs text-gray-500">
-                            {volunteerCounts[volunteerName] || 0} {formattedTravelCount(volunteerCounts[volunteerName] || 0)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+              </div>
+            );
+
+            const fullContent = (
+              <div>
+                <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
+                  <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
+                </div>
+                <div className="mt-2 space-y-1 text-sm text-gray-600">
+                  <p>Data Inicial: {new Date(travel.startDate).toLocaleDateString()}</p>
+                  <p>
+                    Data Final:{" "}
+                    {new Date(
+                      new Date(travel.endDate).setDate(new Date(travel.endDate).getDate() + 1)
+                    ).toLocaleDateString()}
+                  </p>
+                  <p>Vagas: {travel.slots}</p>
+                  <p>Diárias: {travel.dailyAllowance}</p>
+                  {travel.volunteers && travel.volunteers.length > 0 && (
+                    <div className="pt-4 border-t border-gray-100">
+                      <h4 className="font-medium text-sm text-gray-700 mb-2">
+                        Voluntários (ordenados por menor número de viagens):
+                      </h4>
+                      <ul className="space-y-1">
+                        {sortedVolunteers.map((volunteerName: string) => (
+                          <li
+                            key={volunteerName}
+                            className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
+                          >
+                            <span>{volunteerName}</span>
+                            <span className="text-xs text-gray-500">
+                              {formattedTravelCount(volunteerCounts[volunteerName] || 0)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                {showVolunteerButton && (
+                  <div className="mt-4">
+                    <Button
+                      onClick={() => handleVolunteer(travel.id)}
+                      className="w-full"
+                      variant={travel.volunteers?.includes(user.name) ? "secondary" : "default"}
+                      disabled={travel.volunteers?.includes(user.name)}
+                    >
+                      {travel.volunteers?.includes(user.name) ? "Já Inscrito" : "Quero ser Voluntário"}
+                    </Button>
                   </div>
                 )}
               </div>
-              {showVolunteerButton && (
-                <div className="mt-4">
-                  <Button
-                    onClick={() => handleVolunteer(travel.id)}
-                    className="w-full"
-                    variant={travel.volunteers?.includes(user.name) ? "secondary" : "default"}
-                    disabled={travel.volunteers?.includes(user.name)}
-                  >
-                    {travel.volunteers?.includes(user.name) ? "Já Inscrito" : "Quero ser Voluntário"}
-                  </Button>
+            );
+
+            return (
+              <Card
+                key={travel.id}
+                onClick={isArchived ? () => toggleExpansion(travel.id) : undefined}
+                className={`p-6 hover:shadow-xl transition-shadow relative ${
+                  isArchived ? "bg-gray-200 cursor-pointer" : "bg-white"
+                }`}
+              >
+                {user.userType === "admin" && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="absolute top-2 right-2 h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEditTravel(travel)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-600"
+                        onClick={() => handleDeleteTravel(travel.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Excluir
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleArchive(travel.id, true)}>
+                        <Archive className="mr-2 h-4 w-4" />
+                        Arquivar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                <div className="space-y-4">
+                  {isArchived && !isExpanded ? minimalContent : fullContent}
                 </div>
-              )}
-            </div>
-          );
-
-          return (
-            <Card
-              key={travel.id}
-              onClick={isArchived ? () => toggleExpansion(travel.id) : undefined}
-              className={`p-6 hover:shadow-xl transition-shadow relative ${
-                isArchived ? "bg-gray-200 cursor-pointer" : "bg-white"
-              }`}
-            >
-              {user.userType === "admin" && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="absolute top-2 right-2 h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleEditTravel(travel)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-red-600"
-                      onClick={() => handleDeleteTravel(travel.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleArchive(travel.id, true)}
-                    >
-                      <Archive className="mr-2 h-4 w-4" />
-                      Arquivar
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-
-              <div className="space-y-4">
-                {isArchived && !isExpanded ? minimalContent : fullContent}
-              </div>
-            </Card>
-          );
-        })}
+              </Card>
+            );
+          })}
       </div>
     </div>
   );
