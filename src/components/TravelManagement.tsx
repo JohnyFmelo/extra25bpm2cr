@@ -664,17 +664,25 @@ export const TravelManagement = () => {
                   <Label htmlFor="halfLastDay" className="mr-2 text-sm">
                     Último dia meia diária
                   </Label>
-                  <label htmlFor="halfLastDay" className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      id="halfLastDay"
-                      checked={halfLastDay}
-                      onChange={(e) => setHalfLastDay(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 peer-checked:bg-blue-600">
-                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 transform peer-checked:translate-x-5"></div>
+                  <label htmlFor="halfLastDay" className="flex items-center cursor-pointer">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        id="halfLastDay"
+                        checked={halfLastDay}
+                        onChange={(e) => setHalfLastDay(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <div className="block bg-gray-200 w-14 h-8 rounded-full"></div>
+                      <div
+                        className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform duration-200 ${
+                          halfLastDay ? "translate-x-6" : ""
+                        }`}
+                      ></div>
                     </div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">
+                      {halfLastDay ? "On" : "Off"}
+                    </span>
                   </label>
                 </div>
               </div>
