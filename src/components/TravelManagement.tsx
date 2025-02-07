@@ -45,7 +45,6 @@ export const TravelManagement = () => {
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // Busca a contagem de viagens dos voluntários
   useEffect(() => {
     const fetchVolunteerCounts = async () => {
       try {
@@ -71,7 +70,6 @@ export const TravelManagement = () => {
     fetchVolunteerCounts();
   }, []);
 
-  // Atualiza a lista de viagens em tempo real
   useEffect(() => {
     const q = query(collection(db, "travels"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -294,7 +292,7 @@ export const TravelManagement = () => {
           .map((travel) => {
             const isArchived = travel.archived;
             const isExpanded = expandedTravels.includes(travel.id);
-            // Calcula o número total de dias (considerando as datas com T00:00:00 para evitar problemas de fuso)
+            // Calcula o número total de dias (utilizando "T00:00:00" para evitar problemas de fuso)
             const start = new Date(travel.startDate + "T00:00:00");
             const end = new Date(travel.endDate + "T00:00:00");
             const numDays = differenceInDays(end, start) + 1;
@@ -305,69 +303,53 @@ export const TravelManagement = () => {
               minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
               maximumFractionDigits: 1,
             });
-            // Formata o total em moeda brasileira (sem casas decimais, conforme exemplo)
+            // Formata o total em moeda brasileira (sem casas decimais)
             const formattedTotal = totalCost.toLocaleString("pt-BR", {
               style: "currency",
               currency: "BRL",
               minimumFractionDigits: 0,
               maximumFractionDigits: 0,
             });
+            // Se não houver valor da diária, não exibe o total
+            const diariasLine = travel.dailyRate
+              ? `Diárias: ${formattedCount} (${formattedTotal})`
+              : `Diárias: ${formattedCount}`;
 
             const minimalContent = (
               <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
                 <h3 className="text-xl font-semibold">{travel.destination}</h3>
-                <p>
-                  Data Inicial:{" "}
-                  {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}
-                </p>
-                <p>
-                  Diárias: {formattedCount} ({formattedTotal})
-                </p>
+                <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
+                <p>{diariasLine}</p>
               </div>
             );
 
             const fullContent = (
               <div>
-                <div
-                  className="mb-2 cursor-pointer"
-                  onClick={() => toggleExpansion(travel.id)}
-                >
-                  <h3 className="text-xl font-semibold text-primary">
-                    {travel.destination}
-                  </h3>
+                <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
+                  <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
                 </div>
                 <div className="mt-2 space-y-1 text-sm text-gray-600">
-                  <p>
-                    Data Inicial:{" "}
-                    {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}
-                  </p>
-                  <p>
-                    Data Final:{" "}
-                    {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}
-                  </p>
+                  <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
+                  <p>Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</p>
                   <p>Vagas: {travel.slots}</p>
-                  <p>
-                    Diárias: {formattedCount} ({formattedTotal})
-                  </p>
+                  <p>{diariasLine}</p>
                   {travel.volunteers && travel.volunteers.length > 0 && (
                     <div className="pt-4 border-t border-gray-100">
                       <h4 className="font-medium text-sm text-gray-700 mb-2">
                         Voluntários (ordenados por menor número de viagens):
                       </h4>
                       <ul className="space-y-1">
-                        {sortVolunteers(travel.volunteers).map(
-                          (volunteerName: string) => (
-                            <li
-                              key={volunteerName}
-                              className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
-                            >
-                              <span>{volunteerName}</span>
-                              <span className="text-xs text-gray-500">
-                                {formattedTravelCount(volunteerCounts[volunteerName] || 0)}
-                              </span>
-                            </li>
-                          )
-                        )}
+                        {sortVolunteers(travel.volunteers).map((volunteerName: string) => (
+                          <li
+                            key={volunteerName}
+                            className="text-sm text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center"
+                          >
+                            <span>{volunteerName}</span>
+                            <span className="text-xs text-gray-500">
+                              {formattedTravelCount(volunteerCounts[volunteerName] || 0)}
+                            </span>
+                          </li>
+                        ))}
                       </ul>
                     </div>
                   )}
