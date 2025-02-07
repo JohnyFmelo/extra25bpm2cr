@@ -429,11 +429,13 @@ export const TravelManagement = () => {
                   <p>Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</p>
                   <p>Vagas: {travel.slots}</p>
                   <p>{diariasLine}</p>
-                  {travel.volunteers && travel.volunteers.length > 0 && !isLocked && (
+                  {travel.volunteers && travel.volunteers.length > 0 && (
                     <div className="pt-4 border-t border-gray-100">
                       <h4 className="font-medium text-sm text-gray-700 mb-2">Classificação:</h4>
                       <ul className="space-y-1">
-                        {sortVolunteers(travel.volunteers, travel.slots).map((volunteer) => (
+                        {sortVolunteers(travel.volunteers, travel.slots)
+                          .filter(volunteer => !isLocked || volunteer.selected)
+                          .map((volunteer) => (
                           <li
                             key={volunteer.fullName}
                             className={`text-sm p-2 rounded flex justify-between items-center ${
