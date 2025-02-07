@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -15,7 +14,7 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 import {
