@@ -1,6 +1,7 @@
+
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { LogOut, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
@@ -26,6 +27,10 @@ const TopBar = () => {
     navigate("/login");
   };
 
+  const handleRefresh = () => {
+    window.location.reload();
+  };
+
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
 
   return (
@@ -37,6 +42,16 @@ const TopBar = () => {
           </h2>
         </div>
         
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="text-primary-foreground hover:bg-primary-light"
+          onClick={handleRefresh}
+        >
+          <RefreshCw className="h-5 w-5" />
+          <span className="sr-only">Atualizar página</span>
+        </Button>
+
         <Button 
           variant="ghost" 
           size="icon" 
