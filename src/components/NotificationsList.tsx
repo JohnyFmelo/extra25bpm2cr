@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Trash2, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import {
@@ -10,7 +11,7 @@ import {
   arrayUnion,
   Timestamp,
   deleteDoc,
-  getDoc, // Importação do getDoc para buscar detalhes do usuário
+  getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ interface Notification {
   senderName: string;
   graduation: string;
   isAdmin: boolean;
-  readBy: string[]; // Lista de IDs dos usuários que visualizaram
+  readBy: string[];
   type: 'all' | 'individual';
   recipientId: string | null;
 }
@@ -52,7 +53,7 @@ const NotificationsList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<string | null>(null);
   const [viewersDialogOpen, setViewersDialogOpen] = useState(false);
-  const [viewers, setViewers] = useState<{ name: string, graduation: string }[]>([]); // Alterado para armazenar nome e graduação
+  const [viewers, setViewers] = useState<{ name: string, graduation: string }[]>([]);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -143,18 +144,26 @@ const NotificationsList = () => {
 
   const handleViewers = async (readBy: string[]) => {
     try {
-      // Buscar os detalhes dos usuários que visualizaram a notificação
-      const usersSnapshot = await Promise.all(
+      const viewersData = await Promise.all(
         readBy.map(async (userId) => {
-          const userDoc = await getDoc(doc(db, "users", userId)); // Supondo que você tenha uma coleção 'users' no Firebase
-          return userDoc.exists() ? userDoc.data() : null;
+          const userDoc = await getDoc(doc(db, "users", userId));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            return {
+              name: userData.name || '',
+              graduation: userData.graduation || ''
+            };
+          }
+          return null;
         })
       );
 
-      // Filtra usuários não encontrados (caso algum ID seja inválido ou o usuário não exista)
-      const viewersList = usersSnapshot.filter((user) => user !== null) as { name: string, graduation: string }[];
-      
-      setViewers(viewersList);
+      // Filter out any null values and set the viewers
+      const validViewers = viewersData.filter((viewer): viewer is { name: string; graduation: string } => 
+        viewer !== null && viewer.name !== '' && viewer.graduation !== ''
+      );
+
+      setViewers(validViewers);
       setViewersDialogOpen(true);
     } catch (error) {
       console.error("Erro ao carregar os visualizadores:", error);
@@ -292,7 +301,7 @@ const NotificationsList = () => {
               <ul className="space-y-2">
                 {viewers.map((viewer, index) => (
                   <li key={index} className="p-2 bg-gray-50 rounded">
-                    {viewer.graduation} {viewer.name} {/* Exibe a graduação e o nome */}
+                    {viewer.graduation} {viewer.name}
                   </li>
                 ))}
               </ul>
@@ -331,3 +340,4 @@ export const useNotifications = () => {
 };
 
 export default NotificationsList;
+
