@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Trash2, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import {
@@ -150,17 +149,16 @@ const NotificationsList = () => {
           if (userDoc.exists()) {
             const userData = userDoc.data();
             return {
-              name: userData.name || '',
-              graduation: userData.graduation || ''
+              name: userData.name,
+              graduation: userData.graduation
             };
           }
           return null;
         })
       );
 
-      // Filter out any null values and set the viewers
       const validViewers = viewersData.filter((viewer): viewer is { name: string; graduation: string } => 
-        viewer !== null && viewer.name !== '' && viewer.graduation !== ''
+        viewer !== null
       );
 
       setViewers(validViewers);
@@ -301,7 +299,7 @@ const NotificationsList = () => {
               <ul className="space-y-2">
                 {viewers.map((viewer, index) => (
                   <li key={index} className="p-2 bg-gray-50 rounded">
-                    {viewer.graduation} {viewer.name}
+                    {`${viewer.graduation} ${viewer.name}`}
                   </li>
                 ))}
               </ul>
@@ -340,4 +338,3 @@ export const useNotifications = () => {
 };
 
 export default NotificationsList;
-
