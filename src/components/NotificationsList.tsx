@@ -143,24 +143,36 @@ const NotificationsList = () => {
 
   const handleViewers = async (readBy: string[]) => {
     try {
-      const viewersData = await Promise.all(
-        readBy.map(async (userId) => {
-          const userDoc = await getDoc(doc(db, "users", userId));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            return {
-              name: userData.name,
-              graduation: userData.graduation
-            };
+      console.log("Buscando visualizadores para:", readBy);
+      
+      const viewersPromises = readBy.map(async (userId) => {
+        const userDocRef = doc(db, "users", userId);
+        const userDoc = await getDoc(userDocRef);
+        console.log("Dados do usuário:", userId, userDoc.data());
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          // Verificar se os campos necessários existem
+          if (!userData.name || !userData.graduation) {
+            console.log("Dados incompletos para usuário:", userId, userData);
+            return null;
           }
-          return null;
-        })
-      );
+          return {
+            name: userData.name,
+            graduation: userData.graduation
+          };
+        }
+        console.log("Documento não encontrado para usuário:", userId);
+        return null;
+      });
 
+      const viewersData = await Promise.all(viewersPromises);
+      
       const validViewers = viewersData.filter((viewer): viewer is { name: string; graduation: string } => 
-        viewer !== null
+        viewer !== null && viewer.name && viewer.graduation
       );
 
+      console.log("Visualizadores válidos:", validViewers);
       setViewers(validViewers);
       setViewersDialogOpen(true);
     } catch (error) {
@@ -299,7 +311,7 @@ const NotificationsList = () => {
               <ul className="space-y-2">
                 {viewers.map((viewer, index) => (
                   <li key={index} className="p-2 bg-gray-50 rounded">
-                    {`${viewer.graduation} ${viewer.name}`}
+                    {viewer.graduation} {viewer.name}
                   </li>
                 ))}
               </ul>
