@@ -652,8 +652,6 @@ export const TravelManagement = () => {
                     id="halfLastDay"
                     checked={halfLastDay}
                     onCheckedChange={setHalfLastDay}
-                    labelOn="On"
-                    labelOff="Off"
                   />
                 </div>
               </div>
@@ -697,3 +695,5 @@ export const TravelManagement = () => {
     </div>
   );
 };
+
+export default TravelManagement;
