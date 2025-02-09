@@ -148,6 +148,7 @@ const TimeSlotsList = () => {
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
   const isAdmin = userData?.userType === 'admin';
+  const serviceDay = userData?.serviceDay || 'N/A';
 
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
@@ -373,6 +374,14 @@ const TimeSlotsList = () => {
     }, {});
   };
 
+  const sortTimeSlots = (slots: TimeSlot[]): TimeSlot[] => {
+    return slots.sort((a, b) => {
+      const timeA = a.start_time.split(':').map(Number);
+      const timeB = b.start_time.split(':').map(Number);
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    });
+  };
+
   const isVolunteered = (timeSlot: TimeSlot) => {
     return timeSlot.volunteers?.includes(volunteerName);
   };
@@ -438,8 +447,39 @@ const TimeSlotsList = () => {
     return <div className="p-4">Carregando horários...</div>;
   }
 
+  const groupedAndSortedTimeSlots = Object.entries(groupTimeSlotsByDate(timeSlots))
+    .sort()
+    .reduce((acc, [date, slots]) => {
+      acc[date] = sortTimeSlots(slots);
+      return acc;
+    }, {} as GroupedTimeSlots);
+
   return (
     <div className="space-y-6 p-4">
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">Seu dia de serviço</h3>
+            <div className="mt-1 flex items-center space-x-2">
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                ${serviceDay === 'D' ? 'bg-blue-100 text-blue-800' :
+                  serviceDay === 'N' ? 'bg-purple-100 text-purple-800' :
+                  serviceDay === '1' ? 'bg-green-100 text-green-800' :
+                  serviceDay === '2' ? 'bg-yellow-100 text-yellow-800' :
+                  serviceDay === '3' ? 'bg-orange-100 text-orange-800' :
+                  'bg-gray-100 text-gray-800'}`}>
+                {serviceDay === 'D' ? 'Dia' :
+                 serviceDay === 'N' ? 'Noite' :
+                 serviceDay === '1' ? '1º Folga' :
+                 serviceDay === '2' ? '2º Folga' :
+                 serviceDay === '3' ? '3º Folga' :
+                 'N/A'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <TimeSlotLimitControl
         slotLimit={slotLimit}
         onUpdateLimit={handleUpdateSlotLimit}
@@ -447,7 +487,7 @@ const TimeSlotsList = () => {
         isAdmin={isAdmin}
       />
 
-      {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => (
+      {Object.entries(groupedAndSortedTimeSlots).map(([date, slots]) => (
         <div key={date} className="bg-white rounded-lg shadow-sm p-4 md:p-5">
           <h3 className="font-medium text-lg mb-3 text-gray-800">
             {formatDateHeader(date)}
