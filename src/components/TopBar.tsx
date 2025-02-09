@@ -1,8 +1,8 @@
 
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, RefreshCw, ToggleLeft, ToggleRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { LogOut, RefreshCw } from "lucide-react";
+import { useState } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
 import {
@@ -15,15 +15,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/components/ui/use-toast";
 
 const TopBar = () => {
   const navigate = useNavigate();
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-  const [isAdminMode, setIsAdminMode] = useState(true);
-  const { toast } = useToast();
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -34,32 +31,7 @@ const TopBar = () => {
     window.location.reload();
   };
 
-  const toggleAdminMode = () => {
-    const newMode = !isAdminMode;
-    setIsAdminMode(newMode);
-    
-    // Atualiza o localStorage mantendo os outros dados do usuário
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
-    const updatedUserData = {
-      ...userData,
-      tempUserType: newMode ? 'admin' : 'user'
-    };
-    localStorage.setItem('user', JSON.stringify(updatedUserData));
-    
-    toast({
-      title: newMode ? "Modo Administrador ativado" : "Modo Usuário ativado",
-      description: `Você está agora no modo ${newMode ? 'administrador' : 'usuário'}.`,
-    });
-  };
-
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
-  const isAdmin = userData.userType === 'admin';
-
-  // Sincroniza o estado inicial com o localStorage
-  useEffect(() => {
-    const storedUserData = JSON.parse(localStorage.getItem('user') || '{}');
-    setIsAdminMode(storedUserData.tempUserType !== 'user');
-  }, []);
 
   return (
     <header className="bg-primary shadow-md">
@@ -70,21 +42,6 @@ const TopBar = () => {
           </h2>
         </div>
         
-        {isAdmin && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-primary-foreground hover:bg-primary-light"
-            onClick={toggleAdminMode}
-            title={isAdminMode ? "Mudar para modo usuário" : "Mudar para modo administrador"}
-          >
-            {isAdminMode ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
-            <span className="sr-only">
-              {isAdminMode ? "Mudar para modo usuário" : "Mudar para modo administrador"}
-            </span>
-          </Button>
-        )}
-
         <Button 
           variant="ghost" 
           size="icon" 
@@ -142,4 +99,3 @@ const TopBar = () => {
 };
 
 export default TopBar;
-
