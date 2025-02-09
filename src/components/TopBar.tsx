@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { LogOut, RefreshCw, Toggle } from "lucide-react";
+import { LogOut, RefreshCw, ToggleLeft, ToggleRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
@@ -78,7 +78,7 @@ const TopBar = () => {
             onClick={toggleAdminMode}
             title={isAdminMode ? "Mudar para modo usuário" : "Mudar para modo administrador"}
           >
-            <Toggle className="h-5 w-5" />
+            {isAdminMode ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
             <span className="sr-only">
               {isAdminMode ? "Mudar para modo usuário" : "Mudar para modo administrador"}
             </span>
@@ -142,3 +142,4 @@ const TopBar = () => {
 };
 
 export default TopBar;
+
