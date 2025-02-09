@@ -46,14 +46,14 @@ export function AppSidebar() {
       <div
         className={`${
           isCollapsed ? "w-20" : "w-64"
-        } h-screen bg-primary fixed left-0 top-0 transition-all duration-300 ease-in-out flex flex-col`}
+        } h-screen bg-[#13293D] fixed left-0 top-0 transition-all duration-300 ease-in-out flex flex-col shadow-lg`}
       >
         <div className="flex justify-end p-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-primary-foreground hover:bg-primary-light"
+            className="text-white/80 hover:text-white hover:bg-[#247BA0]"
           >
             {isCollapsed ? (
               <ChevronRight className="h-4 w-4" />
@@ -66,29 +66,29 @@ export function AppSidebar() {
         <div className="px-4 py-6">
           {!isCollapsed && (
             <>
-              <h2 className="text-xl font-bold text-primary-foreground mb-1">
+              <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">
                 {userData.rank}
               </h2>
-              <h3 className="text-lg font-semibold text-primary-foreground mb-4">
+              <h3 className="text-xl font-semibold text-white/90 mb-4">
                 {userData.warName}
               </h3>
-              <p className="text-sm text-primary-foreground/80 mb-2">
+              <p className="text-sm text-white/70 mb-3 font-medium">
                 {userData.email}
               </p>
-              <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-primary-light text-primary-foreground">
+              <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-[#247BA0] text-white">
                 {userData.userType === "admin" ? "Administrador" : "Usuário"}
               </span>
             </>
           )}
         </div>
 
-        <Separator className="bg-primary-light my-4" />
+        <Separator className="bg-[#247BA0]/30 my-4" />
 
         <div className="flex-1 px-2">
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Button
               variant="ghost"
-              className="w-full justify-start text-primary-foreground hover:bg-primary-light"
+              className="w-full justify-start text-white/80 hover:text-white hover:bg-[#247BA0]"
               onClick={() => setShowProfileDialog(true)}
             >
               <User className="h-4 w-4 mr-2" />
@@ -96,7 +96,7 @@ export function AppSidebar() {
             </Button>
             <Button
               variant="ghost"
-              className="w-full justify-start text-primary-foreground hover:bg-primary-light"
+              className="w-full justify-start text-white/80 hover:text-white hover:bg-[#247BA0]"
               onClick={() => setShowPasswordDialog(true)}
             >
               <Lock className="h-4 w-4 mr-2" />
@@ -104,7 +104,7 @@ export function AppSidebar() {
             </Button>
             <Button
               variant="ghost"
-              className="w-full justify-start text-primary-foreground hover:bg-primary-light"
+              className="w-full justify-start text-white/80 hover:text-white hover:bg-[#247BA0]"
               onClick={() => setShowInformationDialog(true)}
             >
               <Info className="h-4 w-4 mr-2" />
@@ -116,7 +116,7 @@ export function AppSidebar() {
         <div className="p-4">
           <Button
             variant="ghost"
-            className="w-full justify-start text-primary-foreground hover:bg-primary-light"
+            className="w-full justify-start text-white/80 hover:text-white hover:bg-[#247BA0]"
             onClick={() => setShowLogoutDialog(true)}
           >
             <LogOut className="h-4 w-4 mr-2" />
