@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,7 +8,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Hours from "./pages/Hours";
-import TopBar from "./components/TopBar";
+import { AppSidebar } from "./components/AppSidebar";
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -23,8 +24,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex min-h-screen w-full">
-      <div className="flex-1 flex flex-col">
-        <TopBar />
+      <AppSidebar />
+      <div className="flex-1 ml-20 lg:ml-64">
         <main className="flex-1">
           {children}
         </main>
