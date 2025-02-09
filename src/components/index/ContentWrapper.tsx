@@ -12,13 +12,15 @@ const ContentWrapper = ({ children, onBackClick }: ContentWrapperProps) => {
       <div className="absolute right-0 -top-12 mb-4">
         <button
           onClick={onBackClick}
-          className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+          className="p-2 rounded-full bg-white/80 hover:bg-white shadow-md hover:shadow-lg transition-all duration-300 text-primary"
           aria-label="Voltar para home"
         >
           <ArrowLeft className="h-6 w-6" />
         </button>
       </div>
-      {children}
+      <div className="animate-fade-in">
+        {children}
+      </div>
     </div>
   );
 };
