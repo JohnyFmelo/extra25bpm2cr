@@ -1,11 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card } from "./ui/card";
-import { Plus } from "lucide-react";
-import { differenceInDays } from "date-fns";
 import {
   collection,
   addDoc,
@@ -19,10 +16,17 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { differenceInDays } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen } from "lucide-react";
 import { Switch } from "./ui/switch";
-import { TravelCard } from "./TravelCard";
 
-export interface Travel {
+interface Travel {
   id: string;
   startDate: string;
   endDate: string;
@@ -47,9 +51,10 @@ export const TravelManagement = () => {
   const [travels, setTravels] = useState<Travel[]>([]);
   const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
   const [diaryCounts, setDiaryCounts] = useState<{ [key: string]: number }>({});
-  const [editingTravel, setEditingTravel] = useState<Travel | null>(null);
+  const [editingTravel, setEditingTravel] = useState<any>(null);
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [lockedTravels, setLockedTravels] = useState<string[]>([]);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
@@ -100,6 +105,11 @@ export const TravelManagement = () => {
         ...doc.data(),
       })) as Travel[];
       setTravels(travelsData);
+      
+      const lockedTravelIds = travelsData
+        .filter(travel => travel.isLocked)
+        .map(travel => travel.id);
+      setLockedTravels(lockedTravelIds);
     });
 
     return () => unsubscribe();
@@ -225,7 +235,7 @@ export const TravelManagement = () => {
         toast({
           title: "Erro",
           description: "Usuário não encontrado. Por favor, faça login novamente.",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
@@ -243,7 +253,7 @@ export const TravelManagement = () => {
         : [];
 
       if (currentVolunteers.includes(volunteerInfo)) {
-        const updatedVolunteers = currentVolunteers.filter((v) => v !== volunteerInfo);
+        const updatedVolunteers = currentVolunteers.filter(v => v !== volunteerInfo);
         await updateDoc(travelRef, {
           volunteers: updatedVolunteers,
         });
@@ -278,17 +288,17 @@ export const TravelManagement = () => {
     try {
       const travelRef = doc(db, "travels", travelId);
       const travelSnap = await getDoc(travelRef);
-
+      
       if (travelSnap.exists()) {
         const isCurrentlyLocked = travelSnap.data().isLocked || false;
         await updateDoc(travelRef, {
-          isLocked: !isCurrentlyLocked,
+          isLocked: !isCurrentlyLocked
         });
-
+        
         toast({
           title: "Sucesso",
-          description: !isCurrentlyLocked
-            ? "Viagem bloqueada com sucesso!"
+          description: !isCurrentlyLocked 
+            ? "Viagem bloqueada com sucesso!" 
             : "Viagem desbloqueada com sucesso!",
         });
       }
@@ -302,54 +312,273 @@ export const TravelManagement = () => {
     }
   };
 
+  const getMilitaryRankWeight = (rank: string): number => {
+    const rankWeights: { [key: string]: number } = {
+      "Cel PM": 12,
+      "Ten Cel PM": 11,
+      "Maj PM": 10,
+      "Cap PM": 9,
+      "1° Ten PM": 8,
+      "2° Ten PM": 7,
+      "Sub Ten PM": 6,
+      "1° Sgt PM": 5,
+      "2° Sgt PM": 4,
+      "3° Sgt PM": 3,
+      "Cb PM": 2,
+      "Sd PM": 1,
+      "Estágio": 0
+    };
+    
+    return rankWeights[rank] || 0;
+  };
+
+  const formattedTravelCount = (count: number) => {
+    return count === 1 ? "1 viagem" : `${count} viagens`;
+  };
+
+  const formattedDiaryCount = (count: number) => {
+    const formattedCount = count.toLocaleString("pt-BR", {
+      minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
+      maximumFractionDigits: 1,
+    });
+    return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
+  };
+
+  const sortVolunteers = (volunteers: string[], slots: number) => {
+    if (!volunteers?.length) return [];
+    
+    const processedVolunteers = volunteers.map(volunteer => {
+      const [rank, ...nameParts] = volunteer.split(' ');
+      return {
+        fullName: volunteer,
+        rank,
+        count: volunteerCounts[volunteer] || 0,
+        diaryCount: diaryCounts[volunteer] || 0,
+        rankWeight: getMilitaryRankWeight(rank)
+      };
+    });
+
+    const sortedVolunteers = processedVolunteers.sort((a, b) => {
+      if (a.diaryCount !== b.diaryCount) {
+        return a.diaryCount - b.diaryCount;
+      }
+      return b.rankWeight - a.rankWeight;
+    });
+
+    return sortedVolunteers.map((volunteer, index) => ({
+      ...volunteer,
+      selected: index < slots,
+      selectionReason: index < slots ? 
+        volunteer.diaryCount === sortedVolunteers[0].diaryCount ? 
+          'Selecionado por antiguidade' : 
+          'Selecionado por menor quantidade de diárias' :
+        undefined
+    }));
+  };
+
   const toggleExpansion = (travelId: string) => {
     setExpandedTravels((prev) =>
-      prev.includes(travelId) ? prev.filter((id) => id !== travelId) : [...prev, travelId]
+      prev.includes(travelId)
+        ? prev.filter((id) => id !== travelId)
+        : [...prev, travelId]
     );
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {isAdmin && (
-          <Button
-            onClick={() => setIsModalOpen(true)}
-            className="fixed bottom-8 right-8 rounded-full p-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg transform hover:scale-105 transition-all duration-200 z-50"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-        )}
+    <div className="p-6 space-y-8 relative">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {travels
+          .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+          .map((travel) => {
+            const travelStart = new Date(travel.startDate + "T00:00:00");
+            const travelEnd = new Date(travel.endDate + "T00:00:00");
+            const today = new Date();
+            const isLocked = travel.isLocked;
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {travels
-            .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-            .map((travel) => (
-              <div
-                key={travel.id}
-                className="transform hover:-translate-y-1 transition-all duration-200"
-              >
-                <TravelCard
-                  travel={travel}
-                  isAdmin={isAdmin}
-                  user={user}
-                  isExpanded={true}
-                  onToggleExpansion={toggleExpansion}
-                  onEditTravel={handleEditTravel}
-                  onDeleteTravel={handleDeleteTravel}
-                  onArchiveTravel={handleArchive}
-                  onVolunteerTravel={handleVolunteer}
-                  onToggleLock={handleToggleLock}
-                  volunteerCounts={volunteerCounts}
-                  diaryCounts={diaryCounts}
-                />
+            let cardBg = "bg-white";
+            let statusBadge = null;
+            const rightPos = isAdmin ? "right-12" : "right-2";
+
+            if (today < travelStart) {
+              if (isLocked) {
+                statusBadge = (
+                  <div className={`absolute top-2 ${rightPos} bg-orange-500 text-white px-2 py-1 text-xs rounded`}>
+                    Processando diária
+                  </div>
+                );
+              } else {
+                statusBadge = (
+                  <div className={`absolute top-2 ${rightPos} bg-[#3B82F6] text-white px-2 py-1 text-xs rounded`}>
+                    Em aberto
+                  </div>
+                );
+              }
+            } else if (today >= travelStart && today <= travelEnd) {
+              cardBg = "bg-green-100";
+              statusBadge = (
+                <div className={`absolute top-2 ${rightPos} bg-green-500 text-white px-2 py-1 text-xs rounded`}>
+                  Em transito
+                </div>
+              );
+            } else if (today > travelEnd) {
+              cardBg = "bg-gray-100";
+              statusBadge = (
+                <div className={`absolute top-2 ${rightPos} bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded`}>
+                  Encerrada
+                </div>
+              );
+            }
+
+            const numDays = differenceInDays(travelEnd, travelStart) + 1;
+            const count = travel.halfLastDay ? numDays - 0.5 : numDays;
+            const formattedCount = count.toLocaleString("pt-BR", {
+              minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
+              maximumFractionDigits: 1,
+            });
+            const totalCost = count * Number(travel.dailyRate);
+            const diariasLine = travel.dailyRate
+              ? `Diárias: ${formattedCount} (${totalCost.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })})`
+              : `Diárias: ${formattedCount}`;
+
+            const minimalContent = (
+              <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
+                <h3 className="text-xl font-semibold">{travel.destination}</h3>
+                <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
+                <p>{diariasLine}</p>
               </div>
-            ))}
-        </div>
+            );
+
+            const fullContent = (
+              <div>
+                <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
+                  <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
+                </div>
+                <div className="mt-2 space-y-1 text-sm text-gray-600">
+                  <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
+                  <p>Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</p>
+                  <p>Vagas: {travel.slots}</p>
+                  <p>{diariasLine}</p>
+                  {travel.volunteers && travel.volunteers.length > 0 && (
+                    <div className="pt-4 border-t border-gray-100">
+                      <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntário:</h4>
+                      <ul className="space-y-1">
+                        {sortVolunteers(travel.volunteers, travel.slots)
+                          .filter(volunteer => !isLocked || volunteer.selected)
+                          .map((volunteer) => (
+                          <li
+                            key={volunteer.fullName}
+                            className={`text-sm p-2 rounded flex justify-between items-center ${
+                              volunteer.selected 
+                                ? 'bg-green-100 border border-green-200'
+                                : 'bg-gray-50 border border-gray-100'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-2">
+                              {volunteer.selected && (
+                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              )}
+                              <span className={`${volunteer.selected ? 'font-medium' : ''}`}>
+                                {volunteer.fullName}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className={`text-xs ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
+                                {formattedTravelCount(volunteer.count)}
+                              </span>
+                              <span className={`text-xs block ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
+                                {formattedDiaryCount(volunteer.diaryCount)}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                {today < travelStart && !travel.archived && !isLocked && (
+                  <div className="mt-4">
+                    <Button
+                      onClick={() => handleVolunteer(travel.id)}
+                      className={`w-full ${
+                        travel.volunteers?.includes(`${user.rank} ${user.warName}`)
+                          ? "bg-red-500 hover:bg-red-600"
+                          : "bg-[#3B82F6] hover:bg-[#2563eb]"
+                      } text-white`}
+                    >
+                      {travel.volunteers?.includes(`${user.rank} ${user.warName}`)
+                        ? "Desistir"
+                        : "Quero ser Voluntário"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+
+            return (
+              <Card
+                key={travel.id}
+                className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg} ${travel.archived ? "cursor-pointer" : ""}`}
+                onClick={travel.archived ? () => toggleExpansion(travel.id) : undefined}
+                onDoubleClick={today > travelEnd ? () => toggleExpansion(travel.id) : undefined}
+              >
+                {statusBadge}
+                {isAdmin && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="absolute top-2 right-2 h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEditTravel(travel)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-600"
+                        onClick={() => handleDeleteTravel(travel.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Excluir
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleArchive(travel.id, true)}>
+                        <Archive className="mr-2 h-4 w-4" />
+                        Arquivar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}>
+                        {isLocked ? (
+                          <>
+                            <LockOpen className="mr-2 h-4 w-4" />
+                            Reabrir vagas
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="mr-2 h-4 w-4" />
+                            Processar diária
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                <div className="space-y-4">
+                  {travel.archived && !expandedTravels.includes(travel.id)
+                    ? minimalContent
+                    : fullContent}
+                </div>
+              </Card>
+            );
+          })}
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <Card className="w-full max-w-2xl mx-4 p-6 bg-white shadow-xl rounded-xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <Card className="p-6 bg-white shadow-lg max-w-lg w-full relative">
             <button
               onClick={() => {
                 setIsModalOpen(false);
@@ -362,19 +591,17 @@ export const TravelManagement = () => {
                 setDailyRate("");
                 setHalfLastDay(false);
               }}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 text-xl"
             >
               &times;
             </button>
             <form onSubmit={handleCreateTravel} className="space-y-6">
-              <h2 className="text-2xl font-semibold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+              <h2 className="text-2xl font-semibold text-primary">
                 {editingTravel ? "Editar Viagem" : "Criar Nova Viagem"}
               </h2>
-              <div className="grid grid-cols-1 gap-6">
-                <div>
-                  <Label htmlFor="destination" className="text-gray-700">
-                    Destino
-                  </Label>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="destination">Destino</Label>
                   <Input
                     id="destination"
                     type="text"
@@ -382,42 +609,36 @@ export const TravelManagement = () => {
                     onChange={(e) => setDestination(e.target.value)}
                     required
                     placeholder="Digite o destino"
-                    className="mt-1"
+                    className="w-full"
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="startDate" className="text-gray-700">
-                      Data Inicial
-                    </Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate">Data Inicial</Label>
                     <Input
                       id="startDate"
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
                       required
-                      className="mt-1"
+                      className="w-full"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="endDate" className="text-gray-700">
-                      Data Final
-                    </Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="endDate">Data Final</Label>
                     <Input
                       id="endDate"
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                       required
-                      className="mt-1"
+                      className="w-full"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="slots" className="text-gray-700">
-                      Número de Vagas
-                    </Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="slots">Número de Vagas</Label>
                     <Input
                       id="slots"
                       type="number"
@@ -425,39 +646,34 @@ export const TravelManagement = () => {
                       onChange={(e) => setSlots(e.target.value)}
                       required
                       min="1"
-                      className="mt-1"
+                      className="w-full"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="dailyRate" className="text-gray-700">
-                      Valor da Diária
-                    </Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="dailyRate">Valor da Diária</Label>
                     <Input
                       id="dailyRate"
                       type="number"
                       value={dailyRate}
                       onChange={(e) => setDailyRate(e.target.value)}
                       placeholder="Opcional"
-                      className="mt-1"
+                      className="w-full"
                     />
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center">
+                  <Label htmlFor="halfLastDay" className="mr-2 text-sm">
+                    Último dia meia diária
+                  </Label>
                   <Switch
                     id="halfLastDay"
                     checked={halfLastDay}
                     onCheckedChange={setHalfLastDay}
                   />
-                  <Label htmlFor="halfLastDay" className="text-gray-700">
-                    Último dia meia diária
-                  </Label>
                 </div>
               </div>
-              <div className="flex gap-4 pt-4">
-                <Button
-                  type="submit"
-                  className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
-                >
+              <div className="flex gap-4 mt-4">
+                <Button type="submit" className="w-full md:w-auto">
                   {editingTravel ? "Salvar Alterações" : "Criar Viagem"}
                 </Button>
                 <Button
@@ -474,7 +690,7 @@ export const TravelManagement = () => {
                     setDailyRate("");
                     setHalfLastDay(false);
                   }}
-                  className="flex-1"
+                  className="w-full md:w-auto"
                 >
                   Cancelar
                 </Button>
@@ -482,6 +698,15 @@ export const TravelManagement = () => {
             </form>
           </Card>
         </div>
+      )}
+
+      {isAdmin && (
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          className="fixed bottom-4 right-4 rounded-full p-4 bg-[#3B82F6] hover:bg-[#2563eb] text-white shadow-lg"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
       )}
     </div>
   );
