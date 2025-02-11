@@ -26,6 +26,9 @@ import {
 import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen } from "lucide-react";
 import { Switch } from "./ui/switch";
 
+// ---------------------------------------------------
+// INTERFACES
+// ---------------------------------------------------
 interface Travel {
   id: string;
   startDate: string;
@@ -35,12 +38,16 @@ interface Travel {
   dailyAllowance?: number | null;
   dailyRate?: number | null;
   halfLastDay: boolean;
-  volunteers: string[];
+  volunteers: string[];           // Todos que clicaram em "Quero ser Voluntário"
+  selectedVolunteers?: string[];  // Somente os que foram selecionados de fato
   archived: boolean;
   isLocked?: boolean;
 }
 
 export const TravelManagement = () => {
+  // ---------------------------------------------------
+  // STATES
+  // ---------------------------------------------------
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [slots, setSlots] = useState("");
@@ -49,46 +56,58 @@ export const TravelManagement = () => {
   const [dailyRate, setDailyRate] = useState("");
   const [halfLastDay, setHalfLastDay] = useState(false);
   const [travels, setTravels] = useState<Travel[]>([]);
+
+  // Armazena a contagem total de viagens e diárias de cada voluntário
   const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
   const [diaryCounts, setDiaryCounts] = useState<{ [key: string]: number }>({});
-  const [editingTravel, setEditingTravel] = useState<any>(null);
+
+  const [editingTravel, setEditingTravel] = useState<Travel | null>(null);
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [lockedTravels, setLockedTravels] = useState<string[]>([]);
+
   const { toast } = useToast();
+
+  // Usuário logado
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
 
-  // -------------------------
-  // EFEITO PARA CALCULAR DIÁRIAS E QUANTIDADE DE VIAGENS
-  // -------------------------
+  // ---------------------------------------------------
+  // 1) EFEITO PARA CALCULAR DIÁRIAS E VIAGENS
+  // ---------------------------------------------------
   useEffect(() => {
     const travelsRef = collection(db, "travels");
     const q = query(travelsRef);
-    
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const counts: { [key: string]: number } = {};
       const diaryCount: { [key: string]: number } = {};
       const today = new Date();
 
       snapshot.docs.forEach((doc) => {
-        const travel = doc.data() as DocumentData;
+        const travel = doc.data() as Travel;
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
 
-        // Verifica se existem voluntários e se a viagem está em qualquer estado pós-seleção
+        // Se a viagem está bloqueada no futuro, em andamento ou já terminou,
+        // então consideramos para o cálculo.
         if (
-          travel.volunteers && (
-            (today < travelStart && travel.isLocked) ||
-            (today >= travelStart && today <= travelEnd) ||
-            (today > travelEnd)
-          )
+          (today < travelStart && travel.isLocked) ||
+          (today >= travelStart && today <= travelEnd) ||
+          (today > travelEnd)
         ) {
-          travel.volunteers.forEach((volunteer: string) => {
-            // Conta quantas viagens essa pessoa já participou
+          // Fallback: se existe selectedVolunteers e estiver não vazio, use-o;
+          // caso contrário, use volunteers.
+          const finalList =
+            travel.selectedVolunteers && travel.selectedVolunteers.length > 0
+              ? travel.selectedVolunteers
+              : travel.volunteers || [];
+
+          finalList.forEach((volunteer: string) => {
+            // Soma contagem de viagens
             counts[volunteer] = (counts[volunteer] || 0) + 1;
-            
-            // Calcula diárias
+
+            // Soma diárias
             const days = differenceInDays(travelEnd, travelStart) + 1;
             const diaryDays = travel.halfLastDay ? days - 0.5 : days;
             diaryCount[volunteer] = (diaryCount[volunteer] || 0) + diaryDays;
@@ -103,9 +122,9 @@ export const TravelManagement = () => {
     return () => unsubscribe();
   }, []);
 
-  // -------------------------
-  // EFEITO PARA CARREGAR VIAGENS
-  // -------------------------
+  // ---------------------------------------------------
+  // 2) EFEITO PARA CARREGAR VIAGENS
+  // ---------------------------------------------------
   useEffect(() => {
     const q = query(collection(db, "travels"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -124,14 +143,15 @@ export const TravelManagement = () => {
     return () => unsubscribe();
   }, []);
 
-  // -------------------------
-  // CRIAR OU EDITAR VIAGEM
-  // -------------------------
+  // ---------------------------------------------------
+  // 3) CRIAR OU EDITAR VIAGEM
+  // ---------------------------------------------------
   const handleCreateTravel = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       if (editingTravel) {
+        // Editando viagem existente
         const travelRef = doc(db, "travels", editingTravel.id);
         await updateDoc(travelRef, {
           startDate,
@@ -151,6 +171,7 @@ export const TravelManagement = () => {
         });
         setEditingTravel(null);
       } else {
+        // Criando nova viagem
         await addDoc(collection(db, "travels"), {
           startDate,
           endDate,
@@ -161,6 +182,7 @@ export const TravelManagement = () => {
           halfLastDay,
           createdAt: new Date(),
           volunteers: [],
+          selectedVolunteers: [], // inicia vazio
           archived: false,
           isLocked: false,
         });
@@ -171,6 +193,7 @@ export const TravelManagement = () => {
         });
       }
 
+      // Limpa estados
       setStartDate("");
       setEndDate("");
       setSlots("");
@@ -195,15 +218,15 @@ export const TravelManagement = () => {
     setEndDate(travel.endDate);
     setSlots(String(travel.slots));
     setDestination(travel.destination);
-    setDailyAllowance(String(travel.dailyAllowance));
-    setDailyRate(String(travel.dailyRate));
+    setDailyAllowance(String(travel.dailyAllowance || ""));
+    setDailyRate(String(travel.dailyRate || ""));
     setHalfLastDay(travel.halfLastDay || false);
     setIsModalOpen(true);
   };
 
-  // -------------------------
-  // EXCLUIR VIAGEM
-  // -------------------------
+  // ---------------------------------------------------
+  // 4) EXCLUIR VIAGEM
+  // ---------------------------------------------------
   const handleDeleteTravel = async (travelId: string) => {
     try {
       await deleteDoc(doc(db, "travels", travelId));
@@ -221,9 +244,9 @@ export const TravelManagement = () => {
     }
   };
 
-  // -------------------------
-  // ARQUIVAR VIAGEM
-  // -------------------------
+  // ---------------------------------------------------
+  // 5) ARQUIVAR VIAGEM
+  // ---------------------------------------------------
   const handleArchive = async (travelId: string, archived: boolean) => {
     try {
       const travelRef = doc(db, "travels", travelId);
@@ -244,9 +267,9 @@ export const TravelManagement = () => {
     }
   };
 
-  // -------------------------
-  // VOLUNTARIAR-SE
-  // -------------------------
+  // ---------------------------------------------------
+  // 6) VOLUNTARIAR-SE
+  // ---------------------------------------------------
   const handleVolunteer = async (travelId: string) => {
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -268,8 +291,8 @@ export const TravelManagement = () => {
         throw new Error("Viagem não encontrada");
       }
 
-      const travelData = travelSnap.data();
-      const currentVolunteers: string[] = Array.isArray(travelData.volunteers)
+      const travelData = travelSnap.data() as Travel;
+      const currentVolunteers = Array.isArray(travelData.volunteers)
         ? travelData.volunteers
         : [];
 
@@ -306,9 +329,9 @@ export const TravelManagement = () => {
     }
   };
 
-  // -------------------------
-  // FUNÇÃO DE TRAVAR / PROCESSAR DIÁRIA (CORRIGIDA)
-  // -------------------------
+  // ---------------------------------------------------
+  // 7) TRAVAR / PROCESSAR DIÁRIA (SEM EXCLUIR VOLUNTÁRIOS)
+  // ---------------------------------------------------
   const handleToggleLock = async (travelId: string) => {
     try {
       const travelRef = doc(db, "travels", travelId);
@@ -335,8 +358,7 @@ export const TravelManagement = () => {
           };
         });
 
-        // 3. Ordena pelo mesmo critério do sortVolunteers
-        //    (menor quantidade de diárias primeiro; em caso de empate, maior patente primeiro)
+        // 3. Ordena (menor diária primeiro; em caso de empate, maior patente primeiro)
         processed.sort((a, b) => {
           if (a.diaryCount !== b.diaryCount) {
             return a.diaryCount - b.diaryCount;
@@ -344,18 +366,19 @@ export const TravelManagement = () => {
           return b.rankWeight - a.rankWeight;
         });
 
-        // 4. Fica só com a quantidade de vagas
+        // 4. Pega só a quantidade de vagas
         const selectedVolunteers = processed.slice(0, travelData.slots);
 
-        // 5. Atualiza no Firestore com apenas os selecionados
+        // 5. Atualiza APENAS selectedVolunteers (mantendo volunteers)
         await updateDoc(travelRef, {
           isLocked: true,
-          volunteers: selectedVolunteers.map((v) => v.fullName),
+          selectedVolunteers: selectedVolunteers.map((v) => v.fullName),
         });
       } else {
-        // Desbloqueando a viagem (caso queiram reabrir vagas)
+        // Desbloqueando a viagem (reabrir vagas)
         await updateDoc(travelRef, {
           isLocked: false,
+          selectedVolunteers: [],
         });
       }
 
@@ -375,9 +398,9 @@ export const TravelManagement = () => {
     }
   };
 
-  // -------------------------
-  // PESO DE PATENTES
-  // -------------------------
+  // ---------------------------------------------------
+  // 8) FUNÇÃO DE PESO DAS PATENTES
+  // ---------------------------------------------------
   const getMilitaryRankWeight = (rank: string): number => {
     const rankWeights: { [key: string]: number } = {
       "Cel PM": 12,
@@ -398,9 +421,9 @@ export const TravelManagement = () => {
     return rankWeights[rank] || 0;
   };
 
-  // -------------------------
-  // FORMATAÇÕES DE EXIBIÇÃO
-  // -------------------------
+  // ---------------------------------------------------
+  // 9) FORMATAÇÕES
+  // ---------------------------------------------------
   const formattedTravelCount = (count: number) => {
     return count === 1 ? "1 viagem" : `${count} viagens`;
   };
@@ -413,35 +436,45 @@ export const TravelManagement = () => {
     return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
   };
 
-  const sortVolunteers = (volunteers: string[], slots: number) => {
-    if (!volunteers?.length) return [];
-    
-    const processedVolunteers = volunteers.map(volunteer => {
+  // ---------------------------------------------------
+  // 10) FUNÇÃO PARA MONTAR LISTA DE VOLUNTÁRIOS (VERDE/CINZA)
+  // ---------------------------------------------------
+  const sortVolunteers = (travel: Travel) => {
+    if (!travel.volunteers?.length) return [];
+
+    // Monta objeto com dados
+    const processedVolunteers = travel.volunteers.map(volunteer => {
       const [rank] = volunteer.split(' ');
       return {
         fullName: volunteer,
         rank,
-        count: volunteerCounts[volunteer] || 0,
-        diaryCount: diaryCounts[volunteer] || 0,
-        rankWeight: getMilitaryRankWeight(rank)
+        count: volunteerCounts[volunteer] || 0,   // qtd de viagens
+        diaryCount: diaryCounts[volunteer] || 0,  // qtd de diárias
+        isSelected: travel.selectedVolunteers?.includes(volunteer) || false
       };
     });
 
-    // Ordena: menor diária primeiro, em caso de empate maior patente primeiro
-    const sortedVolunteers = processedVolunteers.sort((a, b) => {
+    // Ordena de modo que os selecionados fiquem no topo
+    // e, entre si, ordene por menor diária e maior patente
+    processedVolunteers.sort((a, b) => {
+      // 1. Selecionado primeiro
+      if (a.isSelected && !b.isSelected) return -1;
+      if (!a.isSelected && b.isSelected) return 1;
+
+      // 2. Se ambos são selecionados (ou ambos não), ordena por diárias
       if (a.diaryCount !== b.diaryCount) {
         return a.diaryCount - b.diaryCount;
       }
+      // 3. Em caso de empate, maior patente primeiro
       return b.rankWeight - a.rankWeight;
     });
 
-    // Define quem é "selecionado" (até o limite de vagas)
-    return sortedVolunteers.map((volunteer, index) => ({
-      ...volunteer,
-      selected: index < slots,
-    }));
+    return processedVolunteers;
   };
 
+  // ---------------------------------------------------
+  // 11) EXPANDIR OU RECOLHER CARTÕES
+  // ---------------------------------------------------
   const toggleExpansion = (travelId: string) => {
     setExpandedTravels((prev) =>
       prev.includes(travelId)
@@ -450,9 +483,9 @@ export const TravelManagement = () => {
     );
   };
 
-  // -------------------------
-  // RENDER
-  // -------------------------
+  // ---------------------------------------------------
+  // 12) RENDER
+  // ---------------------------------------------------
   return (
     <div className="p-6 space-y-8 relative">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -468,6 +501,7 @@ export const TravelManagement = () => {
             let statusBadge = null;
             const rightPos = isAdmin ? "right-12" : "right-2";
 
+            // Define cor e status
             if (today < travelStart) {
               if (isLocked) {
                 statusBadge = (
@@ -498,6 +532,7 @@ export const TravelManagement = () => {
               );
             }
 
+            // Cálculo de diárias para exibição
             const numDays = differenceInDays(travelEnd, travelStart) + 1;
             const count = travel.halfLastDay ? numDays - 0.5 : numDays;
             const formattedCount = count.toLocaleString("pt-BR", {
@@ -514,6 +549,7 @@ export const TravelManagement = () => {
                 })})`
               : `Diárias: ${formattedCount}`;
 
+            // Conteúdo reduzido (cartão fechado)
             const minimalContent = (
               <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
                 <h3 className="text-xl font-semibold">{travel.destination}</h3>
@@ -522,6 +558,7 @@ export const TravelManagement = () => {
               </div>
             );
 
+            // Conteúdo completo (cartão aberto)
             const fullContent = (
               <div>
                 <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
@@ -532,35 +569,35 @@ export const TravelManagement = () => {
                   <p>Data Final: {travelEnd.toLocaleDateString()}</p>
                   <p>Vagas: {travel.slots}</p>
                   <p>{diariasLine}</p>
+
+                  {/* Lista de voluntários */}
                   {travel.volunteers && travel.volunteers.length > 0 && (
                     <div className="pt-4 border-t border-gray-100">
                       <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntário:</h4>
                       <ul className="space-y-1">
-                        {sortVolunteers(travel.volunteers, travel.slots)
-                          .filter(volunteer => !isLocked || volunteer.selected)
-                          .map((volunteer) => (
+                        {sortVolunteers(travel).map((vol) => (
                           <li
-                            key={volunteer.fullName}
+                            key={vol.fullName}
                             className={`text-sm p-2 rounded flex justify-between items-center ${
-                              volunteer.selected 
+                              vol.isSelected 
                                 ? 'bg-green-100 border border-green-200'
                                 : 'bg-gray-50 border border-gray-100'
                             }`}
                           >
                             <div className="flex items-center space-x-2">
-                              {volunteer.selected && (
+                              {vol.isSelected && (
                                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
                               )}
-                              <span className={`${volunteer.selected ? 'font-medium' : ''}`}>
-                                {volunteer.fullName}
+                              <span className={`${vol.isSelected ? 'font-medium' : ''}`}>
+                                {vol.fullName}
                               </span>
                             </div>
                             <div className="text-right">
-                              <span className={`text-xs ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
-                                {formattedTravelCount(volunteer.count)}
+                              <span className={`text-xs ${vol.isSelected ? 'text-green-700' : 'text-gray-500'}`}>
+                                {formattedTravelCount(vol.count)}
                               </span>
-                              <span className={`text-xs block ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
-                                {formattedDiaryCount(volunteer.diaryCount)}
+                              <span className={`text-xs block ${vol.isSelected ? 'text-green-700' : 'text-gray-500'}`}>
+                                {formattedDiaryCount(vol.diaryCount)}
                               </span>
                             </div>
                           </li>
@@ -569,6 +606,9 @@ export const TravelManagement = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Se a viagem ainda não começou, não está arquivada e não está travada, 
+                    permitir voluntariar ou desistir */}
                 {today < travelStart && !travel.archived && !isLocked && (
                   <div className="mt-4">
                     <Button
@@ -591,11 +631,15 @@ export const TravelManagement = () => {
             return (
               <Card
                 key={travel.id}
-                className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg} ${travel.archived ? "cursor-pointer" : ""}`}
+                className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg} ${
+                  travel.archived ? "cursor-pointer" : ""
+                }`}
                 onClick={travel.archived ? () => toggleExpansion(travel.id) : undefined}
                 onDoubleClick={today > travelEnd ? () => toggleExpansion(travel.id) : undefined}
               >
                 {statusBadge}
+
+                {/* Menu de opções para Admin */}
                 {isAdmin && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -635,6 +679,7 @@ export const TravelManagement = () => {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
+
                 <div className="space-y-4">
                   {travel.archived && !expandedTravels.includes(travel.id)
                     ? minimalContent
@@ -645,6 +690,7 @@ export const TravelManagement = () => {
           })}
       </div>
 
+      {/* Modal para criar/editar viagem */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <Card className="p-6 bg-white shadow-lg max-w-lg w-full relative">
@@ -769,6 +815,7 @@ export const TravelManagement = () => {
         </div>
       )}
 
+      {/* Botão de criar nova viagem (visível só para admin) */}
       {isAdmin && (
         <Button
           onClick={() => setIsModalOpen(true)}
@@ -782,26 +829,3 @@ export const TravelManagement = () => {
 };
 
 export default TravelManagement;
-
-// -------------------------
-// FUNÇÃO AUXILIAR
-// -------------------------
-function getMilitaryRankWeight(rank: string): number {
-  // (mantido aqui para referência se precisar exportar separadamente)
-  const rankWeights: { [key: string]: number } = {
-    "Cel PM": 12,
-    "Ten Cel PM": 11,
-    "Maj PM": 10,
-    "Cap PM": 9,
-    "1° Ten PM": 8,
-    "2° Ten PM": 7,
-    "Sub Ten PM": 6,
-    "1° Sgt PM": 5,
-    "2° Sgt PM": 4,
-    "3° Sgt PM": 3,
-    "Cb PM": 2,
-    "Sd PM": 1,
-    "Estágio": 0
-  };
-  return rankWeights[rank] || 0;
-}
