@@ -39,7 +39,7 @@ interface Travel {
   dailyRate?: number | null;
   halfLastDay: boolean;
   volunteers: string[];           // Todos que se inscreveram
-  selectedVolunteers?: string[];  // Somente os que foram selecionados (definidos automaticamente ou via seleção manual)
+  selectedVolunteers?: string[];  // Somente os que foram selecionados
   archived: boolean;
   isLocked?: boolean;
 }
@@ -48,7 +48,9 @@ interface Travel {
 // COMPONENTE PRINCIPAL
 // ---------------------------------------------------
 export const TravelManagement = () => {
-  // Estados do formulário
+  // -----------------------------
+  // ESTADOS GERAIS
+  // -----------------------------
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [slots, setSlots] = useState("");
@@ -57,36 +59,24 @@ export const TravelManagement = () => {
   const [dailyRate, setDailyRate] = useState("");
   const [halfLastDay, setHalfLastDay] = useState(false);
 
-  // Lista de viagens
   const [travels, setTravels] = useState<Travel[]>([]);
-
-  // Contadores globais de viagens e diárias por voluntário
   const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
   const [diaryCounts, setDiaryCounts] = useState<{ [key: string]: number }>({});
 
-  // Para edição de viagem
+  // Para editar viagem
   const [editingTravel, setEditingTravel] = useState<Travel | null>(null);
 
-  // Controle de expansão dos cartões
+  // Controle de expansão de cartões
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
 
   // Modal de criação/edição
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Viagens bloqueadas
-  const [lockedTravels, setLockedTravels] = useState<string[]>([]);
-
-  // Modal para exibição das regras de ordenação
-  const [isRankingRulesModalOpen, setIsRankingRulesModalOpen] = useState(false);
-
-  // Modal de seleção manual (apenas para admin)
-  const [isManualSelectionModalOpen, setIsManualSelectionModalOpen] = useState(false);
-  const [manualSelectionTravel, setManualSelectionTravel] = useState<Travel | null>(null);
-  const [manualSelectedVolunteers, setManualSelectedVolunteers] = useState<string[]>([]);
+  // Modal de exibição das regras (exemplo)
+  const [showRankingRules, setShowRankingRules] = useState(false);
 
   const { toast } = useToast();
 
-  // Usuário logado
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
 
@@ -146,11 +136,6 @@ export const TravelManagement = () => {
         ...doc.data(),
       })) as Travel[];
       setTravels(travelsData);
-      
-      const lockedTravelIds = travelsData
-        .filter(travel => travel.isLocked)
-        .map(travel => travel.id);
-      setLockedTravels(lockedTravelIds);
     });
 
     return () => unsubscribe();
@@ -289,7 +274,7 @@ export const TravelManagement = () => {
         toast({
           title: "Erro",
           description: "Usuário não encontrado. Por favor, faça login novamente.",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
@@ -306,7 +291,7 @@ export const TravelManagement = () => {
         ? travelData.volunteers
         : [];
 
-      // Se já estiver inscrito, remove (desistir); se não, adiciona
+      // Se já estiver na lista, remove (desistir). Se não estiver, adiciona
       if (currentVolunteers.includes(volunteerInfo)) {
         const updatedVolunteers = currentVolunteers.filter(v => v !== volunteerInfo);
         await updateDoc(travelRef, {
@@ -353,31 +338,37 @@ export const TravelManagement = () => {
       const isCurrentlyLocked = travelData.isLocked ?? false;
 
       if (!isCurrentlyLocked) {
-        // Ao travar, define automaticamente os selecionados
+        // Bloqueando a viagem agora (Processar diária).
         const allVolunteers = travelData.volunteers ?? [];
 
-        const processed = allVolunteers.map((volunteer, index) => {
+        // Monta objetos para ordenação
+        const processed = allVolunteers.map((volunteer) => {
           const [rank] = volunteer.split(" ");
           return {
             fullName: volunteer,
             rank,
             diaryCount: diaryCounts[volunteer] || 0,
             rankWeight: getMilitaryRankWeight(rank),
-            appliedAtIndex: travelData.volunteers.indexOf(volunteer), // Ordem de chegada
+            // "appliedAtIndex" = posição no array "volunteers"
+            appliedAtIndex: travelData.volunteers.indexOf(volunteer),
           };
         });
 
-        // Ordena: menor diárias, se empate maior patente e, se ainda empate, quem chegou primeiro
+        // Ordena: 
+        //  1) menor diária
+        //  2) maior patente
+        //  3) quem chegou primeiro (appliedAtIndex)
         processed.sort((a, b) => {
           if (a.diaryCount !== b.diaryCount) {
-            return a.diaryCount - b.diaryCount;
+            return a.diaryCount - b.diaryCount;  // asc
           }
           if (a.rankWeight !== b.rankWeight) {
-            return b.rankWeight - a.rankWeight;
+            return b.rankWeight - a.rankWeight;  // desc
           }
-          return a.appliedAtIndex - b.appliedAtIndex;
+          return a.appliedAtIndex - b.appliedAtIndex; // asc
         });
 
+        // Pega até o limite de vagas
         const selectedVolunteers = processed.slice(0, travelData.slots);
 
         await updateDoc(travelRef, {
@@ -385,6 +376,7 @@ export const TravelManagement = () => {
           selectedVolunteers: selectedVolunteers.map((v) => v.fullName),
         });
       } else {
+        // Desbloqueando a viagem (reabrir vagas)
         await updateDoc(travelRef, {
           isLocked: false,
           selectedVolunteers: [],
@@ -408,21 +400,33 @@ export const TravelManagement = () => {
   };
 
   // ---------------------------------------------------
-  // 8) PESO DE PATENTES
+  // 8) FUNÇÃO PARA CALCULAR PESO DAS PATENTES
   // ---------------------------------------------------
   const getMilitaryRankWeight = (rank: string): number => {
     const rankWeights: { [key: string]: number } = {
+      "Cel": 12,
       "Cel PM": 12,
+      "Ten Cel": 11,
       "Ten Cel PM": 11,
+      "Maj": 10,
       "Maj PM": 10,
+      "Cap": 9,
       "Cap PM": 9,
+      "1° Ten": 8,
       "1° Ten PM": 8,
+      "2° Ten": 7,
       "2° Ten PM": 7,
+      "Sub Ten": 6,
       "Sub Ten PM": 6,
+      "1° Sgt": 5,
       "1° Sgt PM": 5,
+      "2° Sgt": 4,
       "2° Sgt PM": 4,
+      "3° Sgt": 3,
       "3° Sgt PM": 3,
+      "Cb": 2,
       "Cb PM": 2,
+      "Sd": 1,
       "Sd PM": 1,
       "Estágio": 0,
     };
@@ -430,7 +434,7 @@ export const TravelManagement = () => {
   };
 
   // ---------------------------------------------------
-  // 9) FORMATAÇÕES
+  // 9) FUNÇÕES DE FORMATAÇÃO
   // ---------------------------------------------------
   const formattedTravelCount = (count: number) => {
     return count === 1 ? "1 viagem" : `${count} viagens`;
@@ -441,59 +445,65 @@ export const TravelManagement = () => {
       minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
       maximumFractionDigits: 1,
     });
-    return `${formattedCount} ${count === 1 ? "diária" : "diárias"}`;
+    return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
   };
 
   // ---------------------------------------------------
-  // 10) FUNÇÃO PARA DETERMINAR QUEM EXIBIR
-  //     Se a viagem estiver bloqueada, mostra somente selectedVolunteers;
-  //     caso contrário, mostra todos (volunteers).
+  // 10) OBTÉM LISTA DE VOLUNTÁRIOS A EXIBIR + ORDENAÇÃO
   // ---------------------------------------------------
-  const getVolunteersToDisplay = (travel: Travel) => {
-    return travel.isLocked
+  const getSortedVolunteers = (travel: Travel) => {
+    // Se a viagem estiver bloqueada, mostramos apenas selectedVolunteers
+    // Se não estiver bloqueada, mostramos todos de volunteers
+    const baseList = travel.isLocked
       ? travel.selectedVolunteers || []
       : travel.volunteers || [];
-  };
 
-  // ---------------------------------------------------
-  // 11) FUNÇÃO DE ORDENAMENTO DOS VOLUNTÁRIOS (inclui novo critério: ordem de inscrição)
-  // ---------------------------------------------------
-  const sortVolunteers = (travel: Travel, volunteersList: string[]) => {
-    const processedVolunteers = volunteersList.map((volunteer) => {
+    // Monta array de objetos
+    const processed = baseList.map((volunteer) => {
       const [rank] = volunteer.split(" ");
       return {
         fullName: volunteer,
         rank,
-        count: volunteerCounts[volunteer] || 0,
         diaryCount: diaryCounts[volunteer] || 0,
-        appliedAtIndex: travel.volunteers.indexOf(volunteer),
-        isSelected: travel.selectedVolunteers?.includes(volunteer) || false,
+        rankWeight: getMilitaryRankWeight(rank),
+        appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
       };
     });
 
-    processedVolunteers.sort((a, b) => {
-      // Primeiro: voluntários selecionados vêm antes
-      if (a.isSelected && !b.isSelected) return -1;
-      if (!a.isSelected && b.isSelected) return 1;
-      // Segundo: menor diárias primeiro
+    // Se estiver bloqueada, assumimos que todos ali estão "isSelected"
+    // Se não estiver, quem ficaria no top X é "potencialmente selecionado"
+    // (para destacar e mostrar "Seleção" no front)
+    const totalSlots = travel.slots || 1;
+
+    // Ordena do mesmo jeito
+    processed.sort((a, b) => {
+      // 1) Menor diária
       if (a.diaryCount !== b.diaryCount) {
         return a.diaryCount - b.diaryCount;
       }
-      // Terceiro: maior patente (peso maior) vem primeiro
-      const aRankWeight = getMilitaryRankWeight(a.rank);
-      const bRankWeight = getMilitaryRankWeight(b.rank);
-      if (aRankWeight !== bRankWeight) {
-        return bRankWeight - aRankWeight;
+      // 2) Maior patente
+      if (a.rankWeight !== b.rankWeight) {
+        return b.rankWeight - a.rankWeight;
       }
-      // Quarto: quem chegou primeiro (menor índice) vem primeiro
+      // 3) Quem chegou primeiro
       return a.appliedAtIndex - b.appliedAtIndex;
     });
 
-    return processedVolunteers;
+    // Se não estiver bloqueada, a "seleção" é apenas visual:
+    //   os primeiros 'slots' são marcados como selecionados
+    // Se estiver bloqueada, todos exibidos já são considerados selecionados
+    const isLocked = travel.isLocked;
+
+    return processed.map((item, idx) => {
+      const isSelected = isLocked
+        ? true
+        : idx < totalSlots; // se não está bloqueada, os top 'slots' são "selecionados"
+      return { ...item, isSelected };
+    });
   };
 
   // ---------------------------------------------------
-  // 12) EXPANDIR OU RECOLHER CARTÕES
+  // 11) EXPANDIR/COLAPSAR CARTÕES
   // ---------------------------------------------------
   const toggleExpansion = (travelId: string) => {
     setExpandedTravels((prev) =>
@@ -504,110 +514,28 @@ export const TravelManagement = () => {
   };
 
   // ---------------------------------------------------
-  // 13) ABRIR MODAL DE SELEÇÃO MANUAL (ADMIN)
-  // ---------------------------------------------------
-  const openManualSelection = (travel: Travel) => {
-    setManualSelectionTravel(travel);
-    // Preenche com os já selecionados, se houver; senão, usa todos os inscritos
-    setManualSelectedVolunteers(
-      travel.selectedVolunteers && travel.selectedVolunteers.length > 0
-        ? travel.selectedVolunteers
-        : travel.volunteers
-    );
-    setIsManualSelectionModalOpen(true);
-  };
-
-  const handleManualSelectionSubmit = async () => {
-    if (!manualSelectionTravel) return;
-    try {
-      const travelRef = doc(db, "travels", manualSelectionTravel.id);
-      await updateDoc(travelRef, {
-        isLocked: true,
-        selectedVolunteers: manualSelectedVolunteers,
-      });
-      toast({
-        title: "Sucesso",
-        description: "Seleção manual atualizada!",
-      });
-      setIsManualSelectionModalOpen(false);
-      setManualSelectionTravel(null);
-    } catch (error) {
-      console.error("Error in manual selection:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar seleção manual.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // ---------------------------------------------------
-  // 14) RENDERIZAÇÃO
+  // RENDER
   // ---------------------------------------------------
   return (
     <div className="p-6 space-y-8 relative">
-      {/* Modal de Regras de Ordenação */}
-      {isRankingRulesModalOpen && (
+      {/* Modal de Regras (exemplo simples) */}
+      {showRankingRules && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="p-6 bg-white max-w-md w-full relative">
-            <h2 className="text-xl font-semibold mb-4">Regras de Reorganização</h2>
-            <p className="text-sm">
-              1. Ordena-se primeiramente pela quantidade de diárias acumuladas (menor primeiro).<br />
-              2. Em caso de empate, a graduação mais alta fica na frente.<br />
-              3. Se ainda houver empate na graduação, o voluntário que se inscreveu primeiro (quem chegou primeiro) ficará na frente.
-            </p>
-            <Button onClick={() => setIsRankingRulesModalOpen(false)} className="mt-4">
+          <Card className="p-6 bg-white shadow-lg max-w-md w-full relative">
+            <h2 className="text-xl font-semibold mb-2">Regras de Ordenação</h2>
+            <ol className="list-decimal list-inside text-sm space-y-1">
+              <li>Menor quantidade de diárias primeiro.</li>
+              <li>Em caso de empate, graduação mais antiga (peso maior) fica acima.</li>
+              <li>Se ainda houver empate, quem se inscreveu primeiro (ordem de chegada) fica acima.</li>
+            </ol>
+            <Button className="mt-4" onClick={() => setShowRankingRules(false)}>
               Fechar
             </Button>
           </Card>
         </div>
       )}
 
-      {/* Modal de Seleção Manual (Admin) */}
-      {isManualSelectionModalOpen && manualSelectionTravel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="p-6 bg-white max-w-md w-full relative">
-            <h2 className="text-xl font-semibold mb-4">Seleção Manual - {manualSelectionTravel.destination}</h2>
-            <ul className="space-y-2 max-h-60 overflow-y-auto">
-              {manualSelectionTravel.volunteers.map((volunteer, index) => (
-                <li key={index} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={manualSelectedVolunteers.includes(volunteer)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setManualSelectedVolunteers((prev) => [...prev, volunteer]);
-                      } else {
-                        setManualSelectedVolunteers((prev) =>
-                          prev.filter((v) => v !== volunteer)
-                        );
-                      }
-                    }}
-                    className="mr-2"
-                  />
-                  <span>{volunteer}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="flex gap-4 mt-4">
-              <Button onClick={handleManualSelectionSubmit} className="w-full">
-                Salvar Seleção
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsManualSelectionModalOpen(false);
-                  setManualSelectionTravel(null);
-                }}
-                className="w-full"
-              >
-                Cancelar
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
+      {/* LISTA DE CARTÕES DE VIAGEM */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
@@ -621,6 +549,7 @@ export const TravelManagement = () => {
             let statusBadge = null;
             const rightPos = isAdmin ? "right-12" : "right-2";
 
+            // Define status do cartão
             if (today < travelStart) {
               if (isLocked) {
                 statusBadge = (
@@ -632,7 +561,13 @@ export const TravelManagement = () => {
                 statusBadge = (
                   <div className={`absolute top-2 ${rightPos} bg-[#3B82F6] text-white px-2 py-1 text-xs rounded flex items-center`}>
                     Em aberto
-                    <button onClick={(e) => { e.stopPropagation(); setIsRankingRulesModalOpen(true); }} className="ml-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowRankingRules(true);
+                      }}
+                      className="ml-2"
+                    >
                       <Info className="h-4 w-4" />
                     </button>
                   </div>
@@ -642,7 +577,7 @@ export const TravelManagement = () => {
               cardBg = "bg-green-100";
               statusBadge = (
                 <div className={`absolute top-2 ${rightPos} bg-green-500 text-white px-2 py-1 text-xs rounded`}>
-                  Em trânsito
+                  Em transito
                 </div>
               );
             } else if (today > travelEnd) {
@@ -654,7 +589,7 @@ export const TravelManagement = () => {
               );
             }
 
-            // Cálculo de diárias para exibição
+            // Cálculo de diárias (exibição)
             const numDays = differenceInDays(travelEnd, travelStart) + 1;
             const count = travel.halfLastDay ? numDays - 0.5 : numDays;
             const formattedCount = count.toLocaleString("pt-BR", {
@@ -680,11 +615,8 @@ export const TravelManagement = () => {
               </div>
             );
 
-            // Determina quais voluntários exibir
-            const volunteersToDisplay = travel.isLocked
-              ? travel.selectedVolunteers || []
-              : travel.volunteers || [];
-            const sortedVolunteers = sortVolunteers(travel, volunteersToDisplay);
+            // Voluntários ordenados pela regra
+            const sortedVolunteers = getSortedVolunteers(travel);
 
             // Conteúdo completo (cartão aberto)
             const fullContent = (
@@ -702,11 +634,11 @@ export const TravelManagement = () => {
                     <div className="pt-4 border-t border-gray-100">
                       <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntário:</h4>
                       <ul className="space-y-1">
-                        {sortedVolunteers.map((vol) => (
+                        {sortedVolunteers.map((vol, idx) => (
                           <li
                             key={vol.fullName}
                             className={`text-sm p-2 rounded flex justify-between items-center ${
-                              vol.isSelected 
+                              vol.isSelected
                                 ? "bg-green-100 border border-green-200"
                                 : "bg-gray-50 border border-gray-100"
                             }`}
@@ -718,10 +650,20 @@ export const TravelManagement = () => {
                               <span className={vol.isSelected ? "font-medium" : ""}>
                                 {vol.fullName}
                               </span>
+                              {/* Se for o "isSelected", podemos exibir um rótulo */}
+                              {vol.isSelected && (
+                                <span className="text-[10px] text-green-600 border border-green-300 px-1 rounded">
+                                  {idx === 0 && travel.slots === 1
+                                    ? "Selecionado (1ª posição)"
+                                    : idx < (travel.slots || 1)
+                                      ? `Selecionado (pos. ${idx + 1})`
+                                      : ""}
+                                </span>
+                              )}
                             </div>
                             <div className="text-right">
                               <span className={`text-xs ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
-                                {formattedTravelCount(vol.count)}
+                                {formattedTravelCount(volunteerCounts[vol.fullName] || 0)}
                               </span>
                               <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
                                 {formattedDiaryCount(vol.diaryCount)}
@@ -734,6 +676,7 @@ export const TravelManagement = () => {
                   )}
                 </div>
 
+                {/* Botão de voluntariar, se viagem em aberto e futuro */}
                 {today < travelStart && !travel.archived && !isLocked && (
                   <div className="mt-4">
                     <Button
@@ -764,6 +707,7 @@ export const TravelManagement = () => {
               >
                 {statusBadge}
 
+                {/* Menu Admin */}
                 {isAdmin && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -800,12 +744,6 @@ export const TravelManagement = () => {
                           </>
                         )}
                       </DropdownMenuItem>
-                      {isAdmin && !travel.isLocked && (
-                        <DropdownMenuItem onClick={() => openManualSelection(travel)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Seleção Manual
-                        </DropdownMenuItem>
-                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -820,7 +758,7 @@ export const TravelManagement = () => {
           })}
       </div>
 
-      {/* Modal de criação/edição de viagens */}
+      {/* MODAL DE CRIAÇÃO/EDIÇÃO */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <Card className="p-6 bg-white shadow-lg max-w-lg w-full relative">
@@ -945,9 +883,7 @@ export const TravelManagement = () => {
         </div>
       )}
 
-      {/* Botão para abrir modal de seleção manual (Admin) já está incluído no Dropdown */}
-
-      {/* Botão para criar nova viagem (visível só para Admin) */}
+      {/* Botão de criar nova viagem (somente Admin) */}
       {isAdmin && (
         <Button
           onClick={() => setIsModalOpen(true)}
