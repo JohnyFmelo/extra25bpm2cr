@@ -75,21 +75,21 @@ export const TravelManagement = () => {
       "Sd PM": 1,
       "Estágio": 0,
     };
-
     return rankWeights[rank] || 0;
   };
 
+  // Função usada na renderização para ordenar os voluntários
   const sortVolunteers = (volunteers: string[], slots: number) => {
     if (!volunteers?.length) return [];
 
     const processedVolunteers = volunteers.map(volunteer => {
-      const [rank, ...nameParts] = volunteer.split(' ');
+      const [rank, ...nameParts] = volunteer.split(" ");
       return {
         fullName: volunteer,
         rank,
         count: volunteerCounts[volunteer] || 0,
         diaryCount: diaryCounts[volunteer] || 0,
-        rankWeight: getMilitaryRankWeight(rank)
+        rankWeight: getMilitaryRankWeight(rank),
       };
     });
 
@@ -103,11 +103,11 @@ export const TravelManagement = () => {
     return sortedVolunteers.map((volunteer, index) => ({
       ...volunteer,
       selected: index < slots,
-      selectionReason: index < slots ? 
-        volunteer.diaryCount === sortedVolunteers[0].diaryCount ? 
-          'Selecionado por antiguidade' : 
-          'Selecionado por menor quantidade de diárias' :
-        undefined
+      selectionReason: index < slots
+        ? volunteer.diaryCount === sortedVolunteers[0].diaryCount
+          ? "Selecionado por antiguidade"
+          : "Selecionado por menor quantidade de diárias"
+        : undefined,
     }));
   };
 
@@ -120,9 +120,10 @@ export const TravelManagement = () => {
       minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
       maximumFractionDigits: 1,
     });
-    return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
+    return `${formattedCount} ${count === 1 ? "diária" : "diárias"}`;
   };
 
+  // useEffect para calcular os totais de diárias e viagens
   useEffect(() => {
     const travelsRef = collection(db, "travels");
     const q = query(travelsRef);
@@ -137,43 +138,44 @@ export const TravelManagement = () => {
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
 
-        if (
-          travel.volunteers && (
-            (today < travelStart && travel.isLocked) ||
-            (today >= travelStart && today <= travelEnd) ||
-            (today > travelEnd)
-          )
-        ) {
-          let volunteersToCount = travel.volunteers;
-          // Se a viagem está processando a diária (bloqueada), contabiliza somente os selecionados (dentro do container verde)
+        // Se houver voluntários cadastrados...
+        if (travel.volunteers) {
           if (travel.isLocked) {
-            volunteersToCount = (() => {
-              const processedVolunteers = travel.volunteers.map(vol => {
-                const [rank] = vol.split(' ');
-                return {
-                  fullName: vol,
-                  rank,
-                  count: counts[vol] || 0,
-                  diaryCount: diaryCount[vol] || 0,
-                  rankWeight: getMilitaryRankWeight(rank)
-                };
-              });
-              processedVolunteers.sort((a, b) => {
-                if (a.diaryCount !== b.diaryCount) {
-                  return a.diaryCount - b.diaryCount;
-                }
-                return b.rankWeight - a.rankWeight;
-              });
-              return processedVolunteers.slice(0, travel.slots).map(v => v.fullName);
-            })();
+            // Viagem bloqueada – contabiliza somente os voluntários "selecionados"
+            const processedVolunteers = travel.volunteers.map(vol => {
+              const [rank] = vol.split(" ");
+              return {
+                fullName: vol,
+                rank,
+                // Usa os totais já acumulados (de outras viagens) como base para a ordenação
+                count: counts[vol] || 0,
+                diaryCount: diaryCount[vol] || 0,
+                rankWeight: getMilitaryRankWeight(rank),
+              };
+            });
+            processedVolunteers.sort((a, b) => {
+              if (a.diaryCount !== b.diaryCount) {
+                return a.diaryCount - b.diaryCount;
+              }
+              return b.rankWeight - a.rankWeight;
+            });
+            const selectedVolunteers = processedVolunteers.slice(0, travel.slots).map(v => v.fullName);
+            selectedVolunteers.forEach((volunteer: string) => {
+              counts[volunteer] = (counts[volunteer] || 0) + 1;
+              const days = differenceInDays(travelEnd, travelStart) + 1;
+              const diaryDays = travel.halfLastDay ? days - 0.5 : days;
+              diaryCount[volunteer] = (diaryCount[volunteer] || 0) + diaryDays;
+            });
+          } else if ((today >= travelStart && today <= travelEnd) || (today > travelEnd)) {
+            // Viagem não bloqueada e já iniciada ou encerrada – contabiliza todos os voluntários
+            travel.volunteers.forEach((volunteer: string) => {
+              counts[volunteer] = (counts[volunteer] || 0) + 1;
+              const days = differenceInDays(travelEnd, travelStart) + 1;
+              const diaryDays = travel.halfLastDay ? days - 0.5 : days;
+              diaryCount[volunteer] = (diaryCount[volunteer] || 0) + diaryDays;
+            });
           }
-
-          volunteersToCount.forEach((volunteer: string) => {
-            counts[volunteer] = (counts[volunteer] || 0) + 1;
-            const days = differenceInDays(travelEnd, travelStart) + 1;
-            const diaryDays = travel.halfLastDay ? days - 0.5 : days;
-            diaryCount[volunteer] = (diaryCount[volunteer] || 0) + diaryDays;
-          });
+          // Se a viagem ainda não começou e não está bloqueada, não contabiliza
         }
       });
 
@@ -497,23 +499,23 @@ export const TravelManagement = () => {
                             key={volunteer.fullName}
                             className={`text-sm p-2 rounded flex justify-between items-center ${
                               volunteer.selected 
-                                ? 'bg-green-100 border border-green-200'
-                                : 'bg-gray-50 border border-gray-100'
+                                ? "bg-green-100 border border-green-200"
+                                : "bg-gray-50 border border-gray-100"
                             }`}
                           >
                             <div className="flex items-center space-x-2">
                               {volunteer.selected && (
                                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
                               )}
-                              <span className={`${volunteer.selected ? 'font-medium' : ''}`}>
+                              <span className={`${volunteer.selected ? "font-medium" : ""}`}>
                                 {volunteer.fullName}
                               </span>
                             </div>
                             <div className="text-right">
-                              <span className={`text-xs ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
+                              <span className={`text-xs ${volunteer.selected ? "text-green-700" : "text-gray-500"}`}>
                                 {formattedTravelCount(volunteer.count)}
                               </span>
-                              <span className={`text-xs block ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
+                              <span className={`text-xs block ${volunteer.selected ? "text-green-700" : "text-gray-500"}`}>
                                 {formattedDiaryCount(volunteer.diaryCount)}
                               </span>
                             </div>
