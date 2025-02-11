@@ -59,58 +59,6 @@ export const TravelManagement = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
 
-  const getMilitaryRankWeight = (rank: string): number => {
-    const rankWeights: { [key: string]: number } = {
-      "Cel PM": 12,
-      "Ten Cel PM": 11,
-      "Maj PM": 10,
-      "Cap PM": 9,
-      "1° Ten PM": 8,
-      "2° Ten PM": 7,
-      "Sub Ten PM": 6,
-      "1° Sgt PM": 5,
-      "2° Sgt PM": 4,
-      "3° Sgt PM": 3,
-      "Cb PM": 2,
-      "Sd PM": 1,
-      "Estágio": 0
-    };
-    
-    return rankWeights[rank] || 0;
-  };
-
-  const sortVolunteers = (volunteers: string[], slots: number) => {
-    if (!volunteers?.length) return [];
-    
-    const processedVolunteers = volunteers.map(volunteer => {
-      const [rank, ...nameParts] = volunteer.split(' ');
-      return {
-        fullName: volunteer,
-        rank,
-        count: volunteerCounts[volunteer] || 0,
-        diaryCount: diaryCounts[volunteer] || 0,
-        rankWeight: getMilitaryRankWeight(rank)
-      };
-    });
-
-    const sortedVolunteers = processedVolunteers.sort((a, b) => {
-      if (a.diaryCount !== b.diaryCount) {
-        return a.diaryCount - b.diaryCount;
-      }
-      return b.rankWeight - a.rankWeight;
-    });
-
-    return sortedVolunteers.map((volunteer, index) => ({
-      ...volunteer,
-      selected: index < slots,
-      selectionReason: index < slots ? 
-        volunteer.diaryCount === sortedVolunteers[0].diaryCount ? 
-          'Selecionado por antiguidade' : 
-          'Selecionado por menor quantidade de diárias' :
-        undefined
-    }));
-  };
-
   useEffect(() => {
     const travelsRef = collection(db, "travels");
     const q = query(travelsRef);
@@ -132,12 +80,7 @@ export const TravelManagement = () => {
             (today > travelEnd)
           )
         ) {
-          // Pega apenas os voluntários selecionados (dentro do limite de slots)
-          const selectedVolunteers = sortVolunteers(travel.volunteers, travel.slots)
-            .filter(volunteer => volunteer.selected)
-            .map(volunteer => volunteer.fullName);
-
-          selectedVolunteers.forEach((volunteer: string) => {
+          travel.volunteers.forEach((volunteer: string) => {
             counts[volunteer] = (counts[volunteer] || 0) + 1;
             
             const days = differenceInDays(travelEnd, travelStart) + 1;
@@ -369,6 +312,26 @@ export const TravelManagement = () => {
     }
   };
 
+  const getMilitaryRankWeight = (rank: string): number => {
+    const rankWeights: { [key: string]: number } = {
+      "Cel PM": 12,
+      "Ten Cel PM": 11,
+      "Maj PM": 10,
+      "Cap PM": 9,
+      "1° Ten PM": 8,
+      "2° Ten PM": 7,
+      "Sub Ten PM": 6,
+      "1° Sgt PM": 5,
+      "2° Sgt PM": 4,
+      "3° Sgt PM": 3,
+      "Cb PM": 2,
+      "Sd PM": 1,
+      "Estágio": 0
+    };
+    
+    return rankWeights[rank] || 0;
+  };
+
   const formattedTravelCount = (count: number) => {
     return count === 1 ? "1 viagem" : `${count} viagens`;
   };
@@ -379,6 +342,38 @@ export const TravelManagement = () => {
       maximumFractionDigits: 1,
     });
     return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
+  };
+
+  const sortVolunteers = (volunteers: string[], slots: number) => {
+    if (!volunteers?.length) return [];
+    
+    const processedVolunteers = volunteers.map(volunteer => {
+      const [rank, ...nameParts] = volunteer.split(' ');
+      return {
+        fullName: volunteer,
+        rank,
+        count: volunteerCounts[volunteer] || 0,
+        diaryCount: diaryCounts[volunteer] || 0,
+        rankWeight: getMilitaryRankWeight(rank)
+      };
+    });
+
+    const sortedVolunteers = processedVolunteers.sort((a, b) => {
+      if (a.diaryCount !== b.diaryCount) {
+        return a.diaryCount - b.diaryCount;
+      }
+      return b.rankWeight - a.rankWeight;
+    });
+
+    return sortedVolunteers.map((volunteer, index) => ({
+      ...volunteer,
+      selected: index < slots,
+      selectionReason: index < slots ? 
+        volunteer.diaryCount === sortedVolunteers[0].diaryCount ? 
+          'Selecionado por antiguidade' : 
+          'Selecionado por menor quantidade de diárias' :
+        undefined
+    }));
   };
 
   const toggleExpansion = (travelId: string) => {
@@ -413,7 +408,6 @@ export const TravelManagement = () => {
                 );
               } else {
                 statusBadge = (
-                  <div className={`absolute top-2 ${rightPos}
                   <div className={`absolute top-2 ${rightPos} bg-[#3B82F6] text-white px-2 py-1 text-xs rounded`}>
                     Em aberto
                   </div>
