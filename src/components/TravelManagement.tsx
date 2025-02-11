@@ -59,6 +59,70 @@ export const TravelManagement = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
 
+  const getMilitaryRankWeight = (rank: string): number => {
+    const rankWeights: { [key: string]: number } = {
+      "Cel PM": 12,
+      "Ten Cel PM": 11,
+      "Maj PM": 10,
+      "Cap PM": 9,
+      "1° Ten PM": 8,
+      "2° Ten PM": 7,
+      "Sub Ten PM": 6,
+      "1° Sgt PM": 5,
+      "2° Sgt PM": 4,
+      "3° Sgt PM": 3,
+      "Cb PM": 2,
+      "Sd PM": 1,
+      "Estágio": 0,
+    };
+
+    return rankWeights[rank] || 0;
+  };
+
+  const sortVolunteers = (volunteers: string[], slots: number) => {
+    if (!volunteers?.length) return [];
+
+    const processedVolunteers = volunteers.map(volunteer => {
+      const [rank, ...nameParts] = volunteer.split(' ');
+      return {
+        fullName: volunteer,
+        rank,
+        count: volunteerCounts[volunteer] || 0,
+        diaryCount: diaryCounts[volunteer] || 0,
+        rankWeight: getMilitaryRankWeight(rank)
+      };
+    });
+
+    const sortedVolunteers = processedVolunteers.sort((a, b) => {
+      if (a.diaryCount !== b.diaryCount) {
+        return a.diaryCount - b.diaryCount;
+      }
+      return b.rankWeight - a.rankWeight;
+    });
+
+    return sortedVolunteers.map((volunteer, index) => ({
+      ...volunteer,
+      selected: index < slots,
+      selectionReason: index < slots ? 
+        volunteer.diaryCount === sortedVolunteers[0].diaryCount ? 
+          'Selecionado por antiguidade' : 
+          'Selecionado por menor quantidade de diárias' :
+        undefined
+    }));
+  };
+
+  const formattedTravelCount = (count: number) => {
+    return count === 1 ? "1 viagem" : `${count} viagens`;
+  };
+
+  const formattedDiaryCount = (count: number) => {
+    const formattedCount = count.toLocaleString("pt-BR", {
+      minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
+      maximumFractionDigits: 1,
+    });
+    return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
+  };
+
   useEffect(() => {
     const travelsRef = collection(db, "travels");
     const q = query(travelsRef);
@@ -80,9 +144,32 @@ export const TravelManagement = () => {
             (today > travelEnd)
           )
         ) {
-          travel.volunteers.forEach((volunteer: string) => {
+          let volunteersToCount = travel.volunteers;
+          // Se a viagem está processando a diária (bloqueada), contabiliza somente os selecionados (dentro do container verde)
+          if (travel.isLocked) {
+            volunteersToCount = (() => {
+              const processedVolunteers = travel.volunteers.map(vol => {
+                const [rank] = vol.split(' ');
+                return {
+                  fullName: vol,
+                  rank,
+                  count: counts[vol] || 0,
+                  diaryCount: diaryCount[vol] || 0,
+                  rankWeight: getMilitaryRankWeight(rank)
+                };
+              });
+              processedVolunteers.sort((a, b) => {
+                if (a.diaryCount !== b.diaryCount) {
+                  return a.diaryCount - b.diaryCount;
+                }
+                return b.rankWeight - a.rankWeight;
+              });
+              return processedVolunteers.slice(0, travel.slots).map(v => v.fullName);
+            })();
+          }
+
+          volunteersToCount.forEach((volunteer: string) => {
             counts[volunteer] = (counts[volunteer] || 0) + 1;
-            
             const days = differenceInDays(travelEnd, travelStart) + 1;
             const diaryDays = travel.halfLastDay ? days - 0.5 : days;
             diaryCount[volunteer] = (diaryCount[volunteer] || 0) + diaryDays;
@@ -310,70 +397,6 @@ export const TravelManagement = () => {
         variant: "destructive",
       });
     }
-  };
-
-  const getMilitaryRankWeight = (rank: string): number => {
-    const rankWeights: { [key: string]: number } = {
-      "Cel PM": 12,
-      "Ten Cel PM": 11,
-      "Maj PM": 10,
-      "Cap PM": 9,
-      "1° Ten PM": 8,
-      "2° Ten PM": 7,
-      "Sub Ten PM": 6,
-      "1° Sgt PM": 5,
-      "2° Sgt PM": 4,
-      "3° Sgt PM": 3,
-      "Cb PM": 2,
-      "Sd PM": 1,
-      "Estágio": 0
-    };
-    
-    return rankWeights[rank] || 0;
-  };
-
-  const formattedTravelCount = (count: number) => {
-    return count === 1 ? "1 viagem" : `${count} viagens`;
-  };
-
-  const formattedDiaryCount = (count: number) => {
-    const formattedCount = count.toLocaleString("pt-BR", {
-      minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
-      maximumFractionDigits: 1,
-    });
-    return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
-  };
-
-  const sortVolunteers = (volunteers: string[], slots: number) => {
-    if (!volunteers?.length) return [];
-    
-    const processedVolunteers = volunteers.map(volunteer => {
-      const [rank, ...nameParts] = volunteer.split(' ');
-      return {
-        fullName: volunteer,
-        rank,
-        count: volunteerCounts[volunteer] || 0,
-        diaryCount: diaryCounts[volunteer] || 0,
-        rankWeight: getMilitaryRankWeight(rank)
-      };
-    });
-
-    const sortedVolunteers = processedVolunteers.sort((a, b) => {
-      if (a.diaryCount !== b.diaryCount) {
-        return a.diaryCount - b.diaryCount;
-      }
-      return b.rankWeight - a.rankWeight;
-    });
-
-    return sortedVolunteers.map((volunteer, index) => ({
-      ...volunteer,
-      selected: index < slots,
-      selectionReason: index < slots ? 
-        volunteer.diaryCount === sortedVolunteers[0].diaryCount ? 
-          'Selecionado por antiguidade' : 
-          'Selecionado por menor quantidade de diárias' :
-        undefined
-    }));
   };
 
   const toggleExpansion = (travelId: string) => {
