@@ -385,7 +385,7 @@ export const TravelManagement = () => {
   };
 
   return (
-    <div className="p-6 space-y-8 relative">
+    <div className="p-6 space-y-8 relative bg-[#F8F9FA]">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
@@ -395,35 +395,37 @@ export const TravelManagement = () => {
             const today = new Date();
             const isLocked = travel.isLocked;
 
-            let cardBg = "bg-white";
+            let cardBg = "bg-gradient-to-br from-white to-gray-50";
             let statusBadge = null;
             const rightPos = isAdmin ? "right-12" : "right-2";
 
             if (today < travelStart) {
               if (isLocked) {
+                cardBg = "bg-gradient-to-br from-orange-50 to-orange-100";
                 statusBadge = (
-                  <div className={`absolute top-2 ${rightPos} bg-orange-500 text-white px-2 py-1 text-xs rounded`}>
+                  <div className={`absolute top-3 ${rightPos} bg-orange-500 text-white px-3 py-1 text-xs rounded-full font-medium shadow-sm`}>
                     Processando diária
                   </div>
                 );
               } else {
+                cardBg = "bg-gradient-to-br from-blue-50 to-blue-100";
                 statusBadge = (
-                  <div className={`absolute top-2 ${rightPos} bg-[#3B82F6] text-white px-2 py-1 text-xs rounded`}>
+                  <div className={`absolute top-3 ${rightPos} bg-[#3B82F6] text-white px-3 py-1 text-xs rounded-full font-medium shadow-sm`}>
                     Em aberto
                   </div>
                 );
               }
             } else if (today >= travelStart && today <= travelEnd) {
-              cardBg = "bg-green-100";
+              cardBg = "bg-gradient-to-br from-green-50 to-green-100";
               statusBadge = (
-                <div className={`absolute top-2 ${rightPos} bg-green-500 text-white px-2 py-1 text-xs rounded`}>
+                <div className={`absolute top-3 ${rightPos} bg-green-500 text-white px-3 py-1 text-xs rounded-full font-medium shadow-sm`}>
                   Em transito
                 </div>
               );
             } else if (today > travelEnd) {
-              cardBg = "bg-gray-100";
+              cardBg = "bg-gradient-to-br from-gray-50 to-gray-100";
               statusBadge = (
-                <div className={`absolute top-2 ${rightPos} bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded`}>
+                <div className={`absolute top-3 ${rightPos} bg-gray-400 text-white px-3 py-1 text-xs rounded-full font-medium shadow-sm`}>
                   Encerrada
                 </div>
               );
@@ -446,69 +448,94 @@ export const TravelManagement = () => {
               : `Diárias: ${formattedCount}`;
 
             const minimalContent = (
-              <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
-                <h3 className="text-xl font-semibold">{travel.destination}</h3>
-                <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
-                <p>{diariasLine}</p>
+              <div className="cursor-pointer space-y-2" onClick={() => toggleExpansion(travel.id)}>
+                <h3 className="text-xl font-semibold text-gray-800">{travel.destination}</h3>
+                <div className="text-sm text-gray-600">
+                  <p className="mb-1">Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
+                  <p>{diariasLine}</p>
+                </div>
               </div>
             );
 
             const fullContent = (
               <div>
-                <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
-                  <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
+                <div className="mb-4 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
+                  <h3 className="text-2xl font-semibold text-gray-800 mb-1">{travel.destination}</h3>
+                  <div className="h-1 w-20 bg-primary/20 rounded-full"></div>
                 </div>
-                <div className="mt-2 space-y-1 text-sm text-gray-600">
-                  <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
-                  <p>Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</p>
-                  <p>Vagas: {travel.slots}</p>
-                  <p>{diariasLine}</p>
+                <div className="space-y-3 text-sm text-gray-600">
+                  <div className="flex justify-between items-center">
+                    <span>Data Inicial:</span>
+                    <span className="font-medium">{new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Data Final:</span>
+                    <span className="font-medium">{new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Vagas:</span>
+                    <span className="font-medium">{travel.slots}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Diárias:</span>
+                    <span className="font-medium">{diariasLine}</span>
+                  </div>
                   {travel.volunteers && travel.volunteers.length > 0 && (
-                    <div className="pt-4 border-t border-gray-100">
-                      <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntário:</h4>
-                      <ul className="space-y-1">
+                    <div className="pt-4 border-t border-gray-200">
+                      <h4 className="font-medium text-gray-700 mb-3">Voluntários:</h4>
+                      <div className="space-y-2">
                         {sortVolunteers(travel.volunteers, travel.slots)
                           .filter(volunteer => !isLocked || volunteer.selected)
                           .map((volunteer) => (
-                          <li
+                          <div
                             key={volunteer.fullName}
-                            className={`text-sm p-2 rounded flex justify-between items-center ${
+                            className={`p-3 rounded-lg transition-all ${
                               volunteer.selected 
-                                ? 'bg-green-100 border border-green-200'
-                                : 'bg-gray-50 border border-gray-100'
+                                ? 'bg-green-50 border border-green-200 shadow-sm'
+                                : 'bg-gray-50 border border-gray-200'
                             }`}
                           >
-                            <div className="flex items-center space-x-2">
-                              {volunteer.selected && (
-                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                              )}
-                              <span className={`${volunteer.selected ? 'font-medium' : ''}`}>
-                                {volunteer.fullName}
-                              </span>
+                            <div className="flex justify-between items-start mb-1">
+                              <div className="flex items-center space-x-2">
+                                {volunteer.selected && (
+                                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                )}
+                                <span className={`${volunteer.selected ? 'font-medium text-gray-800' : 'text-gray-600'}`}>
+                                  {volunteer.fullName}
+                                </span>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <span className={`text-xs ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
+                            <div className="flex justify-between text-xs">
+                              <span className={`${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
                                 {formattedTravelCount(volunteer.count)}
                               </span>
-                              <span className={`text-xs block ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
+                              <span className={`${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
                                 {formattedDiaryCount(volunteer.diaryCount)}
                               </span>
                             </div>
-                          </li>
+                            {volunteer.selected && (
+                              <div className="mt-1 text-xs text-green-600 italic">
+                                {volunteer.selectionReason}
+                              </div>
+                            )}
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     </div>
                   )}
                 </div>
                 {today < travelStart && !travel.archived && !isLocked && (
                   <div className="mt-4">
                     <Button
-                      onClick={() => handleVolunteer(travel.id)}
-                      className={`w-full ${
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleVolunteer(travel.id);
+                      }}
+                      className={`w-full shadow-sm ${
                         travel.volunteers?.includes(`${user.rank} ${user.warName}`)
                           ? "bg-red-500 hover:bg-red-600"
                           : "bg-[#3B82F6] hover:bg-[#2563eb]"
-                      } text-white`}
+                      } text-white font-medium`}
                     >
                       {travel.volunteers?.includes(`${user.rank} ${user.warName}`)
                         ? "Desistir"
@@ -522,7 +549,9 @@ export const TravelManagement = () => {
             return (
               <Card
                 key={travel.id}
-                className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg} ${travel.archived ? "cursor-pointer" : ""}`}
+                className={`p-6 hover:shadow-lg transition-all relative ${cardBg} ${
+                  travel.archived ? "opacity-75" : ""
+                }`}
                 onClick={travel.archived ? () => toggleExpansion(travel.id) : undefined}
                 onDoubleClick={today > travelEnd ? () => toggleExpansion(travel.id) : undefined}
               >
@@ -534,23 +563,23 @@ export const TravelManagement = () => {
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditTravel(travel)}>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => handleEditTravel(travel)} className="cursor-pointer">
                         <Edit className="mr-2 h-4 w-4" />
                         Editar
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        className="text-red-600"
+                        className="text-red-600 cursor-pointer"
                         onClick={() => handleDeleteTravel(travel.id)}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Excluir
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleArchive(travel.id, true)}>
+                      <DropdownMenuItem onClick={() => handleArchive(travel.id, true)} className="cursor-pointer">
                         <Archive className="mr-2 h-4 w-4" />
                         Arquivar
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}>
+                      <DropdownMenuItem onClick={() => handleToggleLock(travel.id)} className="cursor-pointer">
                         {isLocked ? (
                           <>
                             <LockOpen className="mr-2 h-4 w-4" />
@@ -575,6 +604,15 @@ export const TravelManagement = () => {
             );
           })}
       </div>
+
+      {isAdmin && (
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          className="fixed bottom-4 right-4 rounded-full p-4 bg-[#3B82F6] hover:bg-[#2563eb] text-white shadow-lg"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -698,15 +736,6 @@ export const TravelManagement = () => {
             </form>
           </Card>
         </div>
-      )}
-
-      {isAdmin && (
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          className="fixed bottom-4 right-4 rounded-full p-4 bg-[#3B82F6] hover:bg-[#2563eb] text-white shadow-lg"
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
       )}
     </div>
   );
