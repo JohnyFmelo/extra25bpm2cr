@@ -24,8 +24,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen } from "lucide-react";
-import { Switch } from "./ui/switch";
+import { Switch } from "./ui/switch"; // Importa o componente Switch
 
+// Defina a interface para tipar os dados da viagem
 interface Travel {
   id: string;
   startDate: string;
@@ -50,7 +51,6 @@ export const TravelManagement = () => {
   const [halfLastDay, setHalfLastDay] = useState(false);
   const [travels, setTravels] = useState<Travel[]>([]);
   const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
-  const [diaryCounts, setDiaryCounts] = useState<{ [key: string]: number }>({});
   const [editingTravel, setEditingTravel] = useState<any>(null);
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,13 +59,13 @@ export const TravelManagement = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
 
+  // Atualiza a contagem de viagens dos voluntários em tempo real
   useEffect(() => {
     const travelsRef = collection(db, "travels");
     const q = query(travelsRef);
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const counts: { [key: string]: number } = {};
-      const diaryCount: { [key: string]: number } = {};
       const today = new Date();
 
       snapshot.docs.forEach((doc) => {
@@ -73,6 +73,7 @@ export const TravelManagement = () => {
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
 
+        // Contar somente viagens em "Encerrada", "Em transito" ou "Processando diária"
         if (
           travel.volunteers && (
             (today < travelStart && travel.isLocked) ||
@@ -82,21 +83,17 @@ export const TravelManagement = () => {
         ) {
           travel.volunteers.forEach((volunteer: string) => {
             counts[volunteer] = (counts[volunteer] || 0) + 1;
-            
-            const days = differenceInDays(travelEnd, travelStart) + 1;
-            const diaryDays = travel.halfLastDay ? days - 0.5 : days;
-            diaryCount[volunteer] = (diaryCount[volunteer] || 0) + diaryDays;
           });
         }
       });
 
       setVolunteerCounts(counts);
-      setDiaryCounts(diaryCount);
     });
 
     return () => unsubscribe();
   }, []);
 
+  // Atualiza a lista de viagens em tempo real
   useEffect(() => {
     const q = query(collection(db, "travels"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -106,6 +103,7 @@ export const TravelManagement = () => {
       })) as Travel[];
       setTravels(travelsData);
       
+      // Atualiza o estado dos travels bloqueados
       const lockedTravelIds = travelsData
         .filter(travel => travel.isLocked)
         .map(travel => travel.id);
@@ -159,6 +157,7 @@ export const TravelManagement = () => {
         });
       }
 
+      // Limpa os campos e fecha o modal
       setStartDate("");
       setEndDate("");
       setSlots("");
@@ -253,6 +252,7 @@ export const TravelManagement = () => {
         : [];
 
       if (currentVolunteers.includes(volunteerInfo)) {
+        // Se já é voluntário, remove da lista
         const updatedVolunteers = currentVolunteers.filter(v => v !== volunteerInfo);
         await updateDoc(travelRef, {
           volunteers: updatedVolunteers,
@@ -332,18 +332,6 @@ export const TravelManagement = () => {
     return rankWeights[rank] || 0;
   };
 
-  const formattedTravelCount = (count: number) => {
-    return count === 1 ? "1 viagem" : `${count} viagens`;
-  };
-
-  const formattedDiaryCount = (count: number) => {
-    const formattedCount = count.toLocaleString("pt-BR", {
-      minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
-      maximumFractionDigits: 1,
-    });
-    return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
-  };
-
   const sortVolunteers = (volunteers: string[], slots: number) => {
     if (!volunteers?.length) return [];
     
@@ -353,26 +341,20 @@ export const TravelManagement = () => {
         fullName: volunteer,
         rank,
         count: volunteerCounts[volunteer] || 0,
-        diaryCount: diaryCounts[volunteer] || 0,
         rankWeight: getMilitaryRankWeight(rank)
       };
     });
 
     const sortedVolunteers = processedVolunteers.sort((a, b) => {
-      if (a.diaryCount !== b.diaryCount) {
-        return a.diaryCount - b.diaryCount;
+      if (a.count !== b.count) {
+        return a.count - b.count;
       }
       return b.rankWeight - a.rankWeight;
     });
 
     return sortedVolunteers.map((volunteer, index) => ({
       ...volunteer,
-      selected: index < slots,
-      selectionReason: index < slots ? 
-        volunteer.diaryCount === sortedVolunteers[0].diaryCount ? 
-          'Selecionado por antiguidade' : 
-          'Selecionado por menor quantidade de diárias' :
-        undefined
+      selected: index < slots
     }));
   };
 
@@ -382,6 +364,10 @@ export const TravelManagement = () => {
         ? prev.filter((id) => id !== travelId)
         : [...prev, travelId]
     );
+  };
+
+  const formattedTravelCount = (count: number) => {
+    return count === 1 ? "1 viagem" : `${count} viagens`;
   };
 
   return (
@@ -397,6 +383,7 @@ export const TravelManagement = () => {
 
             let cardBg = "bg-white";
             let statusBadge = null;
+            // Define o posicionamento do status conforme o tipo de usuário
             const rightPos = isAdmin ? "right-12" : "right-2";
 
             if (today < travelStart) {
@@ -486,14 +473,9 @@ export const TravelManagement = () => {
                                 {volunteer.fullName}
                               </span>
                             </div>
-                            <div className="text-right">
-                              <span className={`text-xs ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
-                                {formattedTravelCount(volunteer.count)}
-                              </span>
-                              <span className={`text-xs block ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
-                                {formattedDiaryCount(volunteer.diaryCount)}
-                              </span>
-                            </div>
+                            <span className={`text-xs ${volunteer.selected ? 'text-green-700' : 'text-gray-500'}`}>
+                              {formattedTravelCount(volunteer.count)}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -576,6 +558,7 @@ export const TravelManagement = () => {
           })}
       </div>
 
+      {/* Modal para criar/editar viagem */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <Card className="p-6 bg-white shadow-lg max-w-lg w-full relative">
@@ -700,6 +683,7 @@ export const TravelManagement = () => {
         </div>
       )}
 
+      {/* Botão flutuante para administradores */}
       {isAdmin && (
         <Button
           onClick={() => setIsModalOpen(true)}
