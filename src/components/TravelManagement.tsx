@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "react"; 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -59,6 +59,9 @@ export const TravelManagement = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
 
+  // -------------------------
+  // EFEITO PARA CALCULAR DIÁRIAS E QUANTIDADE DE VIAGENS
+  // -------------------------
   useEffect(() => {
     const travelsRef = collection(db, "travels");
     const q = query(travelsRef);
@@ -73,6 +76,7 @@ export const TravelManagement = () => {
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
 
+        // Verifica se existem voluntários e se a viagem está em qualquer estado pós-seleção
         if (
           travel.volunteers && (
             (today < travelStart && travel.isLocked) ||
@@ -81,8 +85,10 @@ export const TravelManagement = () => {
           )
         ) {
           travel.volunteers.forEach((volunteer: string) => {
+            // Conta quantas viagens essa pessoa já participou
             counts[volunteer] = (counts[volunteer] || 0) + 1;
             
+            // Calcula diárias
             const days = differenceInDays(travelEnd, travelStart) + 1;
             const diaryDays = travel.halfLastDay ? days - 0.5 : days;
             diaryCount[volunteer] = (diaryCount[volunteer] || 0) + diaryDays;
@@ -97,6 +103,9 @@ export const TravelManagement = () => {
     return () => unsubscribe();
   }, []);
 
+  // -------------------------
+  // EFEITO PARA CARREGAR VIAGENS
+  // -------------------------
   useEffect(() => {
     const q = query(collection(db, "travels"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -115,6 +124,9 @@ export const TravelManagement = () => {
     return () => unsubscribe();
   }, []);
 
+  // -------------------------
+  // CRIAR OU EDITAR VIAGEM
+  // -------------------------
   const handleCreateTravel = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -189,6 +201,9 @@ export const TravelManagement = () => {
     setIsModalOpen(true);
   };
 
+  // -------------------------
+  // EXCLUIR VIAGEM
+  // -------------------------
   const handleDeleteTravel = async (travelId: string) => {
     try {
       await deleteDoc(doc(db, "travels", travelId));
@@ -206,6 +221,9 @@ export const TravelManagement = () => {
     }
   };
 
+  // -------------------------
+  // ARQUIVAR VIAGEM
+  // -------------------------
   const handleArchive = async (travelId: string, archived: boolean) => {
     try {
       const travelRef = doc(db, "travels", travelId);
@@ -226,6 +244,9 @@ export const TravelManagement = () => {
     }
   };
 
+  // -------------------------
+  // VOLUNTARIAR-SE
+  // -------------------------
   const handleVolunteer = async (travelId: string) => {
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -252,6 +273,7 @@ export const TravelManagement = () => {
         ? travelData.volunteers
         : [];
 
+      // Se já estiver na lista, remove (desistir). Se não estiver, adiciona
       if (currentVolunteers.includes(volunteerInfo)) {
         const updatedVolunteers = currentVolunteers.filter(v => v !== volunteerInfo);
         await updateDoc(travelRef, {
@@ -284,24 +306,65 @@ export const TravelManagement = () => {
     }
   };
 
+  // -------------------------
+  // FUNÇÃO DE TRAVAR / PROCESSAR DIÁRIA (CORRIGIDA)
+  // -------------------------
   const handleToggleLock = async (travelId: string) => {
     try {
       const travelRef = doc(db, "travels", travelId);
       const travelSnap = await getDoc(travelRef);
-      
-      if (travelSnap.exists()) {
-        const isCurrentlyLocked = travelSnap.data().isLocked || false;
-        await updateDoc(travelRef, {
-          isLocked: !isCurrentlyLocked
+
+      if (!travelSnap.exists()) return;
+
+      const travelData = travelSnap.data() as Travel;
+      const isCurrentlyLocked = travelData.isLocked ?? false;
+
+      if (!isCurrentlyLocked) {
+        // Vamos travar a viagem agora (Processar diária).
+        // 1. Pega todos os voluntários atuais
+        const allVolunteers = travelData.volunteers ?? [];
+
+        // 2. Transforma cada voluntário em objeto para poder ordenar
+        const processed = allVolunteers.map((volunteer) => {
+          const [rank] = volunteer.split(" ");
+          return {
+            fullName: volunteer,
+            rank,
+            diaryCount: diaryCounts[volunteer] || 0,
+            rankWeight: getMilitaryRankWeight(rank),
+          };
         });
-        
-        toast({
-          title: "Sucesso",
-          description: !isCurrentlyLocked 
-            ? "Viagem bloqueada com sucesso!" 
-            : "Viagem desbloqueada com sucesso!",
+
+        // 3. Ordena pelo mesmo critério do sortVolunteers
+        //    (menor quantidade de diárias primeiro; em caso de empate, maior patente primeiro)
+        processed.sort((a, b) => {
+          if (a.diaryCount !== b.diaryCount) {
+            return a.diaryCount - b.diaryCount;
+          }
+          return b.rankWeight - a.rankWeight;
+        });
+
+        // 4. Fica só com a quantidade de vagas
+        const selectedVolunteers = processed.slice(0, travelData.slots);
+
+        // 5. Atualiza no Firestore com apenas os selecionados
+        await updateDoc(travelRef, {
+          isLocked: true,
+          volunteers: selectedVolunteers.map((v) => v.fullName),
+        });
+      } else {
+        // Desbloqueando a viagem (caso queiram reabrir vagas)
+        await updateDoc(travelRef, {
+          isLocked: false,
         });
       }
+
+      toast({
+        title: "Sucesso",
+        description: !isCurrentlyLocked
+          ? "Viagem bloqueada e diárias processadas!"
+          : "Viagem reaberta!",
+      });
     } catch (error) {
       console.error("Error toggling lock:", error);
       toast({
@@ -312,6 +375,9 @@ export const TravelManagement = () => {
     }
   };
 
+  // -------------------------
+  // PESO DE PATENTES
+  // -------------------------
   const getMilitaryRankWeight = (rank: string): number => {
     const rankWeights: { [key: string]: number } = {
       "Cel PM": 12,
@@ -332,6 +398,9 @@ export const TravelManagement = () => {
     return rankWeights[rank] || 0;
   };
 
+  // -------------------------
+  // FORMATAÇÕES DE EXIBIÇÃO
+  // -------------------------
   const formattedTravelCount = (count: number) => {
     return count === 1 ? "1 viagem" : `${count} viagens`;
   };
@@ -348,7 +417,7 @@ export const TravelManagement = () => {
     if (!volunteers?.length) return [];
     
     const processedVolunteers = volunteers.map(volunteer => {
-      const [rank, ...nameParts] = volunteer.split(' ');
+      const [rank] = volunteer.split(' ');
       return {
         fullName: volunteer,
         rank,
@@ -358,6 +427,7 @@ export const TravelManagement = () => {
       };
     });
 
+    // Ordena: menor diária primeiro, em caso de empate maior patente primeiro
     const sortedVolunteers = processedVolunteers.sort((a, b) => {
       if (a.diaryCount !== b.diaryCount) {
         return a.diaryCount - b.diaryCount;
@@ -365,14 +435,10 @@ export const TravelManagement = () => {
       return b.rankWeight - a.rankWeight;
     });
 
+    // Define quem é "selecionado" (até o limite de vagas)
     return sortedVolunteers.map((volunteer, index) => ({
       ...volunteer,
       selected: index < slots,
-      selectionReason: index < slots ? 
-        volunteer.diaryCount === sortedVolunteers[0].diaryCount ? 
-          'Selecionado por antiguidade' : 
-          'Selecionado por menor quantidade de diárias' :
-        undefined
     }));
   };
 
@@ -384,6 +450,9 @@ export const TravelManagement = () => {
     );
   };
 
+  // -------------------------
+  // RENDER
+  // -------------------------
   return (
     <div className="p-6 space-y-8 relative">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -448,7 +517,7 @@ export const TravelManagement = () => {
             const minimalContent = (
               <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
                 <h3 className="text-xl font-semibold">{travel.destination}</h3>
-                <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
+                <p>Data Inicial: {travelStart.toLocaleDateString()}</p>
                 <p>{diariasLine}</p>
               </div>
             );
@@ -459,8 +528,8 @@ export const TravelManagement = () => {
                   <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
                 </div>
                 <div className="mt-2 space-y-1 text-sm text-gray-600">
-                  <p>Data Inicial: {new Date(travel.startDate + "T00:00:00").toLocaleDateString()}</p>
-                  <p>Data Final: {new Date(travel.endDate + "T00:00:00").toLocaleDateString()}</p>
+                  <p>Data Inicial: {travelStart.toLocaleDateString()}</p>
+                  <p>Data Final: {travelEnd.toLocaleDateString()}</p>
                   <p>Vagas: {travel.slots}</p>
                   <p>{diariasLine}</p>
                   {travel.volunteers && travel.volunteers.length > 0 && (
@@ -713,3 +782,26 @@ export const TravelManagement = () => {
 };
 
 export default TravelManagement;
+
+// -------------------------
+// FUNÇÃO AUXILIAR
+// -------------------------
+function getMilitaryRankWeight(rank: string): number {
+  // (mantido aqui para referência se precisar exportar separadamente)
+  const rankWeights: { [key: string]: number } = {
+    "Cel PM": 12,
+    "Ten Cel PM": 11,
+    "Maj PM": 10,
+    "Cap PM": 9,
+    "1° Ten PM": 8,
+    "2° Ten PM": 7,
+    "Sub Ten PM": 6,
+    "1° Sgt PM": 5,
+    "2° Sgt PM": 4,
+    "3° Sgt PM": 3,
+    "Cb PM": 2,
+    "Sd PM": 1,
+    "Estágio": 0
+  };
+  return rankWeights[rank] || 0;
+}
