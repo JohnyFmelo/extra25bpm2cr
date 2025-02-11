@@ -40,6 +40,31 @@ interface Travel {
   isLocked?: boolean;
 }
 
+// Função para extrair o cargo corretamente com base em uma lista de cargos conhecidos
+const extractRank = (volunteer: string): string => {
+  const ranks = [
+    "Cel PM",
+    "Ten Cel PM",
+    "Maj PM",
+    "Cap PM",
+    "1° Ten PM",
+    "2° Ten PM",
+    "Sub Ten PM",
+    "1° Sgt PM",
+    "2° Sgt PM",
+    "3° Sgt PM",
+    "Cb PM",
+    "Sd PM",
+    "Estágio",
+  ];
+  for (const rank of ranks) {
+    if (volunteer.startsWith(rank)) {
+      return rank;
+    }
+  }
+  return "";
+};
+
 export const TravelManagement = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -83,7 +108,7 @@ export const TravelManagement = () => {
     if (!volunteers?.length) return [];
 
     const processedVolunteers = volunteers.map(volunteer => {
-      const [rank, ...nameParts] = volunteer.split(" ");
+      const rank = extractRank(volunteer);
       return {
         fullName: volunteer,
         rank,
@@ -138,16 +163,14 @@ export const TravelManagement = () => {
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
 
-        // Se houver voluntários cadastrados...
         if (travel.volunteers) {
           if (travel.isLocked) {
-            // Viagem bloqueada – contabiliza somente os voluntários "selecionados"
+            // Se a viagem está bloqueada, contabiliza somente os voluntários selecionados
             const processedVolunteers = travel.volunteers.map(vol => {
-              const [rank] = vol.split(" ");
+              const rank = extractRank(vol);
               return {
                 fullName: vol,
                 rank,
-                // Usa os totais já acumulados (de outras viagens) como base para a ordenação
                 count: counts[vol] || 0,
                 diaryCount: diaryCount[vol] || 0,
                 rankWeight: getMilitaryRankWeight(rank),
@@ -167,7 +190,7 @@ export const TravelManagement = () => {
               diaryCount[volunteer] = (diaryCount[volunteer] || 0) + diaryDays;
             });
           } else if ((today >= travelStart && today <= travelEnd) || (today > travelEnd)) {
-            // Viagem não bloqueada e já iniciada ou encerrada – contabiliza todos os voluntários
+            // Se a viagem já iniciou ou encerrou e não está bloqueada, contabiliza todos os voluntários
             travel.volunteers.forEach((volunteer: string) => {
               counts[volunteer] = (counts[volunteer] || 0) + 1;
               const days = differenceInDays(travelEnd, travelStart) + 1;
