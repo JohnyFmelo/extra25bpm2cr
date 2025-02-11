@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -308,41 +309,47 @@ export const TravelManagement = () => {
   };
 
   return (
-    <div className="p-6 space-y-8 relative bg-[#F8F9FA]">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {travels
-          .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-          .map((travel) => (
-            <TravelCard
-              key={travel.id}
-              travel={travel}
-              isAdmin={isAdmin}
-              user={user}
-              isExpanded={expandedTravels.includes(travel.id)}
-              onToggleExpansion={toggleExpansion}
-              onEditTravel={handleEditTravel}
-              onDeleteTravel={handleDeleteTravel}
-              onArchiveTravel={handleArchive}
-              onVolunteerTravel={handleVolunteer}
-              onToggleLock={handleToggleLock}
-              volunteerCounts={volunteerCounts}
-              diaryCounts={diaryCounts}
-            />
-          ))}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {isAdmin && (
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            className="fixed bottom-8 right-8 rounded-full p-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg transform hover:scale-105 transition-all duration-200 z-50"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {travels
+            .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+            .map((travel) => (
+              <div
+                key={travel.id}
+                className="transform hover:-translate-y-1 transition-all duration-200"
+              >
+                <TravelCard
+                  travel={travel}
+                  isAdmin={isAdmin}
+                  user={user}
+                  isExpanded={true}
+                  onToggleExpansion={toggleExpansion}
+                  onEditTravel={handleEditTravel}
+                  onDeleteTravel={handleDeleteTravel}
+                  onArchiveTravel={handleArchive}
+                  onVolunteerTravel={handleVolunteer}
+                  onToggleLock={handleToggleLock}
+                  volunteerCounts={volunteerCounts}
+                  diaryCounts={diaryCounts}
+                />
+              </div>
+            ))}
+        </div>
       </div>
 
-      {isAdmin && (
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          className="fixed bottom-4 right-4 rounded-full p-4 bg-[#3B82F6] hover:bg-[#2563eb] text-white shadow-lg"
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
-      )}
-
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="p-6 bg-white shadow-lg max-w-lg w-full relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <Card className="w-full max-w-2xl mx-4 p-6 bg-white shadow-xl rounded-xl relative">
             <button
               onClick={() => {
                 setIsModalOpen(false);
@@ -355,17 +362,19 @@ export const TravelManagement = () => {
                 setDailyRate("");
                 setHalfLastDay(false);
               }}
-              className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 text-xl"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
             >
               &times;
             </button>
             <form onSubmit={handleCreateTravel} className="space-y-6">
-              <h2 className="text-2xl font-semibold text-primary">
+              <h2 className="text-2xl font-semibold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
                 {editingTravel ? "Editar Viagem" : "Criar Nova Viagem"}
               </h2>
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="destination">Destino</Label>
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <Label htmlFor="destination" className="text-gray-700">
+                    Destino
+                  </Label>
                   <Input
                     id="destination"
                     type="text"
@@ -373,36 +382,42 @@ export const TravelManagement = () => {
                     onChange={(e) => setDestination(e.target.value)}
                     required
                     placeholder="Digite o destino"
-                    className="w-full"
+                    className="mt-1"
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="startDate">Data Inicial</Label>
+                  <div>
+                    <Label htmlFor="startDate" className="text-gray-700">
+                      Data Inicial
+                    </Label>
                     <Input
                       id="startDate"
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
                       required
-                      className="w-full"
+                      className="mt-1"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="endDate">Data Final</Label>
+                  <div>
+                    <Label htmlFor="endDate" className="text-gray-700">
+                      Data Final
+                    </Label>
                     <Input
                       id="endDate"
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                       required
-                      className="w-full"
+                      className="mt-1"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="slots">Número de Vagas</Label>
+                  <div>
+                    <Label htmlFor="slots" className="text-gray-700">
+                      Número de Vagas
+                    </Label>
                     <Input
                       id="slots"
                       type="number"
@@ -410,30 +425,39 @@ export const TravelManagement = () => {
                       onChange={(e) => setSlots(e.target.value)}
                       required
                       min="1"
-                      className="w-full"
+                      className="mt-1"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dailyRate">Valor da Diária</Label>
+                  <div>
+                    <Label htmlFor="dailyRate" className="text-gray-700">
+                      Valor da Diária
+                    </Label>
                     <Input
                       id="dailyRate"
                       type="number"
                       value={dailyRate}
                       onChange={(e) => setDailyRate(e.target.value)}
                       placeholder="Opcional"
-                      className="w-full"
+                      className="mt-1"
                     />
                   </div>
                 </div>
-                <div className="flex items-center">
-                  <Label htmlFor="halfLastDay" className="mr-2 text-sm">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="halfLastDay"
+                    checked={halfLastDay}
+                    onCheckedChange={setHalfLastDay}
+                  />
+                  <Label htmlFor="halfLastDay" className="text-gray-700">
                     Último dia meia diária
                   </Label>
-                  <Switch id="halfLastDay" checked={halfLastDay} onCheckedChange={setHalfLastDay} />
                 </div>
               </div>
-              <div className="flex gap-4 mt-4">
-                <Button type="submit" className="w-full md:w-auto">
+              <div className="flex gap-4 pt-4">
+                <Button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
+                >
                   {editingTravel ? "Salvar Alterações" : "Criar Viagem"}
                 </Button>
                 <Button
@@ -450,7 +474,7 @@ export const TravelManagement = () => {
                     setDailyRate("");
                     setHalfLastDay(false);
                   }}
-                  className="w-full md:w-auto"
+                  className="flex-1"
                 >
                   Cancelar
                 </Button>
