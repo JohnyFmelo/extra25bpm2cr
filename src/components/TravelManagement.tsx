@@ -553,8 +553,8 @@ export const TravelManagement = () => {
             <h2 className="text-xl font-semibold mb-4">Regras de Reorganização</h2>
             <p className="text-sm">
               1. Ordena-se primeiramente pela quantidade de diárias acumuladas (menor primeiro).<br />
-              2. Em caso de empate, a graduação (patente) mais alta prevalece.<br />
-              3. Se ainda houver empate, o voluntário que se inscreveu primeiro (quem chegou primeiro) ficará acima.
+              2. Em caso de empate, a graduação mais alta fica na frente.<br />
+              3. Se ainda houver empate na graduação, o voluntário que se inscreveu primeiro (quem chegou primeiro) ficará na frente.
             </p>
             <Button onClick={() => setIsRankingRulesModalOpen(false)} className="mt-4">
               Fechar
