@@ -23,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info } from "lucide-react";
 import { Switch } from "./ui/switch";
 
 // ---------------------------------------------------
@@ -38,8 +38,8 @@ interface Travel {
   dailyAllowance?: number | null;
   dailyRate?: number | null;
   halfLastDay: boolean;
-  volunteers: string[];           // Todos que clicaram em "Quero ser Voluntário"
-  selectedVolunteers?: string[];  // Somente os que foram selecionados
+  volunteers: string[];           // Todos que se inscreveram
+  selectedVolunteers?: string[];  // Somente os que foram selecionados (definidos automaticamente ou via seleção manual)
   archived: boolean;
   isLocked?: boolean;
 }
@@ -48,7 +48,7 @@ interface Travel {
 // COMPONENTE PRINCIPAL
 // ---------------------------------------------------
 export const TravelManagement = () => {
-  // Estados de formulário
+  // Estados do formulário
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [slots, setSlots] = useState("");
@@ -64,10 +64,10 @@ export const TravelManagement = () => {
   const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number }>({});
   const [diaryCounts, setDiaryCounts] = useState<{ [key: string]: number }>({});
 
-  // Para editar viagem
+  // Para edição de viagem
   const [editingTravel, setEditingTravel] = useState<Travel | null>(null);
 
-  // Expansão de cartões
+  // Controle de expansão dos cartões
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
 
   // Modal de criação/edição
@@ -76,7 +76,14 @@ export const TravelManagement = () => {
   // Viagens bloqueadas
   const [lockedTravels, setLockedTravels] = useState<string[]>([]);
 
-  // Toast
+  // Modal para exibição das regras de ordenação
+  const [isRankingRulesModalOpen, setIsRankingRulesModalOpen] = useState(false);
+
+  // Modal de seleção manual (apenas para admin)
+  const [isManualSelectionModalOpen, setIsManualSelectionModalOpen] = useState(false);
+  const [manualSelectionTravel, setManualSelectionTravel] = useState<Travel | null>(null);
+  const [manualSelectedVolunteers, setManualSelectedVolunteers] = useState<string[]>([]);
+
   const { toast } = useToast();
 
   // Usuário logado
@@ -106,18 +113,14 @@ export const TravelManagement = () => {
           (today >= travelStart && today <= travelEnd) ||
           (today > travelEnd)
         ) {
-          // fallback: se houver selectedVolunteers (e não estiver vazio), usamos ele; 
-          // caso contrário, usamos volunteers
+          // Se existir selectedVolunteers e não estiver vazio, usamos-o; caso contrário, usamos volunteers
           const finalList =
             travel.selectedVolunteers && travel.selectedVolunteers.length > 0
               ? travel.selectedVolunteers
               : travel.volunteers || [];
 
           finalList.forEach((volunteer: string) => {
-            // Soma viagens
             counts[volunteer] = (counts[volunteer] || 0) + 1;
-
-            // Soma diárias
             const days = differenceInDays(travelEnd, travelStart) + 1;
             const diaryDays = travel.halfLastDay ? days - 0.5 : days;
             diaryCount[volunteer] = (diaryCount[volunteer] || 0) + diaryDays;
@@ -161,7 +164,6 @@ export const TravelManagement = () => {
 
     try {
       if (editingTravel) {
-        // Editando
         const travelRef = doc(db, "travels", editingTravel.id);
         await updateDoc(travelRef, {
           startDate,
@@ -181,7 +183,6 @@ export const TravelManagement = () => {
         });
         setEditingTravel(null);
       } else {
-        // Criando nova
         await addDoc(collection(db, "travels"), {
           startDate,
           endDate,
@@ -203,7 +204,6 @@ export const TravelManagement = () => {
         });
       }
 
-      // Limpa campos
       setStartDate("");
       setEndDate("");
       setSlots("");
@@ -289,7 +289,7 @@ export const TravelManagement = () => {
         toast({
           title: "Erro",
           description: "Usuário não encontrado. Por favor, faça login novamente.",
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
@@ -306,7 +306,7 @@ export const TravelManagement = () => {
         ? travelData.volunteers
         : [];
 
-      // Se já estiver na lista, remove (desistir). Se não estiver, adiciona
+      // Se já estiver inscrito, remove (desistir); se não, adiciona
       if (currentVolunteers.includes(volunteerInfo)) {
         const updatedVolunteers = currentVolunteers.filter(v => v !== volunteerInfo);
         await updateDoc(travelRef, {
@@ -353,38 +353,38 @@ export const TravelManagement = () => {
       const isCurrentlyLocked = travelData.isLocked ?? false;
 
       if (!isCurrentlyLocked) {
-        // Bloqueando a viagem agora (Processar diária).
+        // Ao travar, define automaticamente os selecionados
         const allVolunteers = travelData.volunteers ?? [];
 
-        // Ordena voluntários para definir quem entra em selectedVolunteers
-        const processed = allVolunteers.map((volunteer) => {
+        const processed = allVolunteers.map((volunteer, index) => {
           const [rank] = volunteer.split(" ");
           return {
             fullName: volunteer,
             rank,
             diaryCount: diaryCounts[volunteer] || 0,
             rankWeight: getMilitaryRankWeight(rank),
+            appliedAtIndex: travelData.volunteers.indexOf(volunteer), // Ordem de chegada
           };
         });
 
-        // Critério: menor diária primeiro; empate => maior patente primeiro
+        // Ordena: menor diárias, se empate maior patente e, se ainda empate, quem chegou primeiro
         processed.sort((a, b) => {
           if (a.diaryCount !== b.diaryCount) {
             return a.diaryCount - b.diaryCount;
           }
-          return b.rankWeight - a.rankWeight;
+          if (a.rankWeight !== b.rankWeight) {
+            return b.rankWeight - a.rankWeight;
+          }
+          return a.appliedAtIndex - b.appliedAtIndex;
         });
 
-        // Seleciona até o limite de vagas
         const selectedVolunteers = processed.slice(0, travelData.slots);
 
-        // Atualiza APENAS selectedVolunteers (mantém volunteers)
         await updateDoc(travelRef, {
           isLocked: true,
           selectedVolunteers: selectedVolunteers.map((v) => v.fullName),
         });
       } else {
-        // Desbloqueando a viagem
         await updateDoc(travelRef, {
           isLocked: false,
           selectedVolunteers: [],
@@ -424,9 +424,8 @@ export const TravelManagement = () => {
       "3° Sgt PM": 3,
       "Cb PM": 2,
       "Sd PM": 1,
-      "Estágio": 0
+      "Estágio": 0,
     };
-    
     return rankWeights[rank] || 0;
   };
 
@@ -442,13 +441,13 @@ export const TravelManagement = () => {
       minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
       maximumFractionDigits: 1,
     });
-    return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
+    return `${formattedCount} ${count === 1 ? "diária" : "diárias"}`;
   };
 
   // ---------------------------------------------------
-  // 10) FUNÇÃO PARA MONTAR LISTA DE VOLUNTÁRIOS
-  //     Se a viagem estiver bloqueada, exibimos só selectedVolunteers.
-//      Se estiver desbloqueada, exibimos todos (volunteers).
+  // 10) FUNÇÃO PARA DETERMINAR QUEM EXIBIR
+  //     Se a viagem estiver bloqueada, mostra somente selectedVolunteers;
+  //     caso contrário, mostra todos (volunteers).
   // ---------------------------------------------------
   const getVolunteersToDisplay = (travel: Travel) => {
     return travel.isLocked
@@ -457,36 +456,37 @@ export const TravelManagement = () => {
   };
 
   // ---------------------------------------------------
-  // 11) ORDENAR PARA EXIBIR NA TELA (SE QUISER MANTER O MESMO PADRÃO)
+  // 11) FUNÇÃO DE ORDENAMENTO DOS VOLUNTÁRIOS (inclui novo critério: ordem de inscrição)
   // ---------------------------------------------------
   const sortVolunteers = (travel: Travel, volunteersList: string[]) => {
-    // Monta objeto
-    const processedVolunteers = volunteersList.map(volunteer => {
-      const [rank] = volunteer.split(' ');
+    const processedVolunteers = volunteersList.map((volunteer) => {
+      const [rank] = volunteer.split(" ");
       return {
         fullName: volunteer,
         rank,
-        count: volunteerCounts[volunteer] || 0,   // qtd de viagens
-        diaryCount: diaryCounts[volunteer] || 0,  // qtd de diárias
-        // isSelected se está no selectedVolunteers
-        isSelected: travel.selectedVolunteers?.includes(volunteer) || false
+        count: volunteerCounts[volunteer] || 0,
+        diaryCount: diaryCounts[volunteer] || 0,
+        appliedAtIndex: travel.volunteers.indexOf(volunteer),
+        isSelected: travel.selectedVolunteers?.includes(volunteer) || false,
       };
     });
 
-    // Podemos ordenar para que quem estiver selecionado apareça primeiro
     processedVolunteers.sort((a, b) => {
-      // 1. Selecionado primeiro
+      // Primeiro: voluntários selecionados vêm antes
       if (a.isSelected && !b.isSelected) return -1;
       if (!a.isSelected && b.isSelected) return 1;
-
-      // 2. Se ambos são selecionados (ou ambos não), ordena por diárias
+      // Segundo: menor diárias primeiro
       if (a.diaryCount !== b.diaryCount) {
         return a.diaryCount - b.diaryCount;
       }
-      // 3. Em caso de empate, maior patente primeiro
+      // Terceiro: maior patente (peso maior) vem primeiro
       const aRankWeight = getMilitaryRankWeight(a.rank);
       const bRankWeight = getMilitaryRankWeight(b.rank);
-      return bRankWeight - aRankWeight;
+      if (aRankWeight !== bRankWeight) {
+        return bRankWeight - aRankWeight;
+      }
+      // Quarto: quem chegou primeiro (menor índice) vem primeiro
+      return a.appliedAtIndex - b.appliedAtIndex;
     });
 
     return processedVolunteers;
@@ -504,10 +504,110 @@ export const TravelManagement = () => {
   };
 
   // ---------------------------------------------------
-  // 13) RENDER
+  // 13) ABRIR MODAL DE SELEÇÃO MANUAL (ADMIN)
+  // ---------------------------------------------------
+  const openManualSelection = (travel: Travel) => {
+    setManualSelectionTravel(travel);
+    // Preenche com os já selecionados, se houver; senão, usa todos os inscritos
+    setManualSelectedVolunteers(
+      travel.selectedVolunteers && travel.selectedVolunteers.length > 0
+        ? travel.selectedVolunteers
+        : travel.volunteers
+    );
+    setIsManualSelectionModalOpen(true);
+  };
+
+  const handleManualSelectionSubmit = async () => {
+    if (!manualSelectionTravel) return;
+    try {
+      const travelRef = doc(db, "travels", manualSelectionTravel.id);
+      await updateDoc(travelRef, {
+        isLocked: true,
+        selectedVolunteers: manualSelectedVolunteers,
+      });
+      toast({
+        title: "Sucesso",
+        description: "Seleção manual atualizada!",
+      });
+      setIsManualSelectionModalOpen(false);
+      setManualSelectionTravel(null);
+    } catch (error) {
+      console.error("Error in manual selection:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar seleção manual.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ---------------------------------------------------
+  // 14) RENDERIZAÇÃO
   // ---------------------------------------------------
   return (
     <div className="p-6 space-y-8 relative">
+      {/* Modal de Regras de Ordenação */}
+      {isRankingRulesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <Card className="p-6 bg-white max-w-md w-full relative">
+            <h2 className="text-xl font-semibold mb-4">Regras de Reorganização</h2>
+            <p className="text-sm">
+              1. Ordena-se primeiramente pela quantidade de diárias acumuladas (menor primeiro).<br />
+              2. Em caso de empate, a graduação (patente) mais alta prevalece.<br />
+              3. Se ainda houver empate, o voluntário que se inscreveu primeiro (quem chegou primeiro) ficará acima.
+            </p>
+            <Button onClick={() => setIsRankingRulesModalOpen(false)} className="mt-4">
+              Fechar
+            </Button>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de Seleção Manual (Admin) */}
+      {isManualSelectionModalOpen && manualSelectionTravel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <Card className="p-6 bg-white max-w-md w-full relative">
+            <h2 className="text-xl font-semibold mb-4">Seleção Manual - {manualSelectionTravel.destination}</h2>
+            <ul className="space-y-2 max-h-60 overflow-y-auto">
+              {manualSelectionTravel.volunteers.map((volunteer, index) => (
+                <li key={index} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={manualSelectedVolunteers.includes(volunteer)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setManualSelectedVolunteers((prev) => [...prev, volunteer]);
+                      } else {
+                        setManualSelectedVolunteers((prev) =>
+                          prev.filter((v) => v !== volunteer)
+                        );
+                      }
+                    }}
+                    className="mr-2"
+                  />
+                  <span>{volunteer}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-4 mt-4">
+              <Button onClick={handleManualSelectionSubmit} className="w-full">
+                Salvar Seleção
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsManualSelectionModalOpen(false);
+                  setManualSelectionTravel(null);
+                }}
+                className="w-full"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
@@ -521,7 +621,6 @@ export const TravelManagement = () => {
             let statusBadge = null;
             const rightPos = isAdmin ? "right-12" : "right-2";
 
-            // Definir cor/status do cartão
             if (today < travelStart) {
               if (isLocked) {
                 statusBadge = (
@@ -531,8 +630,11 @@ export const TravelManagement = () => {
                 );
               } else {
                 statusBadge = (
-                  <div className={`absolute top-2 ${rightPos} bg-[#3B82F6] text-white px-2 py-1 text-xs rounded`}>
+                  <div className={`absolute top-2 ${rightPos} bg-[#3B82F6] text-white px-2 py-1 text-xs rounded flex items-center`}>
                     Em aberto
+                    <button onClick={(e) => { e.stopPropagation(); setIsRankingRulesModalOpen(true); }} className="ml-2">
+                      <Info className="h-4 w-4" />
+                    </button>
                   </div>
                 );
               }
@@ -540,7 +642,7 @@ export const TravelManagement = () => {
               cardBg = "bg-green-100";
               statusBadge = (
                 <div className={`absolute top-2 ${rightPos} bg-green-500 text-white px-2 py-1 text-xs rounded`}>
-                  Em transito
+                  Em trânsito
                 </div>
               );
             } else if (today > travelEnd) {
@@ -552,7 +654,7 @@ export const TravelManagement = () => {
               );
             }
 
-            // Exibição do cálculo de diárias
+            // Cálculo de diárias para exibição
             const numDays = differenceInDays(travelEnd, travelStart) + 1;
             const count = travel.halfLastDay ? numDays - 0.5 : numDays;
             const formattedCount = count.toLocaleString("pt-BR", {
@@ -578,8 +680,10 @@ export const TravelManagement = () => {
               </div>
             );
 
-            // Lista de voluntários que devemos exibir
-            const volunteersToDisplay = getVolunteersToDisplay(travel);
+            // Determina quais voluntários exibir
+            const volunteersToDisplay = travel.isLocked
+              ? travel.selectedVolunteers || []
+              : travel.volunteers || [];
             const sortedVolunteers = sortVolunteers(travel, volunteersToDisplay);
 
             // Conteúdo completo (cartão aberto)
@@ -594,7 +698,6 @@ export const TravelManagement = () => {
                   <p>Vagas: {travel.slots}</p>
                   <p>{diariasLine}</p>
 
-                  {/* Se houver voluntários a exibir */}
                   {sortedVolunteers.length > 0 && (
                     <div className="pt-4 border-t border-gray-100">
                       <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntário:</h4>
@@ -604,23 +707,23 @@ export const TravelManagement = () => {
                             key={vol.fullName}
                             className={`text-sm p-2 rounded flex justify-between items-center ${
                               vol.isSelected 
-                                ? 'bg-green-100 border border-green-200'
-                                : 'bg-gray-50 border border-gray-100'
+                                ? "bg-green-100 border border-green-200"
+                                : "bg-gray-50 border border-gray-100"
                             }`}
                           >
                             <div className="flex items-center space-x-2">
                               {vol.isSelected && (
                                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
                               )}
-                              <span className={`${vol.isSelected ? 'font-medium' : ''}`}>
+                              <span className={vol.isSelected ? "font-medium" : ""}>
                                 {vol.fullName}
                               </span>
                             </div>
                             <div className="text-right">
-                              <span className={`text-xs ${vol.isSelected ? 'text-green-700' : 'text-gray-500'}`}>
+                              <span className={`text-xs ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
                                 {formattedTravelCount(vol.count)}
                               </span>
-                              <span className={`text-xs block ${vol.isSelected ? 'text-green-700' : 'text-gray-500'}`}>
+                              <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
                                 {formattedDiaryCount(vol.diaryCount)}
                               </span>
                             </div>
@@ -631,8 +734,6 @@ export const TravelManagement = () => {
                   )}
                 </div>
 
-                {/* Se a viagem ainda não começou, não está arquivada e não está travada, 
-                    permitir voluntariar ou desistir */}
                 {today < travelStart && !travel.archived && !isLocked && (
                   <div className="mt-4">
                     <Button
@@ -663,7 +764,6 @@ export const TravelManagement = () => {
               >
                 {statusBadge}
 
-                {/* Menu de opções para Admin */}
                 {isAdmin && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -700,6 +800,12 @@ export const TravelManagement = () => {
                           </>
                         )}
                       </DropdownMenuItem>
+                      {isAdmin && !travel.isLocked && (
+                        <DropdownMenuItem onClick={() => openManualSelection(travel)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Seleção Manual
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -714,7 +820,7 @@ export const TravelManagement = () => {
           })}
       </div>
 
-      {/* Modal de criação/edição */}
+      {/* Modal de criação/edição de viagens */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <Card className="p-6 bg-white shadow-lg max-w-lg w-full relative">
@@ -839,7 +945,9 @@ export const TravelManagement = () => {
         </div>
       )}
 
-      {/* Botão para criar nova viagem (visível só para admin) */}
+      {/* Botão para abrir modal de seleção manual (Admin) já está incluído no Dropdown */}
+
+      {/* Botão para criar nova viagem (visível só para Admin) */}
       {isAdmin && (
         <Button
           onClick={() => setIsModalOpen(true)}
