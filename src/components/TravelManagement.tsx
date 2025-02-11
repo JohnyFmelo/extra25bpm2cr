@@ -623,7 +623,7 @@ export const TravelManagement = () => {
                               {vol.isSelected && (
                                 <span className="text-[10px] text-green-600 border border-green-300 px-1 rounded">
                                   {travel.slots === 1
-                                    ? "Selecionado"
+                                    ? "Selecionado (1ª posição)"
                                     : `Selecionado (pos. ${idx + 1})`}
                                 </span>
                               )}
