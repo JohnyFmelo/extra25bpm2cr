@@ -458,7 +458,7 @@ export const TravelManagement = () => {
     const baseList = travel.isLocked
       ? travel.selectedVolunteers || []
       : travel.volunteers || [];
-  
+
     // Monta array de objetos
     const processed = baseList.map((volunteer) => {
       const [rank] = volunteer.split(" ");
@@ -470,33 +470,26 @@ export const TravelManagement = () => {
         appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
       };
     });
-  
+
     // Se estiver bloqueada, assumimos que todos ali estão "isSelected"
     // Se não estiver, quem ficaria no top X é "potencialmente selecionado"
     const totalSlots = travel.slots || 1;
     const isLocked = travel.isLocked;
-  
-    // Ordena os voluntários de acordo com os critérios:
-    // 1) Menor quantidade de diárias
-    // 2) Maior antiguidade (graduação mais alta)
-    // 3) Quem viajou menos (voluntário que não viajou fica acima)
-    // 4) Se necessário, a ordem de inscrição é usada.
+
+    // Ordena do mesmo jeito
     processed.sort((a, b) => {
       // 1) Menor diária
       if (a.diaryCount !== b.diaryCount) {
-        return a.diaryCount - b.diaryCount;  // asc
+        return a.diaryCount - b.diaryCount;
       }
       // 2) Maior patente
       if (a.rankWeight !== b.rankWeight) {
-        return b.rankWeight - a.rankWeight;  // desc
+        return b.rankWeight - a.rankWeight;
       }
-      // 3) Quem viajou menos (quem não viajou fica acima)
-      if (a.diaryCount === b.diaryCount) {
-        return a.appliedAtIndex - b.appliedAtIndex; // asc
-      }
-      return 0;
+      // 3) Quem chegou primeiro
+      return a.appliedAtIndex - b.appliedAtIndex;
     });
-  
+
     return processed.map((item, idx) => {
       const isSelected = isLocked
         ? true
@@ -504,7 +497,6 @@ export const TravelManagement = () => {
       return { ...item, isSelected };
     });
   };
-
 
   // ---------------------------------------------------
   // 11) EXPANDIR/COLAPSAR CARTÕES
