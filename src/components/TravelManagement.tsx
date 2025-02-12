@@ -453,52 +453,50 @@ export const TravelManagement = () => {
   // 10) OBTÉM LISTA DE VOLUNTÁRIOS A EXIBIR + ORDENAÇÃO
   // ---------------------------------------------------
   const getSortedVolunteers = (travel: Travel) => {
-  // Se a viagem estiver bloqueada, mostramos apenas selectedVolunteers
-  // Se não estiver bloqueada, mostramos todos de volunteers
-  const baseList = travel.isLocked
-    ? travel.selectedVolunteers || []
-    : travel.volunteers || [];
+    // Se a viagem estiver bloqueada, mostramos apenas selectedVolunteers
+    // Se não estiver bloqueada, mostramos todos de volunteers
+    const baseList = travel.isLocked
+      ? travel.selectedVolunteers || []
+      : travel.volunteers || [];
 
-  // Monta array de objetos com as informações dos voluntários
-  const processed = baseList.map((volunteer) => {
-    const [rank] = volunteer.split(" ");
-    return {
-      fullName: volunteer,
-      rank,
-      diaryCount: diaryCounts[volunteer] || 0,
-      rankWeight: getMilitaryRankWeight(rank),
-      appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
-      travelCount: volunteerCounts[volunteer] || 0, // Contagem de viagens
-    };
-  });
+    // Monta array de objetos
+    const processed = baseList.map((volunteer) => {
+      const [rank] = volunteer.split(" ");
+      return {
+        fullName: volunteer,
+        rank,
+        diaryCount: diaryCounts[volunteer] || 0,
+        rankWeight: getMilitaryRankWeight(rank),
+        appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
+      };
+    });
 
-  // Ordena:
-  // 1) Menor quantidade de diárias
-  // 2) Maior antiguidade (peso maior para maior patente)
-  // 3) Menor número de viagens (quem não viajou fica acima)
-  // 4) Ordem de inscrição (caso ainda haja empate)
-  processed.sort((a, b) => {
-    // Critério 1: Menor quantidade de diárias
-    if (a.diaryCount !== b.diaryCount) {
-      return a.diaryCount - b.diaryCount;
-    }
-    // Critério 2: Maior antiguidade (maior rankWeight)
-    if (a.rankWeight !== b.rankWeight) {
-      return b.rankWeight - a.rankWeight;
-    }
-    // Critério 3: Menor número de viagens (quem não viajou vem antes)
-    if (a.travelCount !== b.travelCount) {
-      return a.travelCount - b.travelCount;
-    }
-    // Critério 4: Ordem de inscrição (menor índice vem primeiro)
-    return a.appliedAtIndex - b.appliedAtIndex;
-  });
+    // Se estiver bloqueada, assumimos que todos ali estão "isSelected"
+    // Se não estiver, quem ficaria no top X é "potencialmente selecionado"
+    const totalSlots = travel.slots || 1;
+    const isLocked = travel.isLocked;
 
-  return processed.map((item, idx) => {
-    const isSelected = travel.isLocked ? true : idx < travel.slots;
-    return { ...item, isSelected };
-  });
-};
+    // Ordena do mesmo jeito
+    processed.sort((a, b) => {
+      // 1) Menor diária
+      if (a.diaryCount !== b.diaryCount) {
+        return a.diaryCount - b.diaryCount;
+      }
+      // 2) Maior patente
+      if (a.rankWeight !== b.rankWeight) {
+        return b.rankWeight - a.rankWeight;
+      }
+      // 3) Quem chegou primeiro
+      return a.appliedAtIndex - b.appliedAtIndex;
+    });
+
+    return processed.map((item, idx) => {
+      const isSelected = isLocked
+        ? true
+        : idx < totalSlots; // se não está bloqueada, top 'slots' são "selecionados"
+      return { ...item, isSelected };
+    });
+  };
 
   // ---------------------------------------------------
   // 11) EXPANDIR/COLAPSAR CARTÕES
