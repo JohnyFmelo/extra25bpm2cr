@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "react"; 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -127,45 +127,277 @@ export const TravelManagement = () => {
   }, []);
 
   // ---------------------------------------------------
-  // 10) OBTÉM LISTA DE VOLUNTÁRIOS A EXIBIR + ORDENAÇÃO
+  // 2) EFEITO PARA CARREGAR VIAGENS
   // ---------------------------------------------------
-  const getSortedVolunteers = (travel: Travel) => {
-    // Se a viagem estiver bloqueada, mostramos apenas selectedVolunteers
-    // Se não estiver bloqueada, mostramos todos de volunteers
-    const baseList = travel.isLocked
-      ? travel.selectedVolunteers || []
-      : travel.volunteers || [];
-
-    // Monta array de objetos
-    const processed = baseList.map((volunteer) => {
-      const [rank] = volunteer.split(" ");
-      return {
-        fullName: volunteer,
-        rank,
-        diaryCount: diaryCounts[volunteer] || 0,
-        rankWeight: getMilitaryRankWeight(rank),
-        appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
-      };
+  useEffect(() => {
+    const q = query(collection(db, "travels"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const travelsData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Travel[];
+      setTravels(travelsData);
     });
 
-    // Ordena: 
-    //  1) menor diária
-    //  2) maior patente
-    //  3) quem chegou primeiro (appliedAtIndex)
-    processed.sort((a, b) => {
-      if (a.diaryCount !== b.diaryCount) {
-        return a.diaryCount - b.diaryCount;  // asc
+    return () => unsubscribe();
+  }, []);
+
+  // ---------------------------------------------------
+  // 3) CRIAR OU EDITAR VIAGEM
+  // ---------------------------------------------------
+  const handleCreateTravel = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      if (editingTravel) {
+        const travelRef = doc(db, "travels", editingTravel.id);
+        await updateDoc(travelRef, {
+          startDate,
+          endDate,
+          slots: Number(slots),
+          destination,
+          dailyAllowance: dailyAllowance ? Number(dailyAllowance) : null,
+          dailyRate: dailyRate ? Number(dailyRate) : null,
+          halfLastDay,
+          updatedAt: new Date(),
+          archived: editingTravel.archived || false,
+        });
+
+        toast({
+          title: "Sucesso",
+          description: "Viagem atualizada com sucesso!",
+        });
+        setEditingTravel(null);
+      } else {
+        await addDoc(collection(db, "travels"), {
+          startDate,
+          endDate,
+          slots: Number(slots),
+          destination,
+          dailyAllowance: dailyAllowance ? Number(dailyAllowance) : null,
+          dailyRate: dailyRate ? Number(dailyRate) : null,
+          halfLastDay,
+          createdAt: new Date(),
+          volunteers: [],
+          selectedVolunteers: [], // inicia vazio
+          archived: false,
+          isLocked: false,
+        });
+
+        toast({
+          title: "Sucesso",
+          description: "Viagem criada com sucesso!",
+        });
       }
-      if (a.rankWeight !== b.rankWeight) {
-        return b.rankWeight - a.rankWeight;  // desc
-      }
-      return a.appliedAtIndex - b.appliedAtIndex; // asc
-    });
 
-    return processed.map((item, idx) => {
-      const isSelected = travel.isLocked ? true : idx < travel.slots; // se não está bloqueada, top 'slots' são "selecionados"
-      return { ...item, isSelected };
-    });
+      setStartDate("");
+      setEndDate("");
+      setSlots("");
+      setDestination("");
+      setDailyAllowance("");
+      setDailyRate("");
+      setHalfLastDay(false);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Error creating/updating travel:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar viagem.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditTravel = (travel: Travel) => {
+    setEditingTravel(travel);
+    setStartDate(travel.startDate);
+    setEndDate(travel.endDate);
+    setSlots(String(travel.slots));
+    setDestination(travel.destination);
+    setDailyAllowance(String(travel.dailyAllowance || ""));
+    setDailyRate(String(travel.dailyRate || ""));
+    setHalfLastDay(travel.halfLastDay || false);
+    setIsModalOpen(true);
+  };
+
+  // ---------------------------------------------------
+  // 4) EXCLUIR VIAGEM
+  // ---------------------------------------------------
+  const handleDeleteTravel = async (travelId: string) => {
+    try {
+      await deleteDoc(doc(db, "travels", travelId));
+      toast({
+        title: "Sucesso",
+        description: "Viagem excluída com sucesso!",
+      });
+    } catch (error) {
+      console.error("Error deleting travel:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir viagem.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ---------------------------------------------------
+  // 5) ARQUIVAR VIAGEM
+  // ---------------------------------------------------
+  const handleArchive = async (travelId: string, archived: boolean) => {
+    try {
+      const travelRef = doc(db, "travels", travelId);
+      await updateDoc(travelRef, { archived });
+      toast({
+        title: "Sucesso",
+        description: archived
+          ? "Viagem arquivada com sucesso!"
+          : "Viagem desarquivada com sucesso!",
+      });
+    } catch (error) {
+      console.error("Error archiving travel:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao arquivar a viagem.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ---------------------------------------------------
+  // 6) VOLUNTARIAR-SE
+  // ---------------------------------------------------
+  const handleVolunteer = async (travelId: string) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const volunteerInfo = `${user.rank} ${user.warName}`;
+
+      if (!volunteerInfo) {
+        toast({
+          title: "Erro",
+          description: "Usuário não encontrado. Por favor, faça login novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const travelRef = doc(db, "travels", travelId);
+      const travelSnap = await getDoc(travelRef);
+
+      if (!travelSnap.exists()) {
+        throw new Error("Viagem não encontrada");
+      }
+
+      const travelData = travelSnap.data() as Travel;
+      const currentVolunteers = Array.isArray(travelData.volunteers)
+        ? travelData.volunteers
+        : [];
+
+      // Se já estiver na lista, remove (desistir). Se não estiver, adiciona
+      if (currentVolunteers.includes(volunteerInfo)) {
+        const updatedVolunteers = currentVolunteers.filter(v => v !== volunteerInfo);
+        await updateDoc(travelRef, {
+          volunteers: updatedVolunteers,
+        });
+
+        toast({
+          title: "Sucesso",
+          description: "Você desistiu da viagem com sucesso.",
+        });
+        return;
+      }
+
+      const updatedVolunteers = [...currentVolunteers, volunteerInfo];
+      await updateDoc(travelRef, {
+        volunteers: updatedVolunteers,
+      });
+
+      toast({
+        title: "Sucesso",
+        description: "Você se candidatou com sucesso!",
+      });
+    } catch (error) {
+      console.error("Error volunteering:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao se candidatar.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ---------------------------------------------------
+  // 7) TRAVAR / PROCESSAR DIÁRIA (SEM EXCLUIR VOLUNTÁRIOS)
+  // ---------------------------------------------------
+  const handleToggleLock = async (travelId: string) => {
+    try {
+      const travelRef = doc(db, "travels", travelId);
+      const travelSnap = await getDoc(travelRef);
+
+      if (!travelSnap.exists()) return;
+
+      const travelData = travelSnap.data() as Travel;
+      const isCurrentlyLocked = travelData.isLocked ?? false;
+
+      if (!isCurrentlyLocked) {
+        // Bloqueando a viagem agora (Processar diária).
+        const allVolunteers = travelData.volunteers ?? [];
+
+        // Monta objetos para ordenação
+        const processed = allVolunteers.map((volunteer) => {
+          const [rank] = volunteer.split(" ");
+          return {
+            fullName: volunteer,
+            rank,
+            diaryCount: diaryCounts[volunteer] || 0,
+            rankWeight: getMilitaryRankWeight(rank),
+            // "appliedAtIndex" = posição no array "volunteers"
+            appliedAtIndex: travelData.volunteers.indexOf(volunteer),
+          };
+        });
+
+        // Ordena: 
+        //  1) menor diária
+        //  2) maior patente
+        //  3) quem chegou primeiro (appliedAtIndex)
+        processed.sort((a, b) => {
+          if (a.diaryCount !== b.diaryCount) {
+            return a.diaryCount - b.diaryCount;  // asc
+          }
+          if (a.rankWeight !== b.rankWeight) {
+            return b.rankWeight - a.rankWeight;  // desc
+          }
+          return a.appliedAtIndex - b.appliedAtIndex; // asc
+        });
+
+        // Pega até o limite de vagas
+        const selectedVolunteers = processed.slice(0, travelData.slots);
+
+        await updateDoc(travelRef, {
+          isLocked: true,
+          selectedVolunteers: selectedVolunteers.map((v) => v.fullName),
+        });
+      } else {
+        // Desbloqueando a viagem (reabrir vagas)
+        await updateDoc(travelRef, {
+          isLocked: false,
+          selectedVolunteers: [],
+        });
+      }
+
+      toast({
+        title: "Sucesso",
+        description: !isCurrentlyLocked
+          ? "Viagem bloqueada e diárias processadas!"
+          : "Viagem reaberta!",
+      });
+    } catch (error) {
+      console.error("Error toggling lock:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar o status da viagem.",
+        variant: "destructive",
+      });
+    }
   };
 
   // ---------------------------------------------------
@@ -203,6 +435,83 @@ export const TravelManagement = () => {
   };
 
   // ---------------------------------------------------
+  // 9) FUNÇÕES DE FORMATAÇÃO
+  // ---------------------------------------------------
+  const formattedTravelCount = (count: number) => {
+    return count === 1 ? "1 viagem" : `${count} viagens`;
+  };
+
+  const formattedDiaryCount = (count: number) => {
+    const formattedCount = count.toLocaleString("pt-BR", {
+      minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
+      maximumFractionDigits: 1,
+    });
+    return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
+  };
+
+  // ---------------------------------------------------
+  // 10) OBTÉM LISTA DE VOLUNTÁRIOS A EXIBIR + ORDENAÇÃO
+  // ---------------------------------------------------
+  const getSortedVolunteers = (travel: Travel) => {
+  // Se a viagem estiver bloqueada, mostramos apenas selectedVolunteers
+  // Se não estiver bloqueada, mostramos todos de volunteers
+  const baseList = travel.isLocked
+    ? travel.selectedVolunteers || []
+    : travel.volunteers || [];
+
+  // Monta array de objetos com as informações dos voluntários
+  const processed = baseList.map((volunteer) => {
+    const [rank] = volunteer.split(" ");
+    return {
+      fullName: volunteer,
+      rank,
+      diaryCount: diaryCounts[volunteer] || 0,
+      rankWeight: getMilitaryRankWeight(rank),
+      appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
+      travelCount: volunteerCounts[volunteer] || 0, // Contagem de viagens
+    };
+  });
+
+  // Ordena:
+  // 1) Menor quantidade de diárias
+  // 2) Maior antiguidade (peso maior para maior patente)
+  // 3) Menor número de viagens (quem não viajou fica acima)
+  // 4) Ordem de inscrição (caso ainda haja empate)
+  processed.sort((a, b) => {
+    // Critério 1: Menor quantidade de diárias
+    if (a.diaryCount !== b.diaryCount) {
+      return a.diaryCount - b.diaryCount;
+    }
+    // Critério 2: Maior antiguidade (maior rankWeight)
+    if (a.rankWeight !== b.rankWeight) {
+      return b.rankWeight - a.rankWeight;
+    }
+    // Critério 3: Menor número de viagens (quem não viajou vem antes)
+    if (a.travelCount !== b.travelCount) {
+      return a.travelCount - b.travelCount;
+    }
+    // Critério 4: Ordem de inscrição (menor índice vem primeiro)
+    return a.appliedAtIndex - b.appliedAtIndex;
+  });
+
+  return processed.map((item, idx) => {
+    const isSelected = travel.isLocked ? true : idx < travel.slots;
+    return { ...item, isSelected };
+  });
+};
+
+  // ---------------------------------------------------
+  // 11) EXPANDIR/COLAPSAR CARTÕES
+  // ---------------------------------------------------
+  const toggleExpansion = (travelId: string) => {
+    setExpandedTravels((prev) =>
+      prev.includes(travelId)
+        ? prev.filter((id) => id !== travelId)
+        : [...prev, travelId]
+    );
+  };
+
+  // ---------------------------------------------------
   // RENDER
   // ---------------------------------------------------
   return (
@@ -230,14 +539,152 @@ export const TravelManagement = () => {
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
           .map((travel) => {
+            const travelStart = new Date(travel.startDate + "T00:00:00");
+            const travelEnd = new Date(travel.endDate + "T00:00:00");
+            const today = new Date();
+            const isLocked = travel.isLocked;
             const sortedVolunteers = getSortedVolunteers(travel);
 
+            // Cálculo correto de diárias (evitando NaN)
+            const numDays = differenceInDays(travelEnd, travelStart) + 1;
+            const count = travel.halfLastDay ? numDays - 0.5 : numDays;
+            const formattedCount = count > 0 ? count.toLocaleString("pt-BR", {
+              minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
+              maximumFractionDigits: 1,
+            }) : "0";
+            const totalCost = travel.dailyRate ? count * Number(travel.dailyRate) : 0;
+
+            let cardBg = "bg-white";
+            let statusBadge = null;
+            const rightPos = isAdmin ? "right-12" : "right-2";
+
+            // Define status do cartão
+            if (today < travelStart) {
+              if (isLocked) {
+                statusBadge = (
+                  <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
+                    Processando diária
+                  </div>
+                );
+              } else {
+                statusBadge = (
+                  <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm flex items-center gap-2`}>
+                    Em aberto
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowRankingRules(true);
+                      }}
+                      className="hover:bg-white/20 rounded-full p-1 transition-colors"
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              }
+            } else if (today >= travelStart && today <= travelEnd) {
+              cardBg = "bg-gradient-to-br from-green-50 to-green-100";
+              statusBadge = (
+                <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
+                  Em transito
+                </div>
+              );
+            } else if (today > travelEnd) {
+              cardBg = "bg-gradient-to-br from-gray-50 to-gray-100";
+              statusBadge = (
+                <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-gray-400 to-gray-500 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
+                  Encerrada
+                </div>
+              );
+            }
+
             return (
-              <Card key={travel.id} className="relative overflow-hidden bg-white border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300">
-                {/* Render do restante da viagem */}
+              <Card
+                key={travel.id}
+                className={`relative overflow-hidden ${cardBg} border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 ${
+                  travel.archived ? "opacity-75" : ""
+                }`}
+              >
+                {statusBadge}
+
+                {/* Menu Admin */}
+                {isAdmin && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-black/5">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => handleEditTravel(travel)} className="gap-2">
+                        <Edit className="h-4 w-4" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-600 gap-2"
+                        onClick={() => handleDeleteTravel(travel.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Excluir
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleArchive(travel.id, true)} className="gap-2">
+                        <Archive className="h-4 w-4" />
+                        Arquivar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleToggleLock(travel.id)} className="gap-2">
+                        {isLocked ? (
+                          <>
+                            <LockOpen className="h-4 w-4" />
+                            Reabrir vagas
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="h-4 w-4" />
+                            Processar diária
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
                 <div className="p-4">
                   <div className="space-y-3">
-                    {/* Voluntários Ordenados */}
+                    <div>
+                      <h3 className="text-xl font-semibold mb-2 text-blue-900">
+                        {travel.destination}
+                      </h3>
+                      <div className="space-y-2 text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-4 w-4 text-blue-500" />
+                          <p>Início: {travelStart.toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-4 w-4 text-blue-500" />
+                          <p>Fim: {travelEnd.toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-blue-500" />
+                          <p>Vagas: {travel.slots}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-blue-500" />
+                          <p>{formattedCount} diárias
+                            {travel.dailyRate && totalCost > 0 && (
+                              <span className="text-blue-600 font-medium ml-1">
+                                ({totalCost.toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL",
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0,
+                                })})
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     {sortedVolunteers.length > 0 && (
                       <div className="pt-3 border-t border-gray-200">
                         <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntários:</h4>
@@ -245,17 +692,49 @@ export const TravelManagement = () => {
                           {sortedVolunteers.map((vol) => (
                             <div
                               key={vol.fullName}
-                              className={`text-sm p-2 rounded-lg flex justify-between items-center ${vol.isSelected ? 'bg-green-50' : 'bg-gray-50'}`}
+                              className={`text-sm p-2 rounded-lg flex justify-between items-center ${
+                                vol.isSelected
+                                  ? 'bg-green-50 border border-green-200'
+                                  : 'bg-gray-50 border border-gray-200'
+                              }`}
                             >
                               <div className="flex items-center gap-2">
                                 {vol.isSelected && (
                                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
                                 )}
-                                <span className={vol.isSelected ? "font-medium text-green-900" : "text-gray-700"}>{vol.fullName}</span>
+                                <span className={vol.isSelected ? "font-medium text-green-900" : "text-gray-700"}>
+                                  {vol.fullName}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
+                                  {formattedTravelCount(volunteerCounts[vol.fullName] || 0)}
+                                </span>
+                                <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
+                                  {formattedDiaryCount(vol.diaryCount)}
+                                </span>
                               </div>
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Botão de voluntariar */}
+                    {today < travelStart && !travel.archived && !isLocked && (
+                      <div className="mt-3">
+                        <Button
+                          onClick={() => handleVolunteer(travel.id)}
+                          className={`w-full shadow-sm ${
+                            travel.volunteers?.includes(`${user.rank} ${user.warName}`)
+                              ? "bg-red-500 hover:bg-red-600"
+                              : "bg-blue-500 hover:bg-blue-600"
+                          } text-white font-medium`}
+                        >
+                          {travel.volunteers?.includes(`${user.rank} ${user.warName}`)
+                            ? "Desistir"
+                            : "Quero ser Voluntário"}
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -264,6 +743,141 @@ export const TravelManagement = () => {
             );
           })}
       </div>
+
+      {/* Botão de criar nova viagem (somente Admin) */}
+      {isAdmin && (
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          className="fixed bottom-6 right-6 rounded-full p-4 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      )}
+
+      {/* Modal de criação/edição */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <Card className="p-6 bg-white shadow-lg max-w-lg w-full relative">
+            <button
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingTravel(null);
+                setStartDate("");
+                setEndDate("");
+                setSlots("");
+                setDestination("");
+                setDailyAllowance("");
+                setDailyRate("");
+                setHalfLastDay(false);
+              }}
+              className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 text-xl"
+            >
+              &times;
+            </button>
+            <form onSubmit={handleCreateTravel} className="space-y-6">
+              <h2 className="text-2xl font-semibold text-primary">
+                {editingTravel ? "Editar Viagem" : "Criar Nova Viagem"}
+              </h2>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="destination">Destino</Label>
+                  <Input
+                    id="destination"
+                    type="text"
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    required
+                    placeholder="Digite o destino"
+                    className="w-full"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate">Data Inicial</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      required
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endDate">Data Final</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      required
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="slots">Número de Vagas</Label>
+                    <Input
+                      id="slots"
+                      type="number"
+                      value={slots}
+                      onChange={(e) => setSlots(e.target.value)}
+                      required
+                      min="1"
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dailyRate">Valor da Diária</Label>
+                    <Input
+                      id="dailyRate"
+                      type="number"
+                      value={dailyRate}
+                      onChange={(e) => setDailyRate(e.target.value)}
+                      placeholder="Opcional"
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <Label htmlFor="halfLastDay" className="mr-2 text-sm">
+                    Último dia meia diária
+                  </Label>
+                  <Switch
+                    id="halfLastDay"
+                    checked={halfLastDay}
+                    onCheckedChange={setHalfLastDay}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-4 mt-4">
+                <Button type="submit" className="w-full md:w-auto">
+                  {editingTravel ? "Salvar Alterações" : "Criar Viagem"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingTravel(null);
+                    setStartDate("");
+                    setEndDate("");
+                    setSlots("");
+                    setDestination("");
+                    setDailyAllowance("");
+                    setDailyRate("");
+                    setHalfLastDay(false);
+                  }}
+                  className="w-full md:w-auto"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
     </>
   );
 };
