@@ -6,11 +6,10 @@ import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { UserRoundCog, CalendarDays, XCircle } from "lucide-react";
+import { UserRoundCog, CalendarDays, Clock } from "lucide-react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -137,6 +136,37 @@ const TimeSlotLimitControl = ({
       )}
     </div>
   );
+};
+
+const getMilitaryRankWeight = (rank: string): number => {
+  const rankWeights: { [key: string]: number } = {
+    "Cel": 12,
+    "Cel PM": 12,
+    "Ten Cel": 11,
+    "Ten Cel PM": 11,
+    "Maj": 10,
+    "Maj PM": 10,
+    "Cap": 9,
+    "Cap PM": 9,
+    "1° Ten": 8,
+    "1° Ten PM": 8,
+    "2° Ten": 7,
+    "2° Ten PM": 7,
+    "Sub Ten": 6,
+    "Sub Ten PM": 6,
+    "1° Sgt": 5,
+    "1° Sgt PM": 5,
+    "2° Sgt": 4,
+    "2° Sgt PM": 4,
+    "3° Sgt": 3,
+    "3° Sgt PM": 3,
+    "Cb": 2,
+    "Cb PM": 2,
+    "Sd": 1,
+    "Sd PM": 1,
+    "Estágio": 0,
+  };
+  return rankWeights[rank] || 0;
 };
 
 const TimeSlotsList = () => {
@@ -429,6 +459,16 @@ const TimeSlotsList = () => {
     return userSlotCount < slotLimit;
   };
 
+  const sortVolunteers = (volunteers: string[]) => {
+    if (!volunteers) return [];
+    
+    return volunteers.sort((a, b) => {
+      const rankA = a.split(" ")[0];
+      const rankB = b.split(" ")[0];
+      return getMilitaryRankWeight(rankB) - getMilitaryRankWeight(rankA);
+    });
+  };
+
   const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
 
   const userSlotCount = timeSlots.reduce((count, slot) => 
@@ -472,22 +512,25 @@ const TimeSlotsList = () => {
                 }`}
               >
                 <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <p className="font-medium text-gray-900">
-                      {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} - {calculateTimeDifference(slot.start_time, slot.end_time)}
-                    </p>
-                    {slot.slots_used < slot.total_slots ? (
-                      <p className="text-sm text-gray-600">
-                        {slot.total_slots - slot.slots_used} {slot.total_slots - slot.slots_used === 1 ? 'vaga' : 'vagas'}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-blue-500" />
+                      <p className="font-medium text-gray-900">
+                        {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} - {calculateTimeDifference(slot.start_time, slot.end_time)}
                       </p>
-                    ) : (
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 border border-orange-200">
-                        <XCircle className="h-4 w-4 text-orange-500" />
-                        <span className="text-sm font-medium text-orange-700">
-                          Vagas Esgotadas
-                        </span>
-                      </div>
-                    )}
+                    </div>
+                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+                      isSlotFull(slot)
+                        ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                        : 'bg-blue-50 text-blue-700 border border-blue-200'
+                    }`}>
+                      <span className="text-sm font-medium">
+                        {isSlotFull(slot)
+                          ? 'Vagas Esgotadas'
+                          : `${slot.total_slots - slot.slots_used} ${slot.total_slots - slot.slots_used === 1 ? 'vaga disponível' : 'vagas disponíveis'}`
+                        }
+                      </span>
+                    </div>
                   </div>
                   {shouldShowVolunteerButton(slot) && (
                     isVolunteered(slot) ? (
@@ -499,17 +542,13 @@ const TimeSlotsList = () => {
                       >
                         Desmarcar
                       </Button>
-                    ) : !isSlotFull(slot) && canVolunteerForSlot(slot) ? (
+                    ) : !isSlotFull(slot) && canVolunteerForSlot(slot) && (
                       <Button 
                         onClick={() => handleVolunteer(slot)}
                         className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow"
                         size="sm"
                       >
                         Voluntário
-                      </Button>
-                    ) : (
-                      <Button disabled size="sm" className="opacity-60">
-                        Vagas Esgotadas
                       </Button>
                     )
                   )}
@@ -518,7 +557,7 @@ const TimeSlotsList = () => {
                   <div className="pt-3 border-t border-gray-200">
                     <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
                     <div className="space-y-1">
-                      {slot.volunteers.map((volunteer, index) => (
+                      {sortVolunteers(slot.volunteers).map((volunteer, index) => (
                         <p key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300">
                           {volunteer}
                         </p>
