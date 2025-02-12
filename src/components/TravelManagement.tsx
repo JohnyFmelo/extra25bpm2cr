@@ -513,8 +513,7 @@ export const TravelManagement = () => {
   // RENDER
   // ---------------------------------------------------
   return (
-    <div className="p-6 space-y-8 relative">
-      {/* Modal de Regras (exemplo simples) */}
+    <>
       {showRankingRules && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <Card className="p-6 bg-white shadow-xl max-w-md w-full relative border border-gray-100">
@@ -534,8 +533,7 @@ export const TravelManagement = () => {
         </div>
       )}
 
-      {/* LISTA DE CARTÕES DE VIAGEM */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-min p-4">
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
           .map((travel) => {
@@ -544,6 +542,15 @@ export const TravelManagement = () => {
             const today = new Date();
             const isLocked = travel.isLocked;
             const sortedVolunteers = getSortedVolunteers(travel);
+
+            // Cálculo correto de diárias (evitando NaN)
+            const numDays = differenceInDays(travelEnd, travelStart) + 1;
+            const count = travel.halfLastDay ? numDays - 0.5 : numDays;
+            const formattedCount = count > 0 ? count.toLocaleString("pt-BR", {
+              minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
+              maximumFractionDigits: 1,
+            }) : "0";
+            const totalCost = travel.dailyRate ? count * Number(travel.dailyRate) : 0;
 
             let cardBg = "bg-white";
             let statusBadge = null;
@@ -589,19 +596,10 @@ export const TravelManagement = () => {
               );
             }
 
-            // Cálculo de diárias (exibição)
-            const numDays = differenceInDays(travelEnd, travelStart) + 1;
-            const count = travel.halfLastDay ? numDays - 0.5 : numDays;
-            const formattedCount = count.toLocaleString("pt-BR", {
-              minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
-              maximumFractionDigits: 1,
-            });
-            const totalCost = count * Number(travel.dailyRate);
-
             return (
               <Card
                 key={travel.id}
-                className={`relative overflow-hidden ${cardBg} border-0 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                className={`relative overflow-hidden ${cardBg} border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 ${
                   travel.archived ? "opacity-75" : ""
                 }`}
               >
@@ -648,10 +646,10 @@ export const TravelManagement = () => {
                   </DropdownMenu>
                 )}
 
-                <div className="p-6">
-                  <div className="space-y-4">
+                <div className="p-4">
+                  <div className="space-y-3">
                     <div>
-                      <h3 className="text-2xl font-semibold mb-2 text-blue-900">
+                      <h3 className="text-xl font-semibold mb-2 text-blue-900">
                         {travel.destination}
                       </h3>
                       <div className="space-y-2 text-gray-600">
@@ -670,7 +668,7 @@ export const TravelManagement = () => {
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-blue-500" />
                           <p>{formattedCount} diárias
-                            {travel.dailyRate && (
+                            {travel.dailyRate && totalCost > 0 && (
                               <span className="text-blue-600 font-medium ml-1">
                                 ({totalCost.toLocaleString("pt-BR", {
                                   style: "currency",
@@ -686,13 +684,13 @@ export const TravelManagement = () => {
                     </div>
 
                     {sortedVolunteers.length > 0 && (
-                      <div className="pt-4 border-t border-gray-200">
-                        <h4 className="font-medium text-sm text-gray-700 mb-3">Voluntários:</h4>
+                      <div className="pt-3 border-t border-gray-200">
+                        <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntários:</h4>
                         <div className="space-y-2">
                           {sortedVolunteers.map((vol) => (
                             <div
                               key={vol.fullName}
-                              className={`text-sm p-3 rounded-lg flex justify-between items-center ${
+                              className={`text-sm p-2 rounded-lg flex justify-between items-center ${
                                 vol.isSelected
                                   ? 'bg-green-50 border border-green-200'
                                   : 'bg-gray-50 border border-gray-200'
@@ -722,7 +720,7 @@ export const TravelManagement = () => {
 
                     {/* Botão de voluntariar */}
                     {today < travelStart && !travel.archived && !isLocked && (
-                      <div className="mt-4">
+                      <div className="mt-3">
                         <Button
                           onClick={() => handleVolunteer(travel.id)}
                           className={`w-full shadow-sm ${
@@ -878,7 +876,7 @@ export const TravelManagement = () => {
           </Card>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
