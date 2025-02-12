@@ -506,7 +506,6 @@ export const TravelManagement = () => {
     });
   };
 
-
   // ---------------------------------------------------
   // 11) EXPANDIR/COLAPSAR CARTÕES
   // ---------------------------------------------------
@@ -528,7 +527,7 @@ export const TravelManagement = () => {
           <Card className="p-6 bg-white shadow-xl max-w-md w-full relative border border-gray-100">
             <h2 className="text-xl font-semibold mb-4 text-blue-900">Regras de Ordenação</h2>
             <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
-              <li>Menor quantidade de diárias primeiro.</li>
+                            <li>Menor quantidade de diárias primeiro.</li>
               <li>Em caso de empate, graduação mais antiga (peso maior) fica acima.</li>
               <li>Se ainda houver empate, quem se inscreveu primeiro fica acima.</li>
             </ol>
