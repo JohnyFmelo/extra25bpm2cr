@@ -3,7 +3,7 @@ import { differenceInDays } from "date-fns";
 import { Clock } from "lucide-react";
 import { Button } from "./ui/button";
 import { VolunteerList } from "./VolunteerList";
-import { Travel } from "@/types/travel";
+import { Travel } from "./TravelManagement";
 
 interface TravelDetailsProps {
   travel: Travel;

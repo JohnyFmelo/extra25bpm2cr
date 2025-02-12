@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "react"; 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -25,7 +25,24 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info } from "lucide-react";
 import { Switch } from "./ui/switch";
-import { Travel } from "@/types/travel";
+
+// ---------------------------------------------------
+// INTERFACES
+// ---------------------------------------------------
+interface Travel {
+  id: string;
+  startDate: string;
+  endDate: string;
+  slots: number;
+  destination: string;
+  dailyAllowance?: number | null;
+  dailyRate?: number | null;
+  halfLastDay: boolean;
+  volunteers: string[];           // Todos que se inscreveram
+  selectedVolunteers?: string[];  // Somente os que foram selecionados
+  archived: boolean;
+  isLocked?: boolean;
+}
 
 // ---------------------------------------------------
 // COMPONENTE PRINCIPAL
