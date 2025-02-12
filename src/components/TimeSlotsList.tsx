@@ -6,7 +6,7 @@ import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { UserRoundCog } from "lucide-react";
+import { UserRoundCog, CalendarDays, XCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 interface TimeSlot {
   id?: string;
@@ -449,24 +450,43 @@ const TimeSlotsList = () => {
 
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => (
         <div key={date} className="bg-white rounded-lg shadow-sm p-4 md:p-5">
-          <h3 className="font-medium text-lg mb-3 text-gray-800">
-            {formatDateHeader(date)}
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-blue-500" />
+              <h3 className="font-medium text-lg text-gray-800">
+                {formatDateHeader(date)}
+              </h3>
+            </div>
+            <Badge variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+              Extra
+            </Badge>
+          </div>
           <div className="space-y-3">
             {slots.map((slot) => (
               <div 
                 key={slot.id} 
-                className={`border rounded-lg p-3 space-y-2 ${isSlotFull(slot) ? 'bg-orange-50' : 'bg-gray-50'}`}
+                className={`border rounded-lg p-4 space-y-2 transition-all ${
+                  isSlotFull(slot) 
+                    ? 'bg-orange-50 border-orange-200' 
+                    : 'bg-gray-50 hover:bg-gray-100'
+                }`}
               >
-                <div className="flex justify-between items-center">
-                  <div>
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
                     <p className="font-medium text-gray-900">
                       {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} - {calculateTimeDifference(slot.start_time, slot.end_time)}
                     </p>
-                    {slot.slots_used < slot.total_slots && (
+                    {slot.slots_used < slot.total_slots ? (
                       <p className="text-sm text-gray-600">
                         {slot.total_slots - slot.slots_used} {slot.total_slots - slot.slots_used === 1 ? 'vaga' : 'vagas'}
                       </p>
+                    ) : (
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 border border-orange-200">
+                        <XCircle className="h-4 w-4 text-orange-500" />
+                        <span className="text-sm font-medium text-orange-700">
+                          Vagas Esgotadas
+                        </span>
+                      </div>
                     )}
                   </div>
                   {shouldShowVolunteerButton(slot) && (
@@ -475,30 +495,31 @@ const TimeSlotsList = () => {
                         onClick={() => handleUnvolunteer(slot)}
                         variant="destructive"
                         size="sm"
+                        className="shadow-sm hover:shadow"
                       >
                         Desmarcar
                       </Button>
                     ) : !isSlotFull(slot) && canVolunteerForSlot(slot) ? (
                       <Button 
                         onClick={() => handleVolunteer(slot)}
-                        className="bg-blue-500 hover:bg-blue-600 text-white"
+                        className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow"
                         size="sm"
                       >
                         Voluntário
                       </Button>
                     ) : (
-                      <Button disabled size="sm">
+                      <Button disabled size="sm" className="opacity-60">
                         Vagas Esgotadas
                       </Button>
                     )
                   )}
                 </div>
                 {slot.volunteers && slot.volunteers.length > 0 && (
-                  <div className="pt-2 border-t border-gray-200">
-                    <p className="text-sm font-medium mb-1 text-gray-700">Voluntários:</p>
+                  <div className="pt-3 border-t border-gray-200">
+                    <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
                     <div className="space-y-1">
                       {slot.volunteers.map((volunteer, index) => (
-                        <p key={index} className="text-sm text-gray-600">
+                        <p key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300">
                           {volunteer}
                         </p>
                       ))}
