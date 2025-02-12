@@ -6,12 +6,14 @@ import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { UserRoundCog, CalendarDays, Clock } from "lucide-react";
+import { UserRoundCog, CalendarDays, Clock, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -173,6 +175,8 @@ const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [slotLimit, setSlotLimit] = useState<number>(0);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedVolunteer, setSelectedVolunteer] = useState<{ slot: TimeSlot; volunteer: string } | null>(null);
   const { toast } = useToast();
   
   const userDataString = localStorage.getItem('user');
@@ -184,23 +188,18 @@ const TimeSlotsList = () => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);
     
-    // Se o horário final for menor que o inicial, significa que passou para o próximo dia
-    // Então adicionamos 24 horas ao horário final
     if (endHour < startHour || (endHour === 0 && startHour > 0)) {
       endHour += 24;
     }
     
-    // Calcula diferença de horas e minutos
     let diffHours = endHour - startHour;
     let diffMinutes = endMinute - startMinute;
     
-    // Ajusta quando os minutos são negativos
     if (diffMinutes < 0) {
       diffHours -= 1;
       diffMinutes += 60;
     }
     
-    // Formata o texto de retorno
     const hourText = diffHours > 0 ? `${diffHours}h` : '';
     const minText = diffMinutes > 0 ? `${diffMinutes}min` : '';
     
@@ -390,6 +389,47 @@ const TimeSlotsList = () => {
         description: "Não foi possível atualizar o limite de horários.",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleDeleteVolunteer = async () => {
+    if (!selectedVolunteer) return;
+
+    try {
+      const { slot, volunteer } = selectedVolunteer;
+      const updatedSlot = {
+        ...slot,
+        slots_used: slot.slots_used - 1,
+        volunteers: slot.volunteers?.filter(v => v !== volunteer) || []
+      };
+
+      const result = await dataOperations.update(
+        updatedSlot,
+        {
+          date: slot.date,
+          start_time: slot.start_time,
+          end_time: slot.end_time
+        }
+      );
+
+      if (!result.success) {
+        throw new Error('Failed to remove volunteer');
+      }
+
+      toast({
+        title: "Sucesso",
+        description: "Voluntário removido com sucesso!"
+      });
+    } catch (error) {
+      console.error('Erro ao remover voluntário:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover o voluntário.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setSelectedVolunteer(null);
     }
   };
 
