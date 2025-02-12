@@ -543,6 +543,7 @@ export const TravelManagement = () => {
             const travelEnd = new Date(travel.endDate + "T00:00:00");
             const today = new Date();
             const isLocked = travel.isLocked;
+            const sortedVolunteers = getSortedVolunteers(travel);
 
             let cardBg = "bg-white";
             let statusBadge = null;
