@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info } from "lucide-react";
 import { Switch } from "./ui/switch";
+import { CalendarDays, Users, Clock } from "lucide-react";
 
 // ---------------------------------------------------
 // INTERFACES
@@ -515,15 +516,18 @@ export const TravelManagement = () => {
     <div className="p-6 space-y-8 relative">
       {/* Modal de Regras (exemplo simples) */}
       {showRankingRules && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="p-6 bg-white shadow-lg max-w-md w-full relative">
-            <h2 className="text-xl font-semibold mb-2">Regras de Ordenação</h2>
-            <ol className="list-decimal list-inside text-sm space-y-1">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <Card className="p-6 bg-white shadow-xl max-w-md w-full relative border border-gray-100">
+            <h2 className="text-xl font-semibold mb-4 text-blue-900">Regras de Ordenação</h2>
+            <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
               <li>Menor quantidade de diárias primeiro.</li>
               <li>Em caso de empate, graduação mais antiga (peso maior) fica acima.</li>
               <li>Se ainda houver empate, quem se inscreveu primeiro fica acima.</li>
             </ol>
-            <Button className="mt-4" onClick={() => setShowRankingRules(false)}>
+            <Button 
+              className="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white" 
+              onClick={() => setShowRankingRules(false)}
+            >
               Fechar
             </Button>
           </Card>
@@ -548,37 +552,37 @@ export const TravelManagement = () => {
             if (today < travelStart) {
               if (isLocked) {
                 statusBadge = (
-                  <div className={`absolute top-2 ${rightPos} bg-orange-500 text-white px-2 py-1 text-xs rounded`}>
+                  <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
                     Processando diária
                   </div>
                 );
               } else {
                 statusBadge = (
-                  <div className={`absolute top-2 ${rightPos} bg-[#3B82F6] text-white px-2 py-1 text-xs rounded flex items-center`}>
+                  <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm flex items-center gap-2`}>
                     Em aberto
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowRankingRules(true);
                       }}
-                      className="ml-2"
+                      className="hover:bg-white/20 rounded-full p-1 transition-colors"
                     >
-                      <Info className="h-4 w-4" />
+                      <Info className="h-3 w-3" />
                     </button>
                   </div>
                 );
               }
             } else if (today >= travelStart && today <= travelEnd) {
-              cardBg = "bg-green-100";
+              cardBg = "bg-gradient-to-br from-green-50 to-green-100";
               statusBadge = (
-                <div className={`absolute top-2 ${rightPos} bg-green-500 text-white px-2 py-1 text-xs rounded`}>
+                <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
                   Em transito
                 </div>
               );
             } else if (today > travelEnd) {
-              cardBg = "bg-gray-100";
+              cardBg = "bg-gradient-to-br from-gray-50 to-gray-100";
               statusBadge = (
-                <div className={`absolute top-2 ${rightPos} bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded`}>
+                <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-gray-400 to-gray-500 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
                   Encerrada
                 </div>
               );
@@ -592,104 +596,13 @@ export const TravelManagement = () => {
               maximumFractionDigits: 1,
             });
             const totalCost = count * Number(travel.dailyRate);
-            const diariasLine = travel.dailyRate
-              ? `Diárias: ${formattedCount} (${totalCost.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                })})`
-              : `Diárias: ${formattedCount}`;
-
-            // Conteúdo reduzido (cartão fechado)
-            const minimalContent = (
-              <div className="cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
-                <h3 className="text-xl font-semibold">{travel.destination}</h3>
-                <p>Data Inicial: {travelStart.toLocaleDateString()}</p>
-                <p>{diariasLine}</p>
-              </div>
-            );
-
-            // Voluntários ordenados pela regra
-            const sortedVolunteers = getSortedVolunteers(travel);
-
-            // Conteúdo completo (cartão aberto)
-            const fullContent = (
-              <div>
-                <div className="mb-2 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
-                  <h3 className="text-xl font-semibold text-primary">{travel.destination}</h3>
-                </div>
-                <div className="mt-2 space-y-1 text-sm text-gray-600">
-                  <p>Data Inicial: {travelStart.toLocaleDateString()}</p>
-                  <p>Data Final: {travelEnd.toLocaleDateString()}</p>
-                  <p>Vagas: {travel.slots}</p>
-                  <p>{diariasLine}</p>
-
-                  {sortedVolunteers.length > 0 && (
-                    <div className="pt-4 border-t border-gray-100">
-                      <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntário:</h4>
-                      <ul className="space-y-1">
-                        {sortedVolunteers.map((vol) => (
-                          <li
-                            key={vol.fullName}
-                            className={`text-sm p-2 rounded flex justify-between items-center ${
-                              vol.isSelected
-                                ? "bg-green-100 border border-green-200"
-                                : "bg-gray-50 border border-gray-100"
-                            }`}
-                          >
-                            <div className="flex items-center space-x-2">
-                              {vol.isSelected && (
-                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                              )}
-                              <span className={vol.isSelected ? "font-medium" : ""}>
-                                {vol.fullName}
-                              </span>
-                              {/* Removemos o rótulo textual "Selecionado (1ª posição / pos. X)" */}
-                            </div>
-                            <div className="text-right">
-                              <span className={`text-xs ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
-                                {formattedTravelCount(volunteerCounts[vol.fullName] || 0)}
-                              </span>
-                              <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
-                                {formattedDiaryCount(vol.diaryCount)}
-                              </span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                {/* Botão de voluntariar, se viagem em aberto e futuro */}
-                {today < travelStart && !travel.archived && !isLocked && (
-                  <div className="mt-4">
-                    <Button
-                      onClick={() => handleVolunteer(travel.id)}
-                      className={`w-full ${
-                        travel.volunteers?.includes(`${user.rank} ${user.warName}`)
-                          ? "bg-red-500 hover:bg-red-600"
-                          : "bg-[#3B82F6] hover:bg-[#2563eb]"
-                      } text-white`}
-                    >
-                      {travel.volunteers?.includes(`${user.rank} ${user.warName}`)
-                        ? "Desistir"
-                        : "Quero ser Voluntário"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            );
 
             return (
               <Card
                 key={travel.id}
-                className={`p-6 hover:shadow-xl transition-shadow relative ${cardBg} ${
-                  travel.archived ? "cursor-pointer" : ""
+                className={`relative overflow-hidden ${cardBg} border-0 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                  travel.archived ? "opacity-75" : ""
                 }`}
-                onClick={travel.archived ? () => toggleExpansion(travel.id) : undefined}
-                onDoubleClick={today > travelEnd ? () => toggleExpansion(travel.id) : undefined}
               >
                 {statusBadge}
 
@@ -697,35 +610,35 @@ export const TravelManagement = () => {
                 {isAdmin && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="absolute top-2 right-2 h-8 w-8 p-0">
+                      <Button variant="ghost" className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-black/5">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditTravel(travel)}>
-                        <Edit className="mr-2 h-4 w-4" />
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => handleEditTravel(travel)} className="gap-2">
+                        <Edit className="h-4 w-4" />
                         Editar
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        className="text-red-600"
+                        className="text-red-600 gap-2"
                         onClick={() => handleDeleteTravel(travel.id)}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                         Excluir
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleArchive(travel.id, true)}>
-                        <Archive className="mr-2 h-4 w-4" />
+                      <DropdownMenuItem onClick={() => handleArchive(travel.id, true)} className="gap-2">
+                        <Archive className="h-4 w-4" />
                         Arquivar
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}>
+                      <DropdownMenuItem onClick={() => handleToggleLock(travel.id)} className="gap-2">
                         {isLocked ? (
                           <>
-                            <LockOpen className="mr-2 h-4 w-4" />
+                            <LockOpen className="h-4 w-4" />
                             Reabrir vagas
                           </>
                         ) : (
                           <>
-                            <Lock className="mr-2 h-4 w-4" />
+                            <Lock className="h-4 w-4" />
                             Processar diária
                           </>
                         )}
@@ -734,17 +647,113 @@ export const TravelManagement = () => {
                   </DropdownMenu>
                 )}
 
-                <div className="space-y-4">
-                  {travel.archived && !expandedTravels.includes(travel.id)
-                    ? minimalContent
-                    : fullContent}
+                <div className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-2xl font-semibold mb-2 text-blue-900">
+                        {travel.destination}
+                      </h3>
+                      <div className="space-y-2 text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-4 w-4 text-blue-500" />
+                          <p>Início: {travelStart.toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-4 w-4 text-blue-500" />
+                          <p>Fim: {travelEnd.toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-blue-500" />
+                          <p>Vagas: {travel.slots}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-blue-500" />
+                          <p>{formattedCount} diárias
+                            {travel.dailyRate && (
+                              <span className="text-blue-600 font-medium ml-1">
+                                ({totalCost.toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL",
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0,
+                                })})
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {sortedVolunteers.length > 0 && (
+                      <div className="pt-4 border-t border-gray-200">
+                        <h4 className="font-medium text-sm text-gray-700 mb-3">Voluntários:</h4>
+                        <div className="space-y-2">
+                          {sortedVolunteers.map((vol) => (
+                            <div
+                              key={vol.fullName}
+                              className={`text-sm p-3 rounded-lg flex justify-between items-center ${
+                                vol.isSelected
+                                  ? 'bg-green-50 border border-green-200'
+                                  : 'bg-gray-50 border border-gray-200'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {vol.isSelected && (
+                                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                )}
+                                <span className={vol.isSelected ? "font-medium text-green-900" : "text-gray-700"}>
+                                  {vol.fullName}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
+                                  {formattedTravelCount(volunteerCounts[vol.fullName] || 0)}
+                                </span>
+                                <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
+                                  {formattedDiaryCount(vol.diaryCount)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Botão de voluntariar */}
+                    {today < travelStart && !travel.archived && !isLocked && (
+                      <div className="mt-4">
+                        <Button
+                          onClick={() => handleVolunteer(travel.id)}
+                          className={`w-full shadow-sm ${
+                            travel.volunteers?.includes(`${user.rank} ${user.warName}`)
+                              ? "bg-red-500 hover:bg-red-600"
+                              : "bg-blue-500 hover:bg-blue-600"
+                          } text-white font-medium`}
+                        >
+                          {travel.volunteers?.includes(`${user.rank} ${user.warName}`)
+                            ? "Desistir"
+                            : "Quero ser Voluntário"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </Card>
             );
           })}
       </div>
 
-      {/* MODAL DE CRIAÇÃO/EDIÇÃO */}
+      {/* Botão de criar nova viagem (somente Admin) */}
+      {isAdmin && (
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          className="fixed bottom-6 right-6 rounded-full p-4 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      )}
+
+      {/* Modal de criação/edição */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <Card className="p-6 bg-white shadow-lg max-w-lg w-full relative">
@@ -867,16 +876,6 @@ export const TravelManagement = () => {
             </form>
           </Card>
         </div>
-      )}
-
-      {/* Botão de criar nova viagem (somente Admin) */}
-      {isAdmin && (
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          className="fixed bottom-4 right-4 rounded-full p-4 bg-[#3B82F6] hover:bg-[#2563eb] text-white shadow-lg"
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
       )}
     </div>
   );
