@@ -754,7 +754,7 @@ export const TravelManagement = () => {
 
       {/* Modal de criação/edição */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <Card className="p-6 bg-white shadow-lg max-w-lg w-full relative">
             <button
               onClick={() => {
@@ -876,8 +876,5 @@ export const TravelManagement = () => {
           </Card>
         </div>
       )}
-    </>
-  );
-};
-
+     
 export default TravelManagement;
