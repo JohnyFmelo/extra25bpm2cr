@@ -350,14 +350,20 @@ export const TravelManagement = () => {
             fullName: volunteer,
             rank,
             diaryCount: diaryCounts[volunteer] || 0,
-            rankWeight: getMilitaryRankWeight(rank), // Mantém, mas não usa na ordenação
-            appliedAtIndex: travelData.volunteers.indexOf(volunteer), // Mantém, mas não usa na ordenação
+            rankWeight: getMilitaryRankWeight(rank),
+            // "appliedAtIndex" = posição no array "volunteers"
+            appliedAtIndex: travelData.volunteers.indexOf(volunteer),
           };
         });
 
-        // Ordena: Apenas por diária (maior diária embaixo)
+        // Ordena:
+        // 1) Menor diária (quem tem menos diárias em cima)
+        // 2) Maior patente (desempate: maior patente em cima)
         processed.sort((a, b) => {
-          return a.diaryCount - b.diaryCount; // Ordena pela diária (menor diária em cima)
+          if (a.diaryCount !== b.diaryCount) {
+            return a.diaryCount - b.diaryCount; // 1) Menor diária - ASCENDING
+          }
+          return b.rankWeight - a.rankWeight;  // 2) Maior patente (desempate) - DESCENDING
         });
 
         // Pega até o limite de vagas
@@ -457,8 +463,8 @@ export const TravelManagement = () => {
         fullName: volunteer,
         rank,
         diaryCount: diaryCounts[volunteer] || 0,
-        rankWeight: getMilitaryRankWeight(rank), // Mantém, mas não usa na ordenação
-        appliedAtIndex: (travel.volunteers || []).indexOf(volunteer), // Mantém, mas não usa na ordenação
+        rankWeight: getMilitaryRankWeight(rank),
+        appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
       };
     });
 
@@ -467,10 +473,16 @@ export const TravelManagement = () => {
     const totalSlots = travel.slots || 1;
     const isLocked = travel.isLocked;
 
-    // Ordena: Apenas por diária (menor diária em cima, maior diária embaixo)
+    // Ordena:
+    // 1) Menor diária (quem tem menos diárias em cima)
+    // 2) Maior patente (desempate: maior patente em cima)
     processed.sort((a, b) => {
-      return a.diaryCount - b.diaryCount; // Ordena pela diária (menor diária em cima)
+      if (a.diaryCount !== b.diaryCount) {
+        return a.diaryCount - b.diaryCount; // 1) Menor diária - ASCENDING
+      }
+      return b.rankWeight - a.rankWeight;  // 2) Maior patente (desempate) - DESCENDING
     });
+
 
     return processed.map((item, idx) => {
       const isSelected = isLocked
@@ -501,7 +513,8 @@ export const TravelManagement = () => {
           <Card className="p-6 bg-white shadow-xl max-w-md w-full relative border border-gray-100">
             <h2 className="text-xl font-semibold mb-4 text-blue-900">Regras de Ordenação</h2>
             <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
-              <li>Menor quantidade de diárias primeiro (quem tem menos diárias acumuladas, fica no topo).</li>
+              <li>Menor quantidade de diárias primeiro.</li>
+              <li>Empate em diárias: Graduação mais antiga (peso maior) fica acima.</li>
             </ol>
             <Button
               className="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white"
