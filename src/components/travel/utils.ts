@@ -33,16 +33,19 @@ export const getMilitaryRankWeight = (rank: string): number => {
 };
 
 export const calculateDailyCount = (startDate: string, endDate: string, halfLastDay: boolean): number => {
-  // Verifica se as datas são válidas
+  // Converte as strings de data para objetos Date
   const travelStart = new Date(startDate + "T00:00:00");
   const travelEnd = new Date(endDate + "T00:00:00");
 
+  // Verifica se as datas são válidas
   if (isNaN(travelStart.getTime()) || isNaN(travelEnd.getTime())) {
     throw new Error("Datas inválidas fornecidas.");
   }
 
   // Calcula a diferença de dias
-  const numDays = differenceInDays(travelEnd, travelStart) + 1;
+  const timeDifference = travelEnd.getTime() - travelStart.getTime();
+  const numDays = timeDifference / (1000 * 3600 * 24) + 1; // Converte de milissegundos para dias
+  
   return halfLastDay ? numDays - 0.5 : numDays;
 };
 
