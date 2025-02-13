@@ -13,7 +13,6 @@ import {
   doc,
   updateDoc,
   deleteDoc,
-  DocumentData,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -540,214 +539,212 @@ export const TravelManagement = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-        {travels
-          .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-          .map((travel) => {
-            const travelStart = new Date(travel.startDate + "T00:00:00");
-            const travelEnd = new Date(travel.endDate + "T00:00:00");
-            const today = new Date();
-            const isLocked = travel.isLocked;
-            const sortedVolunteers = getSortedVolunteers(travel);
+      {travels
+        .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+        .map((travel) => {
+          const travelStart = new Date(travel.startDate + "T00:00:00");
+          const travelEnd = new Date(travel.endDate + "T00:00:00");
+          const today = new Date();
+          const isLocked = travel.isLocked;
+          const sortedVolunteers = getSortedVolunteers(travel);
 
-            // Cálculo correto de diárias
-            const numDays = differenceInDays(travelEnd, travelStart) + 1;
-            const dailyCount = travel.halfLastDay ? numDays - 0.5 : numDays;
-            const formattedCount = dailyCount.toLocaleString("pt-BR", {
-              minimumFractionDigits: dailyCount % 1 !== 0 ? 1 : 0,
-              maximumFractionDigits: 1,
-            });
-            const totalCost = travel.dailyRate ? dailyCount * Number(travel.dailyRate) : 0;
+          // Cálculo correto de diárias
+          const numDays = differenceInDays(travelEnd, travelStart) + 1;
+          const dailyCount = travel.halfLastDay ? numDays - 0.5 : numDays;
+          const formattedCount = dailyCount.toLocaleString("pt-BR", {
+            minimumFractionDigits: dailyCount % 1 !== 0 ? 1 : 0,
+            maximumFractionDigits: 1,
+          });
+          const totalCost = travel.dailyRate ? dailyCount * Number(travel.dailyRate) : 0;
 
-            let cardBg = "bg-white";
-            let statusBadge = null;
-            const rightPos = isAdmin ? "right-12" : "right-2";
+          let cardBg = "bg-white";
+          let statusBadge = null;
+          const rightPos = isAdmin ? "right-12" : "right-2";
 
-            // Define status do cartão
-            if (today < travelStart) {
-              if (isLocked) {
-                statusBadge = (
-                  <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
-                    Processando diária
-                  </div>
-                );
-              } else {
-                statusBadge = (
-                  <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm flex items-center gap-2`}>
-                    Em aberto
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowRankingRules(true);
-                      }}
-                      className="hover:bg-white/20 rounded-full p-1 transition-colors"
-                    >
-                      <Info className="h-3 w-3" />
-                    </button>
-                  </div>
-                );
-              }
-            } else if (today >= travelStart && today <= travelEnd) {
-              cardBg = "bg-gradient-to-br from-green-50 to-green-100";
+          // Define status do cartão
+          if (today < travelStart) {
+            if (isLocked) {
               statusBadge = (
-                <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
-                  Em transito
+                <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
+                  Processando diária
                 </div>
               );
-            } else if (today > travelEnd) {
-              cardBg = "bg-gradient-to-br from-gray-50 to-gray-100";
+            } else {
               statusBadge = (
-                <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-gray-400 to-gray-500 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
-                  Encerrada
+                <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm flex items-center gap-2`}>
+                  Em aberto
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowRankingRules(true);
+                    }}
+                    className="hover:bg-white/20 rounded-full p-1 transition-colors"
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
                 </div>
               );
             }
+          } else if (today >= travelStart && today <= travelEnd) {
+            cardBg = "bg-gradient-to-br from-green-50 to-green-100";
+            statusBadge = (
+              <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
+                Em transito
+              </div>
+            );
+          } else if (today > travelEnd) {
+            cardBg = "bg-gradient-to-br from-gray-50 to-gray-100";
+            statusBadge = (
+              <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-gray-400 to-gray-500 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
+                Encerrada
+              </div>
+            );
+          }
 
-            return (
-              <Card
-                key={travel.id}
-                className={`relative overflow-hidden ${cardBg} border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 ${
-                  travel.archived ? "opacity-75" : ""
-                }`}
-              >
-                {statusBadge}
+          return (
+            <Card
+              key={travel.id}
+              className={`relative overflow-hidden ${cardBg} border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 ${
+                travel.archived ? "opacity-75" : ""
+              }`}
+            >
+              {statusBadge}
 
-                {/* Menu Admin */}
-                {isAdmin && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-black/5">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => handleEditTravel(travel)} className="gap-2">
-                        <Edit className="h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-red-600 gap-2"
-                        onClick={() => handleDeleteTravel(travel.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Excluir
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleArchive(travel.id, true)} className="gap-2">
-                        <Archive className="h-4 w-4" />
-                        Arquivar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleToggleLock(travel.id)} className="gap-2">
-                        {isLocked ? (
-                          <>
-                            <LockOpen className="h-4 w-4" />
-                            Reabrir vagas
-                          </>
-                        ) : (
-                          <>
-                            <Lock className="h-4 w-4" />
-                            Processar diária
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+              {/* Menu Admin */}
+              {isAdmin && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-black/5">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => handleEditTravel(travel)} className="gap-2">
+                      <Edit className="h-4 w-4" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-red-600 gap-2"
+                      onClick={() => handleDeleteTravel(travel.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Excluir
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleArchive(travel.id, true)} className="gap-2">
+                      <Archive className="h-4 w-4" />
+                      Arquivar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleToggleLock(travel.id)} className="gap-2">
+                      {isLocked ? (
+                        <>
+                          <LockOpen className="h-4 w-4" />
+                          Reabrir vagas
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="h-4 w-4" />
+                          Processar diária
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
-                <div className="p-4">
-                  <div className="space-y-3">
-                    <div>
-                      <h3 className="text-xl font-semibold mb-2 text-blue-900">
-                        {travel.destination}
-                      </h3>
-                      <div className="space-y-2 text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <CalendarDays className="h-4 w-4 text-blue-500" />
-                          <p>Início: {travelStart.toLocaleDateString()}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CalendarDays className="h-4 w-4 text-blue-500" />
-                          <p>Fim: {travelEnd.toLocaleDateString()}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-blue-500" />
-                          <p>Vagas: {travel.slots}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-blue-500" />
-                          <p>{formattedCount} diárias
-                            {travel.dailyRate && totalCost > 0 && (
-                              <span className="text-blue-600 font-medium ml-1">
-                                ({totalCost.toLocaleString("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL",
-                                  minimumFractionDigits: 0,
-                                  maximumFractionDigits: 0,
-                                })})
-                              </span>
-                            )}
-                          </p>
-                        </div>
+              <div className="p-4">
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2 text-blue-900">
+                      {travel.destination}
+                    </h3>
+                    <div className="space-y-2 text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-blue-500" />
+                        <p>Início: {travelStart.toLocaleDateString()}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-blue-500" />
+                        <p>Fim: {travelEnd.toLocaleDateString()}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-blue-500" />
+                        <p>Vagas: {travel.slots}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-blue-500" />
+                        <p>{formattedCount} diárias
+                          {travel.dailyRate && totalCost > 0 && (
+                            <span className="text-blue-600 font-medium ml-1">
+                              ({totalCost.toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              })})
+                            </span>
+                          )}
+                        </p>
                       </div>
                     </div>
-
-                    {sortedVolunteers.length > 0 && (
-                      <div className="pt-3 border-t border-gray-200">
-                        <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntários:</h4>
-                        <div className="space-y-2">
-                          {sortedVolunteers.map((vol) => (
-                            <div
-                              key={vol.fullName}
-                              className={`text-sm p-2 rounded-lg flex justify-between items-center ${
-                                vol.isSelected
-                                  ? 'bg-green-50 border border-green-200'
-                                  : 'bg-gray-50 border border-gray-200'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                {vol.isSelected && (
-                                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                )}
-                                <span className={vol.isSelected ? "font-medium text-green-900" : "text-gray-700"}>
-                                  {vol.fullName}
-                                </span>
-                              </div>
-                              <div className="text-right">
-                                <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
-                                  {formattedTravelCount(volunteerCounts[vol.fullName] || 0)}
-                                </span>
-                                <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
-                                  {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Botão de voluntariar */}
-                    {today < travelStart && !travel.archived && !isLocked && (
-                      <div className="mt-3">
-                        <Button
-                          onClick={() => handleVolunteer(travel.id)}
-                          className={`w-full shadow-sm ${
-                            travel.volunteers?.includes(`${user.rank} ${user.warName}`)
-                              ? "bg-red-500 hover:bg-red-600"
-                              : "bg-blue-500 hover:bg-blue-600"
-                          } text-white font-medium`}
-                        >
-                          {travel.volunteers?.includes(`${user.rank} ${user.warName}`)
-                            ? "Desistir"
-                            : "Quero ser Voluntário"}
-                        </Button>
-                      </div>
-                    )}
                   </div>
+
+                  {sortedVolunteers.length > 0 && (
+                    <div className="pt-3 border-t border-gray-200">
+                      <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntários:</h4>
+                      <div className="space-y-2">
+                        {sortedVolunteers.map((vol) => (
+                          <div
+                            key={vol.fullName}
+                            className={`text-sm p-2 rounded-lg flex justify-between items-center ${
+                              vol.isSelected
+                                ? 'bg-green-50 border border-green-200'
+                                : 'bg-gray-50 border border-gray-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {vol.isSelected && (
+                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              )}
+                              <span className={vol.isSelected ? "font-medium text-green-900" : "text-gray-700"}>
+                                {vol.fullName}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
+                                {formattedTravelCount(volunteerCounts[vol.fullName] || 0)}
+                              </span>
+                              <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
+                                {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Botão de voluntariar */}
+                  {today < travelStart && !travel.archived && !isLocked && (
+                    <div className="mt-3">
+                      <Button
+                        onClick={() => handleVolunteer(travel.id)}
+                        className={`w-full shadow-sm ${
+                          travel.volunteers?.includes(`${user.rank} ${user.warName}`)
+                            ? "bg-red-500 hover:bg-red-600"
+                            : "bg-blue-500 hover:bg-blue-600"
+                        } text-white font-medium`}
+                      >
+                        {travel.volunteers?.includes(`${user.rank} ${user.warName}`)
+                          ? "Desistir"
+                          : "Quero ser Voluntário"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              </Card>
-            );
-          })}
-      </div>
+              </div>
+            </Card>
+          );
+        })}
 
       {/* Botão de criar nova viagem (somente Admin) */}
       {isAdmin && (
