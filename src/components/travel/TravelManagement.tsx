@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
@@ -489,4 +488,17 @@ export const TravelManagement = () => {
           setSlots={setSlots}
           setDestination={setDestination}
           setDailyAllowance={setDailyAllowance}
-          setDailyRate={setDaily
+          setDailyRate={setDailyRate}
+          setHalfLastDay={setHalfLastDay}
+          onSubmit={handleCreateTravel}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingTravel(null);
+          }}
+        />
+      )}
+    </>
+  );
+};
+
+export default TravelManagement;
