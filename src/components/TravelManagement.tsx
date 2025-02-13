@@ -452,30 +452,53 @@ export const TravelManagement = () => {
   // ---------------------------------------------------
   // 10) OBTÉM LISTA DE VOLUNTÁRIOS A EXIBIR + ORDENAÇÃO
   // ---------------------------------------------------
-  const getSortedVolunteers = (travel: Travel) => {
-    // Se a viagem estiver bloqueada, mostramos apenas selectedVolunteers
-    // Se não estiver bloqueada, mostramos todos de volunteers
-    const baseList = travel.isLocked
-      ? travel.selectedVolunteers || []
-      : travel.volunteers || [];
+const getSortedVolunteers = (travel: Travel) => {
+  const baseList = travel.isLocked ? travel.selectedVolunteers || [] : travel.volunteers || [];
+  const processed = baseList.map((volunteer) => {
+    const [rank] = volunteer.split(" ");
+    const volunteerUser = JSON.parse(localStorage.getItem(`user_${volunteer}`) || "{}") as UserInfo;
+    return {
+      fullName: volunteer,
+      rank,
+      diaryCount: diaryCounts[volunteer] || 0,
+      rankWeight: getMilitaryRankWeight(rank),
+      rankSeniority: volunteerUser.rankSeniority || 0, // Antiguidade na graduação
+      serviceSeniority: volunteerUser.serviceSeniority || 0, // NOVO: Antiguidade no serviço
+      appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
+    };
+  });
 
-    // Monta array de objetos
-    const processed = baseList.map((volunteer) => {
-      const [rank] = volunteer.split(" ");
-      return {
-        fullName: volunteer,
-        rank,
-        diaryCount: diaryCounts[volunteer] || 0,
-        rankWeight: getMilitaryRankWeight(rank),
-        appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
-      };
-    });
+  const totalSlots = travel.slots || 1;
+  const isLocked = travel.isLocked;
 
-    // Se estiver bloqueada, assumimos que todos ali estão "isSelected"
-    // Se não estiver, quem ficaria no top X é "potencialmente selecionado"
-    const totalSlots = travel.slots || 1;
-    const isLocked = travel.isLocked;
+  // Ordena:
+  // 1) Menor quantidade de diárias
+  // 2) Maior patente (peso maior)
+  // 3) Antiguidade na graduação (para o mesmo rank)
+  // 4) Antiguidade no serviço (NOVO CRITÉRIO)
+  // 5) Ordem de inscrição (appliedAtIndex)
+  processed.sort((a, b) => {
+    if (a.diaryCount !== b.diaryCount) {
+      return a.diaryCount - b.diaryCount; // Ascendente
+    }
+    if (a.rankWeight !== b.rankWeight) {
+      return b.rankWeight - a.rankWeight; // Descendente
+    }
+    if (a.rankSeniority !== b.rankSeniority && a.rank === b.rank) {
+      return a.rankSeniority - b.rankSeniority; // Ascendente
+    }
+    if (a.serviceSeniority !== b.serviceSeniority) {
+      return a.serviceSeniority - b.serviceSeniority; // Ascendente (quem tem mais tempo de serviço primeiro)
+    }
+    return a.appliedAtIndex - b.appliedAtIndex; // Ascendente
+  });
 
+  return processed.map((item, idx) => ({
+    item,
+    isSelected: isLocked ? true : idx < totalSlots,
+  }));
+};
+};
     // Ordena do mesmo jeito
     processed.sort((a, b) => {
       // 1) Menor diária
