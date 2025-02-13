@@ -1,6 +1,6 @@
 //Viagens2
 //Viagens2
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -25,7 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X } from "lucide-react"; // Importando o ícone de X
 import { Switch } from "./ui/switch";
 import { CalendarDays, Users, Clock } from "lucide-react";
 
@@ -82,6 +82,8 @@ export const TravelManagement = () => {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
+
+  const [selectedVolunteerForTrip, setSelectedVolunteerForTrip] = useState<string | null>(null); // Estado para voluntário selecionado ao segurar
 
   // ---------------------------------------------------
   // 1) EFEITO PARA CALCULAR DIÁRIAS E VIAGENS
@@ -514,38 +516,31 @@ export const TravelManagement = () => {
   };
 
   // ---------------------------------------------------
-  // 12) EXCLUIR VOLUNTÁRIO
+  // 12) REMOVER VOLUNTÁRIO DA VIAGEM (ADMIN)
   // ---------------------------------------------------
-  const handleDeleteVolunteer = async (travelId: string, volunteerName: string) => {
-    if (!isAdmin) return; // Segurança extra, só admin pode excluir
-
-    if (window.confirm(`Deseja excluir o voluntário "${volunteerName}" desta viagem?`)) {
-      try {
-        const travelRef = doc(db, "travels", travelId);
-        const travelSnap = await getDoc(travelRef);
-
-        if (!travelSnap.exists()) {
-          toast({ title: "Erro", description: "Viagem não encontrada.", variant: "destructive" });
-          return;
-        }
-
-        const travelData = travelSnap.data() as Travel;
-        let updatedVolunteers = travelData.volunteers.filter(v => v !== volunteerName);
-        let updatedSelectedVolunteers = travelData.selectedVolunteers?.filter(v => v !== volunteerName) || [];
-
-        await updateDoc(travelRef, {
-          volunteers: updatedVolunteers,
-          selectedVolunteers: updatedSelectedVolunteers // Garante que remove de ambos se existir
-        });
-
-        toast({ title: "Sucesso", description: "Voluntário excluído com sucesso!" });
-      } catch (error) {
-        console.error("Erro ao excluir voluntário:", error);
-        toast({ title: "Erro", description: "Erro ao excluir voluntário.", variant: "destructive" });
+  const handleRemoveVolunteer = async (travelId: string, volunteerName: string) => {
+    try {
+      const travelRef = doc(db, "travels", travelId);
+      const travelSnap = await getDoc(travelRef);
+      if (!travelSnap.exists()) {
+        throw new Error("Viagem não encontrada");
       }
+      const travelData = travelSnap.data() as Travel;
+      const updatedVolunteers = travelData.volunteers.filter(v => v !== volunteerName);
+      await updateDoc(travelRef, { volunteers: updatedVolunteers });
+      toast({
+        title: "Sucesso",
+        description: "Voluntário removido da viagem.",
+      });
+    } catch (error) {
+      console.error("Erro ao remover voluntário:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao remover voluntário da viagem.",
+        variant: "destructive",
+      });
     }
   };
-
 
   // ---------------------------------------------------
   // RENDER
@@ -606,11 +601,11 @@ export const TravelManagement = () => {
                     Processando diária
                   </div>
                 );
-                cardBg = "bg-white"; // Se estiver "Processando diária", não deve ser verde
               } else {
                 statusBadge = (
                   <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm flex items-center gap-2`}>
                     Em aberto
+                    <X className="h-3 w-3 ml-1" /> {/* Adicionando o ícone de X */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -622,7 +617,6 @@ export const TravelManagement = () => {
                     </button>
                   </div>
                 );
-                cardBg = "bg-white"; // Se estiver "Em aberto", também não deve ser verde
               }
             } else if (today >= travelStart && today <= travelEnd) {
               cardBg = "bg-gradient-to-br from-green-50 to-green-100";
@@ -738,7 +732,13 @@ export const TravelManagement = () => {
                                 vol.isSelected
                                   ? 'bg-green-50 border border-green-200'
                                   : 'bg-gray-50 border border-gray-200'
-                              }`}
+                              } ${selectedVolunteerForTrip === vol.fullName ? 'bg-green-200' : ''}`} // Cor verde ao segurar
+                              onMouseDown={() => isAdmin ? setSelectedVolunteerForTrip(vol.fullName) : undefined} // Inicia seleção ao segurar
+                              onMouseUp={() => isAdmin ? setSelectedVolunteerForTrip(null) : undefined}   // Limpa seleção ao soltar
+                              onMouseLeave={() => isAdmin && selectedVolunteerForTrip === vol.fullName ? setSelectedVolunteerForTrip(null) : undefined} // Limpa seleção ao sair do container com mouse segurado
+                              onTouchStart={() => isAdmin ? setSelectedVolunteerForTrip(vol.fullName) : undefined}
+                              onTouchEnd={() => isAdmin ? setSelectedVolunteerForTrip(null) : undefined}
+                              onTouchCancel={() => isAdmin ? setSelectedVolunteerForTrip(null) : undefined}
                             >
                               <div className="flex items-center gap-2">
                                 {vol.isSelected && (
@@ -748,32 +748,27 @@ export const TravelManagement = () => {
                                   {vol.fullName}
                                 </span>
                               </div>
-                              <div className="text-right">
+                              <div className="flex items-center space-x-2">
                                 <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
                                   {formattedTravelCount(volunteerCounts[vol.fullName] || 0)}
                                 </span>
                                 <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
                                   {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}
                                 </span>
+                                {isAdmin && today < travelStart && !travel.isLocked && ( // Mostra X apenas para admin e viagens "Em aberto"
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="hover:bg-red-100 rounded-full text-red-500"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRemoveVolunteer(travel.id, vol.fullName);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
-                              {isAdmin && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="ml-2">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-40">
-                                    <DropdownMenuItem
-                                      className="text-red-600 gap-2"
-                                      onClick={() => handleDeleteVolunteer(travel.id, vol.fullName)}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                      Excluir
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
                             </div>
                           ))}
                         </div>
