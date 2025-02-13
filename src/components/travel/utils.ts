@@ -36,32 +36,23 @@ export const calculateDailyCount = (startDate: string, endDate: string, halfLast
   const travelStart = new Date(startDate + "T00:00:00");
   const travelEnd = new Date(endDate + "T00:00:00");
 
+  // Verifica se as datas são válidas
   if (isNaN(travelStart.getTime()) || isNaN(travelEnd.getTime())) {
-    return 0; // Retorne 0 se as datas forem inválidas
+    return 0; // Retorna 0 se as datas forem inválidas
   }
 
+  // Calcula a diferença de dias
   const numDays = differenceInDays(travelEnd, travelStart) + 1;
   return halfLastDay ? numDays - 0.5 : numDays;
 };
 
 export const formatDiaryCount = (count: number): string => {
+  // Verifica se o valor de count é NaN
   if (isNaN(count)) {
-    return "0 diárias"; // Retorne um valor padrão se o count for NaN
+    return "0 diárias"; // Retorna um valor padrão se o count for NaN
   }
 
-  const formattedCount = count.toLocaleString("pt-BR", {
-    minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
-    maximumFractionDigits: 1,
-  });
-
-  return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
-};
-
-export const formatDiaryCount = (count: number): string => {
-  if (isNaN(count)) {
-    throw new Error("Valor de contagem de diárias inválido.");
-  }
-
+  // Formatação de número para exibir no formato brasileiro
   const formattedCount = count.toLocaleString("pt-BR", {
     minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
     maximumFractionDigits: 1,
