@@ -1,6 +1,6 @@
 //Viagens2
 //Viagens2
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react"; // Import useRef
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -28,6 +28,7 @@ import {
 import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X } from "lucide-react"; // Importando o ícone de X
 import { Switch } from "./ui/switch";
 import { CalendarDays, Users, Clock } from "lucide-react";
+import { DragDropContext, Draggable, Droppable, DropResult } from 'react-beautiful-dnd'; // Import Drag and Drop components
 
 // ---------------------------------------------------
 // INTERFACES
@@ -46,6 +47,17 @@ interface Travel {
   archived: boolean;
   isLocked?: boolean;
 }
+
+interface VolunteerItem extends DocumentData { // Extend DocumentData to include Firebase data
+  fullName: string;
+  rank: string;
+  diaryCount: number;
+  rankWeight: number;
+  appliedAtIndex: number;
+  originalIndex: number;
+  isSelected: boolean;
+}
+
 
 // ---------------------------------------------------
 // COMPONENTE PRINCIPAL
@@ -474,6 +486,7 @@ export const TravelManagement = () => {
         rankWeight: getMilitaryRankWeight(rank),
         appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
         originalIndex: (travel.volunteers || []).indexOf(volunteer), // Para ordem de inscrição
+        isSelected: false // Initialize isSelected to false for each volunteer
       };
     });
 
@@ -497,12 +510,13 @@ export const TravelManagement = () => {
     });
 
     return processed.map((item, idx) => {
-      const isSelected = isLocked
+      const isPotentiallySelected = isLocked
         ? true
         : idx < totalSlots; // se não está bloqueada, top 'slots' são "selecionados"
-      return { ...item, isSelected };
+      return { ...item, isSelected: isPotentiallySelected }; // Use isPotentiallySelected to set initial isSelected
     });
   };
+
 
   // ---------------------------------------------------
   // 11) EXPANDIR/COLAPSAR CARTÕES
@@ -543,6 +557,28 @@ export const TravelManagement = () => {
   };
 
   // ---------------------------------------------------
+  // 13) REORDER VOLUNTEERS
+  // ---------------------------------------------------
+  const handleVolunteerOrderChange = async (travelId: string, orderedVolunteers: string[]) => {
+    try {
+        const travelRef = doc(db, "travels", travelId);
+        await updateDoc(travelRef, { volunteers: orderedVolunteers }); // Update 'volunteers' array to maintain original order
+        toast({
+            title: "Sucesso",
+            description: "Ordem dos voluntários atualizada.",
+        });
+    } catch (error) {
+        console.error("Erro ao reordenar voluntários:", error);
+        toast({
+            title: "Erro",
+            description: "Erro ao atualizar ordem dos voluntários.",
+            variant: "destructive",
+        });
+    }
+  };
+
+
+  // ---------------------------------------------------
   // RENDER
   // ---------------------------------------------------
   return (
@@ -578,7 +614,7 @@ export const TravelManagement = () => {
             const travelEnd = new Date(travel.endDate + "T00:00:00");
             const today = new Date();
             const isLocked = travel.isLocked;
-            const sortedVolunteers = getSortedVolunteers(travel);
+            let sortedVolunteers = getSortedVolunteers(travel); // Get initial sorted volunteers
 
             // Cálculo correto de diárias
             const numDays = differenceInDays(travelEnd, travelStart) + 1;
@@ -633,6 +669,22 @@ export const TravelManagement = () => {
                 </div>
               );
             }
+
+            const onDragEnd = (result: DropResult) => {
+              if (!result.destination) {
+                  return;
+              }
+
+              const items = Array.from(sortedVolunteers);
+              const [reorderedItem] = items.splice(result.source.index, 1);
+              items.splice(result.destination.index, 0, reorderedItem);
+
+              // Update the order of volunteers based on the visual reordering
+              const updatedVolunteerOrder = items.map(item => item.fullName);
+              handleVolunteerOrderChange(travel.id, updatedVolunteerOrder); // Update Firebase with new order
+              sortedVolunteers = items; // Update local sortedVolunteers to reflect the reorder immediately
+            };
+
 
             return (
               <Card
@@ -724,54 +776,67 @@ export const TravelManagement = () => {
                     {sortedVolunteers.length > 0 && (
                       <div className="pt-3 border-t border-gray-200">
                         <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntários:</h4>
-                        <div className="space-y-2">
-                          {sortedVolunteers.map((vol) => (
-                            <div
-                              key={vol.fullName}
-                              className={`text-sm p-2 rounded-lg flex justify-between items-center ${
-                                vol.isSelected
-                                  ? 'bg-green-50 border border-green-200'
-                                  : 'bg-gray-50 border border-gray-200'
-                              } ${selectedVolunteerForTrip === vol.fullName ? 'bg-green-200' : ''}`} // Cor verde ao segurar
-                              onMouseDown={() => isAdmin ? setSelectedVolunteerForTrip(vol.fullName) : undefined} // Inicia seleção ao segurar
-                              onMouseUp={() => isAdmin ? setSelectedVolunteerForTrip(null) : undefined}   // Limpa seleção ao soltar
-                              onMouseLeave={() => isAdmin && selectedVolunteerForTrip === vol.fullName ? setSelectedVolunteerForTrip(null) : undefined} // Limpa seleção ao sair do container com mouse segurado
-                              onTouchStart={() => isAdmin ? setSelectedVolunteerForTrip(vol.fullName) : undefined}
-                              onTouchEnd={() => isAdmin ? setSelectedVolunteerForTrip(null) : undefined}
-                              onTouchCancel={() => isAdmin ? setSelectedVolunteerForTrip(null) : undefined}
-                            >
-                              <div className="flex items-center gap-2">
-                                {vol.isSelected && (
-                                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                )}
-                                <span className={vol.isSelected ? "font-medium text-green-900" : "text-gray-700"}>
-                                  {vol.fullName}
-                                </span>
+                        <DragDropContext onDragEnd={onDragEnd}>
+                          <Droppable droppableId="volunteers-list">
+                            {(provided) => (
+                              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                                {sortedVolunteers.map((vol: VolunteerItem, index) => (
+                                  <Draggable key={vol.fullName} draggableId={vol.fullName} index={index} isDragDisabled={!isAdmin || today >= travelStart || travel.isLocked}>
+                                    {(provided, snapshot) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        className={`text-sm p-2 rounded-lg flex justify-between items-center cursor-grab ${
+                                          vol.isSelected
+                                            ? 'bg-green-50 border border-green-200'
+                                            : 'bg-gray-50 border border-gray-200'
+                                        } ${selectedVolunteerForTrip === vol.fullName ? 'bg-green-200' : ''} ${snapshot.isDragging ? 'shadow-md bg-green-100 border-green-300' : ''}`} // Green background on selection, shadow and lighter green when dragging
+                                        onMouseDown={() => isAdmin ? setSelectedVolunteerForTrip(vol.fullName) : undefined} // Inicia seleção ao segurar
+                                        onMouseUp={() => isAdmin ? setSelectedVolunteerForTrip(null) : undefined}   // Limpa seleção ao soltar
+                                        onMouseLeave={() => isAdmin && selectedVolunteerForTrip === vol.fullName ? setSelectedVolunteerForTrip(null) : undefined} // Limpa seleção ao sair do container com mouse segurado
+                                        onTouchStart={() => isAdmin ? setSelectedVolunteerForTrip(vol.fullName) : undefined}
+                                        onTouchEnd={() => isAdmin ? setSelectedVolunteerForTrip(null) : undefined}
+                                        onTouchCancel={() => isAdmin ? setSelectedVolunteerForTrip(null) : undefined}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          {vol.isSelected && (
+                                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                          )}
+                                          <span className={vol.isSelected ? "font-medium text-green-900" : "text-gray-700"}>
+                                            {vol.fullName}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                          <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
+                                            {formattedTravelCount(volunteerCounts[vol.fullName] || 0)}
+                                          </span>
+                                          <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
+                                            {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}
+                                          </span>
+                                          {isAdmin && today < travelStart && !travel.isLocked && ( // Mostra X apenas para admin e viagens "Em aberto"
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="hover:bg-red-100 rounded-full text-red-500"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleRemoveVolunteer(travel.id, vol.fullName);
+                                              }}
+                                            >
+                                              <X className="h-4 w-4" />
+                                            </Button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+                                {provided.placeholder}
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
-                                  {formattedTravelCount(volunteerCounts[vol.fullName] || 0)}
-                                </span>
-                                <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
-                                  {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}
-                                </span>
-                                {isAdmin && today < travelStart && !travel.isLocked && ( // Mostra X apenas para admin e viagens "Em aberto"
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="hover:bg-red-100 rounded-full text-red-500"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemoveVolunteer(travel.id, vol.fullName);
-                                    }}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                            )}
+                          </Droppable>
+                        </DragDropContext>
                       </div>
                     )}
 
