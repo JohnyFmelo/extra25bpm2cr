@@ -343,30 +343,15 @@ export const TravelManagement = () => {
         // Bloqueando a viagem agora (Processar diária).
         const allVolunteers = travelData.volunteers ?? [];
 
-        // Monta objetos para ordenação
-        const processed = allVolunteers.map((volunteer) => {
-          const [rank] = volunteer.split(" ");
-          return {
-            fullName: volunteer,
-            rank,
-            diaryCount: diaryCounts[volunteer] || 0, // Mantém para exibição, mas não usa na ordenação
-            rankWeight: getMilitaryRankWeight(rank),
-            appliedAtIndex: travelData.volunteers.indexOf(volunteer), // Mantém para exibição, mas não usa na ordenação
-          };
-        });
+        // Ordena alfabeticamente (A-Z)
+        const sortedVolunteers = allVolunteers.sort();
 
-        // Ordena:
-        //  1) maior patente (removido diária e ordem de inscrição)
-        processed.sort((a, b) => {
-          return b.rankWeight - a.rankWeight;  // Ordena pela patente (maior primeiro)
-        });
-
-        // Pega até o limite de vagas
-        const selectedVolunteers = processed.slice(0, travelData.slots);
+        // Pega até o limite de vagas (agora já está ordenado alfabeticamente)
+        const selectedVolunteers = sortedVolunteers.slice(0, travelData.slots);
 
         await updateDoc(travelRef, {
           isLocked: true,
-          selectedVolunteers: selectedVolunteers.map((v) => v.fullName),
+          selectedVolunteers: selectedVolunteers, // already sorted alphabetically
         });
       } else {
         // Desbloqueando a viagem (reabrir vagas)
@@ -393,7 +378,7 @@ export const TravelManagement = () => {
   };
 
   // ---------------------------------------------------
-  // 8) FUNÇÃO PARA CALCULAR PESO DAS PATENTES
+  // 8) FUNÇÃO PARA CALCULAR PESO DAS PATENTES (REMOVIDO - NÃO USADO NA ORDENAÇÃO)
   // ---------------------------------------------------
   const getMilitaryRankWeight = (rank: string): number => {
     const rankWeights: { [key: string]: number } = {
@@ -451,27 +436,23 @@ export const TravelManagement = () => {
       ? travel.selectedVolunteers || []
       : travel.volunteers || [];
 
-    // Monta array de objetos
-    const processed = baseList.map((volunteer) => {
-      const [rank] = volunteer.split(" ");
+    // Ordena alfabeticamente (A-Z)
+    const sortedBaseList = baseList.sort();
+
+    // Mantém a estrutura de objetos para a interface, mas agora ordenado alfabeticamente
+    const processed = sortedBaseList.map(volunteer => {
       return {
         fullName: volunteer,
-        rank,
-        diaryCount: diaryCounts[volunteer] || 0, // Mantém para exibição
-        rankWeight: getMilitaryRankWeight(rank),
-        appliedAtIndex: (travel.volunteers || []).indexOf(volunteer), // Mantém para exibição
+        isSelected: false // isSelected será determinado abaixo
       };
     });
+
 
     // Se estiver bloqueada, assumimos que todos ali estão "isSelected"
     // Se não estiver, quem ficaria no top X é "potencialmente selecionado"
     const totalSlots = travel.slots || 1;
     const isLocked = travel.isLocked;
 
-    // Ordena: Apenas por patente (maior patente primeiro)
-    processed.sort((a, b) => {
-      return b.rankWeight - a.rankWeight; // Ordena pela patente (maior primeiro)
-    });
 
     return processed.map((item, idx) => {
       const isSelected = isLocked
@@ -501,9 +482,9 @@ export const TravelManagement = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <Card className="p-6 bg-white shadow-xl max-w-md w-full relative border border-gray-100">
             <h2 className="text-xl font-semibold mb-4 text-blue-900">Regras de Ordenação</h2>
-            <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
-              <li>Graduação mais antiga (peso maior) fica acima.</li>
-            </ol>
+            <p className="text-sm text-gray-600">
+                Os voluntários são listados em ordem alfabética.
+            </p>
             <Button
               className="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white"
               onClick={() => setShowRankingRules(false)}
