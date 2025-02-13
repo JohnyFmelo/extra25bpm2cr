@@ -349,27 +349,17 @@ export const TravelManagement = () => {
           return {
             fullName: volunteer,
             rank,
-            diaryCount: diaryCounts[volunteer] || 0,
+            diaryCount: diaryCounts[volunteer] || 0, // Mantém para exibição, mas não usa na ordenação
             rankWeight: getMilitaryRankWeight(rank),
-            // "appliedAtIndex" = posição no array "volunteers"
-            appliedAtIndex: travelData.volunteers.indexOf(volunteer),
+            appliedAtIndex: travelData.volunteers.indexOf(volunteer), // Mantém para exibição, mas não usa na ordenação
           };
         });
 
         // Ordena:
-        //  1) Maior patente (antiguidade)
-        //  2) menor diária
-        //  3) quem chegou primeiro (appliedAtIndex)
+        //  1) maior patente (removido diária e ordem de inscrição)
         processed.sort((a, b) => {
-          if (a.rankWeight !== b.rankWeight) {
-            return b.rankWeight - a.rankWeight;  // desc (maior patente primeiro)
-          }
-          if (a.diaryCount !== b.diaryCount) {
-            return a.diaryCount - b.diaryCount;  // asc (menor diária primeiro)
-          }
-          return a.appliedAtIndex - b.appliedAtIndex; // asc (quem se inscreveu primeiro)
+          return b.rankWeight - a.rankWeight;  // Ordena pela patente (maior primeiro)
         });
-
 
         // Pega até o limite de vagas
         const selectedVolunteers = processed.slice(0, travelData.slots);
@@ -467,9 +457,9 @@ export const TravelManagement = () => {
       return {
         fullName: volunteer,
         rank,
-        diaryCount: diaryCounts[volunteer] || 0,
+        diaryCount: diaryCounts[volunteer] || 0, // Mantém para exibição
         rankWeight: getMilitaryRankWeight(rank),
-        appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
+        appliedAtIndex: (travel.volunteers || []).indexOf(volunteer), // Mantém para exibição
       };
     });
 
@@ -478,20 +468,10 @@ export const TravelManagement = () => {
     const totalSlots = travel.slots || 1;
     const isLocked = travel.isLocked;
 
-    // Ordena:
-    // 1) Maior patente (antiguidade)
-    // 2) Menor diária
-    // 3) Quem chegou primeiro
+    // Ordena: Apenas por patente (maior patente primeiro)
     processed.sort((a, b) => {
-      if (a.rankWeight !== b.rankWeight) {
-        return b.rankWeight - a.rankWeight; // 1) Maior patente (antiguidade) - DESCENDING
-      }
-      if (a.diaryCount !== b.diaryCount) {
-        return a.diaryCount - b.diaryCount; // 2) Menor diária - ASCENDING
-      }
-      return a.appliedAtIndex - b.appliedAtIndex; // 3) Quem chegou primeiro - ASCENDING
+      return b.rankWeight - a.rankWeight; // Ordena pela patente (maior primeiro)
     });
-
 
     return processed.map((item, idx) => {
       const isSelected = isLocked
@@ -522,9 +502,7 @@ export const TravelManagement = () => {
           <Card className="p-6 bg-white shadow-xl max-w-md w-full relative border border-gray-100">
             <h2 className="text-xl font-semibold mb-4 text-blue-900">Regras de Ordenação</h2>
             <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
-              <li>Graduação mais antiga (peso maior) primeiro.</li>
-              <li>Em caso de empate, menor quantidade de diárias.</li>
-              <li>Se ainda houver empate, quem se inscreveu primeiro.</li>
+              <li>Graduação mais antiga (peso maior) fica acima.</li>
             </ol>
             <Button
               className="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white"
