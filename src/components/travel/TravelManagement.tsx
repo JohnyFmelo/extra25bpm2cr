@@ -281,6 +281,7 @@ export const TravelManagement = () => {
 
       if (!isCurrentlyLocked) {
         const allVolunteers = travelData.volunteers ?? [];
+
         const processed = allVolunteers.map((volunteer) => {
           const [rank] = volunteer.split(" ");
           return {
