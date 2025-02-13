@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react"; 
+//Viagens2
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -355,19 +356,20 @@ export const TravelManagement = () => {
           };
         });
 
-        // Ordena: 
-        //  1) menor diária
-        //  2) maior patente
+        // Ordena:
+        //  1) Maior patente (antiguidade)
+        //  2) menor diária
         //  3) quem chegou primeiro (appliedAtIndex)
         processed.sort((a, b) => {
-          if (a.diaryCount !== b.diaryCount) {
-            return a.diaryCount - b.diaryCount;  // asc
-          }
           if (a.rankWeight !== b.rankWeight) {
-            return b.rankWeight - a.rankWeight;  // desc
+            return b.rankWeight - a.rankWeight;  // desc (maior patente primeiro)
           }
-          return a.appliedAtIndex - b.appliedAtIndex; // asc
+          if (a.diaryCount !== b.diaryCount) {
+            return a.diaryCount - b.diaryCount;  // asc (menor diária primeiro)
+          }
+          return a.appliedAtIndex - b.appliedAtIndex; // asc (quem se inscreveu primeiro)
         });
+
 
         // Pega até o limite de vagas
         const selectedVolunteers = processed.slice(0, travelData.slots);
@@ -452,66 +454,44 @@ export const TravelManagement = () => {
   // ---------------------------------------------------
   // 10) OBTÉM LISTA DE VOLUNTÁRIOS A EXIBIR + ORDENAÇÃO
   // ---------------------------------------------------
-const getSortedVolunteers = (travel: Travel) => {
-  const baseList = travel.isLocked ? travel.selectedVolunteers || [] : travel.volunteers || [];
-  const processed = baseList.map((volunteer) => {
-    const [rank] = volunteer.split(" ");
-    const volunteerUser = JSON.parse(localStorage.getItem(`user_${volunteer}`) || "{}") as UserInfo;
-    return {
-      fullName: volunteer,
-      rank,
-      diaryCount: diaryCounts[volunteer] || 0,
-      rankWeight: getMilitaryRankWeight(rank),
-      rankSeniority: volunteerUser.rankSeniority || 0, // Antiguidade na graduação
-      serviceSeniority: volunteerUser.serviceSeniority || 0, // NOVO: Antiguidade no serviço
-      appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
-    };
-  });
+  const getSortedVolunteers = (travel: Travel) => {
+    // Se a viagem estiver bloqueada, mostramos apenas selectedVolunteers
+    // Se não estiver bloqueada, mostramos todos de volunteers
+    const baseList = travel.isLocked
+      ? travel.selectedVolunteers || []
+      : travel.volunteers || [];
 
-  const totalSlots = travel.slots || 1;
-  const isLocked = travel.isLocked;
-
-  // Ordena:
-  // 1) Menor quantidade de diárias
-  // 2) Maior patente (peso maior)
-  // 3) Antiguidade na graduação (para o mesmo rank)
-  // 4) Antiguidade no serviço (NOVO CRITÉRIO)
-  // 5) Ordem de inscrição (appliedAtIndex)
-  processed.sort((a, b) => {
-    if (a.diaryCount !== b.diaryCount) {
-      return a.diaryCount - b.diaryCount; // Ascendente
-    }
-    if (a.rankWeight !== b.rankWeight) {
-      return b.rankWeight - a.rankWeight; // Descendente
-    }
-    if (a.rankSeniority !== b.rankSeniority && a.rank === b.rank) {
-      return a.rankSeniority - b.rankSeniority; // Ascendente
-    }
-    if (a.serviceSeniority !== b.serviceSeniority) {
-      return a.serviceSeniority - b.serviceSeniority; // Ascendente (quem tem mais tempo de serviço primeiro)
-    }
-    return a.appliedAtIndex - b.appliedAtIndex; // Ascendente
-  });
-
-  return processed.map((item, idx) => ({
-    item,
-    isSelected: isLocked ? true : idx < totalSlots,
-  }));
-};
-};
-    // Ordena do mesmo jeito
-    processed.sort((a, b) => {
-      // 1) Menor diária
-      if (a.diaryCount !== b.diaryCount) {
-        return a.diaryCount - b.diaryCount;
-      }
-      // 2) Maior patente
-      if (a.rankWeight !== b.rankWeight) {
-        return b.rankWeight - a.rankWeight;
-      }
-      // 3) Quem chegou primeiro
-      return a.appliedAtIndex - b.appliedAtIndex;
+    // Monta array de objetos
+    const processed = baseList.map((volunteer) => {
+      const [rank] = volunteer.split(" ");
+      return {
+        fullName: volunteer,
+        rank,
+        diaryCount: diaryCounts[volunteer] || 0,
+        rankWeight: getMilitaryRankWeight(rank),
+        appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
+      };
     });
+
+    // Se estiver bloqueada, assumimos que todos ali estão "isSelected"
+    // Se não estiver, quem ficaria no top X é "potencialmente selecionado"
+    const totalSlots = travel.slots || 1;
+    const isLocked = travel.isLocked;
+
+    // Ordena:
+    // 1) Maior patente (antiguidade)
+    // 2) Menor diária
+    // 3) Quem chegou primeiro
+    processed.sort((a, b) => {
+      if (a.rankWeight !== b.rankWeight) {
+        return b.rankWeight - a.rankWeight; // 1) Maior patente (antiguidade) - DESCENDING
+      }
+      if (a.diaryCount !== b.diaryCount) {
+        return a.diaryCount - b.diaryCount; // 2) Menor diária - ASCENDING
+      }
+      return a.appliedAtIndex - b.appliedAtIndex; // 3) Quem chegou primeiro - ASCENDING
+    });
+
 
     return processed.map((item, idx) => {
       const isSelected = isLocked
@@ -542,12 +522,12 @@ const getSortedVolunteers = (travel: Travel) => {
           <Card className="p-6 bg-white shadow-xl max-w-md w-full relative border border-gray-100">
             <h2 className="text-xl font-semibold mb-4 text-blue-900">Regras de Ordenação</h2>
             <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
-              <li>Menor quantidade de diárias primeiro.</li>
-              <li>Em caso de empate, graduação mais antiga (peso maior) fica acima.</li>
-              <li>Se ainda houver empate, quem se inscreveu primeiro fica acima.</li>
+              <li>Graduação mais antiga (peso maior) primeiro.</li>
+              <li>Em caso de empate, menor quantidade de diárias.</li>
+              <li>Se ainda houver empate, quem se inscreveu primeiro.</li>
             </ol>
-            <Button 
-              className="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white" 
+            <Button
+              className="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white"
               onClick={() => setShowRankingRules(false)}
             >
               Fechar
@@ -793,7 +773,7 @@ const getSortedVolunteers = (travel: Travel) => {
               }}
               className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 text-xl"
             >
-              &times;
+              ×
             </button>
             <form onSubmit={handleCreateTravel} className="space-y-6">
               <h2 className="text-2xl font-semibold text-primary">
