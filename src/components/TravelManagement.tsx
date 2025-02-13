@@ -353,21 +353,22 @@ export const TravelManagement = () => {
             rankWeight: getMilitaryRankWeight(rank),
             // "appliedAtIndex" = posição no array "volunteers"
             appliedAtIndex: travelData.volunteers.indexOf(volunteer),
+            originalIndex: travelData.volunteers.indexOf(volunteer), // Para ordem de inscrição
           };
         });
 
         // Ordena:
         // 1) Menor diária (quem tem menos diárias primeiro)
         // 2) Maior patente (em caso de empate nas diárias)
-        // 3) Ordem de inscrição (para empates em diárias E patente)
+        // 3) Ordem de Inscrição (em caso de empate nas diárias e patente)
         processed.sort((a, b) => {
           if (a.diaryCount !== b.diaryCount) {
             return a.diaryCount - b.diaryCount; // 1) Menor diária (ASCENDING)
-          } else if (a.rankWeight !== b.rankWeight) {
-            return b.rankWeight - a.rankWeight; // 2) Maior patente (DESCENDING) - Para desempate por diária
-          } else {
-            return a.appliedAtIndex - b.appliedAtIndex; // 3) Ordem de inscrição (ASCENDING) - Desempate final
           }
+          if (a.rankWeight !== b.rankWeight) {
+            return b.rankWeight - a.rankWeight; // 2) Maior patente (DESCENDING) - Desempate Diária
+          }
+          return a.originalIndex - b.originalIndex;   // 3) Ordem de Inscrição (ASCENDING) - Desempate Geral
         });
 
         // Pega até o limite de vagas
@@ -469,6 +470,7 @@ export const TravelManagement = () => {
         diaryCount: diaryCounts[volunteer] || 0,
         rankWeight: getMilitaryRankWeight(rank),
         appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
+        originalIndex: (travel.volunteers || []).indexOf(volunteer), // Para ordem de inscrição
       };
     });
 
@@ -480,15 +482,15 @@ export const TravelManagement = () => {
     // Ordena:
     // 1) Menor diária (quem tem menos diárias primeiro)
     // 2) Maior patente (em caso de empate nas diárias)
-    // 3) Ordem de inscrição (para empates em diárias E patente)
+    // 3) Ordem de Inscrição (em caso de empate nas diárias e patente)
     processed.sort((a, b) => {
       if (a.diaryCount !== b.diaryCount) {
         return a.diaryCount - b.diaryCount; // 1) Menor diária (ASCENDING)
-      } else if (a.rankWeight !== b.rankWeight) {
-        return b.rankWeight - a.rankWeight; // 2) Maior patente (DESCENDING) - Para desempate por diária
-      } else {
-        return a.appliedAtIndex - b.appliedAtIndex; // 3) Ordem de inscrição (ASCENDING) - Desempate final
       }
+      if (a.rankWeight !== b.rankWeight) {
+        return b.rankWeight - a.rankWeight; // 2) Maior patente (DESCENDING) - Desempate Diária
+      }
+      return a.originalIndex - b.originalIndex;   // 3) Ordem de Inscrição (ASCENDING) - Desempate Geral
     });
 
     return processed.map((item, idx) => {
@@ -521,8 +523,12 @@ export const TravelManagement = () => {
             <h2 className="text-xl font-semibold mb-4 text-blue-900">Regras de Ordenação</h2>
             <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
               <li>Menor quantidade de diárias primeiro (quem tem menos diárias acumuladas, fica no topo).</li>
-              <li>Em caso de empate na quantidade de diárias, graduação mais antiga (peso maior) fica acima.</li>
-              <li>Se ainda houver empate, a ordem de inscrição será considerada (quem se inscreveu primeiro fica acima).</li>
+              <li>Em caso de empate na quantidade de diárias:
+                  <ol type="a" className="list-decimal list-inside text-sm space-y-2 text-gray-600 ml-4">
+                      <li>Graduação mais antiga (maior peso) fica acima.</li>
+                      <li>Se ainda persistir o empate, a ordem de inscrição (quem se inscreveu primeiro) define a ordem.</li>
+                  </ol>
+              </li>
             </ol>
             <Button
               className="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white"
