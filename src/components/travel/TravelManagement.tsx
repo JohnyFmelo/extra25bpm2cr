@@ -29,53 +29,39 @@ interface UserInfo {
 export const TravelManagement = () => {
   // ... (previous state declarations remain the same)
 
-  const getSortedVolunteers = (travel: Travel) => {
-    const baseList = travel.isLocked
-      ? travel.selectedVolunteers || []
-      : travel.volunteers || [];
-
-    const processed = baseList.map((volunteer) => {
-      const [rank] = volunteer.split(" ");
-      const volunteerUser = JSON.parse(localStorage.getItem(`user_${volunteer}`) || "{}") as UserInfo;
-      
-      return {
-        fullName: volunteer,
-        rank,
-        diaryCount: diaryCounts[volunteer] || 0,
-        rankWeight: getMilitaryRankWeight(rank),
-        rankSeniority: volunteerUser.rankSeniority || 0, // Timestamp da antiguidade na graduação
-        appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
-      };
-    });
-
-    const totalSlots = travel.slots || 1;
-    const isLocked = travel.isLocked;
-
-    processed.sort((a, b) => {
-      // Primeiro critério: menor número de diárias
-      if (a.diaryCount !== b.diaryCount) {
-        return a.diaryCount - b.diaryCount;
-      }
-
-      // Segundo critério: graduação mais alta
-      if (a.rankWeight !== b.rankWeight) {
-        return b.rankWeight - a.rankWeight;
-      }
-
-      // Terceiro critério: antiguidade na graduação (timestamp menor = mais antigo)
-      if (a.rankSeniority !== b.rankSeniority && a.rank === b.rank) {
-        return a.rankSeniority - b.rankSeniority;
-      }
-
-      // Último critério: ordem de inscrição
-      return a.appliedAtIndex - b.appliedAtIndex;
-    });
-
-    return processed.map((item, idx) => ({
-      ...item,
-      isSelected: isLocked ? true : idx < totalSlots,
-    }));
-  };
+const getSortedVolunteers = (travel: Travel) => {
+  const baseList = travel.isLocked
+    ? travel.selectedVolunteers || []
+    : travel.volunteers || [];
+  const processed = baseList.map((volunteer) => {
+    const [rank] = volunteer.split(" ");
+    return {
+      fullName: volunteer,
+      rank,
+      diaryCount: diaryCounts[volunteer] || 0,
+      rankWeight: getMilitaryRankWeight(rank),
+      appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
+    };
+  });
+  const totalSlots = travel.slots || 1;
+  const isLocked = travel.isLocked;
+  processed.sort((a, b) => {
+    // Primeiro critério: menor número de diárias
+    if (a.diaryCount !== b.diaryCount) {
+      return a.diaryCount - b.diaryCount;
+    }
+    // Segundo critério: graduação mais alta
+    if (a.rankWeight !== b.rankWeight) {
+      return b.rankWeight - a.rankWeight;
+    }
+    // Último critério: ordem de inscrição
+    return a.appliedAtIndex - b.appliedAtIndex;
+  });
+  return processed.map((item, idx) => ({
+    item,
+    isSelected: isLocked ? true : idx < totalSlots,
+  }));
+};
 
   const handleVolunteer = async (travelId: string) => {
     try {
