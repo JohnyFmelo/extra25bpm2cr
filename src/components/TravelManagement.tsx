@@ -1,4 +1,5 @@
 //Viagens2
+//Viagens2
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -39,6 +40,7 @@ interface Travel {
   halfLastDay: boolean;
   volunteers: string[];
   selectedVolunteers?: string[];
+  manualSelectedVolunteers?: string[]; // Campo para voluntários selecionados manualmente
   archived: boolean;
   isLocked?: boolean;
 }
@@ -157,6 +159,7 @@ export const TravelManagement = () => {
           createdAt: new Date(),
           volunteers: [],
           selectedVolunteers: [],
+          manualSelectedVolunteers: [], // Inicializa lista de seleção manual vazia
           archived: false,
           isLocked: false,
         });
@@ -305,21 +308,20 @@ export const TravelManagement = () => {
 
       if (!isCurrentlyLocked) {
         const allVolunteers = travelData.volunteers ?? [];
-        const currentSelectedVolunteers = selectedVolunteers[travelId] || [];
+        const manualSelections = selectedVolunteers[travelId] || [];
 
-        // Combine already selected volunteers with the full list for processing, ensuring no duplicates.
-        const volunteersToProcess = Array.from(new Set([...currentSelectedVolunteers, ...allVolunteers]));
+        // Volunteers to process are those who are not manually selected yet
+        const autoSelectVolunteers = allVolunteers.filter(v => !manualSelections.includes(v));
 
-
-        const processed = volunteersToProcess.map((volunteer) => {
+        const processed = autoSelectVolunteers.map((volunteer) => {
           const [rank] = volunteer.split(" ");
           return {
             fullName: volunteer,
             rank,
             diaryCount: diaryCounts[volunteer] || 0,
             rankWeight: getMilitaryRankWeight(rank),
-            appliedAtIndex: allVolunteers.indexOf(volunteer), // Use allVolunteers here
-            originalIndex: allVolunteers.indexOf(volunteer), // and here
+            appliedAtIndex: allVolunteers.indexOf(volunteer),
+            originalIndex: allVolunteers.indexOf(volunteer),
           };
         });
 
@@ -333,22 +335,25 @@ export const TravelManagement = () => {
           return a.originalIndex - b.originalIndex;
         });
 
-        // Take only the slots amount from the sorted list.
-        const finalSelectedVolunteers = processed.slice(0, travelData.slots);
-        const selectedNames = finalSelectedVolunteers.map((v) => v.fullName);
+        // Take slots after considering manual selections
+        const availableSlots = Math.max(0, (travelData.slots || 0) - manualSelections.length);
+        const autoSelectedVolunteers = processed.slice(0, availableSlots);
+
+        // Combine manual and auto selected volunteers
+        const finalSelectedVolunteers = [...manualSelections, ...autoSelectedVolunteers.map(v => v.fullName)];
 
 
         await updateDoc(travelRef, {
           isLocked: true,
-          selectedVolunteers: selectedNames,
+          selectedVolunteers: finalSelectedVolunteers,
         });
       } else {
         await updateDoc(travelRef, {
           isLocked: false,
           selectedVolunteers: [],
-          selectedVolunteersManual: [], // Clear manual selections when unlocking
+          manualSelectedVolunteers: [], // Clear manual selections when unlocking - not needed anymore as we use selectedVolunteers for manual
         });
-          setSelectedVolunteers(prev => { // Clear local selections as well
+          setSelectedVolunteers(prev => {
             const updatedSelections = {...prev};
             delete updatedSelections[travelId];
             return updatedSelections;
@@ -415,10 +420,11 @@ export const TravelManagement = () => {
     return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
   };
 
-  const getSortedVolunteers = (travel: Travel): { fullName: string; rank: string; diaryCount: number; rankWeight: number; appliedAtIndex: number; originalIndex: number; isSelected: boolean; }[] => {
+  const getSortedVolunteers = (travel: Travel): { fullName: string; rank: string; diaryCount: number; rankWeight: number; appliedAtIndex: number; originalIndex: number; isSelected: boolean; isManual: boolean }[] => {
     const baseList = travel.isLocked
       ? travel.selectedVolunteers || []
       : travel.volunteers || [];
+    const manualSelections = selectedVolunteers[travel.id] || [];
 
     const processed = baseList.map((volunteer) => {
       const [rank] = volunteer.split(" ");
@@ -429,13 +435,17 @@ export const TravelManagement = () => {
         rankWeight: getMilitaryRankWeight(rank),
         appliedAtIndex: (travel.volunteers || []).indexOf(volunteer),
         originalIndex: (travel.volunteers || []).indexOf(volunteer),
+        isManuallySelected: manualSelections.includes(volunteer), // Check if manually selected
       };
     });
 
     const totalSlots = travel.slots || 1;
     const isLocked = travel.isLocked;
 
-    processed.sort((a, b) => {
+    // Filter out manually selected to auto-select the rest
+    const autoSelectCandidates = processed.filter(v => !v.isManuallySelected);
+
+    autoSelectCandidates.sort((a, b) => {
       if (a.diaryCount !== b.diaryCount) {
         return a.diaryCount - b.diaryCount;
       }
@@ -445,11 +455,13 @@ export const TravelManagement = () => {
       return a.originalIndex - b.originalIndex;
     });
 
-      return processed.map((item, idx) => {
-            const isSelected = isLocked || selectedVolunteers[travel.id]?.includes(item.fullName)
-            ? true
-             : idx < totalSlots;
-        return { ...item, isSelected };
+    const autoSelectedNames = autoSelectCandidates.slice(0, Math.max(0, totalSlots - manualSelections.length)).map(v => v.fullName);
+
+
+      return processed.map(item => {
+            const isSelected = item.isManuallySelected || (isLocked ? travel.selectedVolunteers?.includes(item.fullName) : autoSelectedNames.includes(item.fullName));
+            const isManual = item.isManuallySelected;
+        return { ...item, isSelected, isManual };
     });
 };
 
@@ -487,18 +499,21 @@ export const TravelManagement = () => {
     }
   };
 
-    const handleVolunteerSelection = (travelId: string, volunteerName: string) => {
-    if (selectedVolunteers[travelId]?.includes(volunteerName)) {
-      setSelectedVolunteers((prev) => ({
-        ...prev,
-        [travelId]: prev[travelId].filter((name) => name !== volunteerName),
-      }));
-    } else {
-      setSelectedVolunteers((prev) => ({
-        ...prev,
-        [travelId]: [...(prev[travelId] || []), volunteerName],
-      }));
-    }
+    const handleManualVolunteerSelection = (travelId: string, volunteerName: string) => {
+    setSelectedVolunteers(prev => {
+      const currentSelections = prev[travelId] || [];
+      if (currentSelections.includes(volunteerName)) {
+        return {
+          ...prev,
+          [travelId]: currentSelections.filter(name => name !== volunteerName),
+        };
+      } else {
+        return {
+          ...prev,
+          [travelId]: [...currentSelections, volunteerName],
+        };
+      }
+    });
   };
 
 
@@ -683,23 +698,23 @@ export const TravelManagement = () => {
                            <div
                                key={vol.fullName}
                               className={`text-sm p-2 rounded-lg flex justify-between items-center ${
-                               vol.isSelected ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                               vol.isSelected ? 'bg-green-50 border border-green-200' : (vol.isManual ? 'bg-blue-100 border border-blue-200' : 'bg-gray-50 border border-gray-200')
                                }`}
-                                 onDoubleClick={() => {if(isAdmin && !travel.isLocked) {handleVolunteerSelection(travel.id, vol.fullName)} }}
+                                 onDoubleClick={() => {if(isAdmin && !travel.isLocked) {handleManualVolunteerSelection(travel.id, vol.fullName)} }}
                              >
                               <div className="flex items-center gap-2">
                                 {vol.isSelected && (
                                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
                                 )}
-                                <span className={vol.isSelected ? "font-medium text-green-900" : "text-gray-700"}>
-                                  {vol.fullName}
+                                <span className={`${vol.isSelected ? "font-medium text-green-900" : (vol.isManual ? 'text-blue-900 font-medium' : "text-gray-700")}`}>
+                                  {vol.fullName} {vol.isManual ? '(Manual)' : ''}
                                 </span>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
+                                <span className={`text-xs block ${vol.isSelected ? "text-green-700" : (vol.isManual ? 'text-blue-700' : "text-gray-500")}`}>
                                   {formattedTravelCount(volunteerCounts[vol.fullName] || 0)}
                                 </span>
-                                <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
+                                <span className={`text-xs block ${vol.isSelected ? "text-green-700" : (vol.isManual ? 'text-blue-700' : "text-gray-500")}`}>
                                   {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}
                                 </span>
                                 {isAdmin && today < travelStart && !travel.isLocked && (
