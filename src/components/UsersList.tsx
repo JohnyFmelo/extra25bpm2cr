@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Ban, Trash2 } from "lucide-react";
 import UserDetailsDialog from "./UserDetailsDialog";
+import { Tag } from "@/components/ui/tag"; // Supondo que você tenha um componente Tag
 
 interface User {
   id: string;
@@ -110,6 +111,8 @@ const UsersList = () => {
         <TableHeader>
           <TableRow>
             <TableHead className="text-primary">Nome</TableHead>
+            <TableHead className="text-primary">Email</TableHead>
+            <TableHead className="text-primary">Tipo de Usuário</TableHead>
             <TableHead className="text-primary">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -123,6 +126,10 @@ const UsersList = () => {
                 >
                   {formatUserName(user)}
                 </button>
+              </TableCell>
+              <TableCell>{user.email}</TableCell>
+              <TableCell>
+                {user.userType === "admin" && <Tag variant="success">Administrador</Tag>}
               </TableCell>
               <TableCell className="whitespace-nowrap">
                 <div className="flex gap-2">
@@ -146,7 +153,6 @@ const UsersList = () => {
           ))}
         </TableBody>
       </Table>
-
       <UserDetailsDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
