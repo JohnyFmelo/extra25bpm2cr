@@ -1,5 +1,6 @@
 //Viagens2
-import { useState, useEffect } from "react";
+//Viagens2
+import { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -513,6 +514,40 @@ export const TravelManagement = () => {
   };
 
   // ---------------------------------------------------
+  // 12) EXCLUIR VOLUNTÁRIO
+  // ---------------------------------------------------
+  const handleDeleteVolunteer = async (travelId: string, volunteerName: string) => {
+    if (!isAdmin) return; // Segurança extra, só admin pode excluir
+
+    if (window.confirm(`Deseja excluir o voluntário "${volunteerName}" desta viagem?`)) {
+      try {
+        const travelRef = doc(db, "travels", travelId);
+        const travelSnap = await getDoc(travelRef);
+
+        if (!travelSnap.exists()) {
+          toast({ title: "Erro", description: "Viagem não encontrada.", variant: "destructive" });
+          return;
+        }
+
+        const travelData = travelSnap.data() as Travel;
+        let updatedVolunteers = travelData.volunteers.filter(v => v !== volunteerName);
+        let updatedSelectedVolunteers = travelData.selectedVolunteers?.filter(v => v !== volunteerName) || [];
+
+        await updateDoc(travelRef, {
+          volunteers: updatedVolunteers,
+          selectedVolunteers: updatedSelectedVolunteers // Garante que remove de ambos se existir
+        });
+
+        toast({ title: "Sucesso", description: "Voluntário excluído com sucesso!" });
+      } catch (error) {
+        console.error("Erro ao excluir voluntário:", error);
+        toast({ title: "Erro", description: "Erro ao excluir voluntário.", variant: "destructive" });
+      }
+    }
+  };
+
+
+  // ---------------------------------------------------
   // RENDER
   // ---------------------------------------------------
   return (
@@ -571,6 +606,7 @@ export const TravelManagement = () => {
                     Processando diária
                   </div>
                 );
+                cardBg = "bg-white"; // Se estiver "Processando diária", não deve ser verde
               } else {
                 statusBadge = (
                   <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm flex items-center gap-2`}>
@@ -586,6 +622,7 @@ export const TravelManagement = () => {
                     </button>
                   </div>
                 );
+                cardBg = "bg-white"; // Se estiver "Em aberto", também não deve ser verde
               }
             } else if (today >= travelStart && today <= travelEnd) {
               cardBg = "bg-gradient-to-br from-green-50 to-green-100";
@@ -719,6 +756,24 @@ export const TravelManagement = () => {
                                   {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}
                                 </span>
                               </div>
+                              {isAdmin && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="ml-2">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-40">
+                                    <DropdownMenuItem
+                                      className="text-red-600 gap-2"
+                                      onClick={() => handleDeleteVolunteer(travel.id, vol.fullName)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Excluir
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
                             </div>
                           ))}
                         </div>
