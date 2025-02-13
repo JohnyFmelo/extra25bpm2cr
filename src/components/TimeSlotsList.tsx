@@ -15,6 +15,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { X } from "lucide-react";
 
 interface TimeSlot {
   id?: string;
@@ -475,6 +486,43 @@ const TimeSlotsList = () => {
     slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
   );
 
+  const [volunteerToRemove, setVolunteerToRemove] = useState<{ name: string; timeSlot: TimeSlot } | null>(null);
+
+  const handleRemoveVolunteer = async (timeSlot: TimeSlot, volunteerName: string) => {
+    try {
+      const updatedSlot = {
+        ...timeSlot,
+        slots_used: timeSlot.slots_used - 1,
+        volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerName)
+      };
+
+      const result = await dataOperations.update(
+        updatedSlot,
+        {
+          date: timeSlot.date,
+          start_time: timeSlot.start_time,
+          end_time: timeSlot.end_time
+        }
+      );
+
+      if (!result.success) {
+        throw new Error('Failed to remove volunteer');
+      }
+
+      toast({
+        title: "Sucesso! ✅",
+        description: `${volunteerName} foi removido deste horário.`
+      });
+    } catch (error) {
+      console.error('Erro ao remover voluntário:', error);
+      toast({
+        title: "Erro ⛔",
+        description: "Não foi possível remover o voluntário.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (isLoading) {
     return <div className="p-4">Carregando horários...</div>;
   }
@@ -558,9 +606,19 @@ const TimeSlotsList = () => {
                     <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
                     <div className="space-y-1">
                       {sortVolunteers(slot.volunteers).map((volunteer, index) => (
-                        <p key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300">
-                          {volunteer}
-                        </p>
+                        <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
+                          <span>{volunteer}</span>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500"
+                              onClick={() => setVolunteerToRemove({ name: volunteer, timeSlot: slot })}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -570,6 +628,33 @@ const TimeSlotsList = () => {
           </div>
         </div>
       ))}
+
+      <AlertDialog 
+        open={!!volunteerToRemove} 
+        onOpenChange={() => setVolunteerToRemove(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover voluntário</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover {volunteerToRemove?.name} deste horário?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (volunteerToRemove) {
+                  handleRemoveVolunteer(volunteerToRemove.timeSlot, volunteerToRemove.name);
+                  setVolunteerToRemove(null);
+                }
+              }}
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
