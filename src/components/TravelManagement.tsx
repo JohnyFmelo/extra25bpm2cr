@@ -305,16 +305,21 @@ export const TravelManagement = () => {
 
       if (!isCurrentlyLocked) {
         const allVolunteers = travelData.volunteers ?? [];
+        const currentSelectedVolunteers = selectedVolunteers[travelId] || [];
 
-        const processed = allVolunteers.map((volunteer) => {
+        // Combine already selected volunteers with the full list for processing, ensuring no duplicates.
+        const volunteersToProcess = Array.from(new Set([...currentSelectedVolunteers, ...allVolunteers]));
+
+
+        const processed = volunteersToProcess.map((volunteer) => {
           const [rank] = volunteer.split(" ");
           return {
             fullName: volunteer,
             rank,
             diaryCount: diaryCounts[volunteer] || 0,
             rankWeight: getMilitaryRankWeight(rank),
-            appliedAtIndex: travelData.volunteers.indexOf(volunteer),
-            originalIndex: travelData.volunteers.indexOf(volunteer),
+            appliedAtIndex: allVolunteers.indexOf(volunteer), // Use allVolunteers here
+            originalIndex: allVolunteers.indexOf(volunteer), // and here
           };
         });
 
@@ -328,16 +333,25 @@ export const TravelManagement = () => {
           return a.originalIndex - b.originalIndex;
         });
 
-        const selectedVolunteers = processed.slice(0, travelData.slots);
+        // Take only the slots amount from the sorted list.
+        const finalSelectedVolunteers = processed.slice(0, travelData.slots);
+        const selectedNames = finalSelectedVolunteers.map((v) => v.fullName);
+
 
         await updateDoc(travelRef, {
           isLocked: true,
-          selectedVolunteers: selectedVolunteers.map((v) => v.fullName),
+          selectedVolunteers: selectedNames,
         });
       } else {
         await updateDoc(travelRef, {
           isLocked: false,
           selectedVolunteers: [],
+          selectedVolunteersManual: [], // Clear manual selections when unlocking
+        });
+          setSelectedVolunteers(prev => { // Clear local selections as well
+            const updatedSelections = {...prev};
+            delete updatedSelections[travelId];
+            return updatedSelections;
         });
       }
 
@@ -486,44 +500,6 @@ export const TravelManagement = () => {
       }));
     }
   };
-
-    //Função para processar a diaria dos selecionados
-      const handleProcessDaily = async (travelId: string) => {
-        try {
-           if (!isAdmin) {
-               toast({
-                title: "Erro",
-                   description: "Você não tem permissão para processar diárias.",
-                  variant: "destructive",
-                  });
-              return;
-           }
-
-
-     const travelRef = doc(db, "travels", travelId);
-      const travelSnap = await getDoc(travelRef);
-         if (!travelSnap.exists()) return;
-        const travelData = travelSnap.data() as Travel;
-
-        if (travelData.isLocked) {
-          toast({
-              title: "Erro",
-           description: "Esta viagem já está bloqueada.",
-              variant: "destructive",
-        });
-
-         return;
-       }
-
-        await updateDoc(travelRef, { selectedVolunteers: selectedVolunteers[travelId] || [], isLocked: true });
-        toast({ title: "Sucesso!", description: "Diária processada com sucesso." });
-
-        } catch (error) {
-           console.error("Erro ao processar diária:", error);
-          toast({ title: "Erro", description: "Erro ao processar diária.", variant: "destructive" });
-        }
-
-   };
 
 
   return (
@@ -709,7 +685,7 @@ export const TravelManagement = () => {
                               className={`text-sm p-2 rounded-lg flex justify-between items-center ${
                                vol.isSelected ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
                                }`}
-                                 onClick={() => {if(isAdmin && !travel.isLocked) {handleVolunteerSelection(travel.id, vol.fullName)} }}
+                                 onDoubleClick={() => {if(isAdmin && !travel.isLocked) {handleVolunteerSelection(travel.id, vol.fullName)} }}
                              >
                               <div className="flex items-center gap-2">
                                 {vol.isSelected && (
@@ -743,12 +719,6 @@ export const TravelManagement = () => {
                             </div>
                            ))}
                       </div>
-
-                        {isAdmin && !travel.isLocked && today < travelStart && (
-                                <Button onClick={() => handleProcessDaily(travel.id)} className="bg-green-500 w-full mt-4">
-                                Processar Diária
-                              </Button>
-                            )}
                      </div>
                      )}
 
