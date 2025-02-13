@@ -95,7 +95,7 @@ export const TravelManagement = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
 
-  const [selectedVolunteerForTrip, setSelectedVolunteerForTrip] = useState<string | null>(null); // Estado para voluntário selecionado ao segurar
+  const [clickedVolunteer, setClickedVolunteer] = useState<string | null>(null); // Estado para voluntário selecionado via clique
 
   // ---------------------------------------------------
   // 1) EFEITO PARA CALCULAR DIÁRIAS E VIAGENS
@@ -354,8 +354,13 @@ export const TravelManagement = () => {
       const travelData = travelSnap.data() as Travel;
       const isCurrentlyLocked = travelData.isLocked ?? false;
 
-      if (!isCurrentlyLocked) {
-        // Bloqueando a viagem agora (Processar diária).
+      let volunteersToSelect: string[] = [];
+
+      if (clickedVolunteer) {
+        // If a volunteer is clicked, select only that volunteer
+        volunteersToSelect = [clickedVolunteer];
+      } else {
+        // If no volunteer is clicked, use the original logic to select based on ranking (if needed, or just lock without selecting anyone manually)
         const allVolunteers = travelData.volunteers ?? [];
 
         // Monta objetos para ordenação
@@ -387,11 +392,17 @@ export const TravelManagement = () => {
         });
 
         // Pega até o limite de vagas
-        const selectedVolunteers = processed.slice(0, travelData.slots);
+        const selectedVolunteersAuto = processed.slice(0, travelData.slots);
+        volunteersToSelect = selectedVolunteersAuto.map((v) => v.fullName); // Use auto-selected volunteers if no manual selection
+      }
+
+
+      if (!isCurrentlyLocked) {
+        // Bloqueando a viagem agora (Processar diária).
 
         await updateDoc(travelRef, {
           isLocked: true,
-          selectedVolunteers: selectedVolunteers.map((v) => v.fullName),
+          selectedVolunteers: volunteersToSelect, // Use the selected volunteers (manual or auto)
         });
       } else {
         // Desbloqueando a viagem (reabrir vagas)
@@ -401,10 +412,12 @@ export const TravelManagement = () => {
         });
       }
 
+      setClickedVolunteer(null); // Reset clicked volunteer after processing
+
       toast({
         title: "Sucesso",
         description: !isCurrentlyLocked
-          ? "Viagem bloqueada e diárias processadas!"
+          ? "Viagem bloqueada e voluntário(s) selecionado(s)!"
           : "Viagem reaberta!",
       });
     } catch (error) {
@@ -787,23 +800,18 @@ export const TravelManagement = () => {
                                         ref={provided.innerRef}
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
+                                        onClick={() => isAdmin ? setClickedVolunteer(vol.fullName) : undefined} // Set clicked volunteer on click
                                         className={`text-sm p-2 rounded-lg flex justify-between items-center cursor-grab ${
                                           vol.isSelected
                                             ? 'bg-green-50 border border-green-200'
                                             : 'bg-gray-50 border border-gray-200'
-                                        } ${selectedVolunteerForTrip === vol.fullName ? 'bg-green-200' : ''} ${snapshot.isDragging ? 'shadow-md bg-green-100 border-green-300' : ''}`} // Green background on selection, shadow and lighter green when dragging
-                                        onMouseDown={() => isAdmin ? setSelectedVolunteerForTrip(vol.fullName) : undefined} // Inicia seleção ao segurar
-                                        onMouseUp={() => isAdmin ? setSelectedVolunteerForTrip(null) : undefined}   // Limpa seleção ao soltar
-                                        onMouseLeave={() => isAdmin && selectedVolunteerForTrip === vol.fullName ? setSelectedVolunteerForTrip(null) : undefined} // Limpa seleção ao sair do container com mouse segurado
-                                        onTouchStart={() => isAdmin ? setSelectedVolunteerForTrip(vol.fullName) : undefined}
-                                        onTouchEnd={() => isAdmin ? setSelectedVolunteerForTrip(null) : undefined}
-                                        onTouchCancel={() => isAdmin ? setSelectedVolunteerForTrip(null) : undefined}
+                                        } ${clickedVolunteer === vol.fullName ? 'bg-blue-200 border-blue-300' : ''} ${snapshot.isDragging ? 'shadow-md bg-green-100 border-green-300' : ''}`} // Blue background on click selection, shadow and lighter green when dragging
                                       >
                                         <div className="flex items-center gap-2">
                                           {vol.isSelected && (
                                             <div className="w-2 h-2 rounded-full bg-green-500"></div>
                                           )}
-                                          <span className={vol.isSelected ? "font-medium text-green-900" : "text-gray-700"}>
+                                          <span className={`${vol.isSelected ? "font-medium text-green-900" : "text-gray-700"} ${clickedVolunteer === vol.fullName ? 'font-semibold text-blue-900' : ''}`}> {/* Bold and blue text when clicked */}
                                             {vol.fullName}
                                           </span>
                                         </div>
