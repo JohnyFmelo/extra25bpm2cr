@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { LogOut, RefreshCw } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
 import {
@@ -31,26 +31,6 @@ const TopBar = () => {
     window.location.reload();
   };
 
-  // Função para calcular o tempo restante até as 06:00
-  const calculateTimeToSixAM = () => {
-    const now = new Date();
-    const sixAM = new Date(now);
-    sixAM.setHours(6, 0, 0, 0);
-    if (now >= sixAM) {
-      sixAM.setDate(sixAM.getDate() + 1); // Se já passou das 06:00, agende para o próximo dia
-    }
-    return sixAM.getTime() - now.getTime();
-  };
-
-  // UseEffect para agendar a atualização às 06:00
-  useEffect(() => {
-    const timeToSixAM = calculateTimeToSixAM();
-    const timeoutId = setTimeout(handleRefresh, timeToSixAM);
-
-    // Limpar o timeout quando o componente for desmontado
-    return () => clearTimeout(timeoutId);
-  }, []);
-
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
 
   return (
@@ -71,6 +51,7 @@ const TopBar = () => {
           <RefreshCw className="h-5 w-5" />
           <span className="sr-only">Atualizar página</span>
         </Button>
+
         <Button 
           variant="ghost" 
           size="icon" 
@@ -80,6 +61,7 @@ const TopBar = () => {
           <LogOut className="h-5 w-5" />
           <span className="sr-only">Sair</span>
         </Button>
+
         <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -94,6 +76,7 @@ const TopBar = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
         {showProfileDialog && (
           <ProfileUpdateDialog
             open={showProfileDialog}
