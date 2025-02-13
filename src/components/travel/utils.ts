@@ -33,27 +33,28 @@ export const getMilitaryRankWeight = (rank: string): number => {
 };
 
 export const calculateDailyCount = (startDate: string, endDate: string, halfLastDay: boolean): number => {
-  // Converte as strings de data para objetos Date
   const travelStart = new Date(startDate + "T00:00:00");
   const travelEnd = new Date(endDate + "T00:00:00");
 
-  // Verifica se as datas são válidas
   if (isNaN(travelStart.getTime()) || isNaN(travelEnd.getTime())) {
-    throw new Error("Datas inválidas fornecidas.");
+    return 0; // Retorne 0 se as datas forem inválidas
   }
 
-  // Calcula a diferença de dias
-  const timeDifference = travelEnd.getTime() - travelStart.getTime();
-  const numDays = timeDifference / (1000 * 3600 * 24) + 1; // Converte de milissegundos para dias
-  
+  const numDays = differenceInDays(travelEnd, travelStart) + 1;
   return halfLastDay ? numDays - 0.5 : numDays;
 };
 
-export const formatTravelCount = (count: number): string => {
+export const formatDiaryCount = (count: number): string => {
   if (isNaN(count)) {
-    throw new Error("Valor de contagem de viagens inválido.");
+    return "0 diárias"; // Retorne um valor padrão se o count for NaN
   }
-  return count === 1 ? "1 viagem" : `${count} viagens`;
+
+  const formattedCount = count.toLocaleString("pt-BR", {
+    minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
+    maximumFractionDigits: 1,
+  });
+
+  return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
 };
 
 export const formatDiaryCount = (count: number): string => {
