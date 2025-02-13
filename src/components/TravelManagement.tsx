@@ -533,7 +533,7 @@ export const TravelManagement = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-min p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
           .map((travel) => {
@@ -543,14 +543,14 @@ export const TravelManagement = () => {
             const isLocked = travel.isLocked;
             const sortedVolunteers = getSortedVolunteers(travel);
 
-            // Cálculo correto de diárias (evitando NaN)
+            // Cálculo correto de diárias
             const numDays = differenceInDays(travelEnd, travelStart) + 1;
-            const count = travel.halfLastDay ? numDays - 0.5 : numDays;
-            const formattedCount = count > 0 ? count.toLocaleString("pt-BR", {
-              minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
+            const dailyCount = travel.halfLastDay ? numDays - 0.5 : numDays;
+            const formattedCount = dailyCount.toLocaleString("pt-BR", {
+              minimumFractionDigits: dailyCount % 1 !== 0 ? 1 : 0,
               maximumFractionDigits: 1,
-            }) : "0";
-            const totalCost = travel.dailyRate ? count * Number(travel.dailyRate) : 0;
+            });
+            const totalCost = travel.dailyRate ? dailyCount * Number(travel.dailyRate) : 0;
 
             let cardBg = "bg-white";
             let statusBadge = null;
@@ -709,7 +709,7 @@ export const TravelManagement = () => {
                                   {formattedTravelCount(volunteerCounts[vol.fullName] || 0)}
                                 </span>
                                 <span className={`text-xs block ${vol.isSelected ? "text-green-700" : "text-gray-500"}`}>
-                                  {formattedDiaryCount(vol.diaryCount)}
+                                  {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}
                                 </span>
                               </div>
                             </div>
