@@ -1,5 +1,4 @@
 //Viagens2
-//Viagens2
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -40,7 +39,6 @@ interface Travel {
   halfLastDay: boolean;
   volunteers: string[];
   selectedVolunteers?: string[];
-  manualSelectedVolunteers?: string[]; // Campo para voluntários selecionados manualmente
   archived: boolean;
   isLocked?: boolean;
 }
@@ -159,7 +157,6 @@ export const TravelManagement = () => {
           createdAt: new Date(),
           volunteers: [],
           selectedVolunteers: [],
-          manualSelectedVolunteers: [], // Inicializa lista de seleção manual vazia
           archived: false,
           isLocked: false,
         });
@@ -351,7 +348,6 @@ export const TravelManagement = () => {
         await updateDoc(travelRef, {
           isLocked: false,
           selectedVolunteers: [],
-          manualSelectedVolunteers: [], // Clear manual selections when unlocking - not needed anymore as we use selectedVolunteers for manual
         });
           setSelectedVolunteers(prev => {
             const updatedSelections = {...prev};
@@ -499,21 +495,32 @@ export const TravelManagement = () => {
     }
   };
 
-    const handleManualVolunteerSelection = (travelId: string, volunteerName: string) => {
-    setSelectedVolunteers(prev => {
-      const currentSelections = prev[travelId] || [];
-      if (currentSelections.includes(volunteerName)) {
-        return {
+    const handleManualVolunteerSelection = async (travelId: string, volunteerName: string, slots: number) => {
+    const currentManualSelections = selectedVolunteers[travelId] || [];
+    const isAlreadySelectedManually = currentManualSelections.includes(volunteerName);
+
+    if (isAlreadySelectedManually) {
+      // Deselect if already manually selected
+      setSelectedVolunteers(prev => ({
+        ...prev,
+        [travelId]: currentManualSelections.filter(name => name !== volunteerName),
+      }));
+    } else {
+      if (currentManualSelections.length < slots) {
+        // Select if not already selected and within slot limit
+        setSelectedVolunteers(prev => ({
           ...prev,
-          [travelId]: currentSelections.filter(name => name !== volunteerName),
-        };
+          [travelId]: [...currentManualSelections, volunteerName],
+        }));
       } else {
-        return {
-          ...prev,
-          [travelId]: [...currentSelections, volunteerName],
-        };
+        // Show toast if trying to exceed slot limit
+        toast({
+          title: "Limite de vagas atingido",
+          description: `Você já selecionou o número máximo de ${slots} voluntários para esta viagem.`,
+          variant: "warning",
+        });
       }
-    });
+    }
   };
 
 
@@ -700,14 +707,14 @@ export const TravelManagement = () => {
                               className={`text-sm p-2 rounded-lg flex justify-between items-center ${
                                vol.isSelected ? 'bg-green-50 border border-green-200' : (vol.isManual ? 'bg-blue-100 border border-blue-200' : 'bg-gray-50 border border-gray-200')
                                }`}
-                                 onDoubleClick={() => {if(isAdmin && !travel.isLocked) {handleManualVolunteerSelection(travel.id, vol.fullName)} }}
+                                 onDoubleClick={() => {if(isAdmin && !travel.isLocked) {handleManualVolunteerSelection(travel.id, vol.fullName, travel.slots)} }}
                              >
                               <div className="flex items-center gap-2">
                                 {vol.isSelected && (
                                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
                                 )}
                                 <span className={`${vol.isSelected ? "font-medium text-green-900" : (vol.isManual ? 'text-blue-900 font-medium' : "text-gray-700")}`}>
-                                  {vol.fullName} {vol.isManual ? '(Manual)' : ''}
+                                  {vol.fullName}
                                 </span>
                               </div>
                               <div className="flex items-center space-x-2">
