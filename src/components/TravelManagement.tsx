@@ -359,11 +359,14 @@ export const TravelManagement = () => {
         // Ordena:
         // 1) Menor diária (quem tem menos diárias primeiro)
         // 2) Maior patente (em caso de empate nas diárias)
+        // 3) Ordem de inscrição (para empates em diárias E patente)
         processed.sort((a, b) => {
           if (a.diaryCount !== b.diaryCount) {
             return a.diaryCount - b.diaryCount; // 1) Menor diária (ASCENDING)
+          } else if (a.rankWeight !== b.rankWeight) {
+            return b.rankWeight - a.rankWeight; // 2) Maior patente (DESCENDING) - Para desempate por diária
           } else {
-            return b.rankWeight - a.rankWeight; // 2) Maior patente (DESCENDING) - Para desempate
+            return a.appliedAtIndex - b.appliedAtIndex; // 3) Ordem de inscrição (ASCENDING) - Desempate final
           }
         });
 
@@ -477,11 +480,14 @@ export const TravelManagement = () => {
     // Ordena:
     // 1) Menor diária (quem tem menos diárias primeiro)
     // 2) Maior patente (em caso de empate nas diárias)
+    // 3) Ordem de inscrição (para empates em diárias E patente)
     processed.sort((a, b) => {
       if (a.diaryCount !== b.diaryCount) {
         return a.diaryCount - b.diaryCount; // 1) Menor diária (ASCENDING)
+      } else if (a.rankWeight !== b.rankWeight) {
+        return b.rankWeight - a.rankWeight; // 2) Maior patente (DESCENDING) - Para desempate por diária
       } else {
-        return b.rankWeight - a.rankWeight; // 2) Maior patente (DESCENDING) - Para desempate
+        return a.appliedAtIndex - b.appliedAtIndex; // 3) Ordem de inscrição (ASCENDING) - Desempate final
       }
     });
 
@@ -514,8 +520,9 @@ export const TravelManagement = () => {
           <Card className="p-6 bg-white shadow-xl max-w-md w-full relative border border-gray-100">
             <h2 className="text-xl font-semibold mb-4 text-blue-900">Regras de Ordenação</h2>
             <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
-              <li>Menor quantidade de diárias primeiro.</li>
+              <li>Menor quantidade de diárias primeiro (quem tem menos diárias acumuladas, fica no topo).</li>
               <li>Em caso de empate na quantidade de diárias, graduação mais antiga (peso maior) fica acima.</li>
+              <li>Se ainda houver empate, a ordem de inscrição será considerada (quem se inscreveu primeiro fica acima).</li>
             </ol>
             <Button
               className="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white"
