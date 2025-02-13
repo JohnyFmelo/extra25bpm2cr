@@ -357,13 +357,14 @@ export const TravelManagement = () => {
         });
 
         // Ordena:
-        // 1) Menor diária (quem tem menos diárias em cima)
-        // 2) Maior patente (desempate: maior patente em cima)
+        // 1) Menor diária (quem tem menos diárias primeiro)
+        // 2) Maior patente (em caso de empate nas diárias)
         processed.sort((a, b) => {
           if (a.diaryCount !== b.diaryCount) {
-            return a.diaryCount - b.diaryCount; // 1) Menor diária - ASCENDING
+            return a.diaryCount - b.diaryCount; // 1) Menor diária (ASCENDING)
+          } else {
+            return b.rankWeight - a.rankWeight; // 2) Maior patente (DESCENDING) - Para desempate
           }
-          return b.rankWeight - a.rankWeight;  // 2) Maior patente (desempate) - DESCENDING
         });
 
         // Pega até o limite de vagas
@@ -474,15 +475,15 @@ export const TravelManagement = () => {
     const isLocked = travel.isLocked;
 
     // Ordena:
-    // 1) Menor diária (quem tem menos diárias em cima)
-    // 2) Maior patente (desempate: maior patente em cima)
+    // 1) Menor diária (quem tem menos diárias primeiro)
+    // 2) Maior patente (em caso de empate nas diárias)
     processed.sort((a, b) => {
       if (a.diaryCount !== b.diaryCount) {
-        return a.diaryCount - b.diaryCount; // 1) Menor diária - ASCENDING
+        return a.diaryCount - b.diaryCount; // 1) Menor diária (ASCENDING)
+      } else {
+        return b.rankWeight - a.rankWeight; // 2) Maior patente (DESCENDING) - Para desempate
       }
-      return b.rankWeight - a.rankWeight;  // 2) Maior patente (desempate) - DESCENDING
     });
-
 
     return processed.map((item, idx) => {
       const isSelected = isLocked
@@ -514,7 +515,7 @@ export const TravelManagement = () => {
             <h2 className="text-xl font-semibold mb-4 text-blue-900">Regras de Ordenação</h2>
             <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
               <li>Menor quantidade de diárias primeiro.</li>
-              <li>Empate em diárias: Graduação mais antiga (peso maior) fica acima.</li>
+              <li>Em caso de empate na quantidade de diárias, graduação mais antiga (peso maior) fica acima.</li>
             </ol>
             <Button
               className="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white"
