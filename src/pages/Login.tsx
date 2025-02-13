@@ -14,10 +14,10 @@ const Login = () => {
             className="h-24 w-auto mix-blend-multiply animate-float drop-shadow-2xl hover:scale-105 transition-transform duration-300" 
           />
           <h1 className="text-2xl font-semibold text-primary text-center">
-            Bem-vindo ao Sistema
+            Bem-vindo ao Sistema Extra+
           </h1>
           <p className="text-gray-600 text-center max-w-sm">
-            Faça login ou cadastre-se para acessar o sistema
+            Faça login ou cadastre-se para acessar
           </p>
         </div>
 
@@ -51,7 +51,7 @@ const Login = () => {
         </div>
 
         <div className="text-center text-sm text-gray-600">
-          <p>© {new Date().getFullYear()} - Sistema de Controle de Viagens</p>
+          <p>© {new Date().getFullYear()} - Sistema de Controle de Extraodinária e Viagens</p>
         </div>
       </div>
     </div>
