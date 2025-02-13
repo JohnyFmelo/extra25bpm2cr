@@ -33,20 +33,35 @@ export const getMilitaryRankWeight = (rank: string): number => {
 };
 
 export const calculateDailyCount = (startDate: string, endDate: string, halfLastDay: boolean): number => {
+  // Verifica se as datas são válidas
   const travelStart = new Date(startDate + "T00:00:00");
   const travelEnd = new Date(endDate + "T00:00:00");
+
+  if (isNaN(travelStart.getTime()) || isNaN(travelEnd.getTime())) {
+    throw new Error("Datas inválidas fornecidas.");
+  }
+
+  // Calcula a diferença de dias
   const numDays = differenceInDays(travelEnd, travelStart) + 1;
   return halfLastDay ? numDays - 0.5 : numDays;
 };
 
 export const formatTravelCount = (count: number): string => {
+  if (isNaN(count)) {
+    throw new Error("Valor de contagem de viagens inválido.");
+  }
   return count === 1 ? "1 viagem" : `${count} viagens`;
 };
 
 export const formatDiaryCount = (count: number): string => {
+  if (isNaN(count)) {
+    throw new Error("Valor de contagem de diárias inválido.");
+  }
+
   const formattedCount = count.toLocaleString("pt-BR", {
     minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
     maximumFractionDigits: 1,
   });
+
   return `${formattedCount} ${count === 1 ? 'diária' : 'diárias'}`;
 };
