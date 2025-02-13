@@ -498,6 +498,7 @@ const getSortedVolunteers = (travel: Travel) => {
     isSelected: isLocked ? true : idx < totalSlots,
   }));
 };
+};
     // Ordena do mesmo jeito
     processed.sort((a, b) => {
       // 1) Menor diária
