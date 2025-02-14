@@ -386,7 +386,7 @@ const TimeSlotsList = () => {
     return timeSlot.slots_used === timeSlot.total_slots;
   };
   const formatDateHeader = (date: string) => {
-    return format(parseISO(date), "Eee - dd/MM/yyyy", { // Alterado para "Eee" para abreviar o dia da semana
+    return format(parseISO(date), "Eee- dd/MM/yyyy", { // Alterado para "Eee-" para abreviar o dia da semana e usar hífen
       locale: ptBR
     }).replace(/^\w/, c => c.toUpperCase());
   };
