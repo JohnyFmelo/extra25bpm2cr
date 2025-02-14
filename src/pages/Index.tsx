@@ -6,9 +6,6 @@ import TimeSlotsList from "@/components/TimeSlotsList";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UsersList from "@/components/UsersList";
-import ProfileUpdateDialog from "@/components/ProfileUpdateDialog";
-import PasswordChangeDialog from "@/components/PasswordChangeDialog";
-import InformationDialog from "@/components/InformationDialog";
 import Messages from "@/components/Messages";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
 import { TravelManagement } from "@/components/TravelManagement";
@@ -18,9 +15,6 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [showProfileDialog, setShowProfileDialog] = useState(false);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [showInformationDialog, setShowInformationDialog] = useState(false);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
@@ -185,31 +179,6 @@ const Index = () => {
             </div>
           </TabsContent>
         </Tabs>
-
-        {showProfileDialog && (
-          <ProfileUpdateDialog
-            open={showProfileDialog}
-            onOpenChange={setShowProfileDialog}
-            userData={user}
-          />
-        )}
-        
-        {showPasswordDialog && (
-          <PasswordChangeDialog
-            open={showPasswordDialog}
-            onOpenChange={setShowPasswordDialog}
-            userId={user.id}
-            currentPassword={user.password}
-          />
-        )}
-
-        {showInformationDialog && (
-          <InformationDialog
-            open={showInformationDialog}
-            onOpenChange={setShowInformationDialog}
-            isAdmin={user.userType === "admin"}
-          />
-        )}
       </div>
     </div>
   );
