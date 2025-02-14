@@ -1,4 +1,3 @@
-
 import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned } from "lucide-react"; 
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -72,29 +71,26 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="main">
-            <div className="fixed bottom-6 right-6">
-              <div className="bg-white rounded-xl shadow-lg p-4 space-y-4">
-                <IconCard icon={Clock} label="Horas" />
-                <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
-                <IconCard 
-                  icon={MessageSquare} 
-                  label="Recados" 
-                  onClick={handleMessageClick}
-                  badge={unreadCount > 0 ? unreadCount : undefined}
-                />
+            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2">
+              <div className="bg-white rounded-full shadow-lg px-8 py-4">
+                <div className="flex items-center gap-8">
+                  <IconCard icon={Clock} label="Horas" variant="floating" />
+                  <IconCard icon={Bell} label="Notif." variant="floating" onClick={handleNotificationsClick} />
+                  <IconCard 
+                    icon={MessageSquare} 
+                    label="Recados" 
+                    variant="floating"
+                    onClick={handleMessageClick}
+                    badge={unreadCount > 0 ? unreadCount : undefined}
+                  />
+                  <IconCard icon={MapPinned} label="Viagens" variant="floating" onClick={handleTravelClick} />
+                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {user.userType === "admin" && (
-                <>
-                  <IconCard icon={Pencil} label="Editor" onClick={handleEditorClick} />
-                  <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
-                </>
-              )}
               <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
               <IconCard icon={Settings} label="Configurações" onClick={handleSettingsClick} />
-              <IconCard icon={MapPinned} label="Viagens" onClick={handleTravelClick} />
             </div>
           </TabsContent>
 
