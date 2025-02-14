@@ -386,7 +386,7 @@ const TimeSlotsList = () => {
     return timeSlot.slots_used === timeSlot.total_slots;
   };
   const formatDateHeader = (date: string) => {
-    return format(parseISO(date), "EEE - dd/MM/yyyy", {
+    return format(parseISO(date), "Eee - dd/MM/yyyy", { // Alterado para "Eee" para abreviar o dia da semana
       locale: ptBR
     }).replace(/^\w/, c => c.toUpperCase());
   };
@@ -503,6 +503,19 @@ const TimeSlotsList = () => {
   return <div className="space-y-6 p-4">
       <TimeSlotLimitControl slotLimit={slotLimit} onUpdateLimit={handleUpdateSlotLimit} userSlotCount={userSlotCount} isAdmin={isAdmin} />
 
+      {isAdmin && totalCostSummary["Total Geral"] > 0 &&
+    // Renderiza o Resumo de Custos Totais abaixo do TimeSlotLimitControl
+    <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
+          <h2 className="font-semibold text-gray-900 mb-4">Resumo de Custos Totais</h2>
+          <div className="space-y-2">
+            <p><strong>Cb/Sd:</strong> R$ {totalCostSummary["Cb/Sd"]?.toFixed(2)}</p>
+            <p><strong>St/Sgt:</strong> R$ {totalCostSummary["St/Sgt"]?.toFixed(2)}</p>
+            <p><strong>Oficiais:</strong> R$ {totalCostSummary["Oficiais"]?.toFixed(2)}</p>
+            <p className="font-semibold text-green-500"><strong>Total Geral:</strong> R$ {totalCostSummary["Total Geral"]?.toFixed(2)}</p>
+          </div>
+        </div>}
+
+
       {Object.entries(calculatedGroupedTimeSlots).sort().map(([date, groupedData]) => {
       const {
         slots,
@@ -575,18 +588,6 @@ const TimeSlotsList = () => {
             </div>
           </div>;
     })}
-
-      {isAdmin && totalCostSummary["Total Geral"] > 0 &&
-    // Renderiza o Resumo de Custos Totais apenas se Total Geral for maior que 0
-    <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Resumo de Custos Totais</h2>
-          <div className="space-y-2">
-            <p><strong>Cb/Sd:</strong> R$ {totalCostSummary["Cb/Sd"]?.toFixed(2)}</p>
-            <p><strong>St/Sgt:</strong> R$ {totalCostSummary["St/Sgt"]?.toFixed(2)}</p>
-            <p><strong>Oficiais:</strong> R$ {totalCostSummary["Oficiais"]?.toFixed(2)}</p>
-            <p className="font-semibold text-green-500"><strong>Total Geral:</strong> R$ {totalCostSummary["Total Geral"]?.toFixed(2)}</p>
-          </div>
-        </div>}
 
 
       <AlertDialog open={!!volunteerToRemove} onOpenChange={() => setVolunteerToRemove(null)}>
