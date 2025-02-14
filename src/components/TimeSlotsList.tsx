@@ -511,7 +511,7 @@ const TimeSlotsList = () => {
                     <h3 className="font-medium text-lg text-gray-800">
                       {formatDateHeader(date)}
                     </h3>
-                    {isAdmin && <span className="text-green-600 font-normal text-base">R$ {dailyCost.toFixed(2)}</span>} {/* Exibe o custo diário para admins */}
+                    {isAdmin && <span className="text-green-600 font-normal text-lg">R$ {dailyCost.toFixed(2)}</span>} {/* Exibe o custo diário para admins */}
                   </div>
                   <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
                     {isDatePast ? "Extra Encerrada" : "Extra"}
@@ -569,7 +569,7 @@ const TimeSlotsList = () => {
             <p><strong>Cb/Sd:</strong> R$ {totalCostSummary["Cb/Sd"]?.toFixed(2)}</p>
             <p><strong>St/Sgt:</strong> R$ {totalCostSummary["St/Sgt"]?.toFixed(2)}</p>
             <p><strong>Oficiais:</strong> R$ {totalCostSummary["Oficiais"]?.toFixed(2)}</p>
-            <p className="font-semibold"><strong>Total Geral:</strong> R$ {totalCostSummary["Total Geral"]?.toFixed(2)}</p>
+            <p className="font-semibold text-green-500"><strong>Total Geral:</strong> R$ {totalCostSummary["Total Geral"]?.toFixed(2)}</p>
           </div>
         </div>}
 
