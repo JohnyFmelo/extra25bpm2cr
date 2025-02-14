@@ -419,7 +419,7 @@ const TimeSlotsList = () => {
   };
 
   const formatDateHeader = (date: string) => {
-    return format(parseISO(date), "EEEE, dd/MM/yyyy", { locale: ptBR })
+    return format(parseISO(date), "EEEE - dd/MM/yyyy", { locale: ptBR }) // Alteração no formato da data
       .replace(/^\w/, (c) => c.toUpperCase());
   };
 
@@ -536,12 +536,13 @@ const TimeSlotsList = () => {
 
   const toggleCollapse = (date: string) => {
     setCollapsedDates(prevState => {
-      console.log("Previous collapsedDates:", prevState); // Log para debug
+      console.log("toggleCollapse called for date:", date); // LOG: Verificando se a função está sendo chamada
+      console.log("Previous collapsedDates:", prevState);
       const newState = {
         ...prevState,
         [date]: !prevState[date]
       };
-      console.log("New collapsedDates:", newState); // Log para debug
+      console.log("New collapsedDates:", newState);
       return newState;
     });
   };
@@ -562,7 +563,7 @@ const TimeSlotsList = () => {
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => {
         const isDatePast = isPast(parseISO(date));
         const isCollapsed = collapsedDates[date] === true;
-        console.log(`Date: ${date}, isCollapsed: ${isCollapsed}`); // Log para debug
+        console.log(`Rendering date: ${date}, isCollapsed: ${isCollapsed}`); // LOG: Verificando o estado no render
 
         return (
           <div key={date} className="bg-white rounded-lg shadow-sm">
