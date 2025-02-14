@@ -18,9 +18,6 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [showProfileDialog, setShowProfileDialog] = useState(false);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [showInformationDialog, setShowInformationDialog] = useState(false);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
@@ -57,7 +54,6 @@ const Index = () => {
     setActiveTab("notifications");
   };
 
-  // Removemos a verificação do tipo de usuário para que qualquer um possa acessar a aba "travel"
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
@@ -79,20 +75,24 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="main">
+            <div className="fixed bottom-6 right-6">
+              <div className="bg-white rounded-xl shadow-lg p-4 space-y-4">
+                <IconCard icon={Clock} label="Horas" />
+                <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
+                <IconCard 
+                  icon={MessageSquare} 
+                  label="Recados" 
+                  onClick={handleMessageClick}
+                  badge={unreadCount > 0 ? unreadCount : undefined}
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <IconCard icon={Clock} label="Horas" />
-              <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
-              <IconCard 
-                icon={Bell} 
-                label="Notificações" 
-                onClick={handleNotificationsClick}
-                badge={unreadCount > 0 ? unreadCount : undefined}
-              />
               {user.userType === "admin" && (
                 <>
                   <IconCard icon={Pencil} label="Editor" onClick={handleEditorClick} />
                   <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
-                  <IconCard icon={MessageSquare} label="Recados" onClick={handleMessageClick} />
                 </>
               )}
               <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
