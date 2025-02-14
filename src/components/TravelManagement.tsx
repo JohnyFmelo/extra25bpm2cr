@@ -513,11 +513,11 @@ export const TravelManagement = () => {
           [travelId]: [...currentManualSelections, volunteerName],
         }));
       } else {
-        // Show toast if trying to exceed slot limit
+        // Show toast if trying to exceed slot limit - using 'destructive' instead of 'warning'
         toast({
           title: "Limite de vagas atingido",
           description: `Você já selecionou o número máximo de ${slots} voluntários para esta viagem.`,
-          variant: "warning",
+          variant: "destructive",
         });
       }
     }
