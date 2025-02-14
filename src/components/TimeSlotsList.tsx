@@ -168,7 +168,6 @@ const getMilitaryRankWeight = (rank: string): number => {
 // Função getRankCategory para determinar a categoria da patente e o valor por hora
 const getRankCategory = (rank: string): { category: string; hourlyRate: number } => {
   const cbSdRanks = ["Sd", "Sd PM", "Cb", "Cb PM"];
-  // Correção: Adicionado todas as patentes de Sgt e SubTen na categoria correta
   const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM"];
   const oficiaisRanks = ["2° Ten", "2° Ten PM", "1° Ten", "1° Ten PM", "Cap", "Cap PM", "Maj", "Maj PM", "Ten Cel", "Ten Cel PM", "Cel", "Cel PM"];
 
@@ -177,6 +176,16 @@ const getRankCategory = (rank: string): { category: string; hourlyRate: number }
   if (oficiaisRanks.includes(rank)) return { category: "Oficiais", hourlyRate: 87.02 };
   return { category: "Outros", hourlyRate: 0 }; // Categoria padrão e valor 0 para outras patentes
 };
+
+// Nova função para extrair a patente corretamente
+const getVolunteerRank = (volunteerFullName: string): string => {
+  const parts = volunteerFullName.split(" ");
+  if (parts.length >= 2 && (parts[1] === "Sgt" || parts[1] === "Ten")) {
+    return `${parts[0]} ${parts[1]} ${parts[2] || ''}`.trim(); // Para patentes como "1° Sgt PM" ou "Sub Ten"
+  }
+  return parts[0]; // Para outras patentes (ex: "Cel", "Cb", "Sd")
+};
+
 
 // Componente TimeSlotsList
 const TimeSlotsList = () => {
@@ -447,7 +456,7 @@ const TimeSlotsList = () => {
       return false;
     }
 
-    const slotsForDate = timeSlots.filter(s => s.date === slot.date);
+    const slotsForDate = timeSlots.filter(s => s.date === timeSlot.date);
     const isVolunteeredForDate = slotsForDate.some(s =>
       s.volunteers?.includes(volunteerName)
     );
@@ -485,15 +494,9 @@ const TimeSlotsList = () => {
       let dailyCost = 0;
       grouped[date].slots.forEach(slot => {
         slot.volunteers?.forEach(volunteerFullName => {
-          const volunteerRank = volunteerFullName.split(" ")[0];
-          // ----------------------- LOGS ADICIONADOS -----------------------
-          console.log("Nome Completo do Voluntário:", volunteerFullName);
-          console.log("Patente Extraída:", volunteerRank);
-          // ---------------------------------------------------------------
+          // Usar a função getVolunteerRank para extrair a patente corretamente
+          const volunteerRank = getVolunteerRank(volunteerFullName);
           const rankInfo = getRankCategory(volunteerRank);
-          // ----------------------- LOGS ADICIONADOS -----------------------
-          console.log("Informações da Patente (getRankCategory):", rankInfo);
-          // ---------------------------------------------------------------
           const hours = parseFloat(calculateTimeDifference(slot.start_time, slot.end_time));
           const slotCost = hours * rankInfo.hourlyRate;
           dailyCost += slotCost;
@@ -502,15 +505,9 @@ const TimeSlotsList = () => {
         });
       });
       grouped[date].dailyCost = dailyCost; // Adiciona dailyCost ao grupo de datas
-      // ----------------------- LOGS ADICIONADOS -----------------------
-      console.log("Custo Diário para", date, ":", dailyCost);
-      // ---------------------------------------------------------------
     });
     setCalculatedGroupedTimeSlots(grouped);
     setTotalCostSummary(totalCostCounter); // Atualiza o resumo total de custos
-    // ----------------------- LOGS ADICIONADOS -----------------------
-    console.log("Resumo Total de Custos:", totalCostCounter);
-    // ---------------------------------------------------------------
   }, [timeSlots]);
 
 
