@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
 
-// Definição da interface TimeSlot
 interface TimeSlot {
   id?: string;
   date: string;
@@ -38,15 +37,13 @@ interface TimeSlot {
   volunteers?: string[];
 }
 
-// Definição da interface GroupedTimeSlots, agora incluindo dailyCost
 interface GroupedTimeSlots {
   [key: string]: {
     slots: TimeSlot[];
-    dailyCost: number; // Adicionado dailyCost para cada data
+    dailyCost: number;
   };
 }
 
-// Componente TimeSlotLimitControl
 const TimeSlotLimitControl = ({
   slotLimit,
   onUpdateLimit,
@@ -154,21 +151,29 @@ const TimeSlotLimitControl = ({
   );
 };
 
-// Função getMilitaryRankWeight (mantido como antes)
 const getMilitaryRankWeight = (rank: string): number => {
   const rankWeights: { [key: string]: number } = {
-    "Cel": 12, "Cel PM": 12, "Ten Cel": 11, "Ten Cel PM": 11, "Maj": 10, "Maj PM": 10, "Cap": 9, "Cap PM": 9,
-    "1° Ten": 8, "1° Ten PM": 8, "2° Ten": 7, "2° Ten PM": 7, "Sub Ten": 6, "Sub Ten PM": 6,
-    "1° Sgt": 5, "1° Sgt PM": 5, "2° Sgt": 4, "2° Sgt PM": 4, "3° Sgt": 3, "3° Sgt PM": 3,
-    "Cb": 2, "Cb PM": 2, "Sd": 1, "Sd PM": 1, "Estágio": 0,
+    "Cel": 100,
+    "Ten Cel": 90,
+    "Maj": 80,
+    "Cap": 70,
+    "1º Ten": 60,
+    "2º Ten": 50,
+    "Asp": 40,
+    "Sub Ten": 30,
+    "1º Sgt": 25,
+    "2º Sgt": 20,
+    "3º Sgt": 15,
+    "Cb": 10,
+    "Sd": 5,
+    "Estágio": 1
   };
+
   return rankWeights[rank] || 0;
 };
 
-// Função getRankCategory para determinar a categoria da patente e o valor por hora
 const getRankCategory = (rank: string): { category: string; hourlyRate: number } => {
   const cbSdRanks = ["Sd", "Sd PM", "Cb", "Cb PM"];
-  // Correção: Adicionado todas as patentes de Sgt e SubTen na categoria correta
   const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM", "Sub Ten", "Sub Ten PM"];
   const oficiaisRanks = ["2° Ten", "2° Ten PM", "1° Ten", "1° Ten PM", "Cap", "Cap PM", "Maj", "Maj PM", "Ten Cel", "Ten Cel PM", "Cel", "Cel PM"];
 
@@ -178,7 +183,6 @@ const getRankCategory = (rank: string): { category: string; hourlyRate: number }
   return { category: "Outros", hourlyRate: 0 }; // Categoria padrão e valor 0 para outras patentes
 };
 
-// Componente TimeSlotsList
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -398,12 +402,11 @@ const TimeSlotsList = () => {
     }
   };
 
-  // Modificado groupTimeSlotsByDate para calcular dailyCost
   const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
     return slots.reduce((groups: GroupedTimeSlots, slot) => {
       const date = slot.date;
       if (!groups[date]) {
-        groups[date] = { slots: [], dailyCost: 0 }; // Inicializa com slots e dailyCost
+        groups[date] = { slots: [], dailyCost: 0 };
       }
       groups[date].slots.push(slot);
       return groups;
@@ -447,7 +450,7 @@ const TimeSlotsList = () => {
       return false;
     }
 
-    const slotsForDate = timeSlots.filter(s => s.date === timeSlot.date);
+    const slotsForDate = timeSlots.filter(s => s.date === slot.date);
     const isVolunteeredForDate = slotsForDate.some(s =>
       s.volunteers?.includes(volunteerName)
     );
@@ -475,7 +478,6 @@ const TimeSlotsList = () => {
     });
   };
 
-  // Calcula groupedTimeSlots e dailyCost dentro do useEffect para usar timeSlots atualizado
   const [calculatedGroupedTimeSlots, setCalculatedGroupedTimeSlots] = useState<GroupedTimeSlots>({});
   useEffect(() => {
     const grouped = groupTimeSlotsByDate(timeSlots);
@@ -494,12 +496,11 @@ const TimeSlotsList = () => {
           totalCostCounter["Total Geral"] = (totalCostCounter["Total Geral"] || 0) + slotCost;
         });
       });
-      grouped[date].dailyCost = dailyCost; // Adiciona dailyCost ao grupo de datas
+      grouped[date].dailyCost = dailyCost;
     });
     setCalculatedGroupedTimeSlots(grouped);
-    setTotalCostSummary(totalCostCounter); // Atualiza o resumo total de custos
+    setTotalCostSummary(totalCostCounter);
   }, [timeSlots]);
-
 
   const userSlotCount = timeSlots.reduce((count, slot) =>
     slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
@@ -544,7 +545,6 @@ const TimeSlotsList = () => {
 
   const [totalCostSummary, setTotalCostSummary] = useState<{ "Cb/Sd": number, "St/Sgt": number, "Oficiais": number, "Total Geral": number }>({ "Cb/Sd": 0, "St/Sgt": 0, "Oficiais": 0, "Total Geral": 0 });
 
-
   if (isLoading) {
     return <div className="p-4">Carregando horários...</div>;
   }
@@ -578,7 +578,7 @@ const TimeSlotsList = () => {
                     <h3 className="font-medium text-lg text-gray-800">
                       {formatDateHeader(date)}
                     </h3>
-                    {isAdmin && <span className="text-sm text-green-600 font-semibold">R$ {dailyCost.toFixed(2)}</span>} {/* Exibe o custo diário para admins */}
+                    {isAdmin && <span className="text-sm text-green-600 font-semibold">R$ {dailyCost.toFixed(2)}</span>}
                   </div>
                   <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
                     {isDatePast ? "Extra Encerrada" : "Extra"}
@@ -662,7 +662,7 @@ const TimeSlotsList = () => {
         );
       })}
 
-      {isAdmin && ( // Renderiza o resumo de custos somente para administradores
+      {isAdmin && (
         <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
           <h2 className="font-semibold text-gray-900 mb-4">Resumo de Custos Totais</h2>
           <div className="space-y-2">
@@ -673,7 +673,6 @@ const TimeSlotsList = () => {
           </div>
         </div>
       )}
-
 
       <AlertDialog
         open={!!volunteerToRemove}
