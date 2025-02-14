@@ -419,7 +419,7 @@ const TimeSlotsList = () => {
   };
 
   const formatDateHeader = (date: string) => {
-    return format(parseISO(date), "EEE - dd/MM/yyyy", { locale: ptBR }) // Alterado para "EEE" para dia da semana abreviado
+    return format(parseISO(date), "EEE - dd/MM/yyyy", { locale: ptBR })
       .replace(/^\w/, (c) => c.toUpperCase());
   };
 
@@ -533,7 +533,14 @@ const TimeSlotsList = () => {
 
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => {
         const isDatePast = isPast(parseISO(date));
-        const isCollapsed = isDatePast; // Past dates are always collapsed, future are always expanded.
+        const isCollapsed = isDatePast;
+
+        // Sort slots by start_time in ascending order
+        const sortedSlots = [...slots].sort((a, b) => {
+          const timeA = a.start_time;
+          const timeB = b.start_time;
+          return timeA.localeCompare(timeB); // Compare time strings lexicographically
+        });
 
         return (
           <div key={date} className="bg-white rounded-lg shadow-sm">
@@ -541,7 +548,7 @@ const TimeSlotsList = () => {
               <div className="flex flex-col items-center">
                 <div className="flex items-center justify-between w-full mb-2">
                   <div className="flex items-center gap-2">
-                    <CalendarDays className={`h-5 w-5 ${isDatePast ? 'text-gray-500' : 'text-blue-500'}`} /> {/* Calendar Icon color changed */}
+                    <CalendarDays className={`h-5 w-5 ${isDatePast ? 'text-gray-500' : 'text-blue-500'}`} />
                     <h3 className="font-medium text-lg text-gray-800">
                       {formatDateHeader(date)}
                     </h3>
@@ -552,9 +559,9 @@ const TimeSlotsList = () => {
                 </div>
               </div>
 
-              {!isCollapsed && ( // Only render slots if not collapsed (i.e., not a past date)
+              {!isCollapsed && (
                 <div className="space-y-3 mt-4">
-                  {slots.map((slot) => (
+                  {sortedSlots.map((slot) => ( // Use sortedSlots here
                     <div
                       key={slot.id}
                       className={`border rounded-lg p-4 space-y-2 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}
