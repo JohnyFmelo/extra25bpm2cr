@@ -6,7 +6,7 @@ import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { UserRoundCog, CalendarDays, Clock } from "lucide-react";
+import { UserRoundCog, CalendarDays, Clock, ChevronDown, ChevronUp } from "lucide-react"; // Import Chevron icons
 import {
   Dialog,
   DialogContent,
@@ -556,19 +556,29 @@ const TimeSlotsList = () => {
 
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => {
         const isDatePast = isPast(parseISO(date));
-        const isCollapsed = collapsedDates[date] === true; // Default to false if undefined
+        const isCollapsed = collapsedDates[date] === true;
 
         return (
           <div key={date} className="bg-white rounded-lg shadow-sm p-4 md:p-5">
-            <div
-              className="flex items-center justify-between mb-4 cursor-pointer"
-              onDoubleClick={() => toggleCollapse(date)}
-            >
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-blue-500" />
                 <h3 className="font-medium text-lg text-gray-800">
                   {formatDateHeader(date)}
                 </h3>
+              </div>
+              <div className="flex items-center justify-center"> {/* Container for the icon */}
+                {isDatePast && ( // Only show collapse icon for past dates
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => toggleCollapse(date)}
+                    className="hover:bg-gray-100 rounded-full" // Optional hover effect
+                    aria-label={isCollapsed ? "Expandir" : "Recolher"}
+                  >
+                    {isCollapsed ? <ChevronDown className="h-5 w-5 text-gray-600" /> : <ChevronUp className="h-5 w-5 text-gray-600" />}
+                  </Button>
+                )}
               </div>
               <Badge variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
                 Extra
