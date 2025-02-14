@@ -168,7 +168,8 @@ const getMilitaryRankWeight = (rank: string): number => {
 // Função getRankCategory para determinar a categoria da patente e o valor por hora
 const getRankCategory = (rank: string): { category: string; hourlyRate: number } => {
   const cbSdRanks = ["Sd", "Sd PM", "Cb", "Cb PM"];
-  const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM"];
+  // Correção: Adicionado todas as patentes de Sgt e SubTen na categoria correta
+  const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM", "Sub Ten", "Sub Ten PM"];
   const oficiaisRanks = ["2° Ten", "2° Ten PM", "1° Ten", "1° Ten PM", "Cap", "Cap PM", "Maj", "Maj PM", "Ten Cel", "Ten Cel PM", "Cel", "Cel PM"];
 
   if (cbSdRanks.includes(rank)) return { category: "Cb/Sd", hourlyRate: 41.13 };
@@ -446,7 +447,7 @@ const TimeSlotsList = () => {
       return false;
     }
 
-    const slotsForDate = timeSlots.filter(s => s.date === slot.date);
+    const slotsForDate = timeSlots.filter(s => s.date === timeSlot.date);
     const isVolunteeredForDate = slotsForDate.some(s =>
       s.volunteers?.includes(volunteerName)
     );
