@@ -386,9 +386,9 @@ const TimeSlotsList = () => {
     return timeSlot.slots_used === timeSlot.total_slots;
   };
   const formatDateHeader = (date: string) => {
-    return format(parseISO(date), "Eee- dd/MM/yyyy", { // Alterado para "Eee-" para abreviar o dia da semana e usar hífen
-      locale: ptBR
-    }).replace(/^\w/, c => c.toUpperCase());
+    const dayOfWeek = format(parseISO(date), "eee", { locale: ptBR }); // "eee" gives abbreviated day name
+    const truncatedDay = dayOfWeek.substring(0, 3); // Truncate to first 3 letters
+    return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}- ${format(parseISO(date), "dd/MM/yyyy")}`; // Capitalize first letter, add hyphen, and format date
   };
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
     const userDataString = localStorage.getItem('user');
