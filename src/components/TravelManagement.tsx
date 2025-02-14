@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -15,7 +16,7 @@ import { CalendarIcon } from "lucide-react"
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { getFirestore, collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Travel {
@@ -39,14 +40,19 @@ export const TravelManagement = () => {
     const checkActiveTravel = async () => {
       const db = getFirestore();
       const travelCollection = collection(db, 'travels');
-      const q = query(
-        travelCollection,
-        where('userId', '==', user.id),
-        where('endDate', '>=', format(new Date(), 'yyyy-MM-dd'))
-      );
-
-      const querySnapshot = await getDocs(q);
-      setHasActiveTravel(!querySnapshot.empty);
+      
+      // Get all travels for the user and filter in memory
+      const querySnapshot = await getDocs(travelCollection);
+      const currentDate = format(new Date(), 'yyyy-MM-dd');
+      
+      const activeTravel = querySnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .some(travel => 
+          travel.userId === user.id && 
+          travel.endDate >= currentDate
+        );
+      
+      setHasActiveTravel(activeTravel);
     };
 
     checkActiveTravel();
