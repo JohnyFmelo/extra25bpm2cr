@@ -539,7 +539,9 @@ const TimeSlotsList = () => {
       ...prevState,
       [date]: !prevState[date]
     }));
+    // console.log(`Toggled collapse for date ${date}, new state: ${!collapsedDates[date]}`); // Debugging line
   };
+
 
   if (isLoading) {
     return <div className="p-4">Carregando horários...</div>;
@@ -560,105 +562,103 @@ const TimeSlotsList = () => {
 
         return (
           <div key={date} className="bg-white rounded-lg shadow-sm">
-            <div className="p-4 md:p-5"> {/* Content padding inside */}
-              <div className="flex flex-col items-center"> {/* Vertical flex for icon and header */}
+            <div className="p-4 md:p-5 flex items-center justify-between"> {/* Flex container for header */}
+              <div className="flex items-center gap-2"> {/* Date and Calendar Icon */}
+                <CalendarDays className="h-5 w-5 text-blue-500" />
+                <h3 className="font-medium text-lg text-gray-800">
+                  {formatDateHeader(date)}
+                </h3>
+              </div>
+              <div className="flex items-center gap-2"> {/* Badge and Collapse Icon */}
+                <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
+                  {isDatePast ? "Extra Encerrada" : "Extra"}
+                </Badge>
                 {isDatePast && (
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => toggleCollapse(date)}
-                    className="hover:bg-gray-100 rounded-full mb-2" // Added mb-2 for spacing
+                    className="hover:bg-gray-100 rounded-full"
                     aria-label={isCollapsed ? "Expandir" : "Recolher"}
                   >
                     {isCollapsed ? <ChevronDown className="h-5 w-5 text-gray-600" /> : <ChevronUp className="h-5 w-5 text-gray-600" />}
                   </Button>
                 )}
-                <div className="flex items-center justify-between w-full mb-2"> {/* Horizontal flex for date and badge */}
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className="h-5 w-5 text-blue-500" />
-                    <h3 className="font-medium text-lg text-gray-800">
-                      {formatDateHeader(date)}
-                    </h3>
-                  </div>
-                  <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
-                    {isDatePast ? "Extra Encerrada" : "Extra"}
-                  </Badge>
-                </div>
               </div>
+            </div>
 
-              {/* Conditionally render slots based on collapsed state */}
-              {!isCollapsed && (
-                <div className="space-y-3 mt-4"> {/* Added mt-4 for spacing */}
-                  {slots.map((slot) => (
-                    <div
-                      key={slot.id}
-                      className={`border rounded-lg p-4 space-y-2 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-blue-500" />
-                            <p className="font-medium text-gray-900">
-                              {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} - {calculateTimeDifference(slot.start_time, slot.end_time)}
-                            </p>
-                          </div>
-                          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${isSlotFull(slot) ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
-                            <span className="text-sm font-medium">
-                              {isSlotFull(slot)
-                                ? 'Vagas Esgotadas'
-                                : `${slot.total_slots - slot.slots_used} ${slot.total_slots - slot.slots_used === 1 ? 'vaga disponível' : 'vagas disponíveis'}`
-                              }
-                            </span>
-                          </div>
+            {/* Conditionally render slots based on collapsed state */}
+            {!isCollapsed && (
+              <div className="space-y-3 mt-4">
+                {slots.map((slot) => (
+                  <div
+                    key={slot.id}
+                    className={`border rounded-lg p-4 space-y-2 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-blue-500" />
+                          <p className="font-medium text-gray-900">
+                            {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} - {calculateTimeDifference(slot.start_time, slot.end_time)}
+                          </p>
                         </div>
-                        {shouldShowVolunteerButton(slot) && (
-                          isVolunteered(slot) ? (
-                            <Button
-                              onClick={() => handleUnvolunteer(slot)}
-                              variant="destructive"
-                              size="sm"
-                              className="shadow-sm hover:shadow"
-                            >
-                              Desmarcar
-                            </Button>
-                          ) : !isSlotFull(slot) && canVolunteerForSlot(slot) && (
-                            <Button
-                              onClick={() => handleVolunteer(slot)}
-                              className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow"
-                              size="sm"
-                            >
-                              Voluntário
-                            </Button>
-                          )
-                        )}
+                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${isSlotFull(slot) ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
+                          <span className="text-sm font-medium">
+                            {isSlotFull(slot)
+                              ? 'Vagas Esgotadas'
+                              : `${slot.total_slots - slot.slots_used} ${slot.total_slots - slot.slots_used === 1 ? 'vaga disponível' : 'vagas disponíveis'}`
+                            }
+                          </span>
+                        </div>
                       </div>
-                      {slot.volunteers && slot.volunteers.length > 0 && (
-                        <div className="pt-3 border-t border-gray-200">
-                          <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
-                          <div className="space-y-1">
-                            {sortVolunteers(slot.volunteers).map((volunteer, index) => (
-                              <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
-                                <span>{volunteer}</span>
-                                {isAdmin && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500"
-                                    onClick={() => setVolunteerToRemove({ name: volunteer, timeSlot: slot })}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                      {shouldShowVolunteerButton(slot) && (
+                        isVolunteered(slot) ? (
+                          <Button
+                            onClick={() => handleUnvolunteer(slot)}
+                            variant="destructive"
+                            size="sm"
+                            className="shadow-sm hover:shadow"
+                          >
+                            Desmarcar
+                          </Button>
+                        ) : !isSlotFull(slot) && canVolunteerForSlot(slot) && (
+                          <Button
+                            onClick={() => handleVolunteer(slot)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow"
+                            size="sm"
+                          >
+                            Voluntário
+                          </Button>
+                        )
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    {slot.volunteers && slot.volunteers.length > 0 && (
+                      <div className="pt-3 border-t border-gray-200">
+                        <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
+                        <div className="space-y-1">
+                          {sortVolunteers(slot.volunteers).map((volunteer, index) => (
+                            <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
+                              <span>{volunteer}</span>
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500"
+                                  onClick={() => setVolunteerToRemove({ name: volunteer, timeSlot: slot })}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
