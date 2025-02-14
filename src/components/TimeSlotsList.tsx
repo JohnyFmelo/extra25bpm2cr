@@ -6,7 +6,7 @@ import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { UserRoundCog, CalendarDays, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { UserRoundCog, CalendarDays, Clock } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -419,7 +419,7 @@ const TimeSlotsList = () => {
   };
 
   const formatDateHeader = (date: string) => {
-    return format(parseISO(date), "EEEE - dd/MM/yyyy", { locale: ptBR }) // Alteração no formato da data
+    return format(parseISO(date), "EEE - dd/MM/yyyy", { locale: ptBR }) // Alterado para "EEE" para dia da semana abreviado
       .replace(/^\w/, (c) => c.toUpperCase());
   };
 
@@ -518,35 +518,6 @@ const TimeSlotsList = () => {
     }
   };
 
-  // State to manage collapsed dates
-  const [collapsedDates, setCollapsedDates] = useState<{ [date: string]: boolean }>({});
-
-  // Initialize collapsed state on component mount and data load
-  useEffect(() => {
-    const initialCollapsedState: { [date: string]: boolean } = {};
-    Object.keys(groupedTimeSlots).forEach(date => {
-      if (isPast(parseISO(date))) {
-        initialCollapsedState[date] = true;
-      } else {
-        initialCollapsedState[date] = false;
-      }
-    });
-    setCollapsedDates(initialCollapsedState);
-  }, [groupedTimeSlots]);
-
-  const toggleCollapse = (date: string) => {
-    setCollapsedDates(prevState => {
-      console.log("toggleCollapse called for date:", date); // LOG: Verificando se a função está sendo chamada
-      console.log("Previous collapsedDates:", prevState);
-      const newState = {
-        ...prevState,
-        [date]: !prevState[date]
-      };
-      console.log("New collapsedDates:", newState);
-      return newState;
-    });
-  };
-
   if (isLoading) {
     return <div className="p-4">Carregando horários...</div>;
   }
@@ -562,27 +533,15 @@ const TimeSlotsList = () => {
 
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => {
         const isDatePast = isPast(parseISO(date));
-        const isCollapsed = collapsedDates[date] === true;
-        console.log(`Rendering date: ${date}, isCollapsed: ${isCollapsed}`); // LOG: Verificando o estado no render
+        const isCollapsed = isDatePast; // Past dates are always collapsed, future are always expanded.
 
         return (
           <div key={date} className="bg-white rounded-lg shadow-sm">
             <div className="p-4 md:p-5">
               <div className="flex flex-col items-center">
-                {isDatePast && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => toggleCollapse(date)}
-                    className="hover:bg-gray-100 rounded-full mb-2"
-                    aria-label={isCollapsed ? "Expandir" : "Recolher"}
-                  >
-                    {isCollapsed ? <ChevronDown className="h-5 w-5 text-gray-600" /> : <ChevronUp className="h-5 w-5 text-gray-600" />}
-                  </Button>
-                )}
                 <div className="flex items-center justify-between w-full mb-2">
                   <div className="flex items-center gap-2">
-                    <CalendarDays className="h-5 w-5 text-blue-500" />
+                    <CalendarDays className={`h-5 w-5 ${isDatePast ? 'text-gray-500' : 'text-blue-500'}`} /> {/* Calendar Icon color changed */}
                     <h3 className="font-medium text-lg text-gray-800">
                       {formatDateHeader(date)}
                     </h3>
@@ -593,7 +552,7 @@ const TimeSlotsList = () => {
                 </div>
               </div>
 
-              {!isCollapsed && (
+              {!isCollapsed && ( // Only render slots if not collapsed (i.e., not a past date)
                 <div className="space-y-3 mt-4">
                   {slots.map((slot) => (
                     <div
