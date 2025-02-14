@@ -27,57 +27,60 @@ import {
 } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
 
-// Define the interface for a TimeSlot object, representing a single time slot for volunteering.
+// Definição da interface TimeSlot
+// TimeSlot representa a estrutura de dados para um único horário de voluntariado.
 interface TimeSlot {
-  id?: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  total_slots: number;
-  slots_used: number;
-  volunteers?: string[];
+  id?: string; // Identificador único do horário (opcional, pode ser gerado pelo Firebase)
+  date: string; // Data do horário (formato ISO string)
+  start_time: string; // Hora de início (formato string HH:MM)
+  end_time: string; // Hora de fim (formato string HH:MM)
+  total_slots: number; // Número total de vagas disponíveis para este horário
+  slots_used: number; // Número de vagas já preenchidas
+  volunteers?: string[]; // Lista de nomes dos voluntários inscritos neste horário (opcional)
 }
 
-// Define the interface for GroupedTimeSlots, which is an object grouping TimeSlots by date.
+// Definição da interface GroupedTimeSlots
+// GroupedTimeSlots define a estrutura para agrupar TimeSlots por data.
 interface GroupedTimeSlots {
-  [key: string]: TimeSlot[];
+  [key: string]: TimeSlot[]; // Um objeto onde a chave é a data (string) e o valor é um array de TimeSlot para essa data.
 }
 
-// TimeSlotLimitControl component: Manages and displays the time slot limit per user.
+// Componente TimeSlotLimitControl
+// TimeSlotLimitControl gerencia e exibe o controle do limite de horários por usuário.
 const TimeSlotLimitControl = ({
-  slotLimit,
-  onUpdateLimit,
-  userSlotCount = 0,
-  isAdmin = false
+  slotLimit, // Limite atual de horários por usuário (numérico)
+  onUpdateLimit, // Função callback para atualizar o limite de horários (função)
+  userSlotCount = 0, // Contagem de horários já preenchidos pelo usuário atual (numérico, padrão 0)
+  isAdmin = false // Booleano para indicar se o usuário é administrador (booleano, padrão false)
 }) => {
-  // State to control the visibility of the custom limit input dialog.
+  // Estado para controlar a visibilidade do input de limite personalizado (para admins)
   const [showCustomInput, setShowCustomInput] = useState(false);
-  // State to hold the value of the custom limit input.
+  // Estado para armazenar o valor do limite personalizado digitado pelo admin
   const [customLimit, setCustomLimit] = useState("");
 
-  // Predefined time slot limits for admin quick selection.
+  // Limites de horários predefinidos para seleção rápida pelo administrador
   const predefinedLimits = [1, 2, 3, 4];
 
-  // Function to handle submission of the custom limit.
+  // Função para lidar com a submissão do limite personalizado
   const handleCustomLimitSubmit = () => {
-    const limit = parseInt(customLimit);
-    // Validate if the custom limit is a positive number.
+    const limit = parseInt(customLimit); // Converte o valor do input para um número inteiro
+    // Verifica se o limite é um número válido e maior que zero
     if (!isNaN(limit) && limit > 0) {
-      onUpdateLimit(limit); // Call the onUpdateLimit callback to update the limit.
-      setShowCustomInput(false); // Close the custom input dialog.
-      setCustomLimit(""); // Clear the custom limit input.
+      onUpdateLimit(limit); // Chama a função onUpdateLimit para atualizar o limite global
+      setShowCustomInput(false); // Fecha o dialog de input personalizado
+      setCustomLimit(""); // Limpa o input de limite personalizado
     }
   };
 
-  // Render JSX for TimeSlotLimitControl component.
+  // Renderização do componente TimeSlotLimitControl
   return (
     <div className="w-full space-y-4">
-      {/* Conditional rendering for non-admin users */}
+      {/* Renderização condicional para usuários não administradores */}
       {!isAdmin && (
         <div className="bg-white p-4 rounded-lg shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              {/* Display message based on user's slot usage compared to the limit */}
+              {/* Mensagem condicional baseada no limite de horários do usuário */}
               {userSlotCount >= slotLimit ? (
                 <p className="text-orange-600 font-medium">Horários esgotados</p>
               ) : (
@@ -85,12 +88,12 @@ const TimeSlotLimitControl = ({
                   Escolha {slotLimit - userSlotCount} {slotLimit - userSlotCount === 1 ? 'horário' : 'horários'}
                 </p>
               )}
-              {/* Display the count of used slots vs. the limit */}
+              {/* Exibe a contagem de horários preenchidos em relação ao limite */}
               <p className="text-sm text-gray-500">
                 {userSlotCount} de {slotLimit} horários preenchidos
               </p>
             </div>
-            {/* Display a visual representation of slot usage */}
+            {/* Indicador visual de quantos horários o usuário já preencheu */}
             <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
               <span className="text-gray-700 font-medium">{userSlotCount}/{slotLimit}</span>
             </div>
@@ -98,32 +101,32 @@ const TimeSlotLimitControl = ({
         </div>
       )}
 
-      {/* Conditional rendering for admin users */}
+      {/* Renderização condicional para usuários administradores */}
       {isAdmin && (
         <div className="bg-white p-4 rounded-lg shadow-sm">
           <div className="space-y-4">
-            {/* Section header for admin limit control */}
+            {/* Título da seção de controle de limite para administradores */}
             <div className="flex items-center justify-between">
               <h3 className="font-medium text-gray-900">Limite de horários por usuário</h3>
               <UserRoundCog className="h-5 w-5 text-gray-500" />
             </div>
 
-            {/* Buttons for predefined limits and custom limit input */}
+            {/* Botões para selecionar limites predefinidos ou inserir um personalizado */}
             <div className="flex gap-2">
-              {/* Map through predefined limits to create buttons */}
+              {/* Mapeia os limites predefinidos para criar botões */}
               {predefinedLimits.map((limit) => (
                 <Button
                   key={limit}
-                  onClick={() => onUpdateLimit(limit)} // Call onUpdateLimit with the predefined limit.
-                  variant={slotLimit === limit ? "default" : "outline"} // Highlight the button if it's the current limit.
+                  onClick={() => onUpdateLimit(limit)} // Ao clicar, atualiza o limite para o valor predefinido
+                  variant={slotLimit === limit ? "default" : "outline"} // Botão "default" se for o limite atual, "outline" caso contrário
                   className="flex-1"
                 >
                   {limit}
                 </Button>
               ))}
-              {/* Button to open the custom limit input dialog */}
+              {/* Botão para abrir o dialog de input de limite personalizado */}
               <Button
-                onClick={() => setShowCustomInput(true)}
+                onClick={() => setShowCustomInput(true)} // Ao clicar, exibe o dialog de input personalizado
                 variant="outline"
                 className="flex-1"
               >
@@ -132,7 +135,7 @@ const TimeSlotLimitControl = ({
             </div>
           </div>
 
-          {/* Dialog for custom limit input */}
+          {/* Dialog para inserir limite personalizado (aparece quando admin clica no botão "+") */}
           <Dialog open={showCustomInput} onOpenChange={setShowCustomInput}>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
@@ -140,24 +143,24 @@ const TimeSlotLimitControl = ({
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                  {/* Input field for entering custom limit */}
+                  {/* Input de número para o admin digitar o limite personalizado */}
                   <Input
                     type="number"
                     min="1"
                     value={customLimit}
-                    onChange={(e) => setCustomLimit(e.target.value)} // Update customLimit state on input change.
+                    onChange={(e) => setCustomLimit(e.target.value)} // Atualiza o estado customLimit conforme o admin digita
                     placeholder="Digite o limite de horários"
                   />
                 </div>
-                {/* Buttons to cancel or confirm custom limit */}
+                {/* Botões de "Cancelar" e "Confirmar" no dialog */}
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="outline"
-                    onClick={() => setShowCustomInput(false)} // Close the dialog on cancel.
+                    onClick={() => setShowCustomInput(false)} // Fecha o dialog ao clicar em "Cancelar"
                   >
                     Cancelar
                   </Button>
-                  <Button onClick={handleCustomLimitSubmit}> {/* Submit custom limit on confirm. */}
+                  <Button onClick={handleCustomLimitSubmit}> {/* Chama a função handleCustomLimitSubmit ao clicar em "Confirmar" */}
                     Confirmar
                   </Button>
                 </div>
@@ -170,8 +173,10 @@ const TimeSlotLimitControl = ({
   );
 };
 
-// Function to get a numerical weight for military ranks for sorting purposes.
+// Função getMilitaryRankWeight
+// Retorna um peso numérico para cada patente militar para fins de ordenação.
 const getMilitaryRankWeight = (rank: string): number => {
+  // Objeto que mapeia patentes militares para seus respectivos pesos
   const rankWeights: { [key: string]: number } = {
     "Cel": 12,
     "Cel PM": 12,
@@ -199,106 +204,108 @@ const getMilitaryRankWeight = (rank: string): number => {
     "Sd PM": 1,
     "Estágio": 0,
   };
-  return rankWeights[rank] || 0; // Return weight if rank is found, otherwise default to 0.
+  return rankWeights[rank] || 0; // Retorna o peso da patente, ou 0 se a patente não for encontrada
 };
 
-// TimeSlotsList component: Displays a list of time slots and handles volunteering actions.
+// Componente TimeSlotsList
+// TimeSlotsList exibe a lista de horários disponíveis e lida com ações de voluntariado.
 const TimeSlotsList = () => {
-  // State to store the array of time slots fetched from Firebase.
+  // Estado para armazenar a lista de horários (inicialmente vazia)
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  // State to manage loading state while fetching time slots.
+  // Estado para indicar se os horários estão sendo carregados (para exibir um loading)
   const [isLoading, setIsLoading] = useState(false);
-  // State to store the current slot limit from settings.
+  // Estado para armazenar o limite de horários por usuário (obtido das configurações)
   const [slotLimit, setSlotLimit] = useState<number>(0);
-  // Hook to use toast notifications for user feedback.
+  // Hook useToast para exibir mensagens de notificação (sucesso, erro, etc.)
   const { toast } = useToast();
 
-  // Retrieve user data from local storage.
+  // Recupera os dados do usuário do localStorage
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
-  // Construct volunteer name from user data, if available.
+  // Obtém o nome do voluntário a partir dos dados do usuário (se disponíveis)
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
-  // Determine if the user is an admin based on userType.
+  // Verifica se o usuário é administrador com base no userType
   const isAdmin = userData?.userType === 'admin';
 
-  // Function to calculate the time difference between start and end times.
+  // Função calculateTimeDifference
+  // Calcula a diferença de tempo entre a hora de início e fim e retorna como string formatada.
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    let [endHour, endMinute] = endTime.split(':').map(Number);
+    const [startHour, startMinute] = startTime.split(':').map(Number); // Separa hora e minuto da startTime
+    let [endHour, endMinute] = endTime.split(':').map(Number); // Separa hora e minuto da endTime
 
-    // Handle cases where end time is on the next day.
+    // Ajuste para horários que passam da meia-noite (ex: 22:00 às 02:00)
     if (endHour < startHour || (endHour === 0 && startHour > 0)) {
-      endHour += 24;
+      endHour += 24; // Adiciona 24 horas à hora de fim se passar da meia-noite
     }
 
-    let diffHours = endHour - startHour;
-    let diffMinutes = endMinute - startMinute;
+    let diffHours = endHour - startHour; // Calcula a diferença em horas
+    let diffMinutes = endMinute - startMinute; // Calcula a diferença em minutos
 
-    // Adjust hours and minutes if minutes are negative.
+    // Ajuste caso a diferença de minutos seja negativa (ex: 08:50 às 09:10)
     if (diffMinutes < 0) {
-      diffHours -= 1;
-      diffMinutes += 60;
+      diffHours -= 1; // Decrementa uma hora
+      diffMinutes += 60; // Adiciona 60 minutos
     }
 
-    const hourText = diffHours > 0 ? `${diffHours}h` : '';
-    const minText = diffMinutes > 0 ? `${diffMinutes}min` : '';
+    const hourText = diffHours > 0 ? `${diffHours}h` : ''; // Formata horas como texto (ex: "2h")
+    const minText = diffMinutes > 0 ? `${diffMinutes}min` : ''; // Formata minutos como texto (ex: "30min")
 
-    return `${hourText}${minText}`.trim(); // Return formatted time difference string.
+    return `${hourText}${minText}`.trim(); // Retorna a diferença formatada (ex: "2h 30min")
   };
 
-  // useEffect hook to fetch time slots and slot limit on component mount and updates.
+  // useEffect para buscar dados de horários e limite de slots ao montar o componente
   useEffect(() => {
-    // Function to fetch the slot limit from Firebase settings.
+    // Função interna fetchSlotLimit para buscar o limite de slots do Firebase
     const fetchSlotLimit = async () => {
       try {
-        const settingsDoc = await getDoc(doc(db, 'settings', 'slotLimit'));
+        const settingsDoc = await getDoc(doc(db, 'settings', 'slotLimit')); // Busca o documento 'slotLimit' na coleção 'settings'
         if (settingsDoc.exists()) {
-          setSlotLimit(settingsDoc.data().value || 0);
+          setSlotLimit(settingsDoc.data().value || 0); // Define o limite de slots com o valor do documento ou 0 se não existir
         }
       } catch (error) {
-        console.error('Error fetching slot limit:', error);
+        console.error('Erro ao buscar limite de slots:', error);
       }
     };
 
-    fetchSlotLimit(); // Call fetchSlotLimit function.
+    fetchSlotLimit(); // Chama a função para buscar o limite de slots
 
-    setIsLoading(true); // Set loading state to true before fetching data.
-    const timeSlotsCollection = collection(db, 'timeSlots');
-    const q = query(timeSlotsCollection);
+    setIsLoading(true); // Define o estado de loading como true enquanto busca os dados
+    const timeSlotsCollection = collection(db, 'timeSlots'); // Obtém a coleção 'timeSlots' do Firebase
+    const q = query(timeSlotsCollection); // Cria uma query para a coleção (neste caso, todos os documentos)
 
-    // Subscribe to real-time updates of time slots from Firebase.
+    // onSnapshot para ouvir em tempo real as alterações na coleção 'timeSlots'
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const formattedSlots: TimeSlot[] = snapshot.docs.map(doc => {
-        const data = doc.data();
+      const formattedSlots: TimeSlot[] = snapshot.docs.map(doc => { // Mapeia os documentos retornados pelo snapshot
+        const data = doc.data(); // Obtém os dados de cada documento
         return {
-          id: doc.id,
-          date: data.date,
-          start_time: data.start_time,
-          end_time: data.end_time,
-          volunteers: data.volunteers || [],
-          slots_used: data.slots_used || 0,
-          total_slots: data.total_slots || data.slots || 0,
+          id: doc.id, // Usa o ID do documento como ID do TimeSlot
+          date: data.date, // Data do TimeSlot
+          start_time: data.start_time, // Hora de início
+          end_time: data.end_time, // Hora de fim
+          volunteers: data.volunteers || [], // Lista de voluntários (ou array vazio se não existir)
+          slots_used: data.slots_used || 0, // Vagas usadas (ou 0 se não existir)
+          total_slots: data.total_slots || data.slots || 0, // Vagas totais (ou slots ou 0 se nenhum existir)
         };
       });
-      setTimeSlots(formattedSlots); // Update timeSlots state with fetched and formatted slots.
-      setIsLoading(false); // Set loading state to false after data is loaded.
+      setTimeSlots(formattedSlots); // Atualiza o estado timeSlots com os dados formatados
+      setIsLoading(false); // Define o estado de loading como false, pois os dados foram carregados
     }, (error) => {
-      console.error('Error listening to time slots:', error);
-      toast({
+      console.error('Erro ao ouvir horários:', error);
+      toast({ // Exibe uma notificação de erro usando o hook useToast
         title: "Erro ao atualizar horários",
         description: "Não foi possível receber atualizações em tempo real.",
         variant: "destructive"
       });
-      setIsLoading(false); // Ensure loading state is false even on error.
+      setIsLoading(false); // Garante que o loading seja desativado mesmo em caso de erro
     });
 
-    // Return unsubscribe function to detach listener on component unmount.
-    return () => unsubscribe();
-  }, [toast]); // Dependency array includes toast to react to toast updates.
+    return () => unsubscribe(); // Retorna a função unsubscribe para cancelar o listener ao desmontar o componente
+  }, [toast]); // Dependências do useEffect: apenas toast (para reagir a atualizações de toast)
 
-  // Function to handle user volunteering for a time slot.
+  // Função handleVolunteer
+  // Lida com a ação de um usuário se voluntariar para um horário.
   const handleVolunteer = async (timeSlot: TimeSlot) => {
-    if (!volunteerName) {
+    if (!volunteerName) { // Verifica se o nome do voluntário está disponível
       toast({
         title: "Erro",
         description: "Usuário não encontrado. Por favor, faça login novamente.",
@@ -307,12 +314,12 @@ const TimeSlotsList = () => {
       return;
     }
 
-    // Count the number of slots the user is already volunteered for.
+    // Calcula quantos horários o usuário já está voluntariado
     const userSlotCount = timeSlots.reduce((count, slot) =>
       slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
     );
 
-    // Check if user has reached the slot limit.
+    // Verifica se o usuário atingiu o limite de horários (e não é admin)
     if (userSlotCount >= slotLimit && !isAdmin) {
       toast({
         title: "Limite atingido!🚫",
@@ -322,7 +329,7 @@ const TimeSlotsList = () => {
       return;
     }
 
-    // Check if user is already registered for any slot on the same date.
+    // Verifica se o usuário já está voluntariado em algum horário na mesma data
     const slotsForDate = timeSlots.filter(slot => slot.date === timeSlot.date);
     const isAlreadyRegistered = slotsForDate.some(slot =>
       slot.volunteers?.includes(volunteerName)
@@ -338,14 +345,14 @@ const TimeSlotsList = () => {
     }
 
     try {
-      // Prepare updated slot data with new volunteer and incremented slots_used.
+      // Prepara os dados atualizados do TimeSlot
       const updatedSlot = {
         ...timeSlot,
-        slots_used: timeSlot.slots_used + 1,
-        volunteers: [...(timeSlot.volunteers || []), volunteerName]
+        slots_used: timeSlot.slots_used + 1, // Incrementa o número de vagas usadas
+        volunteers: [...(timeSlot.volunteers || []), volunteerName] // Adiciona o nome do voluntário à lista
       };
 
-      // Update the time slot in Firebase using dataOperations.
+      // Atualiza o TimeSlot no Firebase usando dataOperations
       const result = await dataOperations.update(
         updatedSlot,
         {
@@ -355,17 +362,17 @@ const TimeSlotsList = () => {
         }
       );
 
-      if (!result.success) {
-        throw new Error('Failed to update time slot');
+      if (!result.success) { // Verifica se a atualização foi bem-sucedida
+        throw new Error('Falha ao atualizar o horário');
       }
 
-      toast({
+      toast({ // Exibe notificação de sucesso
         title: "Sucesso!✅🤠",
         description: "Extra marcada. Aguarde a escala."
       });
     } catch (error) {
       console.error('Erro ao voluntariar:', error);
-      toast({
+      toast({ // Exibe notificação de erro
         title: "Erro 🤔",
         description: "Não foi possível reservar a Extra.",
         variant: "destructive"
@@ -373,9 +380,10 @@ const TimeSlotsList = () => {
     }
   };
 
-  // Function to handle user un-volunteering from a time slot.
+  // Função handleUnvolunteer
+  // Lida com a ação de um usuário desmarcar um horário de voluntariado.
   const handleUnvolunteer = async (timeSlot: TimeSlot) => {
-    if (!volunteerName) {
+    if (!volunteerName) { // Verifica se o nome do voluntário está disponível
       toast({
         title: "Erro 🤔",
         description: "Usuário não encontrado. Por favor, faça login novamente.",
@@ -385,14 +393,14 @@ const TimeSlotsList = () => {
     }
 
     try {
-      // Prepare updated slot data by removing the volunteer and decrementing slots_used.
+      // Prepara os dados atualizados do TimeSlot
       const updatedSlot = {
         ...timeSlot,
-        slots_used: timeSlot.slots_used - 1,
-        volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerName)
+        slots_used: timeSlot.slots_used - 1, // Decrementa o número de vagas usadas
+        volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerName) // Remove o nome do voluntário da lista
       };
 
-      // Update the time slot in Firebase using dataOperations.
+      // Atualiza o TimeSlot no Firebase usando dataOperations
       const result = await dataOperations.update(
         updatedSlot,
         {
@@ -402,17 +410,17 @@ const TimeSlotsList = () => {
         }
       );
 
-      if (!result.success) {
-        throw new Error('Failed to update time slot');
+      if (!result.success) { // Verifica se a atualização foi bem-sucedida
+        throw new Error('Falha ao atualizar o horário');
       }
 
-      toast({
+      toast({ // Exibe notificação de sucesso
         title: "Desmarcado! 👀🤔",
         description: "Extra desmarcada com sucesso!"
       });
     } catch (error) {
       console.error('Erro ao desmarcar:', error);
-      toast({
+      toast({ // Exibe notificação de erro
         title: "Erro ⛔",
         description: "Não foi possível desmarcar a Extra.",
         variant: "destructive"
@@ -420,9 +428,10 @@ const TimeSlotsList = () => {
     }
   };
 
-  // Function to handle updating the global slot limit in settings.
+  // Função handleUpdateSlotLimit
+  // Lida com a atualização do limite global de horários por usuário.
   const handleUpdateSlotLimit = async (limit: number) => {
-    if (isNaN(limit) || limit < 0) {
+    if (isNaN(limit) || limit < 0) { // Valida se o limite é um número válido e positivo
       toast({
         title: "Erro 😵‍💫",
         description: "Por favor, insira um número válido.",
@@ -432,16 +441,16 @@ const TimeSlotsList = () => {
     }
 
     try {
-      // Update the slot limit value in Firebase settings.
+      // Atualiza o valor do limite de slots no documento 'slotLimit' em 'settings' no Firebase
       await setDoc(doc(db, 'settings', 'slotLimit'), { value: limit });
-      setSlotLimit(limit); // Update local slotLimit state.
-      toast({
+      setSlotLimit(limit); // Atualiza o estado local slotLimit
+      toast({ // Exibe notificação de sucesso
         title: "Sucesso",
         description: "Limite de horários atualizado com sucesso!"
       });
     } catch (error) {
-      console.error('Error updating slot limit:', error);
-      toast({
+      console.error('Erro ao atualizar limite de slots:', error);
+      toast({ // Exibe notificação de erro
         title: "Erro",
         description: "Não foi possível atualizar o limite de horários.",
         variant: "destructive"
@@ -449,114 +458,122 @@ const TimeSlotsList = () => {
     }
   };
 
-  // Function to group time slots by date.
+  // Função groupTimeSlotsByDate
+  // Agrupa os TimeSlots por data, retornando um objeto GroupedTimeSlots.
   const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
-    return slots.reduce((groups: GroupedTimeSlots, slot) => {
-      const date = slot.date;
-      if (!groups[date]) {
+    return slots.reduce((groups: GroupedTimeSlots, slot) => { // Usa reduce para agrupar
+      const date = slot.date; // Obtém a data do TimeSlot
+      if (!groups[date]) { // Se não existir um grupo para essa data, cria um novo
         groups[date] = [];
       }
-      groups[date].push(slot);
-      return groups;
+      groups[date].push(slot); // Adiciona o TimeSlot ao grupo da data correspondente
+      return groups; // Retorna o objeto de grupos atualizado
     }, {});
   };
 
-  // Function to check if the current user is volunteered for a given time slot.
+  // Função isVolunteered
+  // Verifica se o usuário atual está voluntariado para um determinado TimeSlot.
   const isVolunteered = (timeSlot: TimeSlot) => {
-    return timeSlot.volunteers?.includes(volunteerName);
+    return timeSlot.volunteers?.includes(volunteerName); // Retorna true se o nome do voluntário estiver na lista de voluntários do TimeSlot
   };
 
-  // Function to check if a time slot is full.
+  // Função isSlotFull
+  // Verifica se um TimeSlot está completamente preenchido (sem vagas disponíveis).
   const isSlotFull = (timeSlot: TimeSlot) => {
-    return timeSlot.slots_used === timeSlot.total_slots;
+    return timeSlot.slots_used === timeSlot.total_slots; // Retorna true se o número de vagas usadas for igual ao total de vagas
   };
 
-  // Function to format the date for display in headers.
+  // Função formatDateHeader
+  // Formata a data para exibição no cabeçalho da seção de cada data.
   const formatDateHeader = (date: string) => {
-    return format(parseISO(date), "EEE - dd/MM/yyyy", { locale: ptBR })
-      .replace(/^\w/, (c) => c.toUpperCase());
+    return format(parseISO(date), "EEE - dd/MM/yyyy", { locale: ptBR }) // Formata a data para "Dia da semana abreviado - DD/MM/AAAA"
+      .replace(/^\w/, (c) => c.toUpperCase()); // Capitaliza a primeira letra do dia da semana
   };
 
-  // Function to determine if the volunteer button should be shown for a time slot.
+  // Função shouldShowVolunteerButton
+  // Determina se o botão de voluntariado deve ser exibido para um TimeSlot específico.
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
     const userDataString = localStorage.getItem('user');
     const userData = userDataString ? JSON.parse(userDataString) : null;
 
-    if (userData?.rank === "Estágio") {
-      return false; // Do not show volunteer button for users with "Estágio" rank.
+    if (userData?.rank === "Estágio") { // Não exibe o botão para usuários com patente "Estágio"
+      return false;
     }
 
-    if (isVolunteered(slot)) {
-      return true; // Show button if already volunteered (for un-volunteering).
+    if (isVolunteered(slot)) { // Exibe o botão se o usuário já estiver voluntariado (para desmarcar)
+      return true;
     }
 
-    if (isSlotFull(slot)) {
-      return true; // Show button if slot is full (to indicate it's full).
+    if (isSlotFull(slot)) { // Exibe o botão se o slot estiver cheio (para indicar que está cheio)
+      return true;
     }
 
-    // Check if user has reached slot limit and is not admin.
+    // Calcula quantos horários o usuário já está voluntariado
     const userSlotCount = timeSlots.reduce((count, s) =>
       s.volunteers?.includes(volunteerName) ? count + 1 : count, 0
     );
 
-    if (userSlotCount >= slotLimit && !isAdmin) {
-      return false; // Hide button if user limit is reached and not admin.
+    if (userSlotCount >= slotLimit && !isAdmin) { // Não exibe se o usuário atingiu o limite e não é admin
+      return false;
     }
 
-    // Check if user is already volunteered for any slot on the same date.
+    // Verifica se o usuário já está voluntariado em algum horário na mesma data
     const slotsForDate = timeSlots.filter(s => s.date === slot.date);
     const isVolunteeredForDate = slotsForDate.some(s =>
       s.volunteers?.includes(volunteerName)
     );
 
-    return !isVolunteeredForDate; // Show button if not already volunteered for any slot on this date.
+    return !isVolunteeredForDate; // Exibe se o usuário não estiver voluntariado em nenhum horário nessa data
   };
 
-  // Function to check if the user can volunteer for a slot based on slot limit.
+  // Função canVolunteerForSlot
+  // Verifica se o usuário pode se voluntariar para um TimeSlot (respeitando o limite).
   const canVolunteerForSlot = (slot: TimeSlot) => {
-    if (isAdmin) return true; // Admins can always volunteer.
+    if (isAdmin) return true; // Admins sempre podem se voluntariar
 
-    // Check if user has reached slot limit.
+    // Calcula quantos horários o usuário já está voluntariado
     const userSlotCount = timeSlots.reduce((count, s) =>
       s.volunteers?.includes(volunteerName) ? count + 1 : count, 0
     );
 
-    return userSlotCount < slotLimit; // User can volunteer if under slot limit.
+    return userSlotCount < slotLimit; // Retorna true se o usuário não atingiu o limite de horários
   };
 
-  // Function to sort volunteers by military rank.
+  // Função sortVolunteers
+  // Ordena a lista de voluntários com base na patente militar (usando getMilitaryRankWeight).
   const sortVolunteers = (volunteers: string[]) => {
-    if (!volunteers) return [];
+    if (!volunteers) return []; // Retorna array vazio se a lista de voluntários for nula/vazia
 
-    return volunteers.sort((a, b) => {
-      const rankA = a.split(" ")[0];
-      const rankB = b.split(" ")[0];
-      return getMilitaryRankWeight(rankB) - getMilitaryRankWeight(rankA); // Sort by rank weight in descending order.
+    return volunteers.sort((a, b) => { // Ordena usando a função de comparação
+      const rankA = a.split(" ")[0]; // Extrai a patente do nome do voluntário A
+      const rankB = b.split(" ")[0]; // Extrai a patente do nome do voluntário B
+      return getMilitaryRankWeight(rankB) - getMilitaryRankWeight(rankA); // Ordena por peso da patente (maior patente primeiro)
     });
   };
 
-  // Group time slots by date using the groupTimeSlotsByDate function.
+  // Agrupa os TimeSlots por data usando a função groupTimeSlotsByDate
   const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
 
-  // Count total slots volunteered by the user.
+  // Calcula o total de horários que o usuário está voluntariado
   const userSlotCount = timeSlots.reduce((count, slot) =>
     slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
   );
 
-  // State to manage the volunteer to be removed via AlertDialog.
+  // Estado para gerenciar qual voluntário está sendo removido (para o AlertDialog de confirmação)
   const [volunteerToRemove, setVolunteerToRemove] = useState<{ name: string; timeSlot: TimeSlot } | null>(null);
 
-  // Function to handle removal of a volunteer from a time slot (admin action).
+  // Função handleRemoveVolunteer
+  // Lida com a remoção de um voluntário de um TimeSlot (ação administrativa).
   const handleRemoveVolunteer = async (timeSlot: TimeSlot, volunteerName: string) => {
     try {
-      // Prepare updated slot data by removing the specified volunteer and decrementing slots_used.
+      // Prepara os dados atualizados do TimeSlot
       const updatedSlot = {
         ...timeSlot,
-        slots_used: timeSlot.slots_used - 1,
-        volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerName)
+        slots_used: timeSlot.slots_used - 1, // Decrementa o número de vagas usadas
+        volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerName) // Remove o voluntário da lista
       };
 
-      // Update the time slot in Firebase using dataOperations.
+      // Atualiza o TimeSlot no Firebase usando dataOperations
       const result = await dataOperations.update(
         updatedSlot,
         {
@@ -566,17 +583,17 @@ const TimeSlotsList = () => {
         }
       );
 
-      if (!result.success) {
-        throw new Error('Failed to remove volunteer');
+      if (!result.success) { // Verifica se a atualização foi bem-sucedida
+        throw new Error('Falha ao remover voluntário');
       }
 
-      toast({
+      toast({ // Exibe notificação de sucesso
         title: "Sucesso! ✅",
         description: `${volunteerName} foi removido deste horário.`
       });
     } catch (error) {
       console.error('Erro ao remover voluntário:', error);
-      toast({
+      toast({ // Exibe notificação de erro
         title: "Erro ⛔",
         description: "Não foi possível remover o voluntário.",
         variant: "destructive"
@@ -584,15 +601,15 @@ const TimeSlotsList = () => {
     }
   };
 
-  // Render loading state if data is still being fetched.
+  // Renderiza uma mensagem de loading enquanto os horários estão sendo carregados
   if (isLoading) {
     return <div className="p-4">Carregando horários...</div>;
   }
 
-  // Render the main component structure.
+  // Renderização principal do componente TimeSlotsList
   return (
     <div className="space-y-6 p-4">
-      {/* Time slot limit control component */}
+      {/* Componente TimeSlotLimitControl para gerenciar o limite de horários */}
       <TimeSlotLimitControl
         slotLimit={slotLimit}
         onUpdateLimit={handleUpdateSlotLimit}
@@ -600,16 +617,16 @@ const TimeSlotsList = () => {
         isAdmin={isAdmin}
       />
 
-      {/* Map through grouped time slots to render each date container */}
+      {/* Mapeia as datas agrupadas para renderizar cada seção de data */}
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => {
-        const isDatePast = isPast(parseISO(date));
-        const isCollapsed = isDatePast; // Automatically collapse past dates
+        const isDatePast = isPast(parseISO(date)); // Verifica se a data já passou
+        const isCollapsed = isDatePast; // Define se a seção de data deve estar colapsada (datas passadas sempre colapsadas)
 
-        // Sort slots by start_time in ascending order for each date
+        // Ordena os horários dentro de cada data por hora de início (do menor para o maior)
         const sortedSlots = [...slots].sort((a, b) => {
           const timeA = a.start_time;
           const timeB = b.start_time;
-          return timeA.localeCompare(timeB); // Compare time strings lexicographically
+          return timeA.localeCompare(timeB); // Compara as strings de hora lexicograficamente
         });
 
         return (
@@ -618,24 +635,24 @@ const TimeSlotsList = () => {
               <div className="flex flex-col items-center">
                 <div className="flex items-center justify-between w-full mb-2">
                   <div className="flex items-center gap-2">
-                    {/* Calendar icon, color depends on whether date is past */}
+                    {/* Ícone de calendário (cor cinza para datas passadas, azul para futuras) */}
                     <CalendarDays className={`h-5 w-5 ${isDatePast ? 'text-gray-500' : 'text-blue-500'}`} />
-                    {/* Date header, formatted */}
+                    {/* Cabeçalho da data formatado */}
                     <h3 className="font-medium text-lg text-gray-800">
                       {formatDateHeader(date)}
                     </h3>
                   </div>
-                  {/* Badge indicating if the extra is closed or active */}
+                  {/* Badge "Extra Encerrada" para datas passadas, "Extra" para datas futuras */}
                   <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
                     {isDatePast ? "Extra Encerrada" : "Extra"}
                   </Badge>
                 </div>
               </div>
 
-              {/* Conditionally render slots if the date is not collapsed (i.e., not past) */}
+              {/* Renderiza os horários SOMENTE se a data NÃO estiver colapsada (ou seja, não for data passada) */}
               {!isCollapsed && (
                 <div className="space-y-3 mt-4">
-                  {/* Map through sorted slots to render each time slot */}
+                  {/* Mapeia os horários ordenados para renderizar cada item de horário */}
                   {sortedSlots.map((slot) => (
                     <div
                       key={slot.id}
@@ -644,14 +661,14 @@ const TimeSlotsList = () => {
                       <div className="flex justify-between items-start">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            {/* Clock icon */}
+                            {/* Ícone de relógio */}
                             <Clock className="h-4 w-4 text-blue-500" />
-                            {/* Time slot display with calculated duration */}
+                            {/* Exibe o horário de início e fim e a duração calculada */}
                             <p className="font-medium text-gray-900">
                               {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} - {calculateTimeDifference(slot.start_time, slot.end_time)}
                             </p>
                           </div>
-                          {/* Badge showing slot availability status */}
+                          {/* Badge indicando a disponibilidade de vagas */}
                           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${isSlotFull(slot) ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
                             <span className="text-sm font-medium">
                               {isSlotFull(slot)
@@ -661,11 +678,11 @@ const TimeSlotsList = () => {
                             </span>
                           </div>
                         </div>
-                        {/* Conditional rendering of volunteer buttons */}
+                        {/* Renderiza os botões de "Voluntário" ou "Desmarcar" condicionalmente */}
                         {shouldShowVolunteerButton(slot) && (
                           isVolunteered(slot) ? (
                             <Button
-                              onClick={() => handleUnvolunteer(slot)}
+                              onClick={() => handleUnvolunteer(slot)} // Botão "Desmarcar" se já estiver voluntariado
                               variant="destructive"
                               size="sm"
                               className="shadow-sm hover:shadow"
@@ -674,7 +691,7 @@ const TimeSlotsList = () => {
                             </Button>
                           ) : !isSlotFull(slot) && canVolunteerForSlot(slot) && (
                             <Button
-                              onClick={() => handleVolunteer(slot)}
+                              onClick={() => handleVolunteer(slot)} // Botão "Voluntário" se puder se voluntariar e o slot não estiver cheio
                               className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow"
                               size="sm"
                             >
@@ -683,22 +700,22 @@ const TimeSlotsList = () => {
                           )
                         )}
                       </div>
-                      {/* Display list of volunteers if there are any */}
+                      {/* Renderiza a lista de voluntários se houver */}
                       {slot.volunteers && slot.volunteers.length > 0 && (
                         <div className="pt-3 border-t border-gray-200">
                           <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
                           <div className="space-y-1">
-                            {/* Map through sorted volunteers to display each name */}
+                            {/* Mapeia a lista de voluntários ordenados para exibir cada nome */}
                             {sortVolunteers(slot.volunteers).map((volunteer, index) => (
                               <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
                                 <span>{volunteer}</span>
-                                {/* Admin option to remove a volunteer */}
+                                {/* Botão "X" (apenas para admins) para remover um voluntário */}
                                 {isAdmin && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500"
-                                    onClick={() => setVolunteerToRemove({ name: volunteer, timeSlot: slot })}
+                                    onClick={() => setVolunteerToRemove({ name: volunteer, timeSlot: slot })} // Ao clicar, prepara para remover o voluntário
                                   >
                                     <X className="h-4 w-4" />
                                   </Button>
@@ -717,10 +734,10 @@ const TimeSlotsList = () => {
         );
       })}
 
-      {/* Alert dialog for confirming volunteer removal (admin action) */}
+      {/* AlertDialog para confirmação de remoção de voluntário (ação administrativa) */}
       <AlertDialog
-        open={!!volunteerToRemove}
-        onOpenChange={() => setVolunteerToRemove(null)}
+        open={!!volunteerToRemove} // Abre o dialog se volunteerToRemove tiver um valor (ou seja, se um voluntário estiver sendo removido)
+        onOpenChange={() => setVolunteerToRemove(null)} // Limpa volunteerToRemove ao fechar o dialog
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -734,8 +751,8 @@ const TimeSlotsList = () => {
             <AlertDialogAction
               onClick={() => {
                 if (volunteerToRemove) {
-                  handleRemoveVolunteer(volunteerToRemove.timeSlot, volunteerToRemove.name);
-                  setVolunteerToRemove(null);
+                  handleRemoveVolunteer(volunteerToRemove.timeSlot, volunteerToRemove.name); // Chama a função para remover o voluntário
+                  setVolunteerToRemove(null); // Limpa volunteerToRemove após a ação
                 }
               }}
             >
