@@ -176,25 +176,6 @@ const TimeSlotLimitControl = ({
 // Função getMilitaryRankWeight
 // Retorna um peso numérico para cada patente militar para fins de ordenação.
 const getMilitaryRankWeight = (rank: string): number => {
-  const rankWeights: { [key: string]: number } = {
-    "Cel": 100,
-    "Ten Cel": 90,
-    "Maj": 80,
-    "Cap": 70,
-    "1º Ten": 60,
-    "2º Ten": 50,
-    "Asp": 40,
-    "Sub Ten": 30,
-    "1º Sgt": 25,
-    "2º Sgt": 20,
-    "3º Sgt": 15,
-    "Cb": 10,
-    "Sd": 5,
-    "Estágio": 1
-  };
-
-  return rankWeights[rank] || 0;
-};
 
 // Componente TimeSlotsList
 // TimeSlotsList exibe a lista de horários disponíveis e lida com ações de voluntariado.
