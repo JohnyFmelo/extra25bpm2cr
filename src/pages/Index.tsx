@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { collection, query, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
-import { Globe, Clock, MessageSquare } from "lucide-react";
+import { Globe, Clock, MessageSquare, Info } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import InformationDialog from "@/components/InformationDialog";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
