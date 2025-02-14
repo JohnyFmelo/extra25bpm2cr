@@ -1,4 +1,3 @@
-
 import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned } from "lucide-react"; 
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -6,9 +5,6 @@ import TimeSlotsList from "@/components/TimeSlotsList";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UsersList from "@/components/UsersList";
-import ProfileUpdateDialog from "@/components/ProfileUpdateDialog";
-import PasswordChangeDialog from "@/components/PasswordChangeDialog";
-import InformationDialog from "@/components/InformationDialog";
 import Messages from "@/components/Messages";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
 import { TravelManagement } from "@/components/TravelManagement";
@@ -18,9 +14,6 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [showProfileDialog, setShowProfileDialog] = useState(false);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [showInformationDialog, setShowInformationDialog] = useState(false);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
@@ -78,16 +71,30 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="main">
-            <div className="fixed bottom-6 right-6">
-              <div className="bg-white rounded-xl shadow-lg p-4 space-y-4">
-                <IconCard icon={Clock} label="Horas" />
-                <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
-                <IconCard 
-                  icon={MessageSquare} 
-                  label="Recados" 
-                  onClick={handleMessageClick}
-                  badge={unreadCount > 0 ? unreadCount : undefined}
-                />
+            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2">
+              <div className="bg-white rounded-full shadow-lg px-8 py-4">
+                <div className="flex items-center gap-8">
+                  <button className="text-gray-600 hover:text-primary transition-colors">
+                    <Clock className="h-6 w-6" />
+                  </button>
+                  <button onClick={handleNotificationsClick} className="text-gray-600 hover:text-primary transition-colors">
+                    <Bell className="h-6 w-6" />
+                  </button>
+                  <button 
+                    onClick={handleMessageClick} 
+                    className="relative text-gray-600 hover:text-primary transition-colors"
+                  >
+                    <MessageSquare className="h-6 w-6" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-2 -right-2 flex items-center justify-center w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+                  <button onClick={handleExtraClick} className="text-gray-600 hover:text-primary transition-colors">
+                    <Calendar className="h-6 w-6" />
+                  </button>
+                </div>
               </div>
             </div>
 
