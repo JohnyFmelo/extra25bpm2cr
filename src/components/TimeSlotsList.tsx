@@ -154,14 +154,25 @@ const TimeSlotLimitControl = ({
   );
 };
 
-// Função getMilitaryRankWeight (mantido como antes)
+// Função getMilitaryRankWeight
 const getMilitaryRankWeight = (rank: string): number => {
   const rankWeights: { [key: string]: number } = {
-    "Cel": 12, "Cel PM": 12, "Ten Cel": 11, "Ten Cel PM": 11, "Maj": 10, "Maj PM": 10, "Cap": 9, "Cap PM": 9,
-    "1° Ten": 8, "1° Ten PM": 8, "2° Ten": 7, "2° Ten PM": 7, "Sub Ten": 6, "Sub Ten PM": 6,
-    "1° Sgt": 5, "1° Sgt PM": 5, "2° Sgt": 4, "2° Sgt PM": 4, "3° Sgt": 3, "3° Sgt PM": 3,
-    "Cb": 2, "Cb PM": 2, "Sd": 1, "Sd PM": 1, "Estágio": 0,
+    "Cel": 100,
+    "Ten Cel": 90,
+    "Maj": 80,
+    "Cap": 70,
+    "1º Ten": 60,
+    "2º Ten": 50,
+    "Asp": 40,
+    "Sub Ten": 30,
+    "1º Sgt": 25,
+    "2º Sgt": 20,
+    "3º Sgt": 15,
+    "Cb": 10,
+    "Sd": 5,
+    "Estágio": 1
   };
+
   return rankWeights[rank] || 0;
 };
 
@@ -186,8 +197,6 @@ const getVolunteerRank = (volunteerFullName: string): string => {
   return parts[0]; // Para outras patentes (ex: "Cel", "Cb", "Sd")
 };
 
-
-// Componente TimeSlotsList
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -419,12 +428,12 @@ const TimeSlotsList = () => {
     }, {});
   };
 
-  const isVolunteered = (timeSlot: TimeSlot) => {
-    return timeSlot.volunteers?.includes(volunteerName);
+  const isVolunteered = (currentSlot: TimeSlot) => {
+    return currentSlot.volunteers?.includes(volunteerName);
   };
 
-  const isSlotFull = (timeSlot: TimeSlot) => {
-    return timeSlot.slots_used === timeSlot.total_slots;
+  const isSlotFull = (currentSlot: TimeSlot) => {
+    return currentSlot.slots_used === currentSlot.total_slots;
   };
 
   const formatDateHeader = (date: string) => {
@@ -432,7 +441,7 @@ const TimeSlotsList = () => {
       .replace(/^\w/, (c) => c.toUpperCase());
   };
 
-  const shouldShowVolunteerButton = (slot: TimeSlot) => {
+  const shouldShowVolunteerButton = (currentSlot: TimeSlot) => {
     const userDataString = localStorage.getItem('user');
     const userData = userDataString ? JSON.parse(userDataString) : null;
 
@@ -440,11 +449,11 @@ const TimeSlotsList = () => {
       return false;
     }
 
-    if (isVolunteered(slot)) {
+    if (isVolunteered(currentSlot)) {
       return true;
     }
 
-    if (isSlotFull(slot)) {
+    if (isSlotFull(currentSlot)) {
       return true;
     }
 
@@ -456,7 +465,7 @@ const TimeSlotsList = () => {
       return false;
     }
 
-    const slotsForDate = timeSlots.filter(s => s.date === timeSlot.date);
+    const slotsForDate = timeSlots.filter(s => s.date === currentSlot.date);
     const isVolunteeredForDate = slotsForDate.some(s =>
       s.volunteers?.includes(volunteerName)
     );
@@ -464,7 +473,7 @@ const TimeSlotsList = () => {
     return !isVolunteeredForDate;
   };
 
-  const canVolunteerForSlot = (slot: TimeSlot) => {
+  const canVolunteerForSlot = (currentSlot: TimeSlot) => {
     if (isAdmin) return true;
 
     const userSlotCount = timeSlots.reduce((count, s) =>
@@ -510,7 +519,6 @@ const TimeSlotsList = () => {
     setTotalCostSummary(totalCostCounter); // Atualiza o resumo total de custos
   }, [timeSlots]);
 
-
   const userSlotCount = timeSlots.reduce((count, slot) =>
     slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0
   );
@@ -553,7 +561,6 @@ const TimeSlotsList = () => {
   };
 
   const [totalCostSummary, setTotalCostSummary] = useState<{ "Cb/Sd": number, "St/Sgt": number, "Oficiais": number, "Total Geral": number }>({ "Cb/Sd": 0, "St/Sgt": 0, "Oficiais": 0, "Total Geral": 0 });
-
 
   if (isLoading) {
     return <div className="p-4">Carregando horários...</div>;
