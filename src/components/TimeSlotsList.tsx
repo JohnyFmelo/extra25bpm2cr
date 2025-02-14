@@ -535,10 +535,15 @@ const TimeSlotsList = () => {
   }, [groupedTimeSlots]);
 
   const toggleCollapse = (date: string) => {
-    setCollapsedDates(prevState => ({
-      ...prevState,
-      [date]: !prevState[date]
-    }));
+    setCollapsedDates(prevState => {
+      console.log("Previous collapsedDates:", prevState); // Log para debug
+      const newState = {
+        ...prevState,
+        [date]: !prevState[date]
+      };
+      console.log("New collapsedDates:", newState); // Log para debug
+      return newState;
+    });
   };
 
   if (isLoading) {
@@ -557,23 +562,24 @@ const TimeSlotsList = () => {
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => {
         const isDatePast = isPast(parseISO(date));
         const isCollapsed = collapsedDates[date] === true;
+        console.log(`Date: ${date}, isCollapsed: ${isCollapsed}`); // Log para debug
 
         return (
           <div key={date} className="bg-white rounded-lg shadow-sm">
-            <div className="p-4 md:p-5"> {/* Content padding inside */}
-              <div className="flex flex-col items-center"> {/* Vertical flex for icon and header */}
+            <div className="p-4 md:p-5">
+              <div className="flex flex-col items-center">
                 {isDatePast && (
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => toggleCollapse(date)}
-                    className="hover:bg-gray-100 rounded-full mb-2" // Added mb-2 for spacing
+                    className="hover:bg-gray-100 rounded-full mb-2"
                     aria-label={isCollapsed ? "Expandir" : "Recolher"}
                   >
                     {isCollapsed ? <ChevronDown className="h-5 w-5 text-gray-600" /> : <ChevronUp className="h-5 w-5 text-gray-600" />}
                   </Button>
                 )}
-                <div className="flex items-center justify-between w-full mb-2"> {/* Horizontal flex for date and badge */}
+                <div className="flex items-center justify-between w-full mb-2">
                   <div className="flex items-center gap-2">
                     <CalendarDays className="h-5 w-5 text-blue-500" />
                     <h3 className="font-medium text-lg text-gray-800">
@@ -586,9 +592,8 @@ const TimeSlotsList = () => {
                 </div>
               </div>
 
-              {/* Conditionally render slots based on collapsed state */}
               {!isCollapsed && (
-                <div className="space-y-3 mt-4"> {/* Added mt-4 for spacing */}
+                <div className="space-y-3 mt-4">
                   {slots.map((slot) => (
                     <div
                       key={slot.id}
