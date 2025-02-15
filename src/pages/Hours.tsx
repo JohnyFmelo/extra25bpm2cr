@@ -1,10 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface HoursData {
   Nome: string;
@@ -35,6 +38,8 @@ const Hours = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<HoursData | null>(null);
   const [userData, setUserData] = useState<any>(null);
+  const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -111,6 +116,11 @@ const Hours = () => {
       }
 
       setData(result[0]);
+
+      // Se for admin, buscar dados de todos os usuários
+      if (userData?.userType === 'admin') {
+        await fetchAllUsersHours(selectedMonth);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -122,6 +132,44 @@ const Hours = () => {
       setLoading(false);
     }
   };
+
+  const fetchAllUsersHours = async (month: string) => {
+    try {
+      const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec`;
+      const params = new URLSearchParams({
+        mes: month,
+        todos: 'true'
+      });
+
+      const response = await fetch(`${apiUrl}?${params.toString()}`, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (Array.isArray(result)) {
+        setAllUsersData(result);
+      }
+    } catch (error) {
+      console.error('Error fetching all users data:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao buscar dados de todos os usuários.",
+      });
+    }
+  };
+
+  const filteredUsers = allUsersData.filter(user => 
+    user.Nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
@@ -206,6 +254,51 @@ const Hours = () => {
               >
                 Fechar
               </Button>
+            </div>
+          )}
+
+          {/* Admin Section - All Users Data */}
+          {userData?.userType === 'admin' && allUsersData.length > 0 && (
+            <div className="mt-8 space-y-4">
+              <h2 className="text-xl font-bold text-primary">Todos os Usuários</h2>
+              
+              <div className="flex items-center space-x-2">
+                <Search className="w-5 h-5 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por nome..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>25° BPM</TableHead>
+                      <TableHead>Sonora</TableHead>
+                      <TableHead>Sinfra</TableHead>
+                      <TableHead>Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{user.Nome}</TableCell>
+                        <TableCell>{user["Horas 25° BPM"]}</TableCell>
+                        <TableCell>{user.Sonora}</TableCell>
+                        <TableCell>{user.Sinfra}</TableCell>
+                        <TableCell className="font-bold text-green-600">
+                          {user["Total Geral"]}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
         </div>
