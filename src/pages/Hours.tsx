@@ -5,20 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MonthSelector } from "@/components/hours/MonthSelector";
+import { UserSelector } from "@/components/hours/UserSelector";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
-import { AllUsersHours } from "@/components/hours/AllUsersHours";
-import { fetchUserHours, fetchAllUsersHours } from "@/services/hoursService";
-import type { HoursData } from "@/types/hours";
+import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
+import type { HoursData, UserOption } from "@/types/hours";
 
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
+  const [selectedUser, setSelectedUser] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [loadingGeneral, setLoadingGeneral] = useState(false);
   const [data, setData] = useState<HoursData | null>(null);
+  const [generalData, setGeneralData] = useState<HoursData | null>(null);
   const [userData, setUserData] = useState<any>(null);
-  const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [users, setUsers] = useState<UserOption[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -37,6 +38,28 @@ const Hours = () => {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
+  useEffect(() => {
+    if (userData?.userType === 'admin') {
+      fetchUsers();
+    }
+  }, [userData?.userType]);
+
+  const fetchUsers = async () => {
+    try {
+      const result = await fetchAllUsers();
+      if (Array.isArray(result)) {
+        setUsers(result);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao carregar lista de usuários.",
+      });
+    }
+  };
 
   const handleConsult = async () => {
     if (!userData?.registration) {
@@ -93,23 +116,45 @@ const Hours = () => {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Selecione um mês para a consulta geral",
+        description: "Selecione um mês",
+      });
+      return;
+    }
+
+    if (!selectedUser) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Selecione um usuário",
       });
       return;
     }
 
     setLoadingGeneral(true);
     try {
-      const result = await fetchAllUsersHours(selectedGeneralMonth);
-      if (Array.isArray(result)) {
-        setAllUsersData(result);
+      const result = await fetchUserHours(selectedGeneralMonth, selectedUser);
+      
+      if (result.error) {
+        throw new Error(result.error);
       }
+
+      if (!result.length) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Matrícula não localizada",
+        });
+        setGeneralData(null);
+        return;
+      }
+
+      setGeneralData(result[0]);
     } catch (error) {
-      console.error('Error fetching all users data:', error);
+      console.error('Error fetching general data:', error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Erro ao buscar dados de todos os usuários.",
+        description: "Erro ao consultar dados do usuário selecionado.",
       });
     } finally {
       setLoadingGeneral(false);
@@ -167,6 +212,12 @@ const Hours = () => {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
             <div className="space-y-4">
+              <UserSelector 
+                users={users}
+                value={selectedUser}
+                onChange={setSelectedUser}
+              />
+
               <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
 
               <Button 
@@ -180,17 +231,11 @@ const Hours = () => {
                     Consultando...
                   </>
                 ) : (
-                  "Consultar Todos"
+                  "Consultar"
                 )}
               </Button>
 
-              {allUsersData.length > 0 && (
-                <AllUsersHours
-                  users={allUsersData}
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                />
-              )}
+              {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
             </div>
           </div>
         )}

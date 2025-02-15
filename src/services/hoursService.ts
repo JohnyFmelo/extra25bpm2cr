@@ -22,11 +22,10 @@ export const fetchUserHours = async (month: string, registration: string) => {
   return result;
 };
 
-export const fetchAllUsersHours = async (month: string) => {
+export const fetchAllUsers = async () => {
   const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec`;
   const params = new URLSearchParams({
-    mes: month,
-    todos: 'true'
+    usuarios: 'true'
   });
 
   const response = await fetch(`${apiUrl}?${params.toString()}`, {

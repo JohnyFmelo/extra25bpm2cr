@@ -7,3 +7,8 @@ export interface HoursData {
   "Total 25° BPM": string;
   "Total Geral": string;
 }
+
+export interface UserOption {
+  registration: string;
+  name: string;
+}
