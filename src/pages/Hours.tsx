@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -41,16 +40,14 @@ const Hours = () => {
 
   useEffect(() => {
     if (userData?.userType === 'admin') {
-      fetchUsers();
+      fetchUsersList();
     }
   }, [userData?.userType]);
 
-  const fetchUsers = async () => {
+  const fetchUsersList = async () => {
     try {
-      const result = await fetchAllUsers();
-      if (Array.isArray(result)) {
-        setUsers(result);
-      }
+      const fetchedUsers = await fetchAllUsers();
+      setUsers(fetchedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
