@@ -2,35 +2,13 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Loader2, ArrowLeft, Search } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Input } from "@/components/ui/input";
-
-interface HoursData {
-  Nome: string;
-  "Horas 25° BPM": string;
-  Sinfra: string;
-  Sonora: string;
-  "Total 25° BPM": string;
-  "Total Geral": string;
-}
-
-const months = [
-  { value: "janeiro", label: "Janeiro" },
-  { value: "fevereiro", label: "Fevereiro" },
-  { value: "marco", label: "Março" },
-  { value: "abril", label: "Abril" },
-  { value: "maio", label: "Maio" },
-  { value: "junho", label: "Junho" },
-  { value: "julho", label: "Julho" },
-  { value: "agosto", label: "Agosto" },
-  { value: "setembro", label: "Setembro" },
-  { value: "outubro", label: "Outubro" },
-  { value: "novembro", label: "Novembro" },
-  { value: "dezembro", label: "Dezembro" },
-];
+import { MonthSelector } from "@/components/hours/MonthSelector";
+import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
+import { AllUsersHours } from "@/components/hours/AllUsersHours";
+import { fetchUserHours, fetchAllUsersHours } from "@/services/hoursService";
+import type { HoursData } from "@/types/hours";
 
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
@@ -81,27 +59,8 @@ const Hours = () => {
 
     setLoading(true);
     try {
-      const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec`;
-      const params = new URLSearchParams({
-        mes: selectedMonth,
-        matricula: userData.registration
-      });
-
-      const response = await fetch(`${apiUrl}?${params.toString()}`, {
-        method: 'GET',
-        mode: 'cors',
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Resultado da consulta:', result);
-
+      const result = await fetchUserHours(selectedMonth, userData.registration);
+      
       if (result.error) {
         throw new Error(result.error);
       }
@@ -141,25 +100,7 @@ const Hours = () => {
 
     setLoadingGeneral(true);
     try {
-      const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec`;
-      const params = new URLSearchParams({
-        mes: selectedGeneralMonth,
-        todos: 'true'
-      });
-
-      const response = await fetch(`${apiUrl}?${params.toString()}`, {
-        method: 'GET',
-        mode: 'cors',
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = await fetchAllUsersHours(selectedGeneralMonth);
       if (Array.isArray(result)) {
         setAllUsersData(result);
       }
@@ -174,10 +115,6 @@ const Hours = () => {
       setLoadingGeneral(false);
     }
   };
-
-  const filteredUsers = allUsersData.filter(user => 
-    user.Nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="container mx-auto p-4">
@@ -198,18 +135,7 @@ const Hours = () => {
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
           <div className="space-y-4">
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o mês" />
-              </SelectTrigger>
-              <SelectContent>
-                {months.map((month) => (
-                  <SelectItem key={month.value} value={month.value}>
-                    {month.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
 
             <Button 
               onClick={handleConsult} 
@@ -232,42 +158,7 @@ const Hours = () => {
               </p>
             )}
 
-            {data && (
-              <div className="mt-6 space-y-4">
-                <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
-                
-                <div>
-                  <h3 className="font-bold mb-2">Dias trabalhados:</h3>
-                  {data["Horas 25° BPM"] && (
-                    <p>25° BPM: {data["Horas 25° BPM"]}</p>
-                  )}
-                  {data.Sonora && <p>Sonora: {data.Sonora}</p>}
-                  {data.Sinfra && <p>Sinfra: {data.Sinfra}</p>}
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h3 className="font-bold mb-2">Horas:</h3>
-                  {data["Total 25° BPM"] && (
-                    <p>25° BPM: {data["Total 25° BPM"]}</p>
-                  )}
-                  {data["Total Geral"] && (
-                    <p className="font-bold text-green-600">
-                      Total: {data["Total Geral"]}
-                    </p>
-                  )}
-                </div>
-
-                <Button 
-                  variant="destructive" 
-                  className="w-full mt-4"
-                  onClick={() => setData(null)}
-                >
-                  Fechar
-                </Button>
-              </div>
-            )}
+            {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
           </div>
         </div>
 
@@ -276,18 +167,7 @@ const Hours = () => {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
             <div className="space-y-4">
-              <Select value={selectedGeneralMonth} onValueChange={setSelectedGeneralMonth}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o mês" />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
 
               <Button 
                 onClick={handleGeneralConsult} 
@@ -305,44 +185,11 @@ const Hours = () => {
               </Button>
 
               {allUsersData.length > 0 && (
-                <div className="mt-4 space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Search className="w-5 h-5 text-gray-400" />
-                    <Input
-                      type="text"
-                      placeholder="Buscar por nome..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="flex-1"
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    {filteredUsers.map((user, index) => (
-                      <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                        <h3 className="font-bold text-lg mb-2">{user.Nome}</h3>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <p className="text-sm text-gray-600">25° BPM</p>
-                            <p className="font-medium">{user["Horas 25° BPM"]}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Sonora</p>
-                            <p className="font-medium">{user.Sonora}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Sinfra</p>
-                            <p className="font-medium">{user.Sinfra}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Total</p>
-                            <p className="font-bold text-green-600">{user["Total Geral"]}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <AllUsersHours
+                  users={allUsersData}
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                />
               )}
             </div>
           </div>
