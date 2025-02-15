@@ -7,7 +7,6 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, ArrowLeft, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface HoursData {
   Nome: string;
@@ -35,7 +34,9 @@ const months = [
 
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [loadingGeneral, setLoadingGeneral] = useState(false);
   const [data, setData] = useState<HoursData | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
@@ -116,11 +117,6 @@ const Hours = () => {
       }
 
       setData(result[0]);
-
-      // Se for admin, buscar dados de todos os usuários
-      if (userData?.userType === 'admin') {
-        await fetchAllUsersHours(selectedMonth);
-      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -133,11 +129,21 @@ const Hours = () => {
     }
   };
 
-  const fetchAllUsersHours = async (month: string) => {
+  const handleGeneralConsult = async () => {
+    if (!selectedGeneralMonth) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Selecione um mês para a consulta geral",
+      });
+      return;
+    }
+
+    setLoadingGeneral(true);
     try {
       const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec`;
       const params = new URLSearchParams({
-        mes: month,
+        mes: selectedGeneralMonth,
         todos: 'true'
       });
 
@@ -164,6 +170,8 @@ const Hours = () => {
         title: "Erro",
         description: "Erro ao buscar dados de todos os usuários.",
       });
+    } finally {
+      setLoadingGeneral(false);
     }
   };
 
@@ -172,7 +180,7 @@ const Hours = () => {
   );
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl">
+    <div className="container mx-auto p-4">
       <div className="relative h-12">
         <div className="absolute right-0 top-0">
           <button
@@ -184,124 +192,161 @@ const Hours = () => {
           </button>
         </div>
       </div>
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="space-y-4">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o mês" />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((month) => (
-                <SelectItem key={month.value} value={month.value}>
-                  {month.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
 
-          <Button 
-            onClick={handleConsult} 
-            disabled={loading || !userData?.registration} 
-            className="w-full"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Consultando...
-              </>
-            ) : (
-              "Consultar"
+      <div className={`grid ${userData?.userType === 'admin' ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
+        {/* Consulta Individual */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
+          <div className="space-y-4">
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o mês" />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map((month) => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button 
+              onClick={handleConsult} 
+              disabled={loading || !userData?.registration} 
+              className="w-full"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Consultando...
+                </>
+              ) : (
+                "Consultar"
+              )}
+            </Button>
+
+            {!userData?.registration && (
+              <p className="text-sm text-red-500">
+                Você precisa cadastrar sua matrícula para consultar as horas.
+              </p>
             )}
-          </Button>
 
-          {!userData?.registration && (
-            <p className="text-sm text-red-500">
-              Você precisa cadastrar sua matrícula para consultar as horas.
-            </p>
-          )}
+            {data && (
+              <div className="mt-6 space-y-4">
+                <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
+                
+                <div>
+                  <h3 className="font-bold mb-2">Dias trabalhados:</h3>
+                  {data["Horas 25° BPM"] && (
+                    <p>25° BPM: {data["Horas 25° BPM"]}</p>
+                  )}
+                  {data.Sonora && <p>Sonora: {data.Sonora}</p>}
+                  {data.Sinfra && <p>Sinfra: {data.Sinfra}</p>}
+                </div>
 
-          {data && (
-            <div className="mt-6 space-y-4">
-              <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
-              
-              <div>
-                <h3 className="font-bold mb-2">Dias trabalhados:</h3>
-                {data["Horas 25° BPM"] && (
-                  <p>25° BPM: {data["Horas 25° BPM"]}</p>
-                )}
-                {data.Sonora && <p>Sonora: {data.Sonora}</p>}
-                {data.Sinfra && <p>Sinfra: {data.Sinfra}</p>}
+                <Separator />
+
+                <div>
+                  <h3 className="font-bold mb-2">Horas:</h3>
+                  {data["Total 25° BPM"] && (
+                    <p>25° BPM: {data["Total 25° BPM"]}</p>
+                  )}
+                  {data["Total Geral"] && (
+                    <p className="font-bold text-green-600">
+                      Total: {data["Total Geral"]}
+                    </p>
+                  )}
+                </div>
+
+                <Button 
+                  variant="destructive" 
+                  className="w-full mt-4"
+                  onClick={() => setData(null)}
+                >
+                  Fechar
+                </Button>
               </div>
+            )}
+          </div>
+        </div>
 
-              <Separator />
-
-              <div>
-                <h3 className="font-bold mb-2">Horas:</h3>
-                {data["Total 25° BPM"] && (
-                  <p>25° BPM: {data["Total 25° BPM"]}</p>
-                )}
-                {data["Total Geral"] && (
-                  <p className="font-bold text-green-600">
-                    Total: {data["Total Geral"]}
-                  </p>
-                )}
-              </div>
+        {/* Consulta Geral (apenas para admin) */}
+        {userData?.userType === 'admin' && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
+            <div className="space-y-4">
+              <Select value={selectedGeneralMonth} onValueChange={setSelectedGeneralMonth}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o mês" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month) => (
+                    <SelectItem key={month.value} value={month.value}>
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               <Button 
-                variant="destructive" 
-                className="w-full mt-4"
-                onClick={() => setData(null)}
+                onClick={handleGeneralConsult} 
+                disabled={loadingGeneral} 
+                className="w-full"
               >
-                Fechar
+                {loadingGeneral ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Consultando...
+                  </>
+                ) : (
+                  "Consultar Todos"
+                )}
               </Button>
-            </div>
-          )}
 
-          {/* Admin Section - All Users Data */}
-          {userData?.userType === 'admin' && allUsersData.length > 0 && (
-            <div className="mt-8 space-y-4">
-              <h2 className="text-xl font-bold text-primary">Todos os Usuários</h2>
-              
-              <div className="flex items-center space-x-2">
-                <Search className="w-5 h-5 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Buscar por nome..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1"
-                />
-              </div>
+              {allUsersData.length > 0 && (
+                <div className="mt-4 space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Search className="w-5 h-5 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Buscar por nome..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="flex-1"
+                    />
+                  </div>
 
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>25° BPM</TableHead>
-                      <TableHead>Sonora</TableHead>
-                      <TableHead>Sinfra</TableHead>
-                      <TableHead>Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                  <div className="space-y-4">
                     {filteredUsers.map((user, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{user.Nome}</TableCell>
-                        <TableCell>{user["Horas 25° BPM"]}</TableCell>
-                        <TableCell>{user.Sonora}</TableCell>
-                        <TableCell>{user.Sinfra}</TableCell>
-                        <TableCell className="font-bold text-green-600">
-                          {user["Total Geral"]}
-                        </TableCell>
-                      </TableRow>
+                      <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="font-bold text-lg mb-2">{user.Nome}</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="text-sm text-gray-600">25° BPM</p>
+                            <p className="font-medium">{user["Horas 25° BPM"]}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Sonora</p>
+                            <p className="font-medium">{user.Sonora}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Sinfra</p>
+                            <p className="font-medium">{user.Sinfra}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Total</p>
+                            <p className="font-bold text-green-600">{user["Total Geral"]}</p>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
