@@ -373,11 +373,20 @@ export const TravelManagement = () => {
 
     // Nova função para extrair a patente corretamente
     const getVolunteerRank = (volunteerFullName: string): string => {
-    const parts = volunteerFullName.split(" ");
-    if (parts.length >= 2 && (parts[1] === "Sgt" || parts[1] === "Ten")) {
-        return `${parts[0]} ${parts[1]}${parts[2] ? ` ${parts[2]}` : ''}`.trim(); // Para patentes como "1° Sgt PM" ou "Sub Ten"
-    }
-    return parts[0]; // Para outras patentes (ex: "Cel", "Cb", "Sd")
+      const parts = volunteerFullName.split(" ");
+      let rank = parts[0];
+    
+      // Combine subsequent parts to form the rank if they exist
+      if (parts.length > 1) {
+        if (parts[1] === "Sgt" || parts[1] === "Ten") {
+          rank = parts.slice(0, 2).join(" ");  // e.g., "3° Sgt" or "Sub Ten"
+          if (parts.length > 2 && parts[2] === "PM") {
+            rank += " PM"; // e.g., "3° Sgt PM"
+          }
+        }
+      }
+    
+      return rank;
     };
 
   const getMilitaryRankWeight = (rank: string): number => {
