@@ -57,9 +57,9 @@ export const TravelManagement = () => {
 
   const [editingTravel, setEditingTravel] = useState<Travel | null>(null);
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
-  const [isModalOpen, setIsModalOpen = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showRankingRules, setShowRankingRules] = useState(false);
-  const [selectedVolunteers, setSelectedVolunteers] = useState< { [travelId: string]: string[] } >({});
+  const [selectedVolunteers, setSelectedVolunteers] = useState<{ [travelId: string]: string[] }>({});
 
   const { toast } = useToast();
 
