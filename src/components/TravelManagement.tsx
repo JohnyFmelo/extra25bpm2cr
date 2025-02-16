@@ -1,4 +1,3 @@
-//Viagens2
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -58,7 +57,7 @@ export const TravelManagement = () => {
 
   const [editingTravel, setEditingTravel] = useState<Travel | null>(null);
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen = useState(false);
   const [showRankingRules, setShowRankingRules] = useState(false);
   const [selectedVolunteers, setSelectedVolunteers] = useState< { [travelId: string]: string[] } >({});
 
@@ -66,7 +65,6 @@ export const TravelManagement = () => {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
-
 
   useEffect(() => {
     const travelsRef = collection(db, "travels");
@@ -120,7 +118,6 @@ export const TravelManagement = () => {
 
     return () => unsubscribe();
   }, []);
-
 
   const handleCreateTravel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,7 +211,6 @@ export const TravelManagement = () => {
     }
   };
 
-
   const handleArchive = async (travelId: string, archived: boolean) => {
     try {
       const travelRef = doc(db, "travels", travelId);
@@ -244,7 +240,7 @@ export const TravelManagement = () => {
         toast({
           title: "Erro",
           description: "Usuário não encontrado. Por favor, faça login novamente.",
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
@@ -311,7 +307,7 @@ export const TravelManagement = () => {
         const autoSelectVolunteers = allVolunteers.filter(v => !manualSelections.includes(v));
 
         const processed = autoSelectVolunteers.map((volunteer) => {
-          const [rank] = volunteer.split(" ");
+          const rank = getVolunteerRank(volunteer); // Usando a nova função
           return {
             fullName: volunteer,
             rank,
@@ -338,7 +334,6 @@ export const TravelManagement = () => {
 
         // Combine manual and auto selected volunteers
         const finalSelectedVolunteers = [...manualSelections, ...autoSelectedVolunteers.map(v => v.fullName)];
-
 
         await updateDoc(travelRef, {
           isLocked: true,
@@ -372,43 +367,31 @@ export const TravelManagement = () => {
     }
   };
 
-       const getMilitaryRankWeight = (rank: string): number => {
-        const rankWeights: { [key: string]: number } = {
-          "Cel": 12,
-          "Cel PM": 12,
-          "Ten Cel": 11,
-          "Ten Cel PM": 11,
-          "Maj": 10,
-          "Maj PM": 10,
-          "Cap": 9,
-          "Cap PM": 9,
-          "1° Ten": 8,
-          "1° Ten PM": 8,
-          "2° Ten": 7,
-          "2° Ten PM": 7,
-          "Sub Ten": 6,
-          "Sub Ten PM": 6,
-          "1° Sgt": 5,
-          "1° Sgt PM": 5,
-          "2° Sgt": 4,
-          "2° Sgt PM": 4,
-          "3° Sgt": 3,
-          "3° Sgt PM": 3,
-          "Cb": 2,
-          "Cb PM": 2,
-          "Sd": 1,
-          "Sd PM": 1,
-          "Estágio": 0,
-        };
-        return rankWeights[rank] || 0;
-      };
+  const cbSdRanks = ["Sd", "Sd PM", "Cb", "Cb PM"];
+  const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM"];
+  const oficiaisRanks = ["2° Ten", "2° Ten PM", "1° Ten", "1° Ten PM", "Cap", "Cap PM", "Maj", "Maj PM", "Ten Cel", "Ten Cel PM", "Cel", "Cel PM"];
 
+    // Nova função para extrair a patente corretamente
+    const getVolunteerRank = (volunteerFullName: string): string => {
+    const parts = volunteerFullName.split(" ");
+    if (parts.length >= 2 && (parts[1] === "Sgt" || parts[1] === "Ten")) {
+        return `${parts[0]} ${parts[1]}${parts[2] ? ` ${parts[2]}` : ''}`.trim(); // Para patentes como "1° Sgt PM" ou "Sub Ten"
+    }
+    return parts[0]; // Para outras patentes (ex: "Cel", "Cb", "Sd")
+    };
+
+  const getMilitaryRankWeight = (rank: string): number => {
+    if (cbSdRanks.includes(rank)) return 1;
+    if (stSgtRanks.includes(rank)) return 2;
+    if (oficiaisRanks.includes(rank)) return 3;
+    return 0; // Retorna 0 para patentes desconhecidas
+  };
 
   const formattedTravelCount = (count: number) => {
     return count === 1 ? "1 viagem" : `${count} viagens`;
   };
 
-   const formattedDiaryCount = (count: number) => {
+  const formattedDiaryCount = (count: number) => {
     const formattedCount = count.toLocaleString("pt-BR", {
       minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
       maximumFractionDigits: 1,
@@ -423,7 +406,7 @@ export const TravelManagement = () => {
     const manualSelections = selectedVolunteers[travel.id] || [];
 
     const processed = baseList.map((volunteer) => {
-      const [rank] = volunteer.split(" ");
+      const rank = getVolunteerRank(volunteer); // Usando a nova função
       return {
         fullName: volunteer,
         rank,
@@ -453,14 +436,12 @@ export const TravelManagement = () => {
 
     const autoSelectedNames = autoSelectCandidates.slice(0, Math.max(0, totalSlots - manualSelections.length)).map(v => v.fullName);
 
-
-      return processed.map(item => {
-            const isSelected = item.isManuallySelected || (isLocked ? travel.selectedVolunteers?.includes(item.fullName) : autoSelectedNames.includes(item.fullName));
-            const isManual = item.isManuallySelected;
-        return { ...item, isSelected, isManual };
+    return processed.map(item => {
+      const isSelected = item.isManuallySelected || (isLocked ? travel.selectedVolunteers?.includes(item.fullName) : autoSelectedNames.includes(item.fullName));
+      const isManual = item.isManuallySelected;
+      return { ...item, isSelected, isManual };
     });
-};
-
+  };
 
   const toggleExpansion = (travelId: string) => {
     setExpandedTravels((prev) =>
@@ -469,7 +450,6 @@ export const TravelManagement = () => {
         : [...prev, travelId]
     );
   };
-
 
   const handleRemoveVolunteer = async (travelId: string, volunteerName: string) => {
     try {
@@ -495,7 +475,7 @@ export const TravelManagement = () => {
     }
   };
 
-    const handleManualVolunteerSelection = async (travelId: string, volunteerName: string, slots: number) => {
+  const handleManualVolunteerSelection = async (travelId: string, volunteerName: string, slots: number) => {
     const currentManualSelections = selectedVolunteers[travelId] || [];
     const isAlreadySelectedManually = currentManualSelections.includes(volunteerName);
 
@@ -523,7 +503,6 @@ export const TravelManagement = () => {
     }
   };
 
-
   return (
     <>
       {showRankingRules && (
@@ -533,10 +512,10 @@ export const TravelManagement = () => {
             <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
               <li>Menor quantidade de diárias primeiro (quem tem menos diárias acumuladas, fica no topo).</li>
               <li>Em caso de empate na quantidade de diárias:
-                  <ol type="a" className="list-decimal list-inside text-sm space-y-2 text-gray-600 ml-4">
-                      <li>Graduação mais antiga (maior peso) fica acima.</li>
-                      <li>Se ainda persistir o empate, a ordem de inscrição (quem se inscreveu primeiro) define a ordem.</li>
-                  </ol>
+                <ol type="a" className="list-decimal list-inside text-sm space-y-2 text-gray-600 ml-4">
+                  <li>Graduação mais antiga (maior peso) fica acima.</li>
+                  <li>Se ainda persistir o empate, a ordem de inscrição (quem se inscreveu primeiro) define a ordem.</li>
+                </ol>
               </li>
             </ol>
             <Button
@@ -549,7 +528,7 @@ export const TravelManagement = () => {
         </div>
       )}
 
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
           .map((travel) => {
@@ -612,12 +591,12 @@ export const TravelManagement = () => {
             }
 
             return (
-                <Card
-                  key={travel.id}
-                  className={`relative overflow-hidden ${cardBg} border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 ${
-                    travel.archived ? "opacity-75" : ""
-                  }`}
-                >
+              <Card
+                key={travel.id}
+                className={`relative overflow-hidden ${cardBg} border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 ${
+                  travel.archived ? "opacity-75" : ""
+                }`}
+              >
                 {statusBadge}
 
                 {isAdmin && (
@@ -661,7 +640,7 @@ export const TravelManagement = () => {
                 )}
 
                 <div className="p-4" onClick={() => toggleExpansion(travel.id)}>
-                 <div className="space-y-3">
+                  <div className="space-y-3">
                     <div>
                       <h3 className="text-xl font-semibold mb-2 text-blue-900">
                         {travel.destination}
@@ -698,17 +677,17 @@ export const TravelManagement = () => {
                     </div>
 
                     {sortedVolunteers.length > 0 && (
-                     <div className="pt-3 border-t border-gray-200">
+                      <div className="pt-3 border-t border-gray-200">
                         <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntários:</h4>
                         <div className="space-y-2">
                           {sortedVolunteers.map((vol) => (
-                           <div
-                               key={vol.fullName}
+                            <div
+                              key={vol.fullName}
                               className={`text-sm p-2 rounded-lg flex justify-between items-center ${
-                               vol.isSelected ? 'bg-green-50 border border-green-200' : (vol.isManual ? 'bg-blue-100 border border-blue-200' : 'bg-gray-50 border border-gray-200')
-                               }`}
-                                 onDoubleClick={() => {if(isAdmin && !travel.isLocked) {handleManualVolunteerSelection(travel.id, vol.fullName, travel.slots)} }}
-                             >
+                                vol.isSelected ? 'bg-green-50 border border-green-200' : (vol.isManual ? 'bg-blue-100 border border-blue-200' : 'bg-gray-50 border border-gray-200')
+                              }`}
+                              onDoubleClick={() => {if(isAdmin && !travel.isLocked) {handleManualVolunteerSelection(travel.id, vol.fullName, travel.slots)} }}
+                            >
                               <div className="flex items-center gap-2">
                                 {vol.isSelected && (
                                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
@@ -739,10 +718,10 @@ export const TravelManagement = () => {
                                 )}
                               </div>
                             </div>
-                           ))}
+                          ))}
+                        </div>
                       </div>
-                     </div>
-                     )}
+                    )}
 
                     {today < travelStart && !travel.archived && !isLocked && (
                       <div className="mt-3">
