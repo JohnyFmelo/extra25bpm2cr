@@ -6,26 +6,19 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MonthSelector } from "@/components/hours/MonthSelector";
-import { UserSelector } from "@/components/hours/UserSelector";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { AllUsersHours } from "@/components/hours/AllUsersHours";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
-import type { HoursData, UserOption } from "@/types/hours";
+import type { HoursData } from "@/types/hours";
 
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
-  const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>(() => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-  });
-  const [selectedUser, setSelectedUser] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [loadingGeneral, setLoadingGeneral] = useState(false);
   const [data, setData] = useState<HoursData | null>(null);
   const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
   const [userData, setUserData] = useState<any>(null);
-  const [users, setUsers] = useState<UserOption[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [users, setUsers] = useState<any[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -48,14 +41,14 @@ const Hours = () => {
   useEffect(() => {
     if (userData?.userType === 'admin') {
       fetchUsersList();
-      fetchAllUsersData();
     }
-  }, [userData?.userType, selectedGeneralMonth]);
+  }, [userData?.userType]);
 
   const fetchUsersList = async () => {
     try {
       const fetchedUsers = await fetchAllUsers();
       setUsers(fetchedUsers);
+      fetchAllUsersData(fetchedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -66,12 +59,13 @@ const Hours = () => {
     }
   };
 
-  const fetchAllUsersData = async () => {
-    if (!selectedGeneralMonth) return;
-    
+  const fetchAllUsersData = async (usersList: any[]) => {
     setLoadingGeneral(true);
     try {
-      const promises = users.map(user => fetchUserHours(selectedGeneralMonth, user.registration));
+      const currentDate = new Date();
+      const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+      
+      const promises = usersList.map(user => fetchUserHours(currentMonth, user.registration));
       const results = await Promise.all(promises);
       const validResults = results.flatMap(result => result.length ? [result[0]] : []);
       setAllUsersData(validResults);
@@ -192,17 +186,15 @@ const Hours = () => {
         <TabsContent value="general">
           {userData?.userType === 'admin' && (
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
+              <h2 className="text-xl font-bold text-primary mb-4">
+                Consulta Geral - {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+              </h2>
               {loadingGeneral ? (
                 <div className="flex items-center justify-center p-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : (
-                <AllUsersHours 
-                  users={allUsersData}
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                />
+                <AllUsersHours users={allUsersData} />
               )}
             </div>
           )}
