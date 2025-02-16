@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -35,49 +35,51 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
-  const [queryClient] = useState(() => new QueryClient({
+  const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 1000 * 60 * 5, // 5 minutes
         retry: 1,
       },
     },
-  }));
+  });
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Index />
-                  </Layout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/hours" 
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Hours />
-                  </Layout>
-                </ProtectedRoute>
-              } 
-            />
-            {/* Redirect any unknown routes to login */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </TooltipProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Index />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/hours" 
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Hours />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              {/* Redirect any unknown routes to login */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </TooltipProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </React.StrictMode>
   );
 };
 
