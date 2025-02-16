@@ -59,7 +59,7 @@ export const TravelManagement = () => {
   const [expandedTravels, setExpandedTravels] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showRankingRules, setShowRankingRules] = useState(false);
-  const [selectedVolunteers, setSelectedVolunteers] = useState<{ [travelId: string]: string[] }>({});
+  const [selectedVolunteers, setSelectedVolunteers] = useState< { [travelId: string]: string[] } >({});
 
   const { toast } = useToast();
 
@@ -320,12 +320,12 @@ export const TravelManagement = () => {
 
         processed.sort((a, b) => {
           if (a.diaryCount !== b.diaryCount) {
-            return a.diaryCount - b.diaryCount;
+            return b.diaryCount - a.diaryCount; // Invertendo a ordem das diárias
           }
           if (a.rankWeight !== b.rankWeight) {
-            return b.rankWeight - a.rankWeight;
+            return a.rankWeight - b.rankWeight; // Mantendo a ordem das patentes (menor em baixo, maior em cima)
           }
-          return a.originalIndex - b.originalIndex;
+          return a.originalIndex - b.originalIndex; // Mantendo a ordem de chegada
         });
 
         // Take slots after considering manual selections
@@ -371,7 +371,7 @@ export const TravelManagement = () => {
   const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM"];
   const oficiaisRanks = ["2° Ten", "2° Ten PM", "1° Ten", "1° Ten PM", "Cap", "Cap PM", "Maj", "Maj PM", "Ten Cel", "Ten Cel PM", "Cel", "Cel PM"];
 
-    // Nova função para extrair a patente corretamente
+  // Nova função para extrair a patente corretamente
     const getVolunteerRank = (volunteerFullName: string): string => {
     const parts = volunteerFullName.split(" ");
     if (parts.length >= 2 && (parts[1] === "Sgt" || parts[1] === "Ten")) {
@@ -426,10 +426,10 @@ export const TravelManagement = () => {
 
     autoSelectCandidates.sort((a, b) => {
       if (a.diaryCount !== b.diaryCount) {
-        return a.diaryCount - b.diaryCount;
+        return b.diaryCount - a.diaryCount; // Invertendo a ordem das diárias
       }
       if (a.rankWeight !== b.rankWeight) {
-        return b.rankWeight - a.rankWeight;
+        return a.rankWeight - b.rankWeight; // Mantendo a ordem das patentes (menor em baixo, maior em cima)
       }
       return a.originalIndex - b.originalIndex;
     });
@@ -466,7 +466,7 @@ export const TravelManagement = () => {
         description: "Voluntário removido da viagem.",
       });
     } catch (error) {
-      console.error("Erro ao remover voluntário:", error);
+      console.error("Error ao remover voluntário:", error);
       toast({
         title: "Erro",
         description: "Erro ao remover voluntário da viagem.",
