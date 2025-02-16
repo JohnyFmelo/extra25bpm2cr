@@ -18,7 +18,6 @@ const Hours = () => {
   const [data, setData] = useState<HoursData | null>(null);
   const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
   const [userData, setUserData] = useState<any>(null);
-  const [users, setUsers] = useState<any[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -40,34 +39,25 @@ const Hours = () => {
 
   useEffect(() => {
     if (userData?.userType === 'admin') {
-      fetchUsersList();
+      fetchAllUsersData();
     }
   }, [userData?.userType]);
 
-  const fetchUsersList = async () => {
-    try {
-      const fetchedUsers = await fetchAllUsers();
-      setUsers(fetchedUsers);
-      fetchAllUsersData(fetchedUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Erro ao carregar lista de usuários.",
-      });
-    }
-  };
-
-  const fetchAllUsersData = async (usersList: any[]) => {
+  const fetchAllUsersData = async () => {
     setLoadingGeneral(true);
     try {
+      // Buscar usuários do Firebase
+      const users = await fetchAllUsers();
+      
+      // Configurar mês atual
       const currentDate = new Date();
       const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
       
-      const promises = usersList.map(user => fetchUserHours(currentMonth, user.registration));
+      // Fazer as consultas para cada usuário
+      const promises = users.map(user => fetchUserHours(currentMonth, user.registration));
       const results = await Promise.all(promises);
       const validResults = results.flatMap(result => result.length ? [result[0]] : []);
+      
       setAllUsersData(validResults);
     } catch (error) {
       console.error('Error fetching all users data:', error);
