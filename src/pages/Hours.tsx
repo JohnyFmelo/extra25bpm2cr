@@ -39,6 +39,7 @@ const Hours = () => {
 
   useEffect(() => {
     if (userData?.userType === 'admin') {
+      console.log('Admin user detected, fetching all users data');
       fetchAllUsersData();
     }
   }, [userData?.userType]);
@@ -48,19 +49,52 @@ const Hours = () => {
     try {
       // Buscar usuários do Firebase
       const users = await fetchAllUsers();
+      console.log('Retrieved users from Firebase:', users);
       
+      if (!users.length) {
+        console.log('No users found in Firebase');
+        toast({
+          title: "Aviso",
+          description: "Nenhum usuário encontrado com matrícula cadastrada.",
+        });
+        return;
+      }
+
       // Configurar mês atual
       const currentDate = new Date();
       const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+      console.log('Current month:', currentMonth);
       
       // Fazer as consultas para cada usuário
-      const promises = users.map(user => fetchUserHours(currentMonth, user.registration));
+      const promises = users.map(user => 
+        fetchUserHours(currentMonth, user.registration)
+          .then(result => {
+            if (!result || !result.length) {
+              console.log(`No data found for user ${user.registration}`);
+              return null;
+            }
+            return result[0];
+          })
+          .catch(error => {
+            console.error(`Error fetching data for user ${user.registration}:`, error);
+            return null;
+          })
+      );
+
       const results = await Promise.all(promises);
-      const validResults = results.flatMap(result => result.length ? [result[0]] : []);
+      const validResults = results.filter(result => result !== null) as HoursData[];
+      console.log('Valid results:', validResults);
+
+      if (!validResults.length) {
+        toast({
+          title: "Aviso",
+          description: "Nenhum dado encontrado para o mês atual.",
+        });
+      }
       
       setAllUsersData(validResults);
     } catch (error) {
-      console.error('Error fetching all users data:', error);
+      console.error('Error in fetchAllUsersData:', error);
       toast({
         variant: "destructive",
         title: "Erro",
@@ -94,8 +128,8 @@ const Hours = () => {
     try {
       const result = await fetchUserHours(selectedMonth, userData.registration);
       
-      if (result.error) {
-        throw new Error(result.error);
+      if (!result || result.error) {
+        throw new Error(result?.error || "Erro ao buscar dados");
       }
 
       if (!result.length) {
