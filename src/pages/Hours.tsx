@@ -1,24 +1,31 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MonthSelector } from "@/components/hours/MonthSelector";
 import { UserSelector } from "@/components/hours/UserSelector";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
+import { AllUsersHours } from "@/components/hours/AllUsersHours";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
-  const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
+  const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [loadingGeneral, setLoadingGeneral] = useState(false);
   const [data, setData] = useState<HoursData | null>(null);
-  const [generalData, setGeneralData] = useState<HoursData | null>(null);
+  const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
   const [userData, setUserData] = useState<any>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -41,8 +48,9 @@ const Hours = () => {
   useEffect(() => {
     if (userData?.userType === 'admin') {
       fetchUsersList();
+      fetchAllUsersData();
     }
-  }, [userData?.userType]);
+  }, [userData?.userType, selectedGeneralMonth]);
 
   const fetchUsersList = async () => {
     try {
@@ -58,12 +66,33 @@ const Hours = () => {
     }
   };
 
+  const fetchAllUsersData = async () => {
+    if (!selectedGeneralMonth) return;
+    
+    setLoadingGeneral(true);
+    try {
+      const promises = users.map(user => fetchUserHours(selectedGeneralMonth, user.registration));
+      const results = await Promise.all(promises);
+      const validResults = results.flatMap(result => result.length ? [result[0]] : []);
+      setAllUsersData(validResults);
+    } catch (error) {
+      console.error('Error fetching all users data:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao consultar dados dos usuários.",
+      });
+    } finally {
+      setLoadingGeneral(false);
+    }
+  };
+
   const handleConsult = async () => {
     if (!userData?.registration) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Usuário não autenticado ou sem matrícula cadastrada. Por favor, atualize seu cadastro.",
+        description: "Usuário não autenticado ou sem matrícula cadastrada.",
       });
       return;
     }
@@ -101,60 +130,10 @@ const Hours = () => {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao consultar dados. Por favor, tente novamente mais tarde.",
+        description: error instanceof Error ? error.message : "Erro ao consultar dados.",
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleGeneralConsult = async () => {
-    if (!selectedGeneralMonth) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Selecione um mês",
-      });
-      return;
-    }
-
-    if (!selectedUser) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Selecione um usuário",
-      });
-      return;
-    }
-
-    setLoadingGeneral(true);
-    try {
-      const result = await fetchUserHours(selectedGeneralMonth, selectedUser);
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      if (!result.length) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Matrícula não localizada",
-        });
-        setGeneralData(null);
-        return;
-      }
-
-      setGeneralData(result[0]);
-    } catch (error) {
-      console.error('Error fetching general data:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Erro ao consultar dados do usuário selecionado.",
-      });
-    } finally {
-      setLoadingGeneral(false);
     }
   };
 
@@ -172,57 +151,24 @@ const Hours = () => {
         </div>
       </div>
 
-      <div className={`grid ${userData?.userType === 'admin' ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
-        {/* Consulta Individual */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
-          <div className="space-y-4">
-            <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
+      <Tabs defaultValue="individual" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="individual">Consulta Individual</TabsTrigger>
+          <TabsTrigger value="general">Consulta Geral</TabsTrigger>
+        </TabsList>
 
-            <Button 
-              onClick={handleConsult} 
-              disabled={loading || !userData?.registration} 
-              className="w-full"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Consultando...
-                </>
-              ) : (
-                "Consultar"
-              )}
-            </Button>
-
-            {!userData?.registration && (
-              <p className="text-sm text-red-500">
-                Você precisa cadastrar sua matrícula para consultar as horas.
-              </p>
-            )}
-
-            {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
-          </div>
-        </div>
-
-        {/* Consulta Geral (apenas para admin) */}
-        {userData?.userType === 'admin' && (
+        <TabsContent value="individual" className="space-y-4">
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
+            <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
             <div className="space-y-4">
-              <UserSelector 
-                users={users}
-                value={selectedUser}
-                onChange={setSelectedUser}
-              />
-
-              <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
+              <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
 
               <Button 
-                onClick={handleGeneralConsult} 
-                disabled={loadingGeneral} 
+                onClick={handleConsult} 
+                disabled={loading || !userData?.registration} 
                 className="w-full"
               >
-                {loadingGeneral ? (
+                {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Consultando...
@@ -232,11 +178,36 @@ const Hours = () => {
                 )}
               </Button>
 
-              {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
+              {!userData?.registration && (
+                <p className="text-sm text-red-500">
+                  Você precisa cadastrar sua matrícula para consultar as horas.
+                </p>
+              )}
+
+              {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
             </div>
           </div>
-        )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="general">
+          {userData?.userType === 'admin' && (
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
+              {loadingGeneral ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <AllUsersHours 
+                  users={allUsersData}
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                />
+              )}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
