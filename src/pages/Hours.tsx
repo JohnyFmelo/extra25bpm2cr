@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 import { MonthSelector } from "@/components/hours/MonthSelector";
 import { UserSelector } from "@/components/hours/UserSelector";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
-import { AllUsersHours } from "@/components/hours/AllUsersHours";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 
@@ -133,13 +132,13 @@ const Hours = () => {
     try {
       if (selectedUser === 'all') {
         const allUsersResults = [];
-        console.log("Users list:", users); // Verificando a lista de usuários
+        console.log("Users list:", users);
 
         for (const user of users) {
-          console.log("Processing user:", user.registration); // Verificando o usuário atual
+          console.log("Processing user:", user.registration);
           try {
             const result = await fetchUserHours(selectedGeneralMonth, user.registration);
-            console.log("Result for user", user.registration, ":", result); // Verificando o resultado da busca
+            console.log("Result for user", user.registration, ":", result);
 
             if (result && result.length > 0) {
               allUsersResults.push(result[0]);
@@ -149,11 +148,10 @@ const Hours = () => {
             }
           } catch (error) {
             console.error(`Error fetching data for user ${user.registration}:`, error);
-            // **Importante:** Não interromper o loop em caso de erro.  Apenas logar o erro e continuar.
           }
         }
 
-        console.log("Final allUsersResults:", allUsersResults); // Verificando o array final de resultados
+        console.log("Final allUsersResults:", allUsersResults);
 
         if (allUsersResults.length === 0) {
           toast({
@@ -273,14 +271,22 @@ const Hours = () => {
                 )}
               </Button>
 
+              {/* Renderiza o UserHoursDisplay para cada usuário na consulta "Todos" */}
+              {selectedUser === 'all' && allUsersData.map((userData, index) => (
+                <div key={index} className="mb-4"> {/* Adiciona margem inferior entre os usuários */}
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                    {users.find(user => user.registration === userData.registration)?.name || `Usuário ${index + 1}`}
+                  </h3>
+                  <UserHoursDisplay data={userData} onClose={() => {
+                    // Lógica para remover este usuário do allUsersData, se necessário
+                    const updatedData = [...allUsersData];
+                    updatedData.splice(index, 1);
+                    setAllUsersData(updatedData);
+                  }} />
+                </div>
+              ))}
+
               {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
-              {allUsersData.length > 0 && (
-                <AllUsersHours 
-                  users={allUsersData} 
-                  searchTerm="" 
-                  onSearchChange={() => {}}
-                />
-              )}
             </div>
           </div>
         )}
