@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { MonthSelector } from "@/components/hours/MonthSelector";
 import { UserSelector } from "@/components/hours/UserSelector";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
-import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
+import { fetchUserHours, fetchAllUsers } from "@/services/hoursService"; // Certifique-se de que o caminho está correto
 import type { HoursData, UserOption } from "@/types/hours";
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
