@@ -8,6 +8,7 @@ import { UserSelector } from "@/components/hours/UserSelector";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
+
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
@@ -19,28 +20,34 @@ const Hours = () => {
   const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
   const [userData, setUserData] = useState<any>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const [consultationTime, setConsultationTime] = useState<number | null>(null);
+  const [consultationTime, setConsultationTime] = useState<number>(0);  // Tempo em segundos
+  const [isIndividualActive, setIsIndividualActive] = useState(true); // Controla qual aba está ativa
+  const [startTime, setStartTime] = useState<number | null>(null);
+
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
     setUserData(storedUser);
+
     const handleStorageChange = () => {
       const updatedUser = JSON.parse(localStorage.getItem('user') || '{}');
       setUserData(updatedUser);
     };
+
     window.addEventListener('storage', handleStorageChange);
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
   useEffect(() => {
     if (userData?.userType === 'admin') {
       fetchUsersList();
     }
   }, [userData?.userType]);
+
   const fetchUsersList = async () => {
     try {
       const fetchedUsers = await fetchAllUsers();
@@ -50,84 +57,126 @@ const Hours = () => {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Erro ao carregar lista de usuários."
+        description: "Erro ao carregar lista de usuários.",
       });
     }
   };
+
   const handleConsult = async () => {
     if (!userData?.registration) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Usuário não autenticado ou sem matrícula cadastrada. Por favor, atualize seu cadastro."
+        description: "Usuário não autenticado ou sem matrícula cadastrada. Por favor, atualize seu cadastro.",
       });
       return;
     }
+
     if (!selectedMonth) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Selecione um mês"
+        description: "Selecione um mês",
       });
       return;
     }
+
     setLoading(true);
     try {
       const result = await fetchUserHours(selectedMonth, userData.registration);
+
       if (result.error) {
         throw new Error(result.error);
       }
+
       if (!result.length) {
         toast({
           variant: "destructive",
           title: "Erro",
-          description: "Matrícula não localizada"
+          description: "Matrícula não localizada",
         });
         setData(null);
         return;
       }
+
       setData(result[0]);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao consultar dados. Por favor, tente novamente mais tarde."
+        description: error instanceof Error ? error.message : "Erro ao consultar dados. Por favor, tente novamente mais tarde.",
       });
     } finally {
       setLoading(false);
     }
   };
+
+  const startTimer = () => {
+    setStartTime(performance.now());
+    setConsultationTime(0); // Reinicia a contagem
+  };
+
+  const stopTimer = () => {
+    setStartTime(null);
+  };
+
+  const updateTimer = () => {
+    if (startTime) {
+      const now = performance.now();
+      setConsultationTime((now - startTime) / 1000);
+    }
+  };
+
+  useEffect(() => {
+    let intervalId: number;
+    if (startTime) {
+      intervalId = setInterval(updateTimer, 100); // Atualiza a cada 100ms
+    }
+    return () => clearInterval(intervalId);
+  }, [startTime]);
+
+  const formatTime = (timeInSeconds: number): string => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   const handleGeneralConsult = async () => {
     if (!selectedGeneralMonth) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Selecione um mês"
+        description: "Selecione um mês",
       });
       return;
     }
+
     if (!selectedUser) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Selecione um usuário"
+        description: "Selecione um usuário",
       });
       return;
     }
+
     setLoadingGeneral(true);
-    const startTime = performance.now();
+    startTimer(); // Inicia o temporizador
+
     try {
       if (selectedUser === 'all') {
-        const allUsersResults = [];
+        let allUsersResults: HoursData[] = [];
         console.log("Users list:", users);
+
         for (const user of users) {
           console.log("Processing user:", user.registration);
           try {
             const result = await fetchUserHours(selectedGeneralMonth, user.registration);
             console.log("Result for user", user.registration, ":", result);
+
             if (result && result.length > 0) {
-              allUsersResults.push(result[0]);
+              allUsersResults = [...allUsersResults, result[0]]; // Garante que é um novo array
               console.log("Added user", user.registration, "to allUsersResults");
             } else {
               console.log("No data found for user", user.registration);
@@ -136,34 +185,41 @@ const Hours = () => {
             console.error(`Error fetching data for user ${user.registration}:`, error);
           }
         }
+
         console.log("Final allUsersResults:", allUsersResults);
+
         if (allUsersResults.length === 0) {
           toast({
             variant: "destructive",
             title: "Erro",
-            description: "Nenhum dado encontrado para o período selecionado"
+            description: "Nenhum dado encontrado para o período selecionado",
           });
           setAllUsersData([]);
-          setConsultationTime(null); // Reset time if no data
           return;
         }
+
+        // Ordena os usuários por horas (exemplo simplificado, adapte conforme sua estrutura de dados)
+        allUsersResults.sort((a, b) => (b.totalHours || 0) - (a.totalHours || 0));
+
         setAllUsersData(allUsersResults);
         setGeneralData(null);
       } else {
         const result = await fetchUserHours(selectedGeneralMonth, selectedUser);
+
         if (result.error) {
           throw new Error(result.error);
         }
+
         if (!result.length) {
           toast({
             variant: "destructive",
             title: "Erro",
-            description: "Matrícula não localizada"
+            description: "Matrícula não localizada",
           });
           setGeneralData(null);
-          setConsultationTime(null); // Reset time if no data
           return;
         }
+
         setGeneralData(result[0]);
         setAllUsersData([]);
       }
@@ -172,83 +228,137 @@ const Hours = () => {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Erro ao consultar dados."
+        description: "Erro ao consultar dados.",
       });
     } finally {
       setLoadingGeneral(false);
-      const endTime = performance.now();
-      const durationSeconds = (endTime - startTime) / 1000; // Convert to seconds
-      setConsultationTime(durationSeconds);
+      stopTimer();
     }
   };
-  return <div className="container mx-auto p-4">
+
+  return (
+    <div className="container mx-auto p-4">
       <div className="relative h-12">
         <div className="absolute right-0 top-0">
-          <button onClick={() => navigate('/')} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+          <button
+            onClick={() => navigate('/')}
+            className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+            aria-label="Voltar para home"
+          >
             <ArrowLeft className="h-6 w-6" />
           </button>
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex rounded-md shadow-sm mb-4">
+        <button
+          onClick={() => setIsIndividualActive(true)}
+          className={`px-4 py-2 text-sm font-medium ${isIndividualActive ? 'bg-white text-gray-900 rounded-l-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-50'} focus:outline-none focus:ring-2 focus:ring-primary`}
+        >
+          Consulta Individual
+        </button>
+        <button
+          onClick={() => setIsIndividualActive(false)}
+          className={`px-4 py-2 text-sm font-medium ${!isIndividualActive ? 'bg-white text-gray-900 rounded-r-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-50'} focus:outline-none focus:ring-2 focus:ring-primary`}
+        >
+          Consulta Geral
+        </button>
+      </div>
+
+      {/* Container Principal */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
         {/* Consulta Individual */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
-          <div className="space-y-4">
-            <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
+        {isIndividualActive && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
+            <div className="space-y-4">
+              <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
 
-            <Button onClick={handleConsult} disabled={loading || !userData?.registration} className="w-full">
-              {loading ? <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Consultando...
-                </> : "Consultar"}
-            </Button>
+              <Button
+                onClick={handleConsult}
+                disabled={loading || !userData?.registration}
+                className="w-full"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Consultando...
+                  </>
+                ) : (
+                  "Consultar"
+                )}
+              </Button>
 
-            {!userData?.registration && <p className="text-sm text-red-500">
-                Você precisa cadastrar sua matrícula para consultar as horas.
-              </p>}
+              {!userData?.registration && (
+                <p className="text-sm text-red-500">
+                  Você precisa cadastrar sua matrícula para consultar as horas.
+                </p>
+              )}
 
-            {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
+              {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Consulta Geral (apenas para admin) */}
-        {userData?.userType === 'admin' && <div className="bg-white rounded-lg shadow-sm p-6">
+        {/* Consulta Geral */}
+        {!isIndividualActive && userData?.userType === 'admin' && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
             <div className="space-y-4">
-              <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
+              <UserSelector
+                users={users}
+                value={selectedUser}
+                onChange={setSelectedUser}
+              />
 
               <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
 
-              <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full">
-                {loadingGeneral ? <>
+              <Button
+                onClick={handleGeneralConsult}
+                disabled={loadingGeneral}
+                className="w-full"
+              >
+                {loadingGeneral ? (
+                  <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Consultando...
-                  </> : "Consultar"}
+                  </>
+                ) : (
+                  "Consultar"
+                )}
               </Button>
 
-              {/* Exibe o tempo de consulta ACIMA */}
-              {consultationTime !== null && <p className="text-sm text-gray-500">
-                  Tempo de consulta: {consultationTime.toFixed(2)} s
-                </p>}
+              {/* Exibe o tempo de consulta */}
+              {consultationTime > 0 && (
+                <p className="text-sm text-gray-500">
+                  Tempo de consulta: {formatTime(consultationTime)}
+                </p>
+              )}
 
               {/* Renderiza o UserHoursDisplay para cada usuário na consulta "Todos" */}
-              {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-lime-200 hover:bg-lime-100"> {/* Adiciona container */}
+              {selectedUser === 'all' && allUsersData.map((userData, index) => (
+                <div key={index} className="mb-4 p-4 bg-gray-50 rounded-md shadow-sm">
                   <h3 className="text-lg font-semibold text-gray-700 mb-2">
                     {users.find(user => user.registration === userData.registration)?.name || 'Usuário'}
                   </h3>
                   <UserHoursDisplay data={userData} onClose={() => {
-              const updatedData = [...allUsersData];
-              updatedData.splice(index, 1);
-              setAllUsersData(updatedData);
-            }} />
-                </div>)}
+                    const updatedData = [...allUsersData];
+                    updatedData.splice(index, 1);
+                    setAllUsersData(updatedData);
+                  }} />
+                </div>
+              ))}
 
               {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
 
             </div>
-          </div>}
+          </div>
+        )}
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Hours;
