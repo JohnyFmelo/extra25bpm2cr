@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AllUsersHours } from "./AllUsersHours";
-import { fetchAllUsers } from "@/services/hoursService";
 
 interface GeneralConsultationProps {
   userData: any;
@@ -24,47 +23,40 @@ export const GeneralConsultation = ({ userData }: GeneralConsultationProps) => {
   const fetchAllUsersData = async () => {
     setLoadingGeneral(true);
     try {
-      const users = await fetchAllUsers();
-      console.log('Retrieved users from Firebase:', users);
-      
-      if (!users.length) {
-        console.log('No users found in Firebase');
-        toast({
-          title: "Aviso",
-          description: "Nenhum usuário encontrado com matrícula cadastrada.",
-        });
-        return;
-      }
-      
       const currentDate = new Date();
       const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
       
-      const promises = users.map(user => 
-        fetchUserHours(currentMonth, user.registration)
-          .then(result => {
-            if (!result || !result.length) {
-              console.log(`No data found for user ${user.registration}`);
-              return null;
-            }
-            return result[0];
-          })
-          .catch(error => {
-            console.error(`Error fetching data for user ${user.registration}:`, error);
-            return null;
-          })
-      );
+      const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec`;
+      const params = new URLSearchParams({
+        mes: currentMonth,
+        matricula: 'all' // Indicador especial para buscar todos os registros
+      });
 
-      const results = await Promise.all(promises);
-      const validResults = results.filter(result => result !== null);
+      const response = await fetch(`${apiUrl}?${params.toString()}`, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Retrieved all users data:', result);
       
-      if (!validResults.length) {
+      if (!result || !result.length) {
+        console.log('No data found');
         toast({
           title: "Aviso",
           description: "Nenhum dado encontrado para o mês atual.",
         });
+        return;
       }
       
-      setAllUsersData(validResults);
+      setAllUsersData(result);
     } catch (error) {
       console.error('Error in fetchAllUsersData:', error);
       toast({
@@ -77,7 +69,7 @@ export const GeneralConsultation = ({ userData }: GeneralConsultationProps) => {
     }
   };
 
-  if (!userData?.userType === 'admin') return null;
+  if (userData?.userType !== 'admin') return null;
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
