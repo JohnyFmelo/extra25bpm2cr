@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { MonthSelector } from "@/components/hours/MonthSelector";
 import { UserSelector } from "@/components/hours/UserSelector";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
+import { AllUsersHours } from "@/components/hours/AllUsersHours";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 
@@ -17,6 +19,7 @@ const Hours = () => {
   const [loadingGeneral, setLoadingGeneral] = useState(false);
   const [data, setData] = useState<HoursData | null>(null);
   const [generalData, setGeneralData] = useState<HoursData | null>(null);
+  const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
   const [userData, setUserData] = useState<any>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
   const { toast } = useToast();
@@ -129,29 +132,67 @@ const Hours = () => {
 
     setLoadingGeneral(true);
     try {
-      const result = await fetchUserHours(selectedGeneralMonth, selectedUser);
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      if (!result.length) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Matrícula não localizada",
+      if (selectedUser === 'all') {
+        // Buscar dados de todos os usuários
+        const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec`;
+        const params = new URLSearchParams({
+          mes: selectedGeneralMonth,
+          matricula: 'all'
         });
-        setGeneralData(null);
-        return;
-      }
 
-      setGeneralData(result[0]);
+        const response = await fetch(`${apiUrl}?${params.toString()}`, {
+          method: 'GET',
+          mode: 'cors',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (!result || !result.length) {
+          toast({
+            variant: "destructive",
+            title: "Erro",
+            description: "Nenhum dado encontrado para o período selecionado",
+          });
+          setAllUsersData([]);
+          return;
+        }
+
+        setAllUsersData(result);
+        setGeneralData(null);
+      } else {
+        // Buscar dados de um usuário específico
+        const result = await fetchUserHours(selectedGeneralMonth, selectedUser);
+        
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
+        if (!result.length) {
+          toast({
+            variant: "destructive",
+            title: "Erro",
+            description: "Matrícula não localizada",
+          });
+          setGeneralData(null);
+          return;
+        }
+
+        setGeneralData(result[0]);
+        setAllUsersData([]);
+      }
     } catch (error) {
       console.error('Error fetching general data:', error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Erro ao consultar dados do usuário selecionado.",
+        description: "Erro ao consultar dados.",
       });
     } finally {
       setLoadingGeneral(false);
@@ -172,7 +213,7 @@ const Hours = () => {
         </div>
       </div>
 
-      <div className={`grid ${userData?.userType === 'admin' ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Consulta Individual */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
@@ -233,6 +274,13 @@ const Hours = () => {
               </Button>
 
               {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
+              {allUsersData.length > 0 && (
+                <AllUsersHours 
+                  users={allUsersData} 
+                  searchTerm="" 
+                  onSearchChange={() => {}}
+                />
+              )}
             </div>
           </div>
         )}
