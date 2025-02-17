@@ -248,7 +248,7 @@ const Hours = () => {
                                 </p>}
 
                             {/* Renderiza o UserHoursDisplay para cada usuário na consulta "Todos" */}
-                            {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-yellow-100">
+                            {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-orange-50">
                                     <h3 className="text-lg font-semibold text-gray-700 mb-2">
                                         {users.find(user => user.registration === userData.registration)?.name}
                                     </h3>
