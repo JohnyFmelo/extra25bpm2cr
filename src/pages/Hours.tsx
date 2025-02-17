@@ -133,17 +133,27 @@ const Hours = () => {
     try {
       if (selectedUser === 'all') {
         const allUsersResults = [];
-        
+        console.log("Users list:", users); // Verificando a lista de usuários
+
         for (const user of users) {
+          console.log("Processing user:", user.registration); // Verificando o usuário atual
           try {
             const result = await fetchUserHours(selectedGeneralMonth, user.registration);
+            console.log("Result for user", user.registration, ":", result); // Verificando o resultado da busca
+
             if (result && result.length > 0) {
               allUsersResults.push(result[0]);
+              console.log("Added user", user.registration, "to allUsersResults");
+            } else {
+              console.log("No data found for user", user.registration);
             }
           } catch (error) {
             console.error(`Error fetching data for user ${user.registration}:`, error);
+            // **Importante:** Não interromper o loop em caso de erro.  Apenas logar o erro e continuar.
           }
         }
+
+        console.log("Final allUsersResults:", allUsersResults); // Verificando o array final de resultados
 
         if (allUsersResults.length === 0) {
           toast({
