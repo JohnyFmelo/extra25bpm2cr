@@ -135,8 +135,8 @@ const Hours = () => {
         setIsConsulting(true);
         setConsultationTime(0); // Resetando o tempo
         timerInterval.current = window.setInterval(() => {
-            setConsultationTime(prevTime => prevTime + 1);
-        }, 1000);
+            setConsultationTime(prevTime => prevTime + 0.1);
+        }, 100);
 
         try {
             if (selectedUser === 'all') {
@@ -213,11 +213,9 @@ const Hours = () => {
         }
     };
 
-    // Formata o tempo para mm:ss
+    // Formata o tempo para 00,0s
     const formatTime = (timeInSeconds: number): string => {
-        const minutes = Math.floor(timeInSeconds / 60);
-        const seconds = timeInSeconds % 60;
-        return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      return `${timeInSeconds.toFixed(1)}s`;
     };
 
     return (
@@ -297,7 +295,7 @@ const Hours = () => {
                             {/* Exibe o tempo de consulta ACIMA */}
                             {isConsulting && (
                                 <p className="text-sm text-gray-500">
-                                    Tempo de consulta: {formatTime(consultationTime)}
+                                    Consulta: {formatTime(consultationTime)}
                                 </p>
                             )}
 
