@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -23,16 +22,14 @@ export const GeneralConsultation = ({ userData }: GeneralConsultationProps) => {
   const fetchAllUsersData = async () => {
     setLoadingGeneral(true);
     try {
+      // Obtém o mês atual
       const currentDate = new Date();
       const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-      
-      const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec`;
-      const params = new URLSearchParams({
-        mes: currentMonth,
-        matricula: 'all' // Indicador especial para buscar todos os registros
-      });
 
-      const response = await fetch(`${apiUrl}?${params.toString()}`, {
+      // Constrói a URL da API com o mês atual
+      const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${currentMonth}&matricula=all`;
+
+      const response = await fetch(apiUrl, {
         method: 'GET',
         mode: 'cors',
         headers: {
@@ -46,7 +43,7 @@ export const GeneralConsultation = ({ userData }: GeneralConsultationProps) => {
 
       const result = await response.json();
       console.log('Retrieved all users data:', result);
-      
+
       if (!result || !result.length) {
         console.log('No data found');
         toast({
@@ -55,7 +52,7 @@ export const GeneralConsultation = ({ userData }: GeneralConsultationProps) => {
         });
         return;
       }
-      
+
       setAllUsersData(result);
     } catch (error) {
       console.error('Error in fetchAllUsersData:', error);
