@@ -7,9 +7,9 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const getTableName = (month) => {
     const monthLowerCase = month.toLowerCase();
-    if (monthLowerCase === 'janeiro') {
+    if (monthLowerCase === 'Janeiro') {
         return 'Janeiro';
-    } else if (monthLowerCase === 'fevereiro') {
+    } else if (monthLowerCase === 'Fevereiro') {
         return 'Fevereiro';
     } else {
         return null;
