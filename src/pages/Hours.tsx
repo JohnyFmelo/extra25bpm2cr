@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -133,28 +132,20 @@ const Hours = () => {
     setLoadingGeneral(true);
     try {
       if (selectedUser === 'all') {
-        // Buscar dados de todos os usuários
-        const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec`;
-        const params = new URLSearchParams({
-          mes: selectedGeneralMonth,
-          matricula: 'all'
-        });
-
-        const response = await fetch(`${apiUrl}?${params.toString()}`, {
-          method: 'GET',
-          mode: 'cors',
-          headers: {
-            'Accept': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        const allUsersResults = [];
+        
+        for (const user of users) {
+          try {
+            const result = await fetchUserHours(selectedGeneralMonth, user.registration);
+            if (result && result.length > 0) {
+              allUsersResults.push(result[0]);
+            }
+          } catch (error) {
+            console.error(`Error fetching data for user ${user.registration}:`, error);
+          }
         }
 
-        const result = await response.json();
-        
-        if (!result || !result.length) {
+        if (allUsersResults.length === 0) {
           toast({
             variant: "destructive",
             title: "Erro",
@@ -164,10 +155,9 @@ const Hours = () => {
           return;
         }
 
-        setAllUsersData(result);
+        setAllUsersData(allUsersResults);
         setGeneralData(null);
       } else {
-        // Buscar dados de um usuário específico
         const result = await fetchUserHours(selectedGeneralMonth, selectedUser);
         
         if (result.error) {
