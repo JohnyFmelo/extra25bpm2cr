@@ -25,9 +25,11 @@ export const GeneralConsultation = ({ userData }: GeneralConsultationProps) => {
       // Obtém o mês atual
       const currentDate = new Date();
       const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+      console.log("Current Month:", currentMonth); // Log do formato do mês
 
       // Constrói a URL da API com o mês atual
-      const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${currentMonth}&matricula=all`;
+      const apiUrl = `https://script.google.com/macros/s/AKfycbxmUSgKPVz_waNPHdKPT1y8x52xPNS9Yzqx_u1mlH83OabndJQ8Ie2ZZJVJnLIMNOb4/exec?mes=${currentMonth}&matricula=all&cacheBuster=${Date.now()}`;
+      console.log("API URL:", apiUrl); // Log da URL completa
 
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -36,6 +38,8 @@ export const GeneralConsultation = ({ userData }: GeneralConsultationProps) => {
           'Accept': 'application/json',
         },
       });
+
+      console.log("Response Status:", response.status); // Log do status da resposta
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
