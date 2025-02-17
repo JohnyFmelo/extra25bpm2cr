@@ -1,26 +1,12 @@
+
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { MonthSelector } from "@/components/hours/MonthSelector";
-import { UserSelector } from "@/components/hours/UserSelector";
-import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
-import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
-import type { HoursData, UserOption } from "@/types/hours";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HeaderWithBackButton } from "@/components/hours/HeaderWithBackButton";
+import { IndividualConsultation } from "@/components/hours/IndividualConsultation";
+import { GeneralConsultation } from "@/components/hours/GeneralConsultation";
 
 const Hours = () => {
-  const [selectedMonth, setSelectedMonth] = useState<string>("");
-  const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
-  const [selectedUser, setSelectedUser] = useState<string>("");
-  const [loading, setLoading] = useState(false);
-  const [loadingGeneral, setLoadingGeneral] = useState(false);
-  const [data, setData] = useState<HoursData | null>(null);
-  const [generalData, setGeneralData] = useState<HoursData | null>(null);
   const [userData, setUserData] = useState<any>(null);
-  const [users, setUsers] = useState<UserOption[]>([]);
-  const { toast } = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -38,205 +24,24 @@ const Hours = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (userData?.userType === 'admin') {
-      fetchUsersList();
-    }
-  }, [userData?.userType]);
-
-  const fetchUsersList = async () => {
-    try {
-      const fetchedUsers = await fetchAllUsers();
-      setUsers(fetchedUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Erro ao carregar lista de usuários.",
-      });
-    }
-  };
-
-  const handleConsult = async () => {
-    if (!userData?.registration) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Usuário não autenticado ou sem matrícula cadastrada. Por favor, atualize seu cadastro.",
-      });
-      return;
-    }
-
-    if (!selectedMonth) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Selecione um mês",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await fetchUserHours(selectedMonth, userData.registration);
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      if (!result.length) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Matrícula não localizada",
-        });
-        setData(null);
-        return;
-      }
-
-      setData(result[0]);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao consultar dados. Por favor, tente novamente mais tarde.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGeneralConsult = async () => {
-    if (!selectedGeneralMonth) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Selecione um mês",
-      });
-      return;
-    }
-
-    if (!selectedUser) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Selecione um usuário",
-      });
-      return;
-    }
-
-    setLoadingGeneral(true);
-    try {
-      const result = await fetchUserHours(selectedGeneralMonth, selectedUser);
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      if (!result.length) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Matrícula não localizada",
-        });
-        setGeneralData(null);
-        return;
-      }
-
-      setGeneralData(result[0]);
-    } catch (error) {
-      console.error('Error fetching general data:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Erro ao consultar dados do usuário selecionado.",
-      });
-    } finally {
-      setLoadingGeneral(false);
-    }
-  };
-
   return (
     <div className="container mx-auto p-4">
-      <div className="relative h-12">
-        <div className="absolute right-0 top-0">
-          <button
-            onClick={() => navigate('/')}
-            className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-            aria-label="Voltar para home"
-          >
-            <ArrowLeft className="h-6 w-6" />
-          </button>
-        </div>
-      </div>
+      <HeaderWithBackButton />
 
-      <div className={`grid ${userData?.userType === 'admin' ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
-        {/* Consulta Individual */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
-          <div className="space-y-4">
-            <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
+      <Tabs defaultValue="individual" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="individual">Consulta Individual</TabsTrigger>
+          <TabsTrigger value="general">Consulta Geral</TabsTrigger>
+        </TabsList>
 
-            <Button 
-              onClick={handleConsult} 
-              disabled={loading || !userData?.registration} 
-              className="w-full"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Consultando...
-                </>
-              ) : (
-                "Consultar"
-              )}
-            </Button>
+        <TabsContent value="individual" className="space-y-4">
+          <IndividualConsultation userData={userData} />
+        </TabsContent>
 
-            {!userData?.registration && (
-              <p className="text-sm text-red-500">
-                Você precisa cadastrar sua matrícula para consultar as horas.
-              </p>
-            )}
-
-            {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
-          </div>
-        </div>
-
-        {/* Consulta Geral (apenas para admin) */}
-        {userData?.userType === 'admin' && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
-            <div className="space-y-4">
-              <UserSelector 
-                users={users}
-                value={selectedUser}
-                onChange={setSelectedUser}
-              />
-
-              <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
-
-              <Button 
-                onClick={handleGeneralConsult} 
-                disabled={loadingGeneral} 
-                className="w-full"
-              >
-                {loadingGeneral ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Consultando...
-                  </>
-                ) : (
-                  "Consultar"
-                )}
-              </Button>
-
-              {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
-            </div>
-          </div>
-        )}
-      </div>
+        <TabsContent value="general">
+          <GeneralConsultation userData={userData} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
