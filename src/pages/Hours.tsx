@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -64,7 +63,7 @@ const Hours = () => {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Usuário não autenticado ou sem matrícula cadastrada.",
+        description: "Usuário não autenticado ou sem matrícula cadastrada. Por favor, atualize seu cadastro.",
       });
       return;
     }
@@ -102,7 +101,7 @@ const Hours = () => {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao consultar dados.",
+        description: error instanceof Error ? error.message : "Erro ao consultar dados. Por favor, tente novamente mais tarde.",
       });
     } finally {
       setLoading(false);
@@ -173,12 +172,10 @@ const Hours = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className={`grid ${userData?.userType === 'admin' ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
         {/* Consulta Individual */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="bg-primary text-white py-2 px-4 rounded-md inline-block mb-4">
-            Consulta Individual
-          </div>
+          <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
           <div className="space-y-4">
             <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
 
@@ -210,9 +207,7 @@ const Hours = () => {
         {/* Consulta Geral (apenas para admin) */}
         {userData?.userType === 'admin' && (
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="bg-[#006494] text-white py-2 px-4 rounded-md inline-block mb-4">
-              Consulta Geral
-            </div>
+            <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
             <div className="space-y-4">
               <UserSelector 
                 users={users}
