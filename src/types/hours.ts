@@ -6,6 +6,7 @@ export interface HoursData {
   Sonora: string;
   "Total 25° BPM": string;
   "Total Geral": string;
+  matricula: string;
 }
 
 export interface UserOption {

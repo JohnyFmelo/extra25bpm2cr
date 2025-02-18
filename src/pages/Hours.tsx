@@ -83,7 +83,7 @@ const Hours = () => {
             if (result.error) {
                 throw new Error(result.error);
             }
-            if (!result || result.length === 0) { // Mudança aqui para verificar se result é null ou array vazio
+            if (!result || result.length === 0) {
                 toast({
                     variant: "destructive",
                     title: "Erro",
@@ -105,7 +105,6 @@ const Hours = () => {
         }
     };
 
-
     const handleGeneralConsult = async () => {
         if (!selectedGeneralMonth) {
             toast({
@@ -124,11 +123,6 @@ const Hours = () => {
             return;
         }
         setLoadingGeneral(true);
-        setIsConsulting(true);
-        setConsultationTime(0);
-        timerInterval.current = window.setInterval(() => {
-            setConsultationTime(prevTime => prevTime + 0.1);
-        }, 100);
         try {
             if (selectedUser === 'all') {
                 const allUsersResults = [];
@@ -151,7 +145,7 @@ const Hours = () => {
                     setAllUsersData([]);
                     return;
                 }
-                const sortedResults = [...allUsersResults].sort((a, b) => (b.Total || 0) - (a.Total || 0));
+                const sortedResults = [...allUsersResults].sort((a, b) => (b["Total Geral"] || 0) - (a["Total Geral"] || 0));
                 setAllUsersData(sortedResults);
                 setGeneralData(null);
             } else {
@@ -159,7 +153,7 @@ const Hours = () => {
                 if (result.error) {
                     throw new Error(result.error);
                 }
-                if (!result || result.length === 0) { // Mudança aqui também para consistência
+                if (!result || result.length === 0) {
                     toast({
                         variant: "destructive",
                         title: "Erro",
@@ -180,14 +174,8 @@ const Hours = () => {
             });
         } finally {
             setLoadingGeneral(false);
-            setIsConsulting(false);
-            if (timerInterval.current) {
-                clearInterval(timerInterval.current);
-                timerInterval.current = null;
-            }
         }
     };
-
 
     const formatTime = (timeInSeconds: number): string => {
         return `${timeInSeconds.toFixed(1)}s`;
@@ -258,7 +246,7 @@ const Hours = () => {
                             {selectedUser === 'all' && allUsersData.map((userData, index) => (
                                 <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-yellow-100">
                                     <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                                        {users.find(user => user.registration === userData.registration)?.name}
+                                        {users.find(user => user.registration === userData.matricula)?.name}
                                     </h3>
                                     <UserHoursDisplay
                                         data={userData}
