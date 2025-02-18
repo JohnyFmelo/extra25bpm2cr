@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clock, Users } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { IndividualConsult } from "@/components/hours/IndividualConsult";
 import { GeneralConsult } from "@/components/hours/GeneralConsult";
@@ -37,54 +37,45 @@ const Hours = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-primary">Consulta de Horas</h1>
-        <button
-          onClick={() => navigate('/')}
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors text-primary"
-          aria-label="Voltar para home"
-        >
-          <ArrowLeft className="h-6 w-6" />
-        </button>
-      </div>
-
-      <div className="bg-white shadow-md rounded-lg p-6 mb-8">
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-          <Button
-            onClick={() => setActiveConsult('individual')}
-            variant={activeConsult === 'individual' ? 'default' : 'outline'}
-            className="w-full sm:w-auto flex items-center gap-2"
+    <div className="container mx-auto p-4">
+      {/* Header com botão de voltar */}
+      <div className="relative h-12 mb-6"> {/* Adicionado mb-6 para mais espaço abaixo do header */}
+        <div className="absolute right-0 top-0">
+          <button
+            onClick={() => navigate('/')}
+            className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+            aria-label="Voltar para home"
           >
-            <Clock className="h-4 w-4" />
-            <span>Consulta Individual</span>
-          </Button>
-          {userData?.userType === 'admin' && (
-            <Button
-              onClick={() => setActiveConsult('general')}
-              variant={activeConsult === 'general' ? 'default' : 'outline'}
-              className="w-full sm:w-auto flex items-center gap-2"
-            >
-              <Users className="h-4 w-4" />
-              <span>Consulta Geral</span>
-            </Button>
-          )}
+            <ArrowLeft className="h-6 w-6" />
+          </button>
         </div>
       </div>
 
-      <div className="bg-white shadow-md rounded-lg p-6">
-        {activeConsult === 'individual' ? (
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-xl font-semibold mb-6 text-center">Suas Horas</h2>
-            <IndividualConsult userData={userData} />
-          </div>
-        ) : (
-          userData?.userType === 'admin' && (
-            <div>
-              <h2 className="text-xl font-semibold mb-6 text-center">Horas da Equipe</h2>
-              <GeneralConsult users={users} />
-            </div>
-          )
+      {/* Seção de botões de seleção de consulta */}
+      <div className="flex justify-center gap-4 mb-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm"> {/* Estilização adicionada aqui */}
+        <Button
+          onClick={() => setActiveConsult('individual')}
+          variant={activeConsult === 'individual' ? 'default' : 'outline'}
+        >
+          Consulta Individual
+        </Button>
+        {userData?.userType === 'admin' && (
+          <Button
+            onClick={() => setActiveConsult('general')}
+            variant={activeConsult === 'general' ? 'default' : 'outline'}
+          >
+            Consulta Geral
+          </Button>
+        )}
+      </div>
+
+      {/* Grade de conteúdo */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {activeConsult === 'individual' && (
+          <IndividualConsult userData={userData} />
+        )}
+        {activeConsult === 'general' && userData?.userType === 'admin' && (
+          <GeneralConsult users={users} />
         )}
       </div>
     </div>
