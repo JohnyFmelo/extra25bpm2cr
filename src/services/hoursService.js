@@ -26,7 +26,7 @@ export const fetchUserHours = async (month, registration) => {
         const { data, error } = await supabase
             .from(tableName)
             .select('*')
-            .eq('matricula', registration);
+            .eq('Matricula', registration);  // Atualizado para 'Matricula' com M maiúsculo
 
         if (error) {
             console.error("Supabase error fetching user hours:", error);
@@ -42,7 +42,7 @@ export const fetchUserHours = async (month, registration) => {
 export const fetchAllUsers = async () => {
     try {
         const { data, error } = await supabase
-            .from('FUNCIONARIOS')  // Alterado para maiúsculo
+            .from('FUNCIONARIOS')
             .select('matricula, nome');
 
         if (error) {
