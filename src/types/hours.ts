@@ -10,6 +10,7 @@ export interface HoursData {
 }
 
 export interface UserOption {
+  value: string;
+  label: string;
   registration: string;
-  name: string;
 }

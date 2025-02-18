@@ -24,11 +24,21 @@ export const fetchUserHours = async (month, registration) => {
         return { error: "Mês inválido" };
     }
 
+    if (!registration) {
+        return { error: "Matrícula não informada" };
+    }
+
     try {
+        // Converter a matrícula para número
+        const numericRegistration = Number(registration);
+        if (isNaN(numericRegistration)) {
+            return { error: "Matrícula inválida" };
+        }
+
         const { data, error } = await supabase
             .from(tableName)
             .select('*')
-            .eq('Matricula', registration);
+            .eq('Matricula', numericRegistration);
 
         if (error) {
             console.error("Supabase error fetching user hours:", error);
@@ -43,7 +53,6 @@ export const fetchUserHours = async (month, registration) => {
 
 export const fetchAllUsers = async () => {
     try {
-        // Buscar usuários do Firebase
         const querySnapshot = await getDocs(collection(db, 'users'));
         const firebaseUsers = querySnapshot.docs.map(doc => {
             const data = doc.data();
@@ -53,13 +62,12 @@ export const fetchAllUsers = async () => {
             };
         });
 
-        // Filtrar usuários que têm matrícula
         const validUsers = firebaseUsers.filter(user => user.registration);
 
-        // Mapear para o formato esperado
         const users = validUsers.map(user => ({
             value: user.registration,
             label: user.name,
+            registration: user.registration
         }));
 
         return users;

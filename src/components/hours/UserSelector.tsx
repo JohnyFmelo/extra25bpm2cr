@@ -17,7 +17,7 @@ export const UserSelector = ({ users, value, onChange }: UserSelectorProps) => {
       <SelectContent>
         <SelectItem value="all">Todos os usuários</SelectItem>
         {users.map((user) => (
-          <SelectItem key={user.value} value={user.value}>
+          <SelectItem key={user.registration} value={user.registration}>
             {user.label}
           </SelectItem>
         ))}
