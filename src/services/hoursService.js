@@ -1,16 +1,16 @@
-// src/services/hoursService.js
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://evsfhznfnifmqlpktbdr.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2c2Zoem5mbmlmbXFscGt0YmRyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNzA0NjUyMywiZXhwIjoyMDUyNjIyNTIzfQ.GQEz9xvQmTr0Chtjj1ndtq3WTAA8YMm_dFPvnAHMLuc'; // CHAVE ANON - Verifique se é a ANON KEY correta do seu projeto Supabase
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2c2Zoem5mbmlmbXFscGt0YmRyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNzA0NjUyMywiZXhwIjoyMDUyNjIyNTIzfQ.GQEz9xvQmTr0Chtjj1ndtq3WTAA8YMm_dFPvnAHMLuc';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const getTableName = (month) => {
     const monthLowerCase = month.toLowerCase();
-    if (monthLowerCase === 'Janeiro') {
-        return 'Janeiro';
-    } else if (monthLowerCase === 'Fevereiro') {
-        return 'Fevereiro';
+    if (monthLowerCase === 'janeiro') {
+        return 'janeiro';
+    } else if (monthLowerCase === 'fevereiro') {
+        return 'fevereiro';
     } else {
         return null;
     }
@@ -26,7 +26,7 @@ export const fetchUserHours = async (month, registration) => {
         const { data, error } = await supabase
             .from(tableName)
             .select('*')
-            .eq('registration', registration);
+            .eq('matricula', registration); // Alterado de 'registration' para 'matricula'
 
         if (error) {
             console.error("Supabase error fetching user hours:", error);
@@ -42,8 +42,8 @@ export const fetchUserHours = async (month, registration) => {
 export const fetchAllUsers = async () => {
     try {
         const { data, error } = await supabase
-            .from('users') // Substitua 'users' pelo nome da sua tabela de usuários se for diferente
-            .select('registration, name');
+            .from('funcionarios') // Alterado de 'users' para 'funcionarios'
+            .select('matricula, nome'); // Alterado de 'registration, name' para 'matricula, nome'
 
         if (error) {
             console.error("Supabase error fetching all users:", error);
@@ -51,8 +51,8 @@ export const fetchAllUsers = async () => {
         }
 
         const users = data.map(user => ({
-            value: user.registration.toString(),
-            label: user.name,
+            value: user.matricula.toString(), // Alterado de registration para matricula
+            label: user.nome, // Alterado de name para nome
         }));
         return users;
     } catch (error) {
