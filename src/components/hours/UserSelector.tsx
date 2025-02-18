@@ -15,10 +15,10 @@ export const UserSelector = ({ users, value, onChange }: UserSelectorProps) => {
         <SelectValue placeholder="Selecione o usuário" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">Todos</SelectItem>
+        <SelectItem value="all">Todos os usuários</SelectItem>
         {users.map((user) => (
-          <SelectItem key={user.registration} value={user.registration}>
-            {user.name}
+          <SelectItem key={user.value} value={user.value}>
+            {user.label}
           </SelectItem>
         ))}
       </SelectContent>

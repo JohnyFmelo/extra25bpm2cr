@@ -9,40 +9,10 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      Fevereiro: {
-        Row: {
-          "Horas 25° BPM": string | null
-          Matricula: string
-          Nome: string
-          Sinfra: string | null
-          Sonora: string | null
-          "Total 25° BPM": string | null
-          "Total Geral": string | null
-        }
-        Insert: {
-          "Horas 25° BPM"?: string | null
-          Matricula?: string
-          Nome?: string
-          Sinfra?: string | null
-          Sonora?: string | null
-          "Total 25° BPM"?: string | null
-          "Total Geral"?: string | null
-        }
-        Update: {
-          "Horas 25° BPM"?: string | null
-          Matricula?: string
-          Nome?: string
-          Sinfra?: string | null
-          Sonora?: string | null
-          "Total 25° BPM"?: string | null
-          "Total Geral"?: string | null
-        }
-        Relationships: []
-      }
       FEVEREIRO: {
         Row: {
           "Horas 25° BPM": string | null
-          Matricula: string
+          Matricula: number
           Nome: string
           Sinfra: string | null
           Sonora: string | null
@@ -51,52 +21,7 @@ export type Database = {
         }
         Insert: {
           "Horas 25° BPM"?: string | null
-          Matricula: string
-          Nome: string
-          Sinfra?: string | null
-          Sonora?: string | null
-          "Total 25° BPM"?: string | null
-          "Total Geral"?: string | null
-        }
-        Update: {
-          "Horas 25° BPM"?: string | null
-          Matricula?: string
-          Nome?: string
-          Sinfra?: string | null
-          Sonora?: string | null
-          "Total 25° BPM"?: string | null
-          "Total Geral"?: string | null
-        }
-        Relationships: []
-      }
-      FUNCIONARIOS: {
-        Row: {
-          matricula: string
-          nome: string
-        }
-        Insert: {
-          matricula: string
-          nome: string
-        }
-        Update: {
-          matricula?: string
-          nome?: string
-        }
-        Relationships: []
-      }
-      Janeiro: {
-        Row: {
-          "Horas 25° BPM": string | null
-          Matricula: string
-          Nome: string
-          Sinfra: string | null
-          Sonora: string | null
-          "Total 25° BPM": string | null
-          "Total Geral": string | null
-        }
-        Insert: {
-          "Horas 25° BPM"?: string | null
-          Matricula?: string
+          Matricula: number
           Nome?: string
           Sinfra?: string | null
           Sonora?: string | null
@@ -105,7 +30,7 @@ export type Database = {
         }
         Update: {
           "Horas 25° BPM"?: string | null
-          Matricula?: string
+          Matricula?: number
           Nome?: string
           Sinfra?: string | null
           Sonora?: string | null

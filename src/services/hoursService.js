@@ -1,5 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const supabaseUrl = 'https://evsfhznfnifmqlpktbdr.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2c2Zoem5mbmlmbXFscGt0YmRyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNzA0NjUyMywiZXhwIjoyMDUyNjIyNTIzfQ.GQEz9xvQmTr0Chtjj1ndtq3WTAA8YMm_dFPvnAHMLuc';
@@ -26,7 +28,7 @@ export const fetchUserHours = async (month, registration) => {
         const { data, error } = await supabase
             .from(tableName)
             .select('*')
-            .eq('Matricula', registration);  // Atualizado para 'Matricula' com M maiúsculo
+            .eq('Matricula', registration);
 
         if (error) {
             console.error("Supabase error fetching user hours:", error);
@@ -41,22 +43,28 @@ export const fetchUserHours = async (month, registration) => {
 
 export const fetchAllUsers = async () => {
     try {
-        const { data, error } = await supabase
-            .from('FUNCIONARIOS')
-            .select('matricula, nome');
+        // Buscar usuários do Firebase
+        const querySnapshot = await getDocs(collection(db, 'users'));
+        const firebaseUsers = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                registration: data.registration || '',
+                name: `${data.rank || ''} ${data.warName || ''}`.trim(),
+            };
+        });
 
-        if (error) {
-            console.error("Supabase error fetching all users:", error);
-            return [];
-        }
+        // Filtrar usuários que têm matrícula
+        const validUsers = firebaseUsers.filter(user => user.registration);
 
-        const users = data.map(user => ({
-            value: user.matricula.toString(),
-            label: user.nome,
+        // Mapear para o formato esperado
+        const users = validUsers.map(user => ({
+            value: user.registration,
+            label: user.name,
         }));
+
         return users;
     } catch (error) {
-        console.error("Error fetching all users:", error);
+        console.error("Error fetching users from Firebase:", error);
         return [];
     }
 };
