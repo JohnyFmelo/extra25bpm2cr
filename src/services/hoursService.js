@@ -8,9 +8,9 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const getTableName = (month) => {
     const monthLowerCase = month.toLowerCase();
     if (monthLowerCase === 'janeiro') {
-        return 'janeiro';
+        return 'JANEIRO';
     } else if (monthLowerCase === 'fevereiro') {
-        return 'fevereiro';
+        return 'FEVEREIRO';
     } else {
         return null;
     }
@@ -26,7 +26,7 @@ export const fetchUserHours = async (month, registration) => {
         const { data, error } = await supabase
             .from(tableName)
             .select('*')
-            .eq('matricula', registration); // Alterado de 'registration' para 'matricula'
+            .eq('matricula', registration);
 
         if (error) {
             console.error("Supabase error fetching user hours:", error);
@@ -42,8 +42,8 @@ export const fetchUserHours = async (month, registration) => {
 export const fetchAllUsers = async () => {
     try {
         const { data, error } = await supabase
-            .from('funcionarios') // Alterado de 'users' para 'funcionarios'
-            .select('matricula, nome'); // Alterado de 'registration, name' para 'matricula, nome'
+            .from('FUNCIONARIOS')  // Alterado para maiúsculo
+            .select('matricula, nome');
 
         if (error) {
             console.error("Supabase error fetching all users:", error);
@@ -51,8 +51,8 @@ export const fetchAllUsers = async () => {
         }
 
         const users = data.map(user => ({
-            value: user.matricula.toString(), // Alterado de registration para matricula
-            label: user.nome, // Alterado de name para nome
+            value: user.matricula.toString(),
+            label: user.nome,
         }));
         return users;
     } catch (error) {
