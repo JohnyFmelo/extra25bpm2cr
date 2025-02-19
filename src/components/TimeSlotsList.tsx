@@ -397,7 +397,7 @@ const TimeSlotsList = () => {
   const formatDateHeader = (date: string) => {
     const dayOfWeek = format(parseISO(date), "eee", { locale: ptBR }); // "eee" gives abbreviated day name
     const truncatedDay = dayOfWeek.substring(0, 3); // Truncate to first 3 letters
-    return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}- ${format(parseISO(date), "dd/MM/yyyy")}`; // Capitalize first letter, add hyphen, and format date
+    return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}-${format(parseISO(date), "dd/MM/yyyy")}`; // Capitalize first letter, add hyphen, and format date
   };
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
     const userDataString = localStorage.getItem('user');
