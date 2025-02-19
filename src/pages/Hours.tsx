@@ -208,7 +208,7 @@ const Hours = () => {
             </div>
           </div>}
 
-        {activeConsult === 'general' && userData?.userType === 'admin' && <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
+        {activeConsult === 'general' && userData?.userType === 'admin' && <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto my-[20px]">
             
             <div className="space-y-6">
               <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
