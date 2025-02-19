@@ -75,7 +75,7 @@ const TimeSlotDialog = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center font-bold">
-            {format(selectedDate, "dd/MM/yy", { locale: ptBR })}
+            {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
