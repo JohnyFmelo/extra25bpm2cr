@@ -1,19 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, X } from "lucide-react"; // Importe o ícone X
+import { Loader2, ArrowLeft, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MonthSelector } from "@/components/hours/MonthSelector";
 import { UserSelector } from "@/components/hours/UserSelector";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
-import dayjs from 'dayjs'; // Importe dayjs para lidar com datas
 
 const Hours = () => {
-  const [selectedMonth, setSelectedMonth] = useState<string>(dayjs().format('YYYY-MM')); // Define o mês atual como padrão
-  const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>(dayjs().format('YYYY-MM')); // Define o mês atual como padrão para consulta geral
-  const [selectedUser, setSelectedUser] = useState<string>('all'); // Define 'all' como padrão para UserSelector
+  const currentMonth = new Date().toISOString().slice(0, 7); // Get current month in YYYY-MM format
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonth);
+  const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>(currentMonth);
+  const [selectedUser, setSelectedUser] = useState<string>('all'); // Default to 'all' users
   const [loading, setLoading] = useState(false);
   const [loadingGeneral, setLoadingGeneral] = useState(false);
   const [data, setData] = useState<HoursData | null>(null);
@@ -211,7 +211,9 @@ const Hours = () => {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Consultando...
                   </>
-                ) : "Consultar"}
+                ) : (
+                  "Consultar"
+                )}
               </Button>
 
               {!userData?.registration && (
@@ -221,10 +223,18 @@ const Hours = () => {
               )}
 
               {data && (
-                <UserHoursDisplay
-                  data={data}
-                  onClose={() => setData(null)}
-                />
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 rounded-full hover:bg-gray-100 transition-colors"
+                    onClick={() => setData(null)}
+                    aria-label="Fechar"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <UserHoursDisplay data={data} onClose={() => setData(null)} />
+                </div>
               )}
             </div>
           </div>
@@ -234,7 +244,7 @@ const Hours = () => {
           <div className="bg-white rounded-lg shadow-sm p-6 col-span-2">
             <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
             <div className="space-y-4">
-              <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} defaultValue="all" /> {/* Define 'all' como valor padrão */}
+              <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
 
               <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
 
@@ -244,43 +254,47 @@ const Hours = () => {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Consultando...
                   </>
-                ) : "Consultar"}
+                ) : (
+                  "Consultar"
+                )}
               </Button>
 
-              {selectedUser === 'all' && allUsersData.map((userData, index) => (
-                <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-amber-100 relative"> {/* Adicionado relative aqui */}
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                    {users.find(user => user.registration === userData.matricula)?.label}
-                  </h3>
-                  <UserHoursDisplay data={userData} onClose={() => {
-                      const updatedData = [...allUsersData];
-                      updatedData.splice(index, 1);
-                      setAllUsersData(updatedData);
-                    }} />
-                   <button // Botão de fechar (ícone X)
-                      onClick={() => {
-                        const updatedData = [...allUsersData];
-                        updatedData.splice(index, 1);
-                        setAllUsersData(updatedData);
-                      }}
-                      className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-200"
-                      aria-label="Fechar"
-                    >
-                      <X className="h-4 w-4 text-gray-500" />
-                    </button>
-                </div>
-              ))}
+              {selectedUser === 'all' &&
+                allUsersData.map((userData, index) => (
+                  <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-amber-100">
+                    <div className="relative">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 rounded-full hover:bg-gray-200 transition-colors"
+                        onClick={() => setAllUsersData(prevData => prevData.filter(item => item.matricula !== userData.matricula))}
+                        aria-label="Fechar"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                        {users.find(user => user.registration === userData.matricula)?.label}
+                      </h3>
+                      <UserHoursDisplay
+                        data={userData}
+                        onClose={() => setAllUsersData(prevData => prevData.filter(item => item.matricula !== userData.matricula))}
+                      />
+                    </div>
+                  </div>
+                ))}
 
               {generalData && (
-                <div className="relative"> {/* Adicionado relative aqui */}
+                <div className="relative">
                   <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 rounded-full hover:bg-gray-100 transition-colors"
                     onClick={() => setGeneralData(null)}
-                    className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-200"
-                    aria-label="Fechar"
                   >
-                    <X className="h-4 w-4 text-gray-500" />
-                  </button>
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Fechar</span> {/* Aria label for screen readers */}
+                  </Button>
                 </div>
               )}
             </div>
