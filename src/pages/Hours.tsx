@@ -209,7 +209,7 @@ const Hours = () => {
           </div>}
 
         {activeConsult === 'general' && userData?.userType === 'admin' && <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Consulta Geral</h2>
+            
             <div className="space-y-6">
               <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
               <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
