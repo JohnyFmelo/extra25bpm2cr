@@ -9,7 +9,7 @@ export const UserHoursDisplay = ({
   data,
   onClose
 }: UserHoursDisplayProps) => {
-  return <div className="mt-6 space-y-4">
+  return <div className="mt-6 space-y-4 my-[5px]">
       <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
       
       <div>
