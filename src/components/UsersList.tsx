@@ -44,10 +44,11 @@ const UsersList = () => {
       })) as User[];
       setUsers(usersData);
     } catch (error) {
+      console.error("Error fetching users:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Não foi possível carregar os usuários.",
+        description: "Não foi possível carregar a lista de usuários.",
       });
     }
   };
@@ -56,12 +57,15 @@ const UsersList = () => {
     try {
       await deleteDoc(doc(db, "users", userId));
       toast({
+        title: "Sucesso",
         description: "Usuário excluído com sucesso.",
       });
       fetchUsers();
     } catch (error) {
+      console.error("Error deleting user:", error);
       toast({
         variant: "destructive",
+        title: "Erro",
         description: "Não foi possível excluir o usuário.",
       });
     }
@@ -74,12 +78,15 @@ const UsersList = () => {
         blocked: !user.blocked
       });
       toast({
+        title: "Sucesso",
         description: `Usuário ${user.blocked ? "desbloqueado" : "bloqueado"} com sucesso.`,
       });
       fetchUsers();
     } catch (error) {
+      console.error("Error toggling user block status:", error);
       toast({
         variant: "destructive",
+        title: "Erro",
         description: "Não foi possível alterar o status do usuário.",
       });
     }
@@ -95,57 +102,50 @@ const UsersList = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-medium text-foreground">
-          Usuários
-          <span className="ml-2 text-muted-foreground">({users.length})</span>
-        </h2>
-      </div>
-
-      <div className="bg-background rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead className="w-[100px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>
-                  <button
-                    onClick={() => handleUserClick(user)}
-                    className="hover:text-primary transition-colors"
+    <div className="p-6">
+      <h2 className="text-2xl font-bold text-primary mb-6">
+        Usuários Cadastrados ({users.length})
+      </h2>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-primary">Nome</TableHead>
+            <TableHead className="text-primary">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {users.map((user) => (
+            <TableRow key={user.id}>
+              <TableCell className="w-full">
+                <button
+                  onClick={() => handleUserClick(user)}
+                  className="text-primary hover:underline text-left w-full"
+                >
+                  {formatUserName(user)}
+                </button>
+              </TableCell>
+              <TableCell className="whitespace-nowrap">
+                <div className="flex gap-2">
+                  <Button
+                    variant={user.blocked ? "destructive" : "outline"}
+                    size="icon"
+                    onClick={() => handleToggleBlock(user)}
                   >
-                    {formatUserName(user)}
-                  </button>
-                </TableCell>
-                <TableCell>
-                  <div className="flex justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleBlock(user)}
-                      className={user.blocked ? "text-destructive" : ""}
-                    >
-                      <Ban className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteUser(user.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                    <Ban className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleDeleteUser(user.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
 
       <UserDetailsDialog
         open={isDialogOpen}
