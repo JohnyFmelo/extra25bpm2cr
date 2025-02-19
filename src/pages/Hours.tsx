@@ -175,123 +175,120 @@ const Hours = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-5xl min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      <div className="relative mb-8">
-        <button 
-          onClick={() => navigate('/')} 
-          className="absolute right-0 top-0 p-2.5 rounded-full hover:bg-white/90 transition-colors text-primary bg-white shadow-sm"
-          aria-label="Voltar para home"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-      </div>
-
-      <div className="flex gap-3 mb-10 bg-white p-1.5 rounded-2xl shadow-sm max-w-xl mx-auto">
-        <Button 
-          onClick={() => setActiveConsult('individual')}
-          className={`flex-1 py-6 rounded-xl text-base font-medium tracking-wide transition-all ${
-            activeConsult === 'individual' 
-              ? 'bg-primary text-white shadow-md' 
-              : 'bg-transparent text-gray-600 hover:bg-gray-50'
-          }`}
-        >
-          Consulta Individual
-        </Button>
-        {userData?.userType === 'admin' && (
-          <Button 
-            onClick={() => setActiveConsult('general')}
-            className={`flex-1 py-6 rounded-xl text-base font-medium tracking-wide transition-all ${
-              activeConsult === 'general' 
-                ? 'bg-primary text-white shadow-md' 
-                : 'bg-transparent text-gray-600 hover:bg-gray-50'
-            }`}
+    <div className="min-h-screen bg-gray-100">
+      <div className="container mx-auto p-6 max-w-5xl">
+        <div className="mb-6 flex justify-end">
+          <button 
+            onClick={() => navigate('/')} 
+            className="p-3 rounded-full bg-white hover:bg-gray-50 transition-colors"
+            aria-label="Voltar para home"
           >
-            Consulta Geral
-          </Button>
+            <ArrowLeft className="h-6 w-6 text-gray-700" />
+          </button>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm p-2 mb-8 max-w-xl mx-auto">
+          <div className="flex gap-1">
+            <Button 
+              onClick={() => setActiveConsult('individual')}
+              className={`flex-1 py-7 text-lg font-semibold rounded-xl transition-all ${
+                activeConsult === 'individual' 
+                  ? 'bg-primary text-white shadow-md' 
+                  : 'bg-transparent text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Consulta Individual
+            </Button>
+            {userData?.userType === 'admin' && (
+              <Button 
+                onClick={() => setActiveConsult('general')}
+                className={`flex-1 py-7 text-lg font-semibold rounded-xl transition-all ${
+                  activeConsult === 'general' 
+                    ? 'bg-primary text-white shadow-md' 
+                    : 'bg-transparent text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Consulta Geral
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {activeConsult === 'individual' && (
+          <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
+            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Consulta Individual</h2>
+            <div className="space-y-6">
+              <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
+
+              <Button 
+                onClick={handleConsult} 
+                disabled={loading || !userData?.registration} 
+                className="w-full py-7 text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-sm transition-colors"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Consultando...
+                  </>
+                ) : (
+                  "Consultar"
+                )}
+              </Button>
+
+              {!userData?.registration && (
+                <p className="text-base text-red-500 text-center font-medium">
+                  Você precisa cadastrar sua matrícula para consultar as horas.
+                </p>
+              )}
+
+              {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
+            </div>
+          </div>
+        )}
+
+        {activeConsult === 'general' && userData?.userType === 'admin' && (
+          <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
+            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Consulta Geral</h2>
+            <div className="space-y-6">
+              <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
+              <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
+
+              <Button 
+                onClick={handleGeneralConsult} 
+                disabled={loadingGeneral} 
+                className="w-full py-7 text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-sm transition-colors"
+              >
+                {loadingGeneral ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Consultando...
+                  </>
+                ) : (
+                  "Consultar"
+                )}
+              </Button>
+
+              {selectedUser === 'all' && allUsersData.map((userData, index) => (
+                <div key={index} className="bg-gray-50 rounded-xl p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                    {users.find(user => user.registration === userData.matricula)?.label}
+                  </h3>
+                  <UserHoursDisplay
+                    data={userData}
+                    onClose={() => {
+                      const updatedData = [...allUsersData];
+                      updatedData.splice(index, 1);
+                      setAllUsersData(updatedData);
+                    }}
+                  />
+                </div>
+              ))}
+
+              {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
+            </div>
+          </div>
         )}
       </div>
-
-      {activeConsult === 'individual' && (
-        <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-8 text-center">Consulta Individual</h2>
-          <div className="space-y-6">
-            <div className="bg-gray-50 rounded-xl p-1">
-              <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
-            </div>
-
-            <Button 
-              onClick={handleConsult} 
-              disabled={loading || !userData?.registration} 
-              className="w-full py-6 rounded-xl bg-primary hover:bg-primary/90 text-white text-base font-medium shadow-sm transition-colors"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Consultando...
-                </>
-              ) : (
-                "Consultar"
-              )}
-            </Button>
-
-            {!userData?.registration && (
-              <p className="text-sm text-red-500 text-center">
-                Você precisa cadastrar sua matrícula para consultar as horas.
-              </p>
-            )}
-
-            {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
-          </div>
-        </div>
-      )}
-
-      {activeConsult === 'general' && userData?.userType === 'admin' && (
-        <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-8 text-center">Consulta Geral</h2>
-          <div className="space-y-6">
-            <div className="bg-gray-50 rounded-xl p-1">
-              <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
-            </div>
-
-            <div className="bg-gray-50 rounded-xl p-1">
-              <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
-            </div>
-
-            <Button 
-              onClick={handleGeneralConsult} 
-              disabled={loadingGeneral} 
-              className="w-full py-6 rounded-xl bg-primary hover:bg-primary/90 text-white text-base font-medium shadow-sm transition-colors"
-            >
-              {loadingGeneral ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Consultando...
-                </>
-              ) : (
-                "Consultar"
-              )}
-            </Button>
-
-            {selectedUser === 'all' && allUsersData.map((userData, index) => (
-              <div key={index} className="bg-gray-50 rounded-xl p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  {users.find(user => user.registration === userData.matricula)?.label}
-                </h3>
-                <UserHoursDisplay
-                  data={userData}
-                  onClose={() => {
-                    const updatedData = [...allUsersData];
-                    updatedData.splice(index, 1);
-                    setAllUsersData(updatedData);
-                  }}
-                />
-              </div>
-            ))}
-
-            {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
