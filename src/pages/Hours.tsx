@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
@@ -175,59 +175,43 @@ const Hours = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="container mx-auto p-6 max-w-5xl">
-        <div className="mb-6 flex justify-end">
-          <button 
-            onClick={() => navigate('/')} 
-            className="p-3 rounded-full bg-white hover:bg-gray-50 transition-colors"
-            aria-label="Voltar para home"
-          >
-            <ArrowLeft className="h-6 w-6 text-gray-700" />
+    <div className="container mx-auto p-4">
+      <div className="relative h-12">
+        <div className="absolute right-0 top-0">
+          <button onClick={() => navigate('/')} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+            <ArrowLeft className="h-6 w-6" />
           </button>
         </div>
+      </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-2 mb-8 max-w-xl mx-auto">
-          <div className="flex gap-1">
-            <Button 
-              onClick={() => setActiveConsult('individual')}
-              className={`flex-1 py-7 text-lg font-semibold rounded-xl transition-all ${
-                activeConsult === 'individual' 
-                  ? 'bg-primary text-white shadow-md' 
-                  : 'bg-transparent text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Consulta Individual
-            </Button>
-            {userData?.userType === 'admin' && (
-              <Button 
-                onClick={() => setActiveConsult('general')}
-                className={`flex-1 py-7 text-lg font-semibold rounded-xl transition-all ${
-                  activeConsult === 'general' 
-                    ? 'bg-primary text-white shadow-md' 
-                    : 'bg-transparent text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                Consulta Geral
-              </Button>
-            )}
-          </div>
-        </div>
+      <div className="flex justify-center gap-4 mb-6">
+        <Button 
+          onClick={() => setActiveConsult('individual')}
+          variant={activeConsult === 'individual' ? 'default' : 'outline'}
+        >
+          Consulta Individual
+        </Button>
+        {userData?.userType === 'admin' && (
+          <Button 
+            onClick={() => setActiveConsult('general')}
+            variant={activeConsult === 'general' ? 'default' : 'outline'}
+          >
+            Consulta Geral
+          </Button>
+        )}
+      </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {activeConsult === 'individual' && (
-          <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Consulta Individual</h2>
-            <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-sm p-6 col-span-2">
+            <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
+            <div className="space-y-4">
               <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
 
-              <Button 
-                onClick={handleConsult} 
-                disabled={loading || !userData?.registration} 
-                className="w-full py-7 text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-sm transition-colors"
-              >
+              <Button onClick={handleConsult} disabled={loading || !userData?.registration} className="w-full">
                 {loading ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Consultando...
                   </>
                 ) : (
@@ -236,7 +220,7 @@ const Hours = () => {
               </Button>
 
               {!userData?.registration && (
-                <p className="text-base text-red-500 text-center font-medium">
+                <p className="text-sm text-red-500">
                   Você precisa cadastrar sua matrícula para consultar as horas.
                 </p>
               )}
@@ -247,20 +231,17 @@ const Hours = () => {
         )}
 
         {activeConsult === 'general' && userData?.userType === 'admin' && (
-          <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Consulta Geral</h2>
-            <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-sm p-6 col-span-2">
+            <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
+            <div className="space-y-4">
               <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
+
               <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
 
-              <Button 
-                onClick={handleGeneralConsult} 
-                disabled={loadingGeneral} 
-                className="w-full py-7 text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-sm transition-colors"
-              >
+              <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full">
                 {loadingGeneral ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Consultando...
                   </>
                 ) : (
@@ -269,8 +250,8 @@ const Hours = () => {
               </Button>
 
               {selectedUser === 'all' && allUsersData.map((userData, index) => (
-                <div key={index} className="bg-gray-50 rounded-xl p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-orange-100">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
                     {users.find(user => user.registration === userData.matricula)?.label}
                   </h3>
                   <UserHoursDisplay

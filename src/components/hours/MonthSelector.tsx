@@ -1,6 +1,5 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useEffect } from "react";
 
 interface MonthSelectorProps {
   value: string;
@@ -23,26 +22,14 @@ const months = [
 ];
 
 export const MonthSelector = ({ value, onChange }: MonthSelectorProps) => {
-  useEffect(() => {
-    if (!value) {
-      const currentDate = new Date();
-      const currentMonth = months[currentDate.getMonth()].value;
-      onChange(currentMonth);
-    }
-  }, [value, onChange]);
-
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full py-7 text-lg font-medium bg-white rounded-xl border border-gray-200 shadow-sm hover:border-primary/30 hover:bg-gray-50 transition-colors">
+      <SelectTrigger>
         <SelectValue placeholder="Selecione o mês" />
       </SelectTrigger>
       <SelectContent>
         {months.map((month) => (
-          <SelectItem 
-            key={month.value} 
-            value={month.value}
-            className="py-3 text-lg font-medium cursor-pointer hover:bg-gray-100"
-          >
+          <SelectItem key={month.value} value={month.value}>
             {month.label}
           </SelectItem>
         ))}
