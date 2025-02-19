@@ -222,7 +222,7 @@ const Hours = () => {
                   </> : "Consultar"}
               </Button>
 
-              {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-amber-100">
+              {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-amber-50">
                   <h3 className="text-lg font-semibold text-gray-700 mb-2">
                     {users.find(user => user.registration === userData.matricula)?.label}
                   </h3>
