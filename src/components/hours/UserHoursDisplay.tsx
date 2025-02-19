@@ -23,7 +23,7 @@ export const UserHoursDisplay = ({
 
       <div>
         <h3 className="font-bold mb-2">Horas:</h3>
-        {data["Total 25° BPM"] && <p>25° BPM: {data["Total 25° BPM"]}</p>}
+        {data["Total 25° BPM"] && <p className="font-normal">25° BPM: {data["Total 25° BPM"]}</p>}
         {data["Total Geral"] && <p className="font-bold text-green-600">
             Total: {data["Total Geral"]}
           </p>}
