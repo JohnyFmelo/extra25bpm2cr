@@ -1,19 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MonthSelector } from "@/components/hours/MonthSelector";
 import { UserSelector } from "@/components/hours/UserSelector";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Importe os componentes Tabs
+import dayjs from 'dayjs';
 
 const Hours = () => {
-  const [selectedMonth, setSelectedMonth] = useState<string>("");
-  const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
-  const [selectedUser, setSelectedUser] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>(dayjs().format('YYYY-MM'));
+  const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>(dayjs().format('YYYY-MM'));
+  const [selectedUser, setSelectedUser] = useState<string>('all');
   const [loading, setLoading] = useState(false);
   const [loadingGeneral, setLoadingGeneral] = useState(false);
   const [data, setData] = useState<HoursData | null>(null);
@@ -187,26 +187,20 @@ const Hours = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="individual" value={activeConsult} onValueChange={setActiveConsult} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-white/50 rounded-xl mb-6"> {/* Ajuste o mb-6 para dar espaço abaixo das abas */}
-          <TabsTrigger
-            value="individual"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300"
-          >
-            Consulta Individual
-          </TabsTrigger>
-          {userData?.userType === 'admin' && (
-            <TabsTrigger
-              value="general"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300"
-            >
-              Consulta Geral
-            </TabsTrigger>
-          )}
-        </TabsList>
+      <div className="flex justify-center gap-4 mb-6">
+        <Button onClick={() => setActiveConsult('individual')} variant={activeConsult === 'individual' ? 'default' : 'outline'}>
+          Consulta Individual
+        </Button>
+        {userData?.userType === 'admin' && (
+          <Button onClick={() => setActiveConsult('general')} variant={activeConsult === 'general' ? 'default' : 'outline'}>
+            Consulta Geral
+          </Button>
+        )}
+      </div>
 
-        <TabsContent value="individual">
-          <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {activeConsult === 'individual' && (
+          <div className="bg-white rounded-lg shadow-sm p-6 col-span-2">
             <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
             <div className="space-y-4">
               <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
@@ -217,9 +211,7 @@ const Hours = () => {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Consultando...
                   </>
-                ) : (
-                  "Consultar"
-                )}
+                ) : "Consultar"}
               </Button>
 
               {!userData?.registration && (
@@ -228,53 +220,82 @@ const Hours = () => {
                 </p>
               )}
 
-              {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
+              {data && (
+                <UserHoursDisplay
+                  data={data}
+                  onClose={() => setData(null)}
+                  userType={userData?.userType} // Passa userType para UserHoursDisplay
+                />
+              )}
             </div>
           </div>
-        </TabsContent>
+        )}
 
-        {userData?.userType === 'admin' && (
-          <TabsContent value="general">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
-              <div className="space-y-4">
-                <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
+        {activeConsult === 'general' && userData?.userType === 'admin' && (
+          <div className="bg-white rounded-lg shadow-sm p-6 col-span-2">
+            <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
+            <div className="space-y-4">
+              <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} defaultValue="all" />
 
-                <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
+              <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
 
-                <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full">
-                  {loadingGeneral ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Consultando...
-                    </>
-                  ) : (
-                    "Consultar"
-                  )}
-                </Button>
+              <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full">
+                {loadingGeneral ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Consultando...
+                  </>
+                ) : "Consultar"}
+              </Button>
 
-                {selectedUser === 'all' && allUsersData.map((userData, index) => (
-                  <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-amber-50">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                      {users.find(user => user.registration === userData.matricula)?.label}
-                    </h3>
-                    <UserHoursDisplay
-                      data={userData}
-                      onClose={() => {
+              {selectedUser === 'all' && allUsersData.map((userData, index) => (
+                <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-amber-100 relative">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                    {users.find(user => user.registration === userData.matricula)?.label}
+                  </h3>
+                  <UserHoursDisplay
+                    data={userData}
+                    onClose={() => {
+                      const updatedData = [...allUsersData];
+                      updatedData.splice(index, 1);
+                      setAllUsersData(updatedData);
+                    }}
+                    userType={userData?.userType} // Passa userType para UserHoursDisplay
+                  />
+                   <button
+                      onClick={() => {
                         const updatedData = [...allUsersData];
                         updatedData.splice(index, 1);
                         setAllUsersData(updatedData);
                       }}
-                    />
-                  </div>
-                ))}
+                      className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-200"
+                      aria-label="Fechar"
+                    >
+                      <X className="h-4 w-4 text-gray-500" />
+                    </button>
+                </div>
+              ))}
 
-                {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
-              </div>
+              {generalData && (
+                <div className="relative">
+                  <UserHoursDisplay
+                    data={generalData}
+                    onClose={() => setGeneralData(null)}
+                    userType={userData?.userType} // Passa userType para UserHoursDisplay
+                  />
+                  <button
+                    onClick={() => setGeneralData(null)}
+                    className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-200"
+                    aria-label="Fechar"
+                  >
+                    <X className="h-4 w-4 text-gray-500" />
+                  </button>
+                </div>
+              )}
             </div>
-          </TabsContent>
+          </div>
         )}
-      </Tabs>
+      </div>
     </div>
   );
 };
