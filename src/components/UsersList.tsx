@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Ban, Trash2 } from "lucide-react";
 import UserDetailsDialog from "./UserDetailsDialog";
+import styles from './UsersList.module.css'; // Importe seu arquivo CSS
 
 interface User {
   id: string;
@@ -102,43 +103,41 @@ const UsersList = () => {
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold text-primary mb-6">
-        Usuários Cadastrados ({users.length})
-      </h2>
-      <Table>
+    <div className={styles.container}>
+      <h2 className={styles.title}>Usuários Cadastrados ({users.length})</h2>
+      <Table className={styles.table}>
         <TableHeader>
           <TableRow>
-            <TableHead className="text-primary">Nome</TableHead>
-            <TableHead className="text-primary">Ações</TableHead>
+            <TableHead className={styles.tableHead}>Nome</TableHead>
+            <TableHead className={styles.tableHead}>Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell className="w-full">
+            <TableRow key={user.id} className={styles.tableRow}>
+              <TableCell className={styles.tableCell}>
                 <button
                   onClick={() => handleUserClick(user)}
-                  className="text-primary hover:underline text-left w-full"
+                  className={styles.userButton}
                 >
                   {formatUserName(user)}
                 </button>
               </TableCell>
-              <TableCell className="whitespace-nowrap">
-                <div className="flex gap-2">
+              <TableCell className={styles.tableCell}>
+                <div className={styles.actionButtons}>
                   <Button
                     variant={user.blocked ? "destructive" : "outline"}
                     size="icon"
                     onClick={() => handleToggleBlock(user)}
                   >
-                    <Ban className="h-4 w-4" />
+                    <Ban className={styles.icon} />
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={() => handleDeleteUser(user.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className={styles.icon} />
                   </Button>
                 </div>
               </TableCell>
@@ -146,7 +145,6 @@ const UsersList = () => {
           ))}
         </TableBody>
       </Table>
-
       <UserDetailsDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
