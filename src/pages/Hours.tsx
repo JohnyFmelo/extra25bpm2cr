@@ -178,7 +178,7 @@ const Hours = () => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-2 mb-8 max-w-xl mx-auto">
-          <div className="w-full mt-4">
+          <div className="flex gap-1">
             <Button onClick={() => setActiveConsult('individual')} className={`flex-1 py-7 text-lg font-semibold rounded-xl transition-all ${activeConsult === 'individual' ? 'bg-primary text-white shadow-md' : 'bg-transparent text-gray-700 hover:bg-gray-50'}`}>
               Consulta Individual
             </Button>
@@ -214,7 +214,7 @@ const Hours = () => {
               <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
               <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
 
-              <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full mt-4">
+              <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full py-7 text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-sm transition-colors">
                 {loadingGeneral ? <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Consultando...
