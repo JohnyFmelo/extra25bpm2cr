@@ -169,7 +169,7 @@ const Hours = () => {
       setLoadingGeneral(false);
     }
   };
-  return <div className="min-h-screen bg-gray-100">
+  return <div className="min-h-screen bg-gray-100 px-0">
       <div className="container mx-auto p-6 max-w-5xl">
         <div className="mb-6 flex justify-end">
           <button onClick={() => navigate('/')} className="p-3 rounded-full bg-white hover:bg-gray-50 transition-colors" aria-label="Voltar para home">
@@ -177,8 +177,8 @@ const Hours = () => {
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-2 mb-8 max-w-xl mx-auto">
-          <div className="flex gap-1">
+        <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto my-0 py-[6px]">
+          <div className="flex gap-1 mx-0">
             <Button onClick={() => setActiveConsult('individual')} className={`flex-1 py-7 text-lg font-semibold rounded-xl transition-all ${activeConsult === 'individual' ? 'bg-primary text-white shadow-md' : 'bg-transparent text-gray-700 hover:bg-gray-50'}`}>
               Consulta Individual
             </Button>
@@ -188,7 +188,7 @@ const Hours = () => {
           </div>
         </div>
 
-        {activeConsult === 'individual' && <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
+        {activeConsult === 'individual' && <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto my-[20px]">
             
             <div className="space-y-6">
               <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
