@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { format, parseISO, isPast } from "date-fns";
+import { format, parseISO, isPast, addDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { dataOperations } from "@/lib/firebase";
@@ -176,6 +176,15 @@ const getVolunteerRank = (volunteerFullName: string): string => {
   }
   return parts[0]; // Para outras patentes (ex: "Cel", "Cb", "Sd")
 };
+
+// Function to format currency to "R$ 10.390,32" format
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value);
+};
+
 
 // Componente TimeSlotsList
 const TimeSlotsList = () => {
@@ -497,6 +506,23 @@ const TimeSlotsList = () => {
     "Oficiais": 0,
     "Total Geral": 0
   });
+
+  // Calculate weekly cost
+  const today = new Date();
+  const tomorrow = addDays(today, 1);
+  let weeklyCost = 0;
+  if (calculatedGroupedTimeSlots) {
+    Object.entries(calculatedGroupedTimeSlots)
+      .filter(([date]) => {
+        const slotDate = parseISO(date);
+        return isAfter(slotDate, tomorrow) || format(slotDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
+      })
+      .forEach(([, groupedData]) => {
+        weeklyCost += groupedData.dailyCost;
+      });
+  }
+
+
   if (isLoading) {
     return <div className="p-4">Carregando horários...</div>;
   }
@@ -508,10 +534,11 @@ const TimeSlotsList = () => {
     <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
           <h2 className="font-semibold text-gray-900 mb-4">Resumo de Custos Totais</h2>
           <div className="space-y-2">
-            <p><strong>Cb/Sd:</strong> R$ {totalCostSummary["Cb/Sd"]?.toFixed(2)}</p>
-            <p><strong>St/Sgt:</strong> R$ {totalCostSummary["St/Sgt"]?.toFixed(2)}</p>
-            <p><strong>Oficiais:</strong> R$ {totalCostSummary["Oficiais"]?.toFixed(2)}</p>
-            <p className="font-semibold text-green-500"><strong>Total Geral:</strong> R$ {totalCostSummary["Total Geral"]?.toFixed(2)}</p>
+            <p><strong>Cb/Sd:</strong> {formatCurrency(totalCostSummary["Cb/Sd"])}</p>
+            <p><strong>St/Sgt:</strong> {formatCurrency(totalCostSummary["St/Sgt"])}</p>
+            <p><strong>Oficiais:</strong> {formatCurrency(totalCostSummary["Oficiais"])}</p>
+            <p className="font-semibold text-green-500"><strong>Total Geral:</strong> {formatCurrency(totalCostSummary["Total Geral"])}</p>
+            {weeklyCost > 0 && <p className="font-semibold text-blue-500"><strong>Custo da Semana:</strong> {formatCurrency(weeklyCost)}</p>}
           </div>
         </div>}
 
@@ -539,7 +566,7 @@ const TimeSlotsList = () => {
                     </h3>
                     {isAdmin && dailyCost > 0 &&
                 // Renderiza o custo diário apenas se for maior que 0
-                <span className="text-green-600 font-semibold text-base">R$ {dailyCost.toFixed(2)}</span>}
+                <span className="text-green-600 font-semibold text-base">{formatCurrency(dailyCost)}</span>}
                   </div>
                   <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
                     {isDatePast ? "Extra Encerrada" : "Extra"}
