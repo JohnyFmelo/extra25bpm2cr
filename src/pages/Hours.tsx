@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MonthSelector } from "@/components/hours/MonthSelector";
 import { UserSelector } from "@/components/hours/UserSelector";
@@ -204,7 +204,13 @@ const Hours = () => {
                   Você precisa cadastrar sua matrícula para consultar as horas.
                 </p>}
 
-              {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
+              {data && <div className="relative">
+                  <UserHoursDisplay data={data} onClose={() => setData(null)} />
+                  <Button variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full hover:bg-gray-100 transition-colors" onClick={() => setData(null)}>
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Fechar</span>
+                  </Button>
+                </div>}
             </div>
           </div>}
 
@@ -223,17 +229,27 @@ const Hours = () => {
               </Button>
 
               {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-amber-100">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                    {users.find(user => user.registration === userData.matricula)?.label}
-                  </h3>
-                  <UserHoursDisplay data={userData} onClose={() => {
-              const updatedData = [...allUsersData];
-              updatedData.splice(index, 1);
-              setAllUsersData(updatedData);
-            }} />
+                  <div className="relative">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                      {users.find(user => user.registration === userData.matricula)?.label}
+                    </h3>
+                    <UserHoursDisplay data={userData} onClose={() => {
+                        setAllUsersData(prevData => prevData.filter(item => item.matricula !== userData.matricula));
+                      }} />
+                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full hover:bg-gray-200 transition-colors" onClick={() => setAllUsersData(prevData => prevData.filter(item => item.matricula !== userData.matricula))}>
+                      <X className="h-4 w-4" />
+                      <span className="sr-only">Fechar</span>
+                    </Button>
+                  </div>
                 </div>)}
 
-              {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
+              {generalData && <div className="relative">
+                  <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />
+                  <Button variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full hover:bg-gray-100 transition-colors" onClick={() => setGeneralData(null)}>
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Fechar</span>
+                  </Button>
+                </div>}
             </div>
           </div>}
       </div>
