@@ -182,7 +182,7 @@ const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(value).replace("R$", "R$ "); // Mantém apenas o replace para adicionar espaço após "R$"
+  }).format(value);
 };
 
 
@@ -507,35 +507,20 @@ const TimeSlotsList = () => {
     "Total Geral": 0
   });
 
-  // Calculate weekly cost and date range
+  // Calculate weekly cost
   const today = new Date();
   const tomorrow = addDays(today, 1);
   let weeklyCost = 0;
-  let weeklyCostDates: string[] = []; // Array to store dates for weekly cost
   if (calculatedGroupedTimeSlots) {
     Object.entries(calculatedGroupedTimeSlots)
       .filter(([date]) => {
         const slotDate = parseISO(date);
-        const isWeeklyDate = isAfter(slotDate, tomorrow) || format(slotDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
-        if (isWeeklyDate) {
-          weeklyCostDates.push(date); // Add date to weeklyDates array
-        }
-        return isWeeklyDate;
+        return isAfter(slotDate, tomorrow) || format(slotDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
       })
       .forEach(([, groupedData]) => {
         weeklyCost += groupedData.dailyCost;
       });
   }
-
-  // Format weekly cost date range
-  const formatWeeklyDateRange = () => {
-    if (weeklyCostDates.length === 0) return "";
-    const sortedDates = weeklyCostDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-    const startDate = format(parseISO(sortedDates[0]), "eee", { locale: ptBR }).substring(0, 3).toUpperCase();
-    const endDate = format(parseISO(sortedDates[sortedDates.length - 1]), "eee", { locale: ptBR }).substring(0, 3).toUpperCase();
-    return `${startDate}-${endDate}`;
-  };
-  const weeklyDateRangeText = formatWeeklyDateRange();
 
 
   if (isLoading) {
@@ -553,7 +538,7 @@ const TimeSlotsList = () => {
             <p><strong>St/Sgt:</strong> {formatCurrency(totalCostSummary["St/Sgt"])}</p>
             <p><strong>Oficiais:</strong> {formatCurrency(totalCostSummary["Oficiais"])}</p>
             <p className="font-semibold text-green-500"><strong>Total Geral:</strong> {formatCurrency(totalCostSummary["Total Geral"])}</p>
-            {weeklyCost > 0 && <p className="font-semibold text-blue-500"><strong>Custo da Semana ({weeklyDateRangeText}):</strong> {formatCurrency(weeklyCost)}</p>}
+            {weeklyCost > 0 && <p className="font-semibold text-blue-500"><strong>Custo da Semana:</strong> {formatCurrency(weeklyCost)}</p>}
           </div>
         </div>}
 
@@ -584,7 +569,7 @@ const TimeSlotsList = () => {
                 <span className="text-green-600 font-semibold text-base">{formatCurrency(dailyCost)}</span>}
                   </div>
                   <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
-                    {isDatePast ? "Encerrada" : "Extra"} {/* Alterado para "Encerrada" */}
+                    {isDatePast ? "Extra Encerrada" : "Extra"}
                   </Badge>
                 </div>
               </div>
