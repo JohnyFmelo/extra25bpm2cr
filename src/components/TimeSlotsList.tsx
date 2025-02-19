@@ -596,7 +596,7 @@ const TimeSlotsList = () => {
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-blue-500" />
                             <p className="font-medium text-gray-900">
-                              {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} - {calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)} Horas
+                              {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}-{calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)}h
                             </p>
                           </div>
                           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${isSlotFull(slot) ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
