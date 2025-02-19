@@ -178,7 +178,7 @@ const Hours = () => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-2 mb-8 max-w-xl mx-auto">
-          <div className="flex gap-1">
+          <div className="w-full mt-4">
             <Button onClick={() => setActiveConsult('individual')} className={`flex-1 py-7 text-lg font-semibold rounded-xl transition-all ${activeConsult === 'individual' ? 'bg-primary text-white shadow-md' : 'bg-transparent text-gray-700 hover:bg-gray-50'}`}>
               Consulta Individual
             </Button>
