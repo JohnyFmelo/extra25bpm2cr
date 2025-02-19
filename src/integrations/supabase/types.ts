@@ -9,6 +9,66 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ESCALA: {
+        Row: {
+          data1: string | null
+          data10: string | null
+          data11: string | null
+          data12: string | null
+          data13: string | null
+          data14: string | null
+          data15: string | null
+          data2: string | null
+          data3: string | null
+          data4: string | null
+          data5: string | null
+          data6: string | null
+          data7: string | null
+          data8: string | null
+          data9: string | null
+          Matricula: number
+          Nome: string
+        }
+        Insert: {
+          data1?: string | null
+          data10?: string | null
+          data11?: string | null
+          data12?: string | null
+          data13?: string | null
+          data14?: string | null
+          data15?: string | null
+          data2?: string | null
+          data3?: string | null
+          data4?: string | null
+          data5?: string | null
+          data6?: string | null
+          data7?: string | null
+          data8?: string | null
+          data9?: string | null
+          Matricula: number
+          Nome?: string
+        }
+        Update: {
+          data1?: string | null
+          data10?: string | null
+          data11?: string | null
+          data12?: string | null
+          data13?: string | null
+          data14?: string | null
+          data15?: string | null
+          data2?: string | null
+          data3?: string | null
+          data4?: string | null
+          data5?: string | null
+          data6?: string | null
+          data7?: string | null
+          data8?: string | null
+          data9?: string | null
+          Matricula?: number
+          Nome?: string
+        }
+        Relationships: []
+      }
       FEVEREIRO: {
         Row: {
           "Horas 25° BPM": string | null

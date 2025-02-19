@@ -24,12 +24,16 @@ const months = [
 export const MonthSelector = ({ value, onChange }: MonthSelectorProps) => {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger>
+      <SelectTrigger className="w-full h-14 text-lg font-medium border-2 rounded-2xl">
         <SelectValue placeholder="Selecione o mês" />
       </SelectTrigger>
       <SelectContent>
         {months.map((month) => (
-          <SelectItem key={month.value} value={month.value}>
+          <SelectItem 
+            key={month.value} 
+            value={month.value}
+            className="text-base"
+          >
             {month.label}
           </SelectItem>
         ))}
