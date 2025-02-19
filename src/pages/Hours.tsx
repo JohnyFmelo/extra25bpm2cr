@@ -26,6 +26,7 @@ const Hours = () => {
     toast
   } = useToast();
   const navigate = useNavigate();
+
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
     setUserData(storedUser);
@@ -38,11 +39,13 @@ const Hours = () => {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
   useEffect(() => {
     if (userData?.userType === 'admin') {
       fetchUsersList();
     }
   }, [userData?.userType]);
+
   const fetchUsersList = async () => {
     try {
       const fetchedUsers = await fetchAllUsers();
@@ -56,6 +59,7 @@ const Hours = () => {
       });
     }
   };
+
   const handleConsult = async () => {
     if (!userData?.registration) {
       toast({
@@ -100,6 +104,7 @@ const Hours = () => {
       setLoading(false);
     }
   };
+
   const handleGeneralConsult = async () => {
     if (!selectedGeneralMonth) {
       toast({
@@ -171,7 +176,9 @@ const Hours = () => {
       setLoadingGeneral(false);
     }
   };
-  return <div className="container mx-auto p-4">
+
+  return (
+    <div className="container mx-auto p-4">
       <div className="relative h-12">
         <div className="absolute right-0 top-0">
           <button onClick={() => navigate('/')} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
@@ -182,12 +189,20 @@ const Hours = () => {
 
       <Tabs defaultValue="individual" value={activeConsult} onValueChange={setActiveConsult} className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-white/50 rounded-xl mb-6"> {/* Ajuste o mb-6 para dar espaço abaixo das abas */}
-          <TabsTrigger value="individual" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
+          <TabsTrigger
+            value="individual"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300"
+          >
             Consulta Individual
           </TabsTrigger>
-          {userData?.userType === 'admin' && <TabsTrigger value="general" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
+          {userData?.userType === 'admin' && (
+            <TabsTrigger
+              value="general"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300"
+            >
               Consulta Geral
-            </TabsTrigger>}
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="individual">
@@ -197,52 +212,71 @@ const Hours = () => {
               <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
 
               <Button onClick={handleConsult} disabled={loading || !userData?.registration} className="w-full">
-                {loading ? <>
+                {loading ? (
+                  <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Consultando...
-                  </> : "Consultar"}
+                  </>
+                ) : (
+                  "Consultar"
+                )}
               </Button>
 
-              {!userData?.registration && <p className="text-sm text-red-500">
+              {!userData?.registration && (
+                <p className="text-sm text-red-500">
                   Você precisa cadastrar sua matrícula para consultar as horas.
-                </p>}
+                </p>
+              )}
 
               {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
             </div>
           </div>
         </TabsContent>
 
-        {userData?.userType === 'admin' && <TabsContent value="general">
+        {userData?.userType === 'admin' && (
+          <TabsContent value="general">
             <div className="bg-white rounded-lg shadow-sm p-6">
-              
+              <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
               <div className="space-y-4">
                 <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
 
                 <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
 
                 <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full">
-                  {loadingGeneral ? <>
+                  {loadingGeneral ? (
+                    <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Consultando...
-                    </> : "Consultar"}
+                    </>
+                  ) : (
+                    "Consultar"
+                  )}
                 </Button>
 
-                {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-amber-50">
+                {selectedUser === 'all' && allUsersData.map((userData, index) => (
+                  <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-amber-50">
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">
                       {users.find(user => user.registration === userData.matricula)?.label}
                     </h3>
-                    <UserHoursDisplay data={userData} onClose={() => {
-                const updatedData = [...allUsersData];
-                updatedData.splice(index, 1);
-                setAllUsersData(updatedData);
-              }} />
-                  </div>)}
+                    <UserHoursDisplay
+                      data={userData}
+                      onClose={() => {
+                        const updatedData = [...allUsersData];
+                        updatedData.splice(index, 1);
+                        setAllUsersData(updatedData);
+                      }}
+                    />
+                  </div>
+                ))}
 
                 {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
               </div>
             </div>
-          </TabsContent>}
+          </TabsContent>
+        )}
       </Tabs>
-    </div>;
+    </div>
+  );
 };
+
 export default Hours;
