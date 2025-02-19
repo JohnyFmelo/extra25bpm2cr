@@ -8,6 +8,7 @@ import { UserSelector } from "@/components/hours/UserSelector";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
+
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
@@ -20,10 +21,10 @@ const Hours = () => {
   const [userData, setUserData] = useState<any>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [activeConsult, setActiveConsult] = useState<'individual' | 'general'>('individual');
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Mantendo todos os useEffects existentes
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
     setUserData(storedUser);
@@ -36,11 +37,14 @@ const Hours = () => {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
   useEffect(() => {
     if (userData?.userType === 'admin') {
       fetchUsersList();
     }
   }, [userData?.userType]);
+
+  // Mantendo todas as funções existentes
   const fetchUsersList = async () => {
     try {
       const fetchedUsers = await fetchAllUsers();
@@ -54,6 +58,7 @@ const Hours = () => {
       });
     }
   };
+
   const handleConsult = async () => {
     if (!userData?.registration) {
       toast({
@@ -98,6 +103,7 @@ const Hours = () => {
       setLoading(false);
     }
   };
+
   const handleGeneralConsult = async () => {
     if (!selectedGeneralMonth) {
       toast({
@@ -169,73 +175,147 @@ const Hours = () => {
       setLoadingGeneral(false);
     }
   };
-  return <div className="min-h-screen bg-gray-100">
-      <div className="container mx-auto p-6 max-w-5xl">
-        <div className="mb-6 flex justify-end">
-          <button onClick={() => navigate('/')} className="p-3 rounded-full bg-white hover:bg-gray-50 transition-colors" aria-label="Voltar para home">
-            <ArrowLeft className="h-6 w-6 text-gray-700" />
-          </button>
-        </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-2 mb-8 max-w-xl mx-auto">
-          <div className="flex gap-1">
-            <Button onClick={() => setActiveConsult('individual')} className={`flex-1 py-7 text-lg font-semibold rounded-xl transition-all ${activeConsult === 'individual' ? 'bg-primary text-white shadow-md' : 'bg-transparent text-gray-700 hover:bg-gray-50'}`}>
-              Consulta Individual
-            </Button>
-            {userData?.userType === 'admin' && <Button onClick={() => setActiveConsult('general')} className={`flex-1 py-7 text-lg font-semibold rounded-xl transition-all ${activeConsult === 'general' ? 'bg-primary text-white shadow-md' : 'bg-transparent text-gray-700 hover:bg-gray-50'}`}>
-                Consulta Geral
-              </Button>}
-          </div>
-        </div>
-
-        {activeConsult === 'individual' && <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Consulta Individual</h2>
-            <div className="space-y-6">
-              <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
-
-              <Button onClick={handleConsult} disabled={loading || !userData?.registration} className="w-full mt-4 my-px py-0">
-                {loading ? <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Consultando...
-                  </> : "Consultar"}
-              </Button>
-
-              {!userData?.registration && <p className="text-base text-red-500 text-center font-medium">
-                  Você precisa cadastrar sua matrícula para consultar as horas.
-                </p>}
-
-              {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
-            </div>
-          </div>}
-
-        {activeConsult === 'general' && userData?.userType === 'admin' && <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Consulta Geral</h2>
-            <div className="space-y-6">
-              <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
-              <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
-
-              <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full py-7 text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-sm transition-colors">
-                {loadingGeneral ? <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Consultando...
-                  </> : "Consultar"}
-              </Button>
-
-              {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="bg-gray-50 rounded-xl p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                    {users.find(user => user.registration === userData.matricula)?.label}
-                  </h3>
-                  <UserHoursDisplay data={userData} onClose={() => {
-              const updatedData = [...allUsersData];
-              updatedData.splice(index, 1);
-              setAllUsersData(updatedData);
-            }} />
-                </div>)}
-
-              {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
-            </div>
-          </div>}
+  return (
+    <div className="w-full max-w-3xl mx-auto p-4">
+      {/* Botão de voltar */}
+      <div className="mb-6 flex justify-end">
+        <button 
+          onClick={() => navigate('/')} 
+          className="p-3 rounded-full bg-white hover:bg-gray-50 transition-colors"
+          aria-label="Voltar para home"
+        >
+          <ArrowLeft className="h-6 w-6 text-gray-700" />
+        </button>
       </div>
-    </div>;
+
+      {/* Botões de alternância */}
+      <div className="flex gap-4 mb-8">
+        <Button
+          onClick={() => setActiveConsult('individual')}
+          className={`flex-1 ${
+            activeConsult === 'individual' 
+              ? 'bg-[#1B2A3D] text-white hover:bg-[#1B2A3D]/90' 
+              : 'bg-white text-[#1B2A3D] hover:bg-[#1B2A3D]/10'
+          }`}
+        >
+          Consulta Individual
+        </Button>
+        {userData?.userType === 'admin' && (
+          <Button
+            onClick={() => setActiveConsult('general')}
+            className={`flex-1 ${
+              activeConsult === 'general' 
+                ? 'bg-[#1B2A3D] text-white hover:bg-[#1B2A3D]/90' 
+                : 'bg-white text-[#1B2A3D] hover:bg-[#1B2A3D]/10'
+            }`}
+          >
+            Consulta Geral
+          </Button>
+        )}
+      </div>
+
+      {/* Conteúdo da Consulta Individual */}
+      {activeConsult === 'individual' && (
+        <div className="space-y-6">
+          <h2 className="text-xl text-[#1B2A3D] font-medium mb-6">
+            Consulta Individual
+          </h2>
+
+          <MonthSelector 
+            value={selectedMonth} 
+            onChange={setSelectedMonth} 
+          />
+
+          <Button 
+            onClick={handleConsult} 
+            disabled={loading || !userData?.registration}
+            className="w-full bg-[#1B2A3D] text-white hover:bg-[#1B2A3D]/90"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Consultando...
+              </>
+            ) : (
+              "Consultar"
+            )}
+          </Button>
+
+          {!userData?.registration && (
+            <p className="text-red-500 text-center">
+              Você precisa cadastrar sua matrícula para consultar as horas.
+            </p>
+          )}
+
+          {data && (
+            <UserHoursDisplay 
+              data={data} 
+              onClose={() => setData(null)} 
+            />
+          )}
+        </div>
+      )}
+
+      {/* Conteúdo da Consulta Geral */}
+      {activeConsult === 'general' && userData?.userType === 'admin' && (
+        <div className="space-y-6">
+          <h2 className="text-xl text-[#1B2A3D] font-medium mb-6">
+            Consulta Geral
+          </h2>
+
+          <UserSelector 
+            users={users} 
+            value={selectedUser} 
+            onChange={setSelectedUser} 
+          />
+
+          <MonthSelector 
+            value={selectedGeneralMonth} 
+            onChange={setSelectedGeneralMonth} 
+          />
+
+          <Button 
+            onClick={handleGeneralConsult} 
+            disabled={loadingGeneral}
+            className="w-full bg-[#1B2A3D] text-white hover:bg-[#1B2A3D]/90"
+          >
+            {loadingGeneral ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Consultando...
+              </>
+            ) : (
+              "Consultar"
+            )}
+          </Button>
+
+          {selectedUser === 'all' && allUsersData.map((userData, index) => (
+            <div key={index} className="bg-gray-50 p-6 rounded-lg">
+              <h3 className="text-xl font-semibold mb-4">
+                {users.find(user => user.registration === userData.matricula)?.label}
+              </h3>
+              <UserHoursDisplay 
+                data={userData} 
+                onClose={() => {
+                  const updatedData = [...allUsersData];
+                  updatedData.splice(index, 1);
+                  setAllUsersData(updatedData);
+                }} 
+              />
+            </div>
+          ))}
+
+          {generalData && (
+            <UserHoursDisplay 
+              data={generalData} 
+              onClose={() => setGeneralData(null)} 
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
 };
+
 export default Hours;
