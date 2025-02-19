@@ -182,7 +182,7 @@ const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(value).replace("R$", "R$ ").replace(".", ","); // Added replace to format as requested
+  }).format(value).replace("R$", "R$ "); // Mantém apenas o replace para adicionar espaço após "R$"
 };
 
 
