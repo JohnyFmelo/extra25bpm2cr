@@ -184,27 +184,21 @@ const Hours = () => {
         </div>
       </div>
 
-      {/* Modified column switcher layout */}
-      <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-6 bg-gray-100 p-4 rounded-lg shadow-inner">
-        <h3 className="text-lg font-medium text-gray-700 mb-2 sm:mb-0 sm:mr-4">Tipo de Consulta:</h3>
-        <div className="flex gap-2 w-full sm:w-auto">
+      <div className="flex justify-center gap-4 mb-6">
+        <Button 
+          onClick={() => setActiveConsult('individual')}
+          variant={activeConsult === 'individual' ? 'default' : 'outline'}
+        >
+          Consulta Individual
+        </Button>
+        {userData?.userType === 'admin' && (
           <Button 
-            onClick={() => setActiveConsult('individual')}
-            variant={activeConsult === 'individual' ? 'default' : 'outline'}
-            className="flex-1 sm:flex-none"
+            onClick={() => setActiveConsult('general')}
+            variant={activeConsult === 'general' ? 'default' : 'outline'}
           >
-            Individual
+            Consulta Geral
           </Button>
-          {userData?.userType === 'admin' && (
-            <Button 
-              onClick={() => setActiveConsult('general')}
-              variant={activeConsult === 'general' ? 'default' : 'outline'}
-              className="flex-1 sm:flex-none"
-            >
-              Geral
-            </Button>
-          )}
-        </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
