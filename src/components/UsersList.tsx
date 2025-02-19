@@ -12,9 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Ban, Trash2, Loader2, UserCircle } from "lucide-react";
+import { Ban, Trash2 } from "lucide-react";
 import UserDetailsDialog from "./UserDetailsDialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface User {
   id: string;
@@ -30,7 +29,6 @@ const UsersList = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,7 +36,6 @@ const UsersList = () => {
   }, []);
 
   const fetchUsers = async () => {
-    setIsLoading(true);
     try {
       const querySnapshot = await getDocs(collection(db, "users"));
       const usersData = querySnapshot.docs.map(doc => ({
@@ -50,11 +47,9 @@ const UsersList = () => {
       console.error("Error fetching users:", error);
       toast({
         variant: "destructive",
-        title: "Erro ao carregar usuários",
+        title: "Erro",
         description: "Não foi possível carregar a lista de usuários.",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -62,15 +57,15 @@ const UsersList = () => {
     try {
       await deleteDoc(doc(db, "users", userId));
       toast({
-        title: "Usuário excluído",
-        description: "Usuário foi removido com sucesso.",
+        title: "Sucesso",
+        description: "Usuário excluído com sucesso.",
       });
       fetchUsers();
     } catch (error) {
       console.error("Error deleting user:", error);
       toast({
         variant: "destructive",
-        title: "Erro ao excluir",
+        title: "Erro",
         description: "Não foi possível excluir o usuário.",
       });
     }
@@ -83,15 +78,15 @@ const UsersList = () => {
         blocked: !user.blocked
       });
       toast({
-        title: "Status atualizado",
-        description: `Usuário foi ${user.blocked ? "desbloqueado" : "bloqueado"} com sucesso.`,
+        title: "Sucesso",
+        description: `Usuário ${user.blocked ? "desbloqueado" : "bloqueado"} com sucesso.`,
       });
       fetchUsers();
     } catch (error) {
       console.error("Error toggling user block status:", error);
       toast({
         variant: "destructive",
-        title: "Erro ao atualizar",
+        title: "Erro",
         description: "Não foi possível alterar o status do usuário.",
       });
     }
@@ -106,88 +101,59 @@ const UsersList = () => {
     return `${user.rank || ''} ${user.warName}`.trim();
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-7">
-        <CardTitle className="text-2xl font-bold">
-          Usuários Cadastrados
-          <span className="ml-2 text-sm text-muted-foreground">
-            ({users.length})
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {users.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <UserCircle className="w-12 h-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium">Nenhum usuário cadastrado</p>
-            <p className="text-sm text-muted-foreground">
-              Os usuários cadastrados aparecerão aqui.
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="font-semibold">Nome</TableHead>
-                  <TableHead className="w-[100px] text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-muted/50">
-                    <TableCell>
-                      <button
-                        onClick={() => handleUserClick(user)}
-                        className="text-primary hover:underline text-left w-full"
-                      >
-                        {formatUserName(user)}
-                      </button>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant={user.blocked ? "destructive" : "outline"}
-                          size="icon"
-                          onClick={() => handleToggleBlock(user)}
-                          title={user.blocked ? "Desbloquear usuário" : "Bloquear usuário"}
-                        >
-                          <Ban className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleDeleteUser(user.id)}
-                          title="Excluir usuário"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+    <div className="p-6">
+      <h2 className="text-2xl font-bold text-primary mb-6">
+        Usuários Cadastrados ({users.length})
+      </h2>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-primary">Nome</TableHead>
+            <TableHead className="text-primary">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {users.map((user) => (
+            <TableRow key={user.id}>
+              <TableCell className="w-full">
+                <button
+                  onClick={() => handleUserClick(user)}
+                  className="text-primary hover:underline text-left w-full"
+                >
+                  {formatUserName(user)}
+                </button>
+              </TableCell>
+              <TableCell className="whitespace-nowrap">
+                <div className="flex gap-2">
+                  <Button
+                    variant={user.blocked ? "destructive" : "outline"}
+                    size="icon"
+                    onClick={() => handleToggleBlock(user)}
+                  >
+                    <Ban className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleDeleteUser(user.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
 
-        <UserDetailsDialog
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          userData={selectedUser}
-          onUserUpdated={fetchUsers}
-        />
-      </CardContent>
-    </Card>
+      <UserDetailsDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        userData={selectedUser}
+        onUserUpdated={fetchUsers}
+      />
+    </div>
   );
 };
 
