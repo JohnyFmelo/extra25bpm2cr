@@ -214,7 +214,7 @@ const Hours = () => {
               <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
               <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
 
-              <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full py-7 text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 text-white shadow-sm transition-colors">
+              <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full mt-4">
                 {loadingGeneral ? <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Consultando...
