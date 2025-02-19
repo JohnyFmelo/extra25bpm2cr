@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -176,26 +175,24 @@ const Hours = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <div className="relative h-12">
-        <div className="absolute right-0 top-0">
-          <button 
-            onClick={() => navigate('/')} 
-            className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-            aria-label="Voltar para home"
-          >
-            <ArrowLeft className="h-6 w-6" />
-          </button>
-        </div>
+    <div className="container mx-auto p-6 max-w-5xl min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+      <div className="relative mb-8">
+        <button 
+          onClick={() => navigate('/')} 
+          className="absolute right-0 top-0 p-2.5 rounded-full hover:bg-white/90 transition-colors text-primary bg-white shadow-sm"
+          aria-label="Voltar para home"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
       </div>
 
-      <div className="flex gap-4 mb-8">
+      <div className="flex gap-3 mb-10 bg-white p-1.5 rounded-2xl shadow-sm max-w-xl mx-auto">
         <Button 
           onClick={() => setActiveConsult('individual')}
-          className={`flex-1 h-14 rounded-3xl text-lg font-medium transition-all ${
+          className={`flex-1 py-6 rounded-xl text-base font-medium tracking-wide transition-all ${
             activeConsult === 'individual' 
-              ? 'bg-[#13293D] text-white shadow-lg' 
-              : 'bg-white text-[#13293D] hover:bg-gray-50'
+              ? 'bg-primary text-white shadow-md' 
+              : 'bg-transparent text-gray-600 hover:bg-gray-50'
           }`}
         >
           Consulta Individual
@@ -203,10 +200,10 @@ const Hours = () => {
         {userData?.userType === 'admin' && (
           <Button 
             onClick={() => setActiveConsult('general')}
-            className={`flex-1 h-14 rounded-3xl text-lg font-medium transition-all ${
+            className={`flex-1 py-6 rounded-xl text-base font-medium tracking-wide transition-all ${
               activeConsult === 'general' 
-                ? 'bg-[#13293D] text-white shadow-lg' 
-                : 'bg-white text-[#13293D] hover:bg-gray-50'
+                ? 'bg-primary text-white shadow-md' 
+                : 'bg-transparent text-gray-600 hover:bg-gray-50'
             }`}
           >
             Consulta Geral
@@ -215,21 +212,21 @@ const Hours = () => {
       </div>
 
       {activeConsult === 'individual' && (
-        <div className="bg-white rounded-3xl shadow-lg p-8">
-          <h2 className="text-3xl font-bold text-[#13293D] mb-8">Consulta Individual</h2>
+        <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-8 text-center">Consulta Individual</h2>
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl">
+            <div className="bg-gray-50 rounded-xl p-1">
               <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
             </div>
 
             <Button 
               onClick={handleConsult} 
               disabled={loading || !userData?.registration} 
-              className="w-full h-14 rounded-2xl bg-[#13293D] hover:bg-[#13293D]/90 text-white text-lg font-medium"
+              className="w-full py-6 rounded-xl bg-primary hover:bg-primary/90 text-white text-base font-medium shadow-sm transition-colors"
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Consultando...
                 </>
               ) : (
@@ -238,7 +235,7 @@ const Hours = () => {
             </Button>
 
             {!userData?.registration && (
-              <p className="text-sm text-red-500">
+              <p className="text-sm text-red-500 text-center">
                 Você precisa cadastrar sua matrícula para consultar as horas.
               </p>
             )}
@@ -249,25 +246,25 @@ const Hours = () => {
       )}
 
       {activeConsult === 'general' && userData?.userType === 'admin' && (
-        <div className="bg-white rounded-3xl shadow-lg p-8">
-          <h2 className="text-3xl font-bold text-[#13293D] mb-8">Consulta Geral</h2>
+        <div className="bg-white rounded-2xl shadow-sm p-8 max-w-2xl mx-auto">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-8 text-center">Consulta Geral</h2>
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl">
+            <div className="bg-gray-50 rounded-xl p-1">
               <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
             </div>
 
-            <div className="bg-white rounded-2xl">
+            <div className="bg-gray-50 rounded-xl p-1">
               <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
             </div>
 
             <Button 
               onClick={handleGeneralConsult} 
               disabled={loadingGeneral} 
-              className="w-full h-14 rounded-2xl bg-[#13293D] hover:bg-[#13293D]/90 text-white text-lg font-medium"
+              className="w-full py-6 rounded-xl bg-primary hover:bg-primary/90 text-white text-base font-medium shadow-sm transition-colors"
             >
               {loadingGeneral ? (
                 <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Consultando...
                 </>
               ) : (
@@ -276,8 +273,8 @@ const Hours = () => {
             </Button>
 
             {selectedUser === 'all' && allUsersData.map((userData, index) => (
-              <div key={index} className="bg-orange-100 rounded-xl p-4 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              <div key={index} className="bg-gray-50 rounded-xl p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
                   {users.find(user => user.registration === userData.matricula)?.label}
                 </h3>
                 <UserHoursDisplay

@@ -24,7 +24,7 @@ const months = [
 export const MonthSelector = ({ value, onChange }: MonthSelectorProps) => {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full h-14 text-lg font-medium border-2 rounded-2xl">
+      <SelectTrigger className="w-full py-6 text-base font-medium bg-white rounded-lg border-0 shadow-sm hover:bg-gray-50 transition-colors">
         <SelectValue placeholder="Selecione o mês" />
       </SelectTrigger>
       <SelectContent>
