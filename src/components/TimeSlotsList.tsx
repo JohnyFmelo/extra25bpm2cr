@@ -584,7 +584,7 @@ const TimeSlotsList = () => {
                 <span className="text-green-600 font-semibold text-base">{formatCurrency(dailyCost)}</span>}
                   </div>
                   <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
-                    {isDatePast ? "Encerrada" : "Extra"} {/* Alterado para "Encerrada" */}
+                    {isDatePast ? "Extra" : "Extra"} {/* Alterado para "Extra" */}
                   </Badge>
                 </div>
               </div>
