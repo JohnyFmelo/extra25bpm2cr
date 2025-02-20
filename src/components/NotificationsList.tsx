@@ -180,7 +180,7 @@ const NotificationsList = () => {
                     <p className={cn("text-sm text-gray-600 whitespace-pre-wrap", isExpanded ? "text-justify" : "line-clamp-1")}>
                       {notification.text}
                     </p>
-                    <p className="text-sm text-teal-500">
+                    <p className="text-sm text-slate-900">
                       {formatDate(notification.timestamp)}
                     </p>
                   </div>
