@@ -173,7 +173,7 @@ const NotificationsList = () => {
               <div className="space-y-2">
                 <div className="flex justify-between items-start">
                   <div className="space-y-1 flex-1">
-                    <p className="font-medium">
+                    <p className="font-medium text-slate-900">
                       {notification.graduation} {notification.senderName}
                       {notification.isAdmin ? " - Usuário" : " - Administrador"}
                     </p>
