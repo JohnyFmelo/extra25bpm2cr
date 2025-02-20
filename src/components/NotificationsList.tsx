@@ -185,12 +185,7 @@ const NotificationsList = () => {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    {isAdmin && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => {
-                e.stopPropagation();
-                handleViewers(notification.readBy);
-              }}>
-                        <Eye className="h-5 w-5" />
-                      </Button>}
+                    {isAdmin}
                     {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                   </div>
                 </div>
