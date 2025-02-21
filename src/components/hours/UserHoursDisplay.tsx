@@ -29,8 +29,6 @@ export const UserHoursDisplay = ({
           </p>}
       </div>
 
-      <Button variant="destructive" className="w-full mt-4" onClick={onClose}>
-        Fechar
-      </Button>
+      <Button variant="destructive" className="w-full mt-4" onClick={onClose}>Fecharr</Button>
     </div>;
 };
