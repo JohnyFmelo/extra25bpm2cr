@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { HoursData } from "@/types/hours";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import { Doughnut } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js"; // Importação correta
+import { Doughnut } from "react-chartjs-2"; // Importação correta
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -20,16 +20,16 @@ export const UserHoursDisplay = ({ data, onClose }: UserHoursDisplayProps) => {
     datasets: [
       {
         data: [
-          Math.min(data["Total 25° BPM"] || 0, 50), // Hours for 25° BPM
-          Math.min(data.Sonora || 0, 50), // Hours for Sonora
-          Math.min(data.Sinfra || 0, 50), // Hours for Sinfra
-          Math.max(50 - totalGeneral, 0), // Remaining hours to reach 50
+          Math.min(data["Total 25° BPM"] || 0, 50),
+          Math.min(data.Sonora || 0, 50),
+          Math.min(data.Sinfra || 0, 50),
+          Math.max(50 - totalGeneral, 0),
         ],
         backgroundColor: [
-          "rgba(75, 192, 192, 0.6)", // 25° BPM
-          "rgba(255, 159, 64, 0.6)", // Sonora
-          "rgba(153, 102, 255, 0.6)", // Sinfra
-          "rgba(200, 200, 200, 0.6)", // Remaining
+          "rgba(75, 192, 192, 0.6)",
+          "rgba(255, 159, 64, 0.6)",
+          "rgba(153, 102, 255, 0.6)",
+          "rgba(200, 200, 200, 0.6)",
         ],
         borderColor: [
           "rgba(75, 192, 192, 1)",
