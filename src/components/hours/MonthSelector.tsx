@@ -9,7 +9,7 @@ interface MonthSelectorProps {
 const months = [
   { value: "janeiro", label: "Janeiro" },
   { value: "fevereiro", label: "Fevereiro" },
-  { value: "MARCO", label: "Março" },
+  { value: "marco", label: "Março" },
   { value: "abril", label: "Abril" },
   { value: "maio", label: "Maio" },
   { value: "junho", label: "Junho" },
