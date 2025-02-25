@@ -9,12 +9,33 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const getTableName = (month) => {
     const monthLowerCase = month.toLowerCase();
-    if (monthLowerCase === 'janeiro') {
-        return 'JANEIRO';
-    } else if (monthLowerCase === 'fevereiro') {
-        return 'FEVEREIRO';
-    } else {
-        return null;
+    switch (monthLowerCase) {
+        case 'janeiro':
+            return 'JANEIRO';
+        case 'fevereiro':
+            return 'FEVEREIRO';
+        case 'março':
+            return 'MARCO';
+        case 'abril':
+            return 'ABRIL';
+        case 'maio':
+            return 'MAIO';
+        case 'junho':
+            return 'JUNHO';
+        case 'julho':
+            return 'JULHO';
+        case 'agosto':
+            return 'AGOSTO';
+        case 'setembro':
+            return 'SETEMBRO';
+        case 'outubro':
+            return 'OUTUBRO';
+        case 'novembro':
+            return 'NOVEMBRO';
+        case 'dezembro':
+            return 'DEZEMBRO';
+        default:
+            return null;
     }
 };
 
