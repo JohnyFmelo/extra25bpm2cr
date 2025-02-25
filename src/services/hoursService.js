@@ -14,7 +14,7 @@ const getTableName = (month) => {
             return 'JANEIRO';
         case 'fevereiro':
             return 'FEVEREIRO';
-        case 'março':
+        case 'marco':
             return 'MARCO';
         case 'abril':
             return 'ABRIL';
