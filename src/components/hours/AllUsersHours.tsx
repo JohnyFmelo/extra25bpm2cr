@@ -37,8 +37,8 @@ export const AllUsersHours = ({ users, searchTerm, onSearchChange }: AllUsersHou
                 <p className="font-medium">{user["Horas 25° BPM"]}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Sonora</p>
-                <p className="font-medium">{user.Sonora}</p>
+                <p className="text-sm text-gray-600">Saiop</p>
+                <p className="font-medium">{user.Saiop}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Sinfra</p>
