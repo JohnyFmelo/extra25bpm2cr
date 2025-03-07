@@ -15,8 +15,8 @@ export const UserHoursDisplay = ({
       <div>
         <h3 className="font-bold mb-2">Dias trabalhados:</h3>
         {data["Horas 25° BPM"] && <p>25° BPM: {data["Horas 25° BPM"]}</p>}
-        {data.Saiop && <p>Saiop: {data.Saiop}</p>}
-        {data.Sinfra && <p>Sinfra: {data.Sinfra}</p>}
+        {data.Saiop && <p>SAIOP: {data.Saiop}</p>}
+        {data.Sinfra && <p>SINFRA: {data.Sinfra}</p>}
       </div>
 
       <Separator />
