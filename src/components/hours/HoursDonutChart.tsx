@@ -16,10 +16,8 @@ export const HoursDonutChart = ({
 
   // Determine color based on hour thresholds
   const getColor = (hours: number) => {
-    if (hours < 13) return '#F97316'; // Orange
-    if (hours < 25) return '#FEF08A'; // Yellow
-    if (hours < 31) return '#1B98E0'; // Blue
-    if (hours < 39) return '#86EFAC'; // Light Green
+    if (hours < 29) return '#F97316'; // Orange
+    if (hours < 40) return '#1B98E0'; // Blue
     return '#22C55E'; // Green
   };
   const chartColor = getColor(hours);
