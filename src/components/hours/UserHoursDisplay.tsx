@@ -2,18 +2,15 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { HoursData } from "@/types/hours";
-
 interface UserHoursDisplayProps {
   data: HoursData;
   onClose: () => void;
 }
-
 export const UserHoursDisplay = ({
   data,
   onClose
 }: UserHoursDisplayProps) => {
-  return (
-    <div className="mt-6 space-y-4 my-0">
+  return <div className="mt-6 space-y-4 my-0">
       <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
       
       <div>
@@ -21,7 +18,6 @@ export const UserHoursDisplay = ({
         {data["Horas 25° BPM"] && <p>25° BPM: {data["Horas 25° BPM"]}</p>}
         {data.Saiop && <p>SAIOP: {data.Saiop}</p>}
         {data.Sinfra && <p>SINFRA: {data.Sinfra}</p>}
-        {data.Sonora && <p>SONORA: {data.Sonora}</p>}
       </div>
 
       <Separator />
@@ -37,8 +33,5 @@ export const UserHoursDisplay = ({
       <Button variant="destructive" className="w-full mt-4" onClick={onClose}>
         Fechar
       </Button>
-    </div>
-  );
+    </div>;
 };
-
-export default UserHoursDisplay;
