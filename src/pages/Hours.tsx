@@ -8,7 +8,7 @@ import { UserSelector } from "@/components/hours/UserSelector";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Importe os componentes Tabs
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
@@ -145,7 +145,11 @@ const Hours = () => {
           setAllUsersData([]);
           return;
         }
-        const sortedResults = [...allUsersResults].sort((a, b) => (b["Total Geral"] || 0) - (a["Total Geral"] || 0));
+        const sortedResults = [...allUsersResults].sort((a, b) => {
+          const totalA = a["Total Geral"] ? parseFloat(a["Total Geral"].toString().replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
+          const totalB = b["Total Geral"] ? parseFloat(b["Total Geral"].toString().replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
+          return totalB - totalA;
+        });
         setAllUsersData(sortedResults);
         setGeneralData(null);
       } else {
@@ -187,8 +191,13 @@ const Hours = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="individual" value={activeConsult} onValueChange={setActiveConsult} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-white/50 rounded-xl mb-6"> {/* Ajuste o mb-6 para dar espaço abaixo das abas */}
+      <Tabs 
+        defaultValue="individual" 
+        value={activeConsult} 
+        onValueChange={(value) => setActiveConsult(value as 'individual' | 'general')} 
+        className="w-full"
+      >
+        <TabsList className="grid w-full grid-cols-2 bg-white/50 rounded-xl mb-6">
           <TabsTrigger
             value="individual"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300"
@@ -256,7 +265,7 @@ const Hours = () => {
                 {selectedUser === 'all' && allUsersData.map((userData, index) => (
                   <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-amber-50">
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                      {users.find(user => user.registration === userData.matricula)?.label}
+                      {users.find(user => user.registration === userData.Matricula)?.label}
                     </h3>
                     <UserHoursDisplay
                       data={userData}

@@ -1,17 +1,28 @@
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { HoursDonutChart } from "@/components/hours/HoursDonutChart";
 import { HoursData } from "@/types/hours";
+
 interface UserHoursDisplayProps {
   data: HoursData;
   onClose: () => void;
 }
+
 export const UserHoursDisplay = ({
   data,
   onClose
 }: UserHoursDisplayProps) => {
+  // Convert Total Geral to a number for the chart
+  const totalHours = data["Total Geral"] 
+    ? parseFloat(data["Total Geral"].replace(/[^0-9,.]/g, '').replace(',', '.')) 
+    : 0;
+
   return <div className="mt-6 space-y-4 my-0">
       <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
+      
+      {/* Add the HoursDonutChart here */}
+      <HoursDonutChart totalHours={totalHours} />
       
       <div>
         <h3 className="font-bold mb-2">Dias trabalhados:</h3>
