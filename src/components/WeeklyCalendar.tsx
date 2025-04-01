@@ -1,4 +1,3 @@
-//EDITOR
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, Trash } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO, addDays } from "date-fns";
@@ -11,6 +10,7 @@ import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
 interface WeeklyCalendarProps {
   className?: string;
   currentDate?: Date;
@@ -19,6 +19,7 @@ interface WeeklyCalendarProps {
   isLocked?: boolean;
   onLockChange?: (locked: boolean) => void;
 }
+
 const WeeklyCalendar = ({
   className,
   currentDate: externalCurrentDate,
@@ -38,6 +39,7 @@ const WeeklyCalendar = ({
     toast
   } = useToast();
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+
   const currentDateValue = externalCurrentDate !== undefined ? externalCurrentDate : internalCurrentDate;
   const weekDays = ["Ter", "Qua", "Qui", "Sex", "Sáb", "Dom", "Seg"];
   const fullWeekDays = [" Ter ", " Qua ", " Qui ", " Sex ", " Sáb ", "Dom", " Seg "];
@@ -45,13 +47,16 @@ const WeeklyCalendar = ({
     locale: ptBR
   });
   const isMobile = useIsMobile();
+
   const hasTimeSlotsForDate = (date: Date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     return timeSlots.some(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
   };
+
   useEffect(() => {
     fetchTimeSlots();
   }, []);
+
   const fetchTimeSlots = async () => {
     try {
       setIsLoading(true);
@@ -66,7 +71,8 @@ const WeeklyCalendar = ({
         startTime: slot.start_time ? slot.start_time.slice(0, 5) : "00:00",
         endTime: slot.end_time ? slot.end_time.slice(0, 5) : "00:00",
         slots: slot.total_slots || slot.slots || 0,
-        slotsUsed: slot.slots_used || 0
+        slotsUsed: slot.slots_used || 0,
+        description: slot.description || ""
       }));
       setTimeSlots(formattedSlots);
     } catch (error) {
@@ -80,6 +86,7 @@ const WeeklyCalendar = ({
       setIsLoading(false);
     }
   };
+
   const handleClearData = async () => {
     try {
       const result = await dataOperations.clear();
@@ -101,13 +108,14 @@ const WeeklyCalendar = ({
       });
     }
   };
+
   const formatTimeForDB = (time: string) => {
     return time.includes(":") ? `${time}:00` : `${time}:00:00`;
   };
+
   const handleTimeSlotAdd = async (timeSlot: TimeSlot) => {
     try {
       if (timeSlot.isWeekly) {
-        // Lógica para horários semanais
         const startDate = timeSlot.date;
         const promises = [];
         for (let i = 0; i < 7; i++) {
@@ -118,7 +126,8 @@ const WeeklyCalendar = ({
             start_time: formatTimeForDB(timeSlot.startTime),
             end_time: formatTimeForDB(timeSlot.endTime),
             total_slots: timeSlot.slots,
-            slots_used: 0
+            slots_used: 0,
+            description: timeSlot.description || ""
           }));
         }
         const results = await Promise.all(promises);
@@ -132,7 +141,6 @@ const WeeklyCalendar = ({
           description: "Horários semanais adicionados com sucesso!"
         });
       } else {
-        // Lógica para horário diário
         const formattedDate = format(timeSlot.date, 'yyyy-MM-dd');
         const existingSlots = timeSlots.filter(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
         const result = await dataOperations.insert({
@@ -140,7 +148,8 @@ const WeeklyCalendar = ({
           start_time: formatTimeForDB(timeSlot.startTime),
           end_time: formatTimeForDB(timeSlot.endTime),
           total_slots: timeSlot.slots,
-          slots_used: 0
+          slots_used: 0,
+          description: timeSlot.description || ""
         });
         if (!result.success) {
           throw new Error('Failed to insert time slot');
@@ -160,6 +169,7 @@ const WeeklyCalendar = ({
       });
     }
   };
+
   const handleTimeSlotEdit = async (updatedTimeSlot: TimeSlot) => {
     if (!editingTimeSlot) return;
     try {
@@ -168,7 +178,8 @@ const WeeklyCalendar = ({
         start_time: formatTimeForDB(updatedTimeSlot.startTime),
         end_time: formatTimeForDB(updatedTimeSlot.endTime),
         total_slots: updatedTimeSlot.slots,
-        slots_used: updatedTimeSlot.slotsUsed
+        slots_used: updatedTimeSlot.slotsUsed,
+        description: updatedTimeSlot.description || ""
       }, {
         date: format(editingTimeSlot.date, 'yyyy-MM-dd'),
         start_time: formatTimeForDB(editingTimeSlot.startTime),
@@ -193,6 +204,7 @@ const WeeklyCalendar = ({
       });
     }
   };
+
   const handleDeleteTimeSlot = async (timeSlot: TimeSlot) => {
     try {
       console.log('Deleting time slot:', timeSlot);
@@ -218,10 +230,12 @@ const WeeklyCalendar = ({
       });
     }
   };
+
   const handleClearAllTimeSlots = async () => {
     await handleClearData();
     setShowDeleteAlert(false);
   };
+
   const handlePreviousWeek = () => {
     const newDate = subWeeks(currentDateValue, 1);
     if (onDateChange) {
@@ -231,6 +245,7 @@ const WeeklyCalendar = ({
     }
     setShowAllWeekSlots(false);
   };
+
   const handleNextWeek = () => {
     const newDate = addWeeks(currentDateValue, 1);
     if (onDateChange) {
@@ -240,32 +255,38 @@ const WeeklyCalendar = ({
     }
     setShowAllWeekSlots(false);
   };
+
   const handleDayClick = (date: Date) => {
     console.log('Dia selecionado:', date);
     setSelectedDate(date);
     setShowAllWeekSlots(false);
   };
+
   const handlePlusClick = () => {
     if (selectedDate) {
       setEditingTimeSlot(null);
       setIsDialogOpen(true);
     }
   };
+
   const handleEyeClick = () => {
     setShowAllWeekSlots(prev => !prev);
     setSelectedDate(null);
   };
+
   const handleEditClick = (timeSlot: TimeSlot) => {
     setEditingTimeSlot(timeSlot);
     setIsDialogOpen(true);
   };
+
   const getTimeSlotsForDate = (date: Date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     return timeSlots.filter(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
   };
+
   const getCurrentWeekTimeSlots = () => {
     const startDate = new Date(currentDateValue);
-    startDate.setDate(currentDateValue.getDate() - currentDateValue.getDay() + 2); // Adjust to start from Tuesday
+    startDate.setDate(currentDateValue.getDate() - currentDateValue.getDay() + 2);
 
     const weekSlots = [];
     for (let i = 0; i < 7; i++) {
@@ -281,11 +302,12 @@ const WeeklyCalendar = ({
     }
     return weekSlots;
   };
+
   const getDaysOfWeek = () => {
     const days = [];
     const startDate = new Date(currentDateValue);
     const currentDay = startDate.getDay();
-    const daysToSubtract = (currentDay + 5) % 7; // Calculate days to subtract to reach Tuesday
+    const daysToSubtract = (currentDay + 5) % 7;
     startDate.setDate(currentDateValue.getDate() - daysToSubtract);
     for (let i = 0; i < 7; i++) {
       const currentDateInWeek = new Date(startDate);
@@ -300,6 +322,7 @@ const WeeklyCalendar = ({
     }
     return days;
   };
+
   return <div className={cn("bg-white rounded-xl shadow-sm p-4 md:p-6", className)}>
       <div className="flex justify-between items-center mb-4 md:mb-6">
         <h2 className="text-lg md:text-xl font-semibold">{currentMonth}</h2>
@@ -396,10 +419,18 @@ const WeeklyCalendar = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {selectedDate && <TimeSlotDialog open={isDialogOpen} onOpenChange={open => {
-      setIsDialogOpen(open);
-      setEditingTimeSlot(null);
-    }} selectedDate={selectedDate} onAddTimeSlot={handleTimeSlotAdd} onEditTimeSlot={handleTimeSlotEdit} editingTimeSlot={editingTimeSlot} />}
+      {selectedDate && <TimeSlotDialog 
+        open={isDialogOpen} 
+        onOpenChange={open => {
+          setIsDialogOpen(open);
+          setEditingTimeSlot(null);
+        }} 
+        selectedDate={selectedDate} 
+        onAddTimeSlot={handleTimeSlotAdd} 
+        onEditTimeSlot={handleTimeSlotEdit} 
+        editingTimeSlot={editingTimeSlot} 
+      />}
     </div>;
 };
+
 export default WeeklyCalendar;

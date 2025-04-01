@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
 
-// Definição da interface TimeSlot
 interface TimeSlot {
   id?: string;
   date: string;
@@ -22,17 +21,16 @@ interface TimeSlot {
   total_slots: number;
   slots_used: number;
   volunteers?: string[];
+  description?: string;
 }
 
-// Definição da interface GroupedTimeSlots, agora incluindo dailyCost
 interface GroupedTimeSlots {
   [key: string]: {
     slots: TimeSlot[];
-    dailyCost: number; // Adicionado dailyCost para cada data
+    dailyCost: number;
   };
 }
 
-// Componente TimeSlotLimitControl
 const TimeSlotLimitControl = ({
   slotLimit,
   onUpdateLimit,
@@ -108,7 +106,6 @@ const TimeSlotLimitControl = ({
     </div>;
 };
 
-// Função getMilitaryRankWeight (mantido como antes)
 const getMilitaryRankWeight = (rank: string): number => {
   const rankWeights: {
     [key: string]: number;
@@ -142,7 +139,6 @@ const getMilitaryRankWeight = (rank: string): number => {
   return rankWeights[rank] || 0;
 };
 
-// Função getRankCategory para determinar a categoria da patente e o valor por hora
 const getRankCategory = (rank: string): {
   category: string;
   hourlyRate: number;
@@ -165,28 +161,24 @@ const getRankCategory = (rank: string): {
   return {
     category: "Outros",
     hourlyRate: 0
-  }; // Categoria padrão e valor 0 para outras patentes
+  };
 };
 
-// Nova função para extrair a patente corretamente
 const getVolunteerRank = (volunteerFullName: string): string => {
   const parts = volunteerFullName.split(" ");
   if (parts.length >= 2 && (parts[1] === "Sgt" || parts[1] === "Ten")) {
-    return `${parts[0]} ${parts[1]} ${parts[2] || ''}`.trim(); // Para patentes como "1° Sgt PM" ou "Sub Ten"
+    return `${parts[0]} ${parts[1]} ${parts[2] || ''}`.trim();
   }
-  return parts[0]; // Para outras patentes (ex: "Cel", "Cb", "Sd")
+  return parts[0];
 };
 
-// Function to format currency to "R$ 10.390,32" format
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(value).replace("R$", "R$ "); // Mantém apenas o replace para adicionar espaço após "R$"
+  }).format(value).replace("R$", "R$ ");
 };
 
-
-// Componente TimeSlotsList
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -210,10 +202,10 @@ const TimeSlotsList = () => {
       diffHours -= 1;
       diffMinutes += 60;
     }
-    const totalHours = diffHours + diffMinutes / 60; // Total de horas, incluindo frações
-
-    return `${totalHours}`; // Retorna o total de horas como string para cálculo de custo
+    const totalHours = diffHours + diffMinutes / 60;
+    return `${totalHours}`;
   };
+
   useEffect(() => {
     const fetchSlotLimit = async () => {
       try {
@@ -239,7 +231,8 @@ const TimeSlotsList = () => {
           end_time: data.end_time,
           volunteers: data.volunteers || [],
           slots_used: data.slots_used || 0,
-          total_slots: data.total_slots || data.slots || 0
+          total_slots: data.total_slots || data.slots || 0,
+          description: data.description || ""
         };
       });
       setTimeSlots(formattedSlots);
@@ -255,6 +248,7 @@ const TimeSlotsList = () => {
     });
     return () => unsubscribe();
   }, [toast]);
+
   const handleVolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
       toast({
@@ -310,6 +304,7 @@ const TimeSlotsList = () => {
       });
     }
   };
+
   const handleUnvolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
       toast({
@@ -346,6 +341,7 @@ const TimeSlotsList = () => {
       });
     }
   };
+
   const handleUpdateSlotLimit = async (limit: number) => {
     if (isNaN(limit) || limit < 0) {
       toast({
@@ -374,7 +370,6 @@ const TimeSlotsList = () => {
     }
   };
 
-  // Modificado groupTimeSlotsByDate para calcular dailyCost
   const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
     return slots.reduce((groups: GroupedTimeSlots, slot) => {
       const date = slot.date;
@@ -382,23 +377,27 @@ const TimeSlotsList = () => {
         groups[date] = {
           slots: [],
           dailyCost: 0
-        }; // Inicializa com slots e dailyCost
+        };
       }
       groups[date].slots.push(slot);
       return groups;
     }, {});
   };
+
   const isVolunteered = (timeSlot: TimeSlot) => {
     return timeSlot.volunteers?.includes(volunteerName);
   };
+
   const isSlotFull = (timeSlot: TimeSlot) => {
     return timeSlot.slots_used === timeSlot.total_slots;
   };
+
   const formatDateHeader = (date: string) => {
-    const dayOfWeek = format(parseISO(date), "eee", { locale: ptBR }); // "eee" gives abbreviated day name
-    const truncatedDay = dayOfWeek.substring(0, 3); // Truncate to first 3 letters
-    return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}-${format(parseISO(date), "dd/MM/yy")}`; // Capitalize first letter, add hyphen, and format date
+    const dayOfWeek = format(parseISO(date), "eee", { locale: ptBR });
+    const truncatedDay = dayOfWeek.substring(0, 3);
+    return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}-${format(parseISO(date), "dd/MM/yy")}`;
   };
+
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
     const userDataString = localStorage.getItem('user');
     const userData = userDataString ? JSON.parse(userDataString) : null;
@@ -419,11 +418,13 @@ const TimeSlotsList = () => {
     const isVolunteeredForDate = slotsForDate.some(s => s.volunteers?.includes(volunteerName));
     return !isVolunteeredForDate;
   };
+
   const canVolunteerForSlot = (slot: TimeSlot) => {
     if (isAdmin) return true;
     const userSlotCount = timeSlots.reduce((count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
     return userSlotCount < slotLimit;
   };
+
   const sortVolunteers = (volunteers: string[]) => {
     if (!volunteers) return [];
     return volunteers.sort((a, b) => {
@@ -433,7 +434,6 @@ const TimeSlotsList = () => {
     });
   };
 
-  // Calcula groupedTimeSlots e dailyCost dentro do useEffect para usar timeSlots atualizado
   const [calculatedGroupedTimeSlots, setCalculatedGroupedTimeSlots] = useState<GroupedTimeSlots>({});
   useEffect(() => {
     const grouped = groupTimeSlotsByDate(timeSlots);
@@ -447,7 +447,6 @@ const TimeSlotsList = () => {
       let dailyCost = 0;
       grouped[date].slots.forEach(slot => {
         slot.volunteers?.forEach(volunteerFullName => {
-          // Usar a função getVolunteerRank para extrair a patente corretamente
           const volunteerRank = getVolunteerRank(volunteerFullName);
           const rankInfo = getRankCategory(volunteerRank);
           const hours = parseFloat(calculateTimeDifference(slot.start_time, slot.end_time));
@@ -457,16 +456,18 @@ const TimeSlotsList = () => {
           totalCostCounter["Total Geral"] = (totalCostCounter["Total Geral"] || 0) + slotCost;
         });
       });
-      grouped[date].dailyCost = dailyCost; // Adiciona dailyCost ao grupo de datas
+      grouped[date].dailyCost = dailyCost;
     });
     setCalculatedGroupedTimeSlots(grouped);
-    setTotalCostSummary(totalCostCounter); // Atualiza o resumo total de custos
+    setTotalCostSummary(totalCostCounter);
   }, [timeSlots]);
+
   const userSlotCount = timeSlots.reduce((count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
   const [volunteerToRemove, setVolunteerToRemove] = useState<{
     name: string;
     timeSlot: TimeSlot;
   } | null>(null);
+
   const handleRemoveVolunteer = async (timeSlot: TimeSlot, volunteerName: string) => {
     try {
       const updatedSlot = {
@@ -495,6 +496,7 @@ const TimeSlotsList = () => {
       });
     }
   };
+
   const [totalCostSummary, setTotalCostSummary] = useState<{
     "Cb/Sd": number;
     "St/Sgt": number;
@@ -507,18 +509,18 @@ const TimeSlotsList = () => {
     "Total Geral": 0
   });
 
-  // Calculate weekly cost and date range
   const today = new Date();
   const tomorrow = addDays(today, 1);
   let weeklyCost = 0;
-  let weeklyCostDates: string[] = []; // Array to store dates for weekly cost
+  let weeklyCostDates: string[] = [];
+
   if (calculatedGroupedTimeSlots) {
     Object.entries(calculatedGroupedTimeSlots)
       .filter(([date]) => {
         const slotDate = parseISO(date);
         const isWeeklyDate = isAfter(slotDate, tomorrow) || format(slotDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
         if (isWeeklyDate) {
-          weeklyCostDates.push(date); // Add date to weeklyDates array
+          weeklyCostDates.push(date);
         }
         return isWeeklyDate;
       })
@@ -527,7 +529,6 @@ const TimeSlotsList = () => {
       });
   }
 
-  // Format weekly cost date range
   const formatWeeklyDateRange = () => {
     if (weeklyCostDates.length === 0) return "";
     const sortedDates = weeklyCostDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
@@ -535,18 +536,18 @@ const TimeSlotsList = () => {
     const endDate = format(parseISO(sortedDates[sortedDates.length - 1]), "eee", { locale: ptBR }).substring(0, 3).toUpperCase();
     return `${startDate}-${endDate}`;
   };
-  const weeklyDateRangeText = formatWeeklyDateRange();
 
+  const weeklyDateRangeText = formatWeeklyDateRange();
 
   if (isLoading) {
     return <div className="p-4">Carregando horários...</div>;
   }
+
   return <div className="space-y-6 p-4">
       <TimeSlotLimitControl slotLimit={slotLimit} onUpdateLimit={handleUpdateSlotLimit} userSlotCount={userSlotCount} isAdmin={isAdmin} />
 
       {isAdmin && totalCostSummary["Total Geral"] > 0 &&
-    // Renderiza o Resumo de Custos Totais abaixo do TimeSlotLimitControl
-    <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
+        <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
           <h2 className="font-semibold text-gray-900 mb-4">Resumo de Custos Totais</h2>
           <div className="space-y-2">
             <p><strong>Cb/Sd:</strong> {formatCurrency(totalCostSummary["Cb/Sd"])}</p>
@@ -555,22 +556,22 @@ const TimeSlotsList = () => {
             <p className="font-semibold text-green-500"><strong>Total Geral:</strong> {formatCurrency(totalCostSummary["Total Geral"])}</p>
             {weeklyCost > 0 && <p className="font-semibold text-blue-500"><strong>Custo da Semana ({weeklyDateRangeText}):</strong> {formatCurrency(weeklyCost)}</p>}
           </div>
-        </div>}
-
+        </div>
+      }
 
       {Object.entries(calculatedGroupedTimeSlots).sort().map(([date, groupedData]) => {
-      const {
-        slots,
-        dailyCost
-      } = groupedData;
-      const isDatePast = isPast(parseISO(date));
-      const isCollapsed = isDatePast;
-      const sortedSlots = [...slots].sort((a, b) => {
-        const timeA = a.start_time;
-        const timeB = b.start_time;
-        return timeA.localeCompare(timeB);
-      });
-      return <div key={date} className="bg-white rounded-lg shadow-sm">
+        const {
+          slots,
+          dailyCost
+        } = groupedData;
+        const isDatePast = isPast(parseISO(date));
+        const isCollapsed = isDatePast;
+        const sortedSlots = [...slots].sort((a, b) => {
+          const timeA = a.start_time;
+          const timeB = b.start_time;
+          return timeA.localeCompare(timeB);
+        });
+        return <div key={date} className="bg-white rounded-lg shadow-sm">
             <div className="p-4 md:p-5">
               <div className="flex flex-col items-center">
                 <div className="flex items-center justify-between w-full mb-2">
@@ -580,23 +581,25 @@ const TimeSlotsList = () => {
                       {formatDateHeader(date)}
                     </h3>
                     {isAdmin && dailyCost > 0 &&
-                // Renderiza o custo diário apenas se for maior que 0
-                <span className="text-green-600 font-semibold text-base">{formatCurrency(dailyCost)}</span>}
+                      <span className="text-green-600 font-semibold text-base">{formatCurrency(dailyCost)}</span>}
                   </div>
                   <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
-                    {isDatePast ? "Extra" : "Extra"} {/* Alterado para "Extra" */}
+                    {isDatePast ? "Extra" : "Extra"}
                   </Badge>
                 </div>
               </div>
 
               {!isCollapsed && <div className="space-y-3 mt-4">
-                  {sortedSlots.map(slot => <div key={slot.id} className={`border rounded-lg p-4 space-y-2 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                  {sortedSlots.map(slot => <div key={slot.id || index} className={`border rounded-lg p-4 space-y-2 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
                       <div className="flex justify-between items-start">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-blue-500" />
                             <p className="font-medium text-gray-900">
                               {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}-{calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)}h
+                              {slot.description && (
+                                <span className="ml-2 text-gray-700">| {slot.description}</span>
+                              )}
                             </p>
                           </div>
                           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${isSlotFull(slot) ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
@@ -629,8 +632,7 @@ const TimeSlotsList = () => {
                 </div>}
             </div>
           </div>;
-    })}
-
+      })}
 
       <AlertDialog open={!!volunteerToRemove} onOpenChange={() => setVolunteerToRemove(null)}>
         <AlertDialogContent>
@@ -655,4 +657,5 @@ const TimeSlotsList = () => {
       </AlertDialog>
     </div>;
 };
+
 export default TimeSlotsList;

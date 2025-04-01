@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
 import { Switch } from "./ui/switch";
 import { cn } from "@/lib/utils";
 import { TimeSlot } from "@/types/timeSlot";
@@ -30,11 +32,13 @@ const TimeSlotDialog = ({
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     if (editingTimeSlot) {
       setTimeSlot(`${editingTimeSlot.startTime} às ${editingTimeSlot.endTime}`);
       setSelectedSlots(editingTimeSlot.slots);
+      setDescription(editingTimeSlot.description || "");
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
@@ -44,6 +48,7 @@ const TimeSlotDialog = ({
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
+      setDescription("");
     }
   }, [editingTimeSlot]);
 
@@ -59,7 +64,8 @@ const TimeSlotDialog = ({
       endTime,
       slots,
       slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
-      isWeekly: useWeeklyLogic
+      isWeekly: useWeeklyLogic,
+      description: description.trim()
     };
     
     if (editingTimeSlot) {
@@ -138,6 +144,14 @@ const TimeSlotDialog = ({
               />
             </div>
           )}
+          <div>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="min-h-[80px]"
+              placeholder="Descrição do horário (opcional)"
+            />
+          </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar

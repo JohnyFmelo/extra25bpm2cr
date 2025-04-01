@@ -1,3 +1,4 @@
+
 export interface TimeSlot {
   date: Date;
   startTime: string;
@@ -6,6 +7,7 @@ export interface TimeSlot {
   slotsUsed: number;
   id?: string;
   isWeekly?: boolean;
+  description?: string;
 }
 
 export interface FirebaseTimeSlot {
@@ -15,4 +17,5 @@ export interface FirebaseTimeSlot {
   total_slots: number;
   slots_used: number;
   id?: string;
+  description?: string;
 }
