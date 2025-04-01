@@ -9,3 +9,8 @@ export interface HoursData {
   Sonora?: string;
   Saiop?: string;
 }
+
+export interface UserOption {
+  label: string;
+  value: string;
+}
