@@ -590,7 +590,7 @@ const TimeSlotsList = () => {
               </div>
 
               {!isCollapsed && <div className="space-y-3 mt-4">
-                  {sortedSlots.map(slot => <div key={slot.id || index} className={`border rounded-lg p-4 space-y-2 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                  {sortedSlots.map((slot, idx) => <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-2 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
                       <div className="flex justify-between items-start">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">

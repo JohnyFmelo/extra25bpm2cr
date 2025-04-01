@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, Trash } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO, addDays } from "date-fns";
@@ -368,13 +369,15 @@ const WeeklyCalendar = ({
                   <div>
                     <div className="font-medium">
                       {slot.startTime} às {slot.endTime}
+                      {slot.description && (
+                        <span className="ml-2 text-gray-700">| {slot.description}</span>
+                      )}
                     </div>
                     <div className="text-sm text-gray-500">
                       {slot.slotsUsed}/{slot.slots} vagas
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteTimeSlot(slot)}>
                       <Trash className="h-4 w-4" />
                     </Button>
@@ -386,6 +389,9 @@ const WeeklyCalendar = ({
               <div>
                 <div className="font-medium">
                   {slot.startTime} às {slot.endTime}
+                  {slot.description && (
+                    <span className="ml-2 text-gray-700">| {slot.description}</span>
+                  )}
                 </div>
                 <div className="text-sm text-gray-500">
                   {slot.slotsUsed}/{slot.slots} vagas
