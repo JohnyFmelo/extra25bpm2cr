@@ -32,7 +32,7 @@ export const HoursDonutChart = ({
   }];
 
   // Get progress bar color based on the same thresholds
-  const progressBarColor = hours < 13 ? 'bg-orange-500' : hours < 25 ? 'bg-yellow-300' : hours < 31 ? 'bg-blue-500' : hours < 39 ? 'bg-green-300' : 'bg-green-500';
+  const progressBarColor = hours < 29 ? 'bg-orange-500' : hours < 40 ? 'bg-blue-500' : 'bg-green-500';
   return <div className="flex flex-col items-center mt-4 space-y-2">
       <div className="h-40 w-full relative">
         <ResponsiveContainer width="100%" height="100%">
