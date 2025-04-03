@@ -51,12 +51,12 @@ export const UserHoursDisplay = ({
       <h3 className="font-medium text-gray-700">Dias Trabalhados:</h3>
       <div className="space-y-4">
         {bpmDays.length > 0 && <div className="bg-slate-50 rounded-lg p-3 shadow-sm border border-slate-100">
-            <h3 className="font-semibold mb-2 text-gray-700 flex items-center justify-between mx-0 px-0">
+            <h3 className="font-semibold mb-2 flex items-center justify-between mx-0 px-0 text-gray-700">
               <span className="flex items-center mx-0">
                 <Calendar className="h-4 w-4 mr-2 text-primary" />
                 25° BPM
               </span>
-              <span className="text-primary font-medium text-left my-0 px-0 mx-0">{bpmTotalHours}h</span>
+              <span className="text-primary font-medium my-0 px-0 mx-0 text-left text-emerald-600">{bpmTotalHours}h</span>
             </h3>
             <div className="flex flex-wrap gap-2 py-0 px-[5px] my-0 mx-0">
               {bpmDays.map((day, index) => <Badge key={`bpm-${index}`} variant="outline" className="bg-white text-gray-800 border-gray-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
