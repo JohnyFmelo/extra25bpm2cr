@@ -39,6 +39,18 @@ export const UserHoursDisplay = ({
   const saiopDays = parseWorkDays(data["Saiop"]);
   const sinfraDays = parseWorkDays(data["Sinfra"]);
 
+  // Calculate total hours for each section
+  const calculateSectionHours = (days: string[]) => {
+    return days.reduce((total, day) => {
+      const hourMatch = day.match(/\/(\d+)h/);
+      return total + (hourMatch ? parseInt(hourMatch[1], 10) : 0);
+    }, 0);
+  };
+
+  const bpmTotalHours = calculateSectionHours(bpmDays);
+  const saiopTotalHours = calculateSectionHours(saiopDays);
+  const sinfraTotalHours = calculateSectionHours(sinfraDays);
+
   return (
     <div className="mt-6 space-y-4 my-0">
       <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
@@ -47,12 +59,16 @@ export const UserHoursDisplay = ({
       <HoursDonutChart totalHours={totalHours} />
       
       {/* Worked Days Section */}
+      <h3 className="font-medium text-gray-700">Dias Trabalhados:</h3>
       <div className="space-y-4">
         {bpmDays.length > 0 && (
           <div className="bg-slate-50 rounded-lg p-3 shadow-sm border border-slate-100">
-            <h3 className="font-semibold mb-2 text-gray-700 flex items-center">
-              <Calendar className="h-4 w-4 mr-2 text-primary" />
-              25° BPM
+            <h3 className="font-semibold mb-2 text-gray-700 flex items-center justify-between">
+              <span className="flex items-center">
+                <Calendar className="h-4 w-4 mr-2 text-primary" />
+                25° BPM
+              </span>
+              <span className="text-primary font-medium">{bpmTotalHours}h</span>
             </h3>
             <div className="flex flex-wrap gap-2">
               {bpmDays.map((day, index) => (
@@ -70,9 +86,12 @@ export const UserHoursDisplay = ({
         
         {saiopDays.length > 0 && (
           <div className="bg-blue-50 rounded-lg p-3 shadow-sm border border-blue-100">
-            <h3 className="font-semibold mb-2 text-blue-700 flex items-center">
-              <Calendar className="h-4 w-4 mr-2 text-blue-600" />
-              SAIOP
+            <h3 className="font-semibold mb-2 text-blue-700 flex items-center justify-between">
+              <span className="flex items-center">
+                <Calendar className="h-4 w-4 mr-2 text-blue-600" />
+                SAIOP
+              </span>
+              <span className="text-blue-600 font-medium">{saiopTotalHours}h</span>
             </h3>
             <div className="flex flex-wrap gap-2">
               {saiopDays.map((day, index) => (
@@ -90,9 +109,12 @@ export const UserHoursDisplay = ({
         
         {sinfraDays.length > 0 && (
           <div className="bg-green-50 rounded-lg p-3 shadow-sm border border-green-100">
-            <h3 className="font-semibold mb-2 text-green-700 flex items-center">
-              <Calendar className="h-4 w-4 mr-2 text-green-600" />
-              SINFRA
+            <h3 className="font-semibold mb-2 text-green-700 flex items-center justify-between">
+              <span className="flex items-center">
+                <Calendar className="h-4 w-4 mr-2 text-green-600" />
+                SINFRA
+              </span>
+              <span className="text-green-600 font-medium">{sinfraTotalHours}h</span>
             </h3>
             <div className="flex flex-wrap gap-2">
               {sinfraDays.map((day, index) => (
