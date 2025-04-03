@@ -75,12 +75,10 @@ export const UserHoursDisplay = ({
         <div className="flex flex-wrap gap-2">
           {workingDays.size > 0 ? (
             Array.from(workingDays.entries()).map(([day, hours]) => (
-              <div 
-                key={day} 
-                className="inline-flex items-center justify-center px-2.5 py-1.5 rounded-md bg-gray-100 border border-gray-200 text-gray-800 min-w-[60px] text-center"
-              >
-                <span className="font-semibold">{day}/{hours}</span>
-              </div>
+              <Badge key={day} variant="outline" className="bg-primary/10 border-primary/30 text-primary hover:bg-primary/20">
+                <span className="font-bold mr-1">{day}:</span>
+                {hours}
+              </Badge>
             ))
           ) : (
             // Fallback for when we can't parse the days properly
