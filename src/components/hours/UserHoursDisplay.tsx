@@ -65,7 +65,7 @@ export const UserHoursDisplay = ({
             </div>
           </div>}
         
-        {saiopDays.length > 0 && <div className="bg-blue-50 rounded-lg p-3 shadow-sm border border-blue-100">
+        {saiopDays.length > 0 && <div className="rounded-lg p-3 shadow-sm border border-blue-100 bg-slate-50">
             <h3 className="font-semibold mb-2 text-blue-700 flex items-center justify-between">
               <span className="flex items-center">
                 <Calendar className="h-4 w-4 mr-2 text-blue-600" />
