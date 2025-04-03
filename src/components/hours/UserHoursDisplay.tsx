@@ -48,7 +48,7 @@ export const UserHoursDisplay = ({
       <HoursDonutChart totalHours={totalHours} />
       
       {/* Worked Days Section */}
-      <h3 className="font-medium text-gray-700">Dias Trabalhados:</h3>
+      <h3 className="font-medium text-gray-700">Dias Trabalhados</h3>
       <div className="space-y-4">
         {bpmDays.length > 0 && <div className="bg-slate-50 rounded-lg p-3 shadow-sm border border-slate-100">
             <h3 className="font-semibold mb-2 flex items-center justify-between mx-0 px-0 text-gray-700">
