@@ -119,8 +119,8 @@ export const UserHoursDisplay = ({
           <AlertTriangle className="h-4 w-4 text-yellow-600" />
           <AlertTitle className="text-amber-800">Atenção</AlertTitle>
           <AlertDescription className="text-amber-700">
-            Existe uma diferença entre o total de horas ({totalHours}h) e a soma dos dias trabalhados ({sumOfSectionHours}h).
-            Procure a administração pois há um erro no cálculo das horas.
+            Existe uma discrepância entre o total de horas ({totalHours}h) e a soma dos dias trabalhados ({sumOfSectionHours}h).
+            Procure a administração.
           </AlertDescription>
         </Alert>
       )}
