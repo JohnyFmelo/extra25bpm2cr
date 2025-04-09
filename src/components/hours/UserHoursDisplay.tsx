@@ -72,17 +72,17 @@ export const UserHoursDisplay = ({
   const totalToReceive = totalHours * hourlyRate;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 mt-6">
       <h2 className="text-center font-bold text-xl text-gray-800 mb-4">{data.Nome}</h2>
       
       {/* Hours Donut Chart */}
       <HoursDonutChart totalHours={totalHours} />
       
       {/* Financial Summary */}
-      <Card className="bg-slate-50 border border-slate-100">
-        <CardContent className="p-4">
-          <h3 className="font-semibold text-gray-700 mb-2">Resumo Financeiro</h3>
-          <div className="space-y-2">
+      <Card className="bg-white border border-gray-100 shadow-sm">
+        <CardContent className="p-5">
+          <h3 className="font-semibold text-gray-800 mb-3">Resumo Financeiro</h3>
+          <div className="space-y-2.5">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Total de Horas:</span>
               <span className="font-medium">{totalHours}h</span>
@@ -91,10 +91,10 @@ export const UserHoursDisplay = ({
               <span className="text-gray-600">Valor por Hora:</span>
               <span className="font-medium">R$ {hourlyRate.toFixed(2)}</span>
             </div>
-            <Separator className="my-2" />
-            <div className="flex justify-between items-center font-bold">
+            <Separator className="my-3" />
+            <div className="flex justify-between items-center font-bold text-lg">
               <span>Total a Receber:</span>
-              <span className="text-primary">R$ {totalToReceive.toFixed(2)}</span>
+              <span className="text-green-600">R$ {totalToReceive.toFixed(2)}</span>
             </div>
           </div>
         </CardContent>
@@ -102,16 +102,16 @@ export const UserHoursDisplay = ({
       
       {/* Worked Days Section */}
       <div>
-        <h3 className="font-medium text-gray-700 mb-3">Dias Trabalhados</h3>
+        <h3 className="font-medium text-gray-800 mb-4">Dias Trabalhados</h3>
         <div className="space-y-4">
           {bpmDays.length > 0 && (
-            <div className="flex items-center gap-2 border-l-4 border-red-500 bg-white rounded-lg p-3 shadow-sm">
+            <div className="flex items-center gap-3 border-l-4 border-red-500 bg-white rounded-lg p-4 shadow-sm">
               <div className="flex-1">
-                <h4 className="font-semibold flex items-center text-gray-700">
+                <h4 className="font-semibold flex items-center text-gray-800">
                   <Calendar className="h-4 w-4 mr-2 text-red-500" />
                   25° BPM
                 </h4>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex flex-wrap gap-2 mt-2.5">
                   {bpmDays.map((day, index) => (
                     <Badge key={`bpm-${index}`} variant="outline" className="bg-white border-gray-200 py-1.5 px-3 rounded-md">
                       {formatDayHour(day)}
@@ -119,18 +119,18 @@ export const UserHoursDisplay = ({
                   ))}
                 </div>
               </div>
-              <div className="font-medium text-red-600">{bpmTotalHours}h</div>
+              <div className="font-medium text-red-600 text-lg">{bpmTotalHours}h</div>
             </div>
           )}
           
           {saiopDays.length > 0 && (
-            <div className="flex items-center gap-2 border-l-4 border-blue-500 bg-white rounded-lg p-3 shadow-sm">
+            <div className="flex items-center gap-3 border-l-4 border-blue-500 bg-white rounded-lg p-4 shadow-sm">
               <div className="flex-1">
-                <h4 className="font-semibold flex items-center text-gray-700">
+                <h4 className="font-semibold flex items-center text-gray-800">
                   <Calendar className="h-4 w-4 mr-2 text-blue-500" />
                   SAIOP
                 </h4>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex flex-wrap gap-2 mt-2.5">
                   {saiopDays.map((day, index) => (
                     <Badge key={`saiop-${index}`} variant="outline" className="bg-white border-gray-200 py-1.5 px-3 rounded-md">
                       {formatDayHour(day)}
@@ -138,18 +138,18 @@ export const UserHoursDisplay = ({
                   ))}
                 </div>
               </div>
-              <div className="font-medium text-blue-600">{saiopTotalHours}h</div>
+              <div className="font-medium text-blue-600 text-lg">{saiopTotalHours}h</div>
             </div>
           )}
           
           {sinfraDays.length > 0 && (
-            <div className="flex items-center gap-2 border-l-4 border-green-500 bg-white rounded-lg p-3 shadow-sm">
+            <div className="flex items-center gap-3 border-l-4 border-green-500 bg-white rounded-lg p-4 shadow-sm">
               <div className="flex-1">
-                <h4 className="font-semibold flex items-center text-gray-700">
+                <h4 className="font-semibold flex items-center text-gray-800">
                   <Calendar className="h-4 w-4 mr-2 text-green-500" />
                   SINFRA
                 </h4>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex flex-wrap gap-2 mt-2.5">
                   {sinfraDays.map((day, index) => (
                     <Badge key={`sinfra-${index}`} variant="outline" className="bg-white border-gray-200 py-1.5 px-3 rounded-md">
                       {formatDayHour(day)}
@@ -157,13 +157,13 @@ export const UserHoursDisplay = ({
                   ))}
                 </div>
               </div>
-              <div className="font-medium text-green-600">{sinfraTotalHours}h</div>
+              <div className="font-medium text-green-600 text-lg">{sinfraTotalHours}h</div>
             </div>
           )}
         </div>
       </div>
 
-      <Button variant="destructive" className="w-full mt-4" onClick={onClose}>
+      <Button variant="outline" className="w-full mt-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={onClose}>
         Fechar
       </Button>
     </div>

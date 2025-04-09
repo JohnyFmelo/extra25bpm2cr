@@ -26,24 +26,25 @@ export const HoursDonutChart = ({
   }, {
     name: 'Horas Restantes',
     value: remainingHours,
-    color: '#E0E0E0'
+    color: '#E5E7EB' // Lighter gray for better contrast
   }];
 
   return (
-    <div className="flex flex-col items-center mt-4 space-y-2">
-      <div className="h-40 w-full relative">
+    <div className="flex flex-col items-center mt-4 space-y-3">
+      <div className="h-44 w-full relative">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie 
               data={data} 
               cx="50%" 
               cy="50%" 
-              innerRadius={50} 
-              outerRadius={70} 
-              paddingAngle={0} 
+              innerRadius={58} 
+              outerRadius={80} 
+              paddingAngle={2} 
               dataKey="value" 
               startAngle={90} 
               endAngle={-270}
+              strokeWidth={0}
             >
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
@@ -52,7 +53,8 @@ export const HoursDonutChart = ({
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-          <div className="text-3xl font-bold">{hours}h</div>
+          <div className="text-4xl font-bold text-gray-800">{hours}h</div>
+          <div className="text-sm text-gray-500">de {maxHours}h</div>
         </div>
       </div>
 
@@ -61,10 +63,10 @@ export const HoursDonutChart = ({
           <span>0h</span>
           <span>{maxHours}h</span>
         </div>
-        <Progress value={percentage} className="h-2" indicatorClassName="bg-green-500" />
+        <Progress value={percentage} className="h-2.5" indicatorClassName="bg-green-500" />
         {percentage > 0 && percentage < 100 && (
           <div
-            className="absolute top-[8px] w-3 h-3 bg-blue-500 rounded-full transform -translate-x-1/2"
+            className="absolute top-[9px] w-3 h-3 bg-blue-500 rounded-full transform -translate-x-1/2"
             style={{ left: `${percentage}%` }}
           />
         )}
