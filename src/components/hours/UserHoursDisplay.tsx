@@ -1,10 +1,12 @@
+
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { HoursDonutChart } from "@/components/hours/HoursDonutChart";
 import { HoursData } from "@/types/hours";
-import { Calendar, DollarSign } from "lucide-react";
+import { Calendar, DollarSign, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -18,6 +20,7 @@ export const UserHoursDisplay = ({
 }: UserHoursDisplayProps) => {
   const [userRank, setUserRank] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [hasDiscrepancy, setHasDiscrepancy] = useState(false);
 
   // Convert Total Geral to a number for the chart
   const totalHours = data["Total Geral"] ? parseFloat(data["Total Geral"].replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
@@ -48,6 +51,16 @@ export const UserHoursDisplay = ({
   const bpmTotalHours = calculateSectionHours(bpmDays);
   const saiopTotalHours = calculateSectionHours(saiopDays);
   const sinfraTotalHours = calculateSectionHours(sinfraDays);
+
+  // Calculate the sum of all section hours
+  const sumOfSectionHours = bpmTotalHours + saiopTotalHours + sinfraTotalHours;
+
+  // Check for discrepancy between total hours and sum of section hours
+  useEffect(() => {
+    // Allow for small floating point differences (0.1 hours or less)
+    const hasHourDiscrepancy = Math.abs(totalHours - sumOfSectionHours) > 0.1;
+    setHasDiscrepancy(hasHourDiscrepancy);
+  }, [totalHours, sumOfSectionHours]);
 
   // Get user data from Firebase based on the matricula
   useEffect(() => {
@@ -99,6 +112,18 @@ export const UserHoursDisplay = ({
       
       {/* Hours Donut Chart */}
       <HoursDonutChart totalHours={totalHours} />
+      
+      {/* Discrepancy Warning */}
+      {hasDiscrepancy && (
+        <Alert variant="default" className="border-yellow-400 bg-[#FEF7CD] text-amber-800">
+          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+          <AlertTitle className="text-amber-800">Atenção</AlertTitle>
+          <AlertDescription className="text-amber-700">
+            Existe uma diferença entre o total de horas ({totalHours}h) e a soma dos dias trabalhados ({sumOfSectionHours}h).
+            Procure a administração pois há um erro no cálculo das horas.
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Worked Days Section */}
       <h3 className="font-medium text-gray-700">Dias Trabalhados</h3>
