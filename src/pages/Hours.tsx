@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
@@ -197,17 +199,17 @@ const Hours = () => {
         onValueChange={(value) => setActiveConsult(value as 'individual' | 'general')} 
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-2 bg-white/50 rounded-xl mb-6">
+        <TabsList className="grid w-full grid-cols-2 bg-white rounded-none mb-0">
           <TabsTrigger
             value="individual"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300"
+            className="data-[state=active]:bg-[#152b48] data-[state=active]:text-white rounded-none border-none py-3 text-lg"
           >
             Consulta Individual
           </TabsTrigger>
           {userData?.userType === 'admin' && (
             <TabsTrigger
               value="general"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300"
+              className="data-[state=active]:bg-[#152b48] data-[state=active]:text-white rounded-none border-none py-3 text-lg"
             >
               Consulta Geral
             </TabsTrigger>
@@ -215,44 +217,18 @@ const Hours = () => {
         </TabsList>
 
         <TabsContent value="individual">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
-            <div className="space-y-4">
-              <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
-
-              <Button onClick={handleConsult} disabled={loading || !userData?.registration} className="w-full">
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Consultando...
-                  </>
-                ) : (
-                  "Consultar"
-                )}
-              </Button>
-
-              {!userData?.registration && (
-                <p className="text-sm text-red-500">
-                  Você precisa cadastrar sua matrícula para consultar as horas.
-                </p>
-              )}
-
-              {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
-            </div>
-          </div>
-        </TabsContent>
-
-        {userData?.userType === 'admin' && (
-          <TabsContent value="general">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
+          <Card className="border-none rounded-md shadow-sm">
+            <CardContent className="p-6 pt-6">
+              <h2 className="text-xl font-bold text-[#152b48] mb-4">Consulta Individual</h2>
               <div className="space-y-4">
-                <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
+                <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
 
-                <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
-
-                <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full">
-                  {loadingGeneral ? (
+                <Button 
+                  onClick={handleConsult} 
+                  disabled={loading || !userData?.registration} 
+                  className="w-full bg-[#152b48] hover:bg-[#0e1d31]"
+                >
+                  {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Consultando...
@@ -262,25 +238,63 @@ const Hours = () => {
                   )}
                 </Button>
 
-                {selectedUser === 'all' && allUsersData.map((userData, index) => (
-                  <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-amber-50">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                      {users.find(user => user.registration === userData.Matricula)?.label}
-                    </h3>
-                    <UserHoursDisplay
-                      data={userData}
-                      onClose={() => {
-                        const updatedData = [...allUsersData];
-                        updatedData.splice(index, 1);
-                        setAllUsersData(updatedData);
-                      }}
-                    />
-                  </div>
-                ))}
+                {!userData?.registration && (
+                  <p className="text-sm text-red-500">
+                    Você precisa cadastrar sua matrícula para consultar as horas.
+                  </p>
+                )}
 
-                {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
+                {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
               </div>
-            </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {userData?.userType === 'admin' && (
+          <TabsContent value="general">
+            <Card className="border-none rounded-md shadow-sm">
+              <CardContent className="p-6 pt-6">
+                <h2 className="text-xl font-bold text-[#152b48] mb-4">Consulta Geral</h2>
+                <div className="space-y-4">
+                  <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
+
+                  <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
+
+                  <Button 
+                    onClick={handleGeneralConsult} 
+                    disabled={loadingGeneral} 
+                    className="w-full bg-[#152b48] hover:bg-[#0e1d31]"
+                  >
+                    {loadingGeneral ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Consultando...
+                      </>
+                    ) : (
+                      "Consultar"
+                    )}
+                  </Button>
+
+                  {selectedUser === 'all' && allUsersData.map((userData, index) => (
+                    <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-slate-50">
+                      <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                        {users.find(user => user.registration === userData.Matricula)?.label}
+                      </h3>
+                      <UserHoursDisplay
+                        data={userData}
+                        onClose={() => {
+                          const updatedData = [...allUsersData];
+                          updatedData.splice(index, 1);
+                          setAllUsersData(updatedData);
+                        }}
+                      />
+                    </div>
+                  ))}
+
+                  {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         )}
       </Tabs>
