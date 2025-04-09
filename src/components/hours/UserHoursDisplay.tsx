@@ -1,13 +1,17 @@
+
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { HoursDonutChart } from "@/components/hours/HoursDonutChart";
 import { HoursData } from "@/types/hours";
-import { Calendar } from "lucide-react";
+import { Calendar, DollarSign } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+
 interface UserHoursDisplayProps {
   data: HoursData;
   onClose: () => void;
 }
+
 export const UserHoursDisplay = ({
   data,
   onClose
@@ -41,6 +45,30 @@ export const UserHoursDisplay = ({
   const bpmTotalHours = calculateSectionHours(bpmDays);
   const saiopTotalHours = calculateSectionHours(saiopDays);
   const sinfraTotalHours = calculateSectionHours(sinfraDays);
+
+  // Get user data from localStorage
+  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  // Define hourly rates based on rank
+  const determineHourlyRate = (rank: string) => {
+    if (!rank) return 41.13; // Default to lowest rate
+    
+    const lowerRank = rank.toLowerCase();
+    
+    if (lowerRank.includes('cb') || lowerRank.includes('sd')) {
+      return 41.13; // Rate for "Cb e Sd"
+    } else if (lowerRank.includes('sgt') || lowerRank.includes('sub')) {
+      return 56.28; // Rate for "Sub e Sgt"
+    } else if (lowerRank.includes('ten') || lowerRank.includes('cap') || lowerRank.includes('maj') || lowerRank.includes('cel')) {
+      return 87.02; // Rate for "Oficiais"
+    }
+    
+    return 41.13; // Default fallback
+  };
+  
+  const hourlyRate = determineHourlyRate(userData?.rank || '');
+  const totalValue = totalHours * hourlyRate;
+  
   return <div className="mt-6 space-y-4 my-0">
       <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
       
@@ -96,10 +124,34 @@ export const UserHoursDisplay = ({
           </div>}
       </div>
 
-      
-
-      {/* Hours Summary */}
-      
+      {/* Financial Summary Section */}
+      <Card className="bg-blue-50 border-blue-100 shadow-sm mt-4">
+        <CardContent className="p-4">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+            <DollarSign className="h-5 w-5 mr-2 text-primary" />
+            Resumo Financeiro
+          </h3>
+          
+          <div className="text-sm space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Valor por hora:</span>
+              <span className="font-medium">R$ {hourlyRate.toFixed(2).replace('.', ',')}</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Horas trabalhadas:</span>
+              <span className="font-medium">{totalHours}h</span>
+            </div>
+            
+            <Separator className="my-2 bg-blue-200/50" />
+            
+            <div className="flex justify-between items-center">
+              <span className="text-gray-700 font-medium">Valor Total:</span>
+              <span className="text-emerald-600 font-semibold text-lg">R$ {totalValue.toFixed(2).replace('.', ',')}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Button variant="destructive" className="w-full mt-4" onClick={onClose}>
         Fechar
