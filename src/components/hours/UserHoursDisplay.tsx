@@ -6,6 +6,9 @@ import { HoursDonutChart } from "@/components/hours/HoursDonutChart";
 import { HoursData } from "@/types/hours";
 import { Calendar, DollarSign } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface UserHoursDisplayProps {
   data: HoursData;
@@ -16,6 +19,9 @@ export const UserHoursDisplay = ({
   data,
   onClose
 }: UserHoursDisplayProps) => {
+  const [userRank, setUserRank] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
+
   // Convert Total Geral to a number for the chart
   const totalHours = data["Total Geral"] ? parseFloat(data["Total Geral"].replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
 
@@ -24,6 +30,7 @@ export const UserHoursDisplay = ({
     if (!workDaysStr) return [];
     return workDaysStr.split('|').map(day => day.trim()).filter(day => day);
   };
+  
   const formatDayHour = (dayHourStr: string) => {
     // Check if the format already has a slash
     if (dayHourStr.includes('/')) return dayHourStr;
@@ -31,6 +38,7 @@ export const UserHoursDisplay = ({
     // Convert format like "05:6h" or "05/6h" to "05/6h"
     return dayHourStr.replace(':', '/');
   };
+  
   const bpmDays = parseWorkDays(data["Horas 25° BPM"]);
   const saiopDays = parseWorkDays(data["Saiop"]);
   const sinfraDays = parseWorkDays(data["Sinfra"]);
@@ -42,12 +50,41 @@ export const UserHoursDisplay = ({
       return total + (hourMatch ? parseInt(hourMatch[1], 10) : 0);
     }, 0);
   };
+  
   const bpmTotalHours = calculateSectionHours(bpmDays);
   const saiopTotalHours = calculateSectionHours(saiopDays);
   const sinfraTotalHours = calculateSectionHours(sinfraDays);
 
-  // Get user data from localStorage
-  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  // Get user data from Firebase based on the matricula
+  useEffect(() => {
+    const fetchUserData = async () => {
+      setIsLoading(true);
+      try {
+        // Get user data from firestore collection "users" where registration matches the matricula
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("registration", "==", data.Matricula.toString()));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const userData = querySnapshot.docs[0].data();
+          setUserRank(userData.rank || "");
+        } else {
+          // Fallback to localStorage if not found in Firebase
+          const localUserData = JSON.parse(localStorage.getItem('user') || '{}');
+          setUserRank(localUserData?.rank || "");
+        }
+      } catch (error) {
+        console.error("Error fetching user data from Firebase:", error);
+        // Fallback to localStorage if error
+        const localUserData = JSON.parse(localStorage.getItem('user') || '{}');
+        setUserRank(localUserData?.rank || "");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [data.Matricula]);
   
   // Define hourly rates based on rank
   const determineHourlyRate = (rank: string) => {
@@ -66,7 +103,7 @@ export const UserHoursDisplay = ({
     return 41.13; // Default fallback
   };
   
-  const hourlyRate = determineHourlyRate(userData?.rank || '');
+  const hourlyRate = determineHourlyRate(userRank);
   const totalValue = totalHours * hourlyRate;
   
   return <div className="mt-6 space-y-4 my-0">
@@ -133,6 +170,11 @@ export const UserHoursDisplay = ({
           </h3>
           
           <div className="text-sm space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Graduação:</span>
+              <span className="font-medium">{userRank || "Não informada"}</span>
+            </div>
+            
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Valor por hora:</span>
               <span className="font-medium">R$ {hourlyRate.toFixed(2).replace('.', ',')}</span>
