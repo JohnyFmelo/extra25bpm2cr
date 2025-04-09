@@ -231,9 +231,7 @@ const Hours = () => {
                 </Button>
 
                 {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-stone-50">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                      {users.find(user => user.registration === userData.Matricula)?.label}
-                    </h3>
+                    
                     <UserHoursDisplay data={userData} onClose={() => {
                 const updatedData = [...allUsersData];
                 updatedData.splice(index, 1);
