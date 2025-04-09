@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -9,12 +8,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
 interface UserHoursDisplayProps {
   data: HoursData;
   onClose: () => void;
 }
-
 export const UserHoursDisplay = ({
   data,
   onClose
@@ -30,7 +27,6 @@ export const UserHoursDisplay = ({
     if (!workDaysStr) return [];
     return workDaysStr.split('|').map(day => day.trim()).filter(day => day);
   };
-  
   const formatDayHour = (dayHourStr: string) => {
     // Check if the format already has a slash
     if (dayHourStr.includes('/')) return dayHourStr;
@@ -38,7 +34,6 @@ export const UserHoursDisplay = ({
     // Convert format like "05:6h" or "05/6h" to "05/6h"
     return dayHourStr.replace(':', '/');
   };
-  
   const bpmDays = parseWorkDays(data["Horas 25° BPM"]);
   const saiopDays = parseWorkDays(data["Saiop"]);
   const sinfraDays = parseWorkDays(data["Sinfra"]);
@@ -50,7 +45,6 @@ export const UserHoursDisplay = ({
       return total + (hourMatch ? parseInt(hourMatch[1], 10) : 0);
     }, 0);
   };
-  
   const bpmTotalHours = calculateSectionHours(bpmDays);
   const saiopTotalHours = calculateSectionHours(saiopDays);
   const sinfraTotalHours = calculateSectionHours(sinfraDays);
@@ -64,7 +58,6 @@ export const UserHoursDisplay = ({
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("registration", "==", data.Matricula.toString()));
         const querySnapshot = await getDocs(q);
-        
         if (!querySnapshot.empty) {
           const userData = querySnapshot.docs[0].data();
           setUserRank(userData.rank || "");
@@ -82,16 +75,14 @@ export const UserHoursDisplay = ({
         setIsLoading(false);
       }
     };
-
     fetchUserData();
   }, [data.Matricula]);
-  
+
   // Define hourly rates based on rank
   const determineHourlyRate = (rank: string) => {
     if (!rank) return 41.13; // Default to lowest rate
-    
+
     const lowerRank = rank.toLowerCase();
-    
     if (lowerRank.includes('cb') || lowerRank.includes('sd')) {
       return 41.13; // Rate for "Cb e Sd"
     } else if (lowerRank.includes('sgt') || lowerRank.includes('sub')) {
@@ -99,13 +90,10 @@ export const UserHoursDisplay = ({
     } else if (lowerRank.includes('ten') || lowerRank.includes('cap') || lowerRank.includes('maj') || lowerRank.includes('cel')) {
       return 87.02; // Rate for "Oficiais"
     }
-    
     return 41.13; // Default fallback
   };
-  
   const hourlyRate = determineHourlyRate(userRank);
   const totalValue = totalHours * hourlyRate;
-  
   return <div className="mt-6 space-y-4 my-0">
       <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
       
@@ -188,7 +176,7 @@ export const UserHoursDisplay = ({
             <Separator className="my-2 bg-blue-200/50" />
             
             <div className="flex justify-between items-center">
-              <span className="text-gray-700 font-medium">Valor Total:</span>
+              <span className="text-gray-700 font-medium">Valor Estimado:</span>
               <span className="text-emerald-600 font-semibold text-lg">R$ {totalValue.toFixed(2).replace('.', ',')}</span>
             </div>
           </div>
