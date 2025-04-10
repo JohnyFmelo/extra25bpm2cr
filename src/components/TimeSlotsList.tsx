@@ -550,20 +550,20 @@ const TimeSlotsList = () => {
   };
 
   if (isLoading) {
-    return <div className="p-4 bg-white rounded-lg shadow-sm text-center">Carregando horários...</div>;
+    return <div className="p-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm text-center">Carregando horários...</div>;
   }
 
   return (
-    <div className="space-y-6 p-4 bg-gray-50 rounded-lg">
+    <div className="space-y-6 p-4 bg-transparent rounded-lg">
       <TimeSlotLimitControl slotLimit={slotLimit} onUpdateLimit={handleUpdateSlotLimit} userSlotCount={userSlotCount} isAdmin={isAdmin} />
 
       {isAdmin && totalCostSummary["Total Geral"] > 0 &&
-        <div className="bg-white rounded-lg shadow-sm p-4 mt-6 border border-gray-100">
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-sm p-4 mt-6 border border-blue-100">
           <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <UserRoundCog className="h-5 w-5 text-blue-500" />
             Resumo de Custos Totais
           </h2>
-          <div className="space-y-2 bg-gradient-to-r from-blue-50 to-white p-3 rounded-lg">
+          <div className="space-y-2 bg-gradient-to-r from-blue-50 to-white/90 p-3 rounded-lg">
             <p><strong>Cb/Sd:</strong> {formatCurrency(totalCostSummary["Cb/Sd"])}</p>
             <p><strong>St/Sgt:</strong> {formatCurrency(totalCostSummary["St/Sgt"])}</p>
             <p><strong>Oficiais:</strong> {formatCurrency(totalCostSummary["Oficiais"])}</p>
@@ -586,7 +586,7 @@ const TimeSlotsList = () => {
         return (
           <Collapsible 
             key={date} 
-            className="bg-white rounded-lg shadow-sm transition-all duration-300 hover:shadow-md border border-gray-100"
+            className="bg-white/95 backdrop-blur-sm rounded-lg shadow-md transition-all duration-300 hover:shadow-lg border border-blue-100"
             open={!isCollapsed}
             onOpenChange={isDatePast ? undefined : () => {}}
           >
@@ -626,8 +626,8 @@ const TimeSlotsList = () => {
                     key={slot.id || idx} 
                     className={`border rounded-lg p-4 space-y-2 transition-all ${
                       isSlotFull(slot) 
-                        ? 'bg-gradient-to-r from-orange-50 to-white border-orange-200' 
-                        : 'bg-gradient-to-r from-gray-50 to-white hover:from-blue-50 hover:to-white'
+                        ? 'bg-gradient-to-r from-orange-50 to-white border-orange-200 shadow-sm' 
+                        : 'bg-gradient-to-r from-blue-50/80 to-white/90 hover:from-blue-100 hover:to-white border-blue-100 shadow-sm hover:shadow'
                     }`}
                   >
                     <div className="flex justify-between items-start">
