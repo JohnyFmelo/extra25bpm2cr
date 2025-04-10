@@ -1,14 +1,11 @@
-
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useEffect, useRef } from 'react';
-
 interface HoursDonutChartProps {
   totalHours: number;
   maxHours?: number;
 }
-
 export const HoursDonutChart = ({
   totalHours,
   maxHours = 50
@@ -24,17 +21,24 @@ export const HoursDonutChart = ({
     if (hours < 40) return '#1B98E0'; // Blue
     return '#22C55E'; // Green
   };
-  
+
   // Determine gradient colors based on hour thresholds
   const getGradientColors = (hours: number) => {
-    if (hours < 29) return { start: '#FF9900', end: '#F97316' }; // Orange gradient
-    if (hours < 40) return { start: '#60A5FA', end: '#1B98E0' }; // Blue gradient
-    return { start: '#4ADE80', end: '#22C55E' }; // Green gradient
+    if (hours < 29) return {
+      start: '#FF9900',
+      end: '#F97316'
+    }; // Orange gradient
+    if (hours < 40) return {
+      start: '#60A5FA',
+      end: '#1B98E0'
+    }; // Blue gradient
+    return {
+      start: '#4ADE80',
+      end: '#22C55E'
+    }; // Green gradient
   };
-  
   const chartColor = getColor(hours);
   const gradientColors = getGradientColors(hours);
-  
   const data = [{
     name: 'Horas Trabalhadas',
     value: hours,
@@ -46,12 +50,8 @@ export const HoursDonutChart = ({
   }];
 
   // Get progress bar color based on the same thresholds
-  const progressBarColor = hours < 29 ? 'bg-gradient-to-r from-orange-400 to-orange-500' 
-    : hours < 40 ? 'bg-gradient-to-r from-blue-400 to-blue-500' 
-    : 'bg-gradient-to-r from-green-400 to-green-500';
-
-  return (
-    <div className="flex flex-col items-center mt-4 space-y-2">
+  const progressBarColor = hours < 29 ? 'bg-gradient-to-r from-orange-400 to-orange-500' : hours < 40 ? 'bg-gradient-to-r from-blue-400 to-blue-500' : 'bg-gradient-to-r from-green-400 to-green-500';
+  return <div className="flex flex-col items-center mt-4 space-y-2">
       <div className="h-40 w-full relative">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -61,25 +61,8 @@ export const HoursDonutChart = ({
                 <stop offset="100%" stopColor={gradientColors.end} />
               </linearGradient>
             </defs>
-            <Pie 
-              data={data} 
-              cx="50%" 
-              cy="50%" 
-              innerRadius={40} 
-              outerRadius={70} 
-              paddingAngle={0} 
-              dataKey="value" 
-              startAngle={90} 
-              endAngle={-270}
-            >
-              {data.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={index === 0 ? 'url(#hoursFillGradient)' : entry.color} 
-                  stroke={index === 0 ? gradientColors.end : '#E0E0E0'} 
-                  strokeWidth={1}
-                />
-              ))}
+            <Pie data={data} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={0} dataKey="value" startAngle={90} endAngle={-270}>
+              {data.map((entry, index) => <Cell key={`cell-${index}`} fill={index === 0 ? 'url(#hoursFillGradient)' : entry.color} stroke={index === 0 ? gradientColors.end : '#E0E0E0'} strokeWidth={1} />)}
             </Pie>
           </PieChart>
         </ResponsiveContainer>
@@ -94,18 +77,11 @@ export const HoursDonutChart = ({
           <span>{maxHours}h</span>
         </div>
         <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-          <div 
-            className={cn("h-full rounded-full transition-all duration-500", progressBarColor)}
-            style={{ width: `${percentage}%` }}
-          />
+          <div className={cn("h-full rounded-full transition-all duration-500", progressBarColor)} style={{
+          width: `${percentage}%`
+        }} />
         </div>
-        {percentage > 0 && percentage < 100 && (
-          <div
-            className="absolute top-[8px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[7px] border-t-gray-500 transform -translate-x-1/2"
-            style={{ left: `calc(${percentage}% )` }}
-          />
-        )}
+        {percentage > 0 && percentage < 100}
       </div>
-    </div>
-  );
+    </div>;
 };
