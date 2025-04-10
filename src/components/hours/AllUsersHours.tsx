@@ -2,6 +2,7 @@
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { HoursData } from "@/types/hours";
+import { HoursDonutChart } from "./HoursDonutChart";
 
 interface AllUsersHoursProps {
   users: HoursData[];
@@ -28,29 +29,41 @@ export const AllUsersHours = ({ users, searchTerm, onSearchChange }: AllUsersHou
       </div>
 
       <div className="space-y-4">
-        {filteredUsers.map((user, index) => (
-          <div key={index} className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-bold text-lg mb-2">{user.Nome}</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <p className="text-sm text-gray-600">25° BPM</p>
-                <p className="font-medium">{user["Horas 25° BPM"]}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Saiop</p>
-                <p className="font-medium">{user.Saiop}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Sinfra</p>
-                <p className="font-medium">{user.Sinfra}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total</p>
-                <p className="font-bold text-green-600">{user["Total Geral"]}</p>
+        {filteredUsers.map((user, index) => {
+          // Calculate total hours for the chart
+          const totalHours = user["Total Geral"] 
+            ? parseFloat(user["Total Geral"].toString().replace(/[^0-9,.]/g, '').replace(',', '.')) 
+            : 0;
+            
+          return (
+            <div key={index} className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-bold text-lg mb-2">{user.Nome}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:order-2">
+                  <HoursDonutChart totalHours={totalHours} maxHours={50} />
+                </div>
+                <div className="md:order-1 grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-sm text-gray-600">25° BPM</p>
+                    <p className="font-medium">{user["Horas 25° BPM"]}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Saiop</p>
+                    <p className="font-medium">{user.Saiop}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Sinfra</p>
+                    <p className="font-medium">{user.Sinfra}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Total</p>
+                    <p className="font-bold text-green-600">{user["Total Geral"]}</p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
