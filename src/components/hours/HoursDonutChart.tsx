@@ -2,7 +2,7 @@
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Party } from "lucide-react";
+import { AlertTriangle, PartyPopper } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useEffect, useState } from "react";
 
@@ -200,7 +200,7 @@ export const HoursDonutChart = ({
 
       {isExactlyMax && (
         <Alert className="mt-2 bg-green-50 border-green-300 text-green-800">
-          <Party className="h-4 w-4 text-green-600" />
+          <PartyPopper className="h-4 w-4 text-green-600" />
           <AlertTitle>Parabéns!</AlertTitle>
           <AlertDescription>
             Você atingiu exatamente o limite máximo de {maxHours}h!
