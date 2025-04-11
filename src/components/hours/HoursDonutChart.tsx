@@ -2,6 +2,8 @@
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { AlertTriangle } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface HoursDonutChartProps {
   totalHours: number;
@@ -16,9 +18,11 @@ export const HoursDonutChart = ({
   const hours = typeof totalHours === 'number' ? totalHours : parseFloat(totalHours as any) || 0;
   const remainingHours = Math.max(0, maxHours - hours);
   const percentage = Math.min(100, hours / maxHours * 100);
+  const isOverMaxHours = hours > maxHours;
 
   // Determine color based on hour thresholds
   const getColor = (hours: number) => {
+    if (isOverMaxHours) return '#EF4444'; // Red for over max
     if (hours < 29) return '#F97316'; // Orange
     if (hours < 40) return '#0EA5E9'; // Blue
     return '#22C55E'; // Green
@@ -26,6 +30,10 @@ export const HoursDonutChart = ({
 
   // Determine gradient colors based on hour thresholds
   const getGradientColors = (hours: number) => {
+    if (isOverMaxHours) return {
+      start: '#F87171',
+      end: '#EF4444'
+    }; // Red gradient for over max
     if (hours < 29) return {
       start: '#FF9900',
       end: '#F97316'
@@ -58,11 +66,13 @@ export const HoursDonutChart = ({
 
   // Get progress bar color based on the same thresholds
   const progressBarColor = 
-    hours < 29 
-      ? 'bg-gradient-to-r from-orange-400 to-orange-500' 
-      : hours < 40 
-        ? 'bg-gradient-to-r from-blue-400 to-blue-500' 
-        : 'bg-gradient-to-r from-green-400 to-green-500';
+    isOverMaxHours
+      ? 'bg-gradient-to-r from-red-400 to-red-500'
+      : hours < 29 
+        ? 'bg-gradient-to-r from-orange-400 to-orange-500' 
+        : hours < 40 
+          ? 'bg-gradient-to-r from-blue-400 to-blue-500' 
+          : 'bg-gradient-to-r from-green-400 to-green-500';
 
   return (
     <div className="flex flex-col items-center mt-4 space-y-2">
@@ -98,7 +108,7 @@ export const HoursDonutChart = ({
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-          <div className="text-2xl font-bold">{hours}h</div>
+          <div className={cn("text-2xl font-bold", isOverMaxHours && "text-red-600")}>{hours}h</div>
         </div>
       </div>
 
@@ -116,6 +126,16 @@ export const HoursDonutChart = ({
           />
         </div>
       </div>
+
+      {isOverMaxHours && (
+        <Alert variant="destructive" className="mt-2 bg-red-50 border-red-300 text-red-800">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertTitle>Atenção</AlertTitle>
+          <AlertDescription>
+            Total de horas excede o limite máximo de {maxHours}h.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 };
