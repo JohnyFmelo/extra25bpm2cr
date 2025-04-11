@@ -1,5 +1,4 @@
-
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import React, { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, PartyPopper } from "lucide-react";
@@ -203,7 +202,7 @@ export const HoursDonutChart = ({
           <PartyPopper className="h-4 w-4 text-green-600" />
           <AlertTitle>Parabéns!</AlertTitle>
           <AlertDescription>
-            Você atingiu exatamente o limite máximo de {maxHours}h!
+            Você atingiu o limite máximo de {maxHours}h!
           </AlertDescription>
         </Alert>
       )}
