@@ -590,45 +590,79 @@ const TimeSlotsList = () => {
               </div>
 
               {!isCollapsed && <div className="space-y-3 mt-4">
-                  {sortedSlots.map((slot, idx) => <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-2 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-blue-500" />
-                            <p className="font-medium text-gray-900">
+                  {sortedSlots.map((slot, idx) => (
+                    <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                      <div className="flex flex-col space-y-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
+                            <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                            <p className="font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
                               {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}-{calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)}h
-                              {slot.description && (
-                                <span className="ml-2 text-gray-700">| {slot.description}</span>
-                              )}
                             </p>
                           </div>
+                          {slot.description && (
+                            <span className="text-gray-700 ml-2 max-w-[200px] truncate">
+                              {slot.description}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
                           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${isSlotFull(slot) ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
-                            <span className="text-sm font-medium">
-                              {isSlotFull(slot) ? 'Vagas Esgotadas' : `${slot.total_slots - slot.slots_used} ${slot.total_slots - slot.slots_used === 1 ? 'vaga disponível' : 'vagas disponíveis'}`}
+                            <span className="text-sm font-medium whitespace-nowrap">
+                              {isSlotFull(slot) ? 'Vagas Esgotadas' : `${slot.total_slots - slot.slots_used} ${slot.total_slots - slot.slots_used === 1 ? 'vaga' : 'vagas'}`}
                             </span>
                           </div>
                         </div>
-                        {shouldShowVolunteerButton(slot) && (isVolunteered(slot) ? <Button onClick={() => handleUnvolunteer(slot)} variant="destructive" size="sm" className="shadow-sm hover:shadow">
-                              Desmarcar
-                            </Button> : !isSlotFull(slot) && canVolunteerForSlot(slot) && <Button onClick={() => handleVolunteer(slot)} className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow" size="sm">
-                              Voluntário
-                            </Button>)}
                       </div>
-                      {slot.volunteers && slot.volunteers.length > 0 && <div className="pt-3 border-t border-gray-200">
+                      
+                      {slot.volunteers && slot.volunteers.length > 0 && (
+                        <div className="pt-3 border-t border-gray-200">
                           <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
                           <div className="space-y-1">
-                            {sortVolunteers(slot.volunteers).map((volunteer, index) => <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
+                            {sortVolunteers(slot.volunteers).map((volunteer, index) => (
+                              <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
                                 <span>{volunteer}</span>
-                                {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({
-                      name: volunteer,
-                      timeSlot: slot
-                    })}>
+                                {isAdmin && (
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({
+                                    name: volunteer,
+                                    timeSlot: slot
+                                  })}>
                                     <X className="h-4 w-4" />
-                                  </Button>}
-                              </div>)}
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        </div>}
-                    </div>)}
+                        </div>
+                      )}
+                      
+                      <div className="pt-2">
+                        {shouldShowVolunteerButton(slot) && (
+                          isVolunteered(slot) ? (
+                            <Button 
+                              onClick={() => handleUnvolunteer(slot)} 
+                              variant="destructive" 
+                              size="sm" 
+                              className="w-full shadow-sm hover:shadow"
+                            >
+                              Desmarcar
+                            </Button>
+                          ) : (
+                            !isSlotFull(slot) && canVolunteerForSlot(slot) && (
+                              <Button 
+                                onClick={() => handleVolunteer(slot)} 
+                                className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow w-full" 
+                                size="sm"
+                              >
+                                Voluntário
+                              </Button>
+                            )
+                          )
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>}
             </div>
           </div>;
