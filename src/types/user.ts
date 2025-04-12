@@ -23,4 +23,3 @@ export interface Message {
   timestamp: Date;
   type: 'all' | 'individual';
 }
-

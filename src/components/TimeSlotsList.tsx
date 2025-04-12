@@ -22,11 +22,6 @@ interface TimeSlot {
   slots_used: number;
   volunteers?: string[];
   description?: string;
-  service_slots?: {
-    operational: number;
-    administrative: number;
-    intelligence: number;
-  };
 }
 
 interface GroupedTimeSlots {
@@ -237,8 +232,7 @@ const TimeSlotsList = () => {
           volunteers: data.volunteers || [],
           slots_used: data.slots_used || 0,
           total_slots: data.total_slots || data.slots || 0,
-          description: data.description || "",
-          service_slots: data.service_slots || null
+          description: data.description || ""
         };
       });
       setTimeSlots(formattedSlots);
@@ -264,16 +258,6 @@ const TimeSlotsList = () => {
       });
       return;
     }
-
-    if (!userData?.service) {
-      toast({
-        title: "Erro",
-        description: "Você precisa definir seu serviço no seu perfil primeiro.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     const userSlotCount = timeSlots.reduce((count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
     if (userSlotCount >= slotLimit && !isAdmin) {
       toast({
@@ -283,7 +267,6 @@ const TimeSlotsList = () => {
       });
       return;
     }
-    
     const slotsForDate = timeSlots.filter(slot => slot.date === timeSlot.date);
     const isAlreadyRegistered = slotsForDate.some(slot => slot.volunteers?.includes(volunteerName));
     if (isAlreadyRegistered) {
@@ -294,55 +277,20 @@ const TimeSlotsList = () => {
       });
       return;
     }
-
-    const serviceSlots = timeSlot.service_slots;
-    if (serviceSlots) {
-      const userService = userData.service.toLowerCase();
-      const serviceKey = userService === "operacional" ? "operational" : 
-                         userService === "administrativo" ? "administrative" : 
-                         userService === "inteligência" ? "intelligence" : null;
-      
-      if (serviceKey && serviceSlots[serviceKey] <= 0) {
-        toast({
-          title: "Erro ⛔",
-          description: `Não há vagas disponíveis para o serviço ${userData.service}.`,
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-
     try {
       const updatedSlot = {
         ...timeSlot,
         slots_used: timeSlot.slots_used + 1,
         volunteers: [...(timeSlot.volunteers || []), volunteerName]
       };
-      
-      if (timeSlot.service_slots) {
-        const userService = userData.service.toLowerCase();
-        const serviceKey = userService === "operacional" ? "operational" : 
-                          userService === "administrativo" ? "administrative" : 
-                          userService === "inteligência" ? "intelligence" : null;
-        
-        if (serviceKey) {
-          updatedSlot.service_slots = {
-            ...timeSlot.service_slots,
-            [serviceKey]: Math.max(0, timeSlot.service_slots[serviceKey] - 1)
-          };
-        }
-      }
-
       const result = await dataOperations.update(updatedSlot, {
         date: timeSlot.date,
         start_time: timeSlot.start_time,
         end_time: timeSlot.end_time
       });
-      
       if (!result.success) {
         throw new Error('Falha ao atualizar o horário');
       }
-      
       toast({
         title: "Sucesso!✅🤠",
         description: "Extra marcada. Aguarde a escala."
@@ -441,17 +389,6 @@ const TimeSlotsList = () => {
   };
 
   const isSlotFull = (timeSlot: TimeSlot) => {
-    if (userData?.service && timeSlot.service_slots) {
-      const userService = userData.service.toLowerCase();
-      const serviceKey = userService === "operacional" ? "operational" : 
-                         userService === "administrativo" ? "administrative" : 
-                         userService === "inteligência" ? "intelligence" : null;
-      
-      if (serviceKey && timeSlot.service_slots[serviceKey] <= 0) {
-        return true;
-      }
-    }
-    
     return timeSlot.slots_used === timeSlot.total_slots;
   };
 
@@ -673,29 +610,9 @@ const TimeSlotsList = () => {
                         <div className="flex items-center justify-between">
                           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${isSlotFull(slot) ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
                             <span className="text-sm font-medium whitespace-nowrap">
-                              {isSlotFull(slot) ? 'Vagas Esgotadas' : `${slot.total_slots - slot.slots_used} vagas`}
+                              {isSlotFull(slot) ? 'Vagas Esgotadas' : `${slot.total_slots - slot.slots_used} ${slot.total_slots - slot.slots_used === 1 ? 'vaga' : 'vagas'}`}
                             </span>
                           </div>
-                          
-                          {slot.service_slots && (
-                            <div className="flex gap-1 text-xs">
-                              {slot.service_slots.operational > 0 && (
-                                <span className="px-2 py-1 bg-green-50 text-green-700 rounded-md border border-green-200">
-                                  Operacional: {slot.service_slots.operational}
-                                </span>
-                              )}
-                              {slot.service_slots.administrative > 0 && (
-                                <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md border border-blue-200">
-                                  Adm: {slot.service_slots.administrative}
-                                </span>
-                              )}
-                              {slot.service_slots.intelligence > 0 && (
-                                <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded-md border border-purple-200">
-                                  Intel: {slot.service_slots.intelligence}
-                                </span>
-                              )}
-                            </div>
-                          )}
                         </div>
                       </div>
                       
