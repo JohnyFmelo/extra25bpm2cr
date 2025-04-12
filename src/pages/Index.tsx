@@ -99,6 +99,16 @@ const Index = () => {
                 </button>
               </div>
               <TimeSlotsList />
+              
+              {isAdmin && (
+                <Button
+                  className="fixed right-6 bottom-6 p-3 h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
+                  onClick={() => setShowCreateVacancyDialog(true)}
+                >
+                  <Plus className="h-6 w-6" />
+                  <span className="sr-only">Criar nova vaga</span>
+                </Button>
+              )}
             </div>
           </TabsContent>
 
@@ -214,16 +224,6 @@ const Index = () => {
         {showInformationDialog && <InformationDialog open={showInformationDialog} onOpenChange={setShowInformationDialog} isAdmin={user.userType === "admin"} />}
         
         {showCreateVacancyDialog && <CreateVacancyDialog open={showCreateVacancyDialog} onOpenChange={setShowCreateVacancyDialog} />}
-
-        {isAdmin && (
-          <Button
-            className="fixed right-6 bottom-6 p-3 h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
-            onClick={() => setShowCreateVacancyDialog(true)}
-          >
-            <Plus className="h-6 w-6" />
-            <span className="sr-only">Criar nova vaga</span>
-          </Button>
-        )}
       </div>
     </div>;
 };

@@ -1,10 +1,9 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -14,20 +13,36 @@ import { ptBR } from "date-fns/locale";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CreateVacancyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+interface ServiceType {
+  id: string;
+  label: string;
+  value: number;
+}
+
 const CreateVacancyDialog = ({ open, onOpenChange }: CreateVacancyDialogProps) => {
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [description, setDescription] = useState("");
   const [totalSlots, setTotalSlots] = useState("");
-  const [operationalSlots, setOperationalSlots] = useState("");
-  const [administrativeSlots, setAdministrativeSlots] = useState("");
-  const [intelligenceSlots, setIntelligenceSlots] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [selectedServices, setSelectedServices] = useState<{ [key: string]: boolean }>({
+    operational: false,
+    administrative: false,
+    intelligence: false
+  });
+  
+  const [serviceSlots, setServiceSlots] = useState<{ [key: string]: string }>({
+    operational: "",
+    administrative: "",
+    intelligence: ""
+  });
   
   const { toast } = useToast();
 
@@ -35,9 +50,16 @@ const CreateVacancyDialog = ({ open, onOpenChange }: CreateVacancyDialogProps) =
     setDate(undefined);
     setDescription("");
     setTotalSlots("");
-    setOperationalSlots("");
-    setAdministrativeSlots("");
-    setIntelligenceSlots("");
+    setSelectedServices({
+      operational: false,
+      administrative: false,
+      intelligence: false
+    });
+    setServiceSlots({
+      operational: "",
+      administrative: "",
+      intelligence: ""
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,17 +78,21 @@ const CreateVacancyDialog = ({ open, onOpenChange }: CreateVacancyDialogProps) =
       setIsSubmitting(true);
       
       const formattedDate = format(date, "yyyy-MM-dd");
+      
+      // Create service slots object based on selected services
+      const serviceSlotValues = {
+        operational: selectedServices.operational ? Number(serviceSlots.operational) || 0 : 0,
+        administrative: selectedServices.administrative ? Number(serviceSlots.administrative) || 0 : 0,
+        intelligence: selectedServices.intelligence ? Number(serviceSlots.intelligence) || 0 : 0
+      };
+      
       const vacancyData = {
         date: formattedDate,
         description: description || "Extra",
         total_slots: Number(totalSlots),
         slots_used: 0,
         volunteers: [],
-        service_slots: {
-          operational: Number(operationalSlots) || 0,
-          administrative: Number(administrativeSlots) || 0,
-          intelligence: Number(intelligenceSlots) || 0
-        },
+        service_slots: serviceSlotValues,
         createdAt: new Date()
       };
 
@@ -89,6 +115,13 @@ const CreateVacancyDialog = ({ open, onOpenChange }: CreateVacancyDialogProps) =
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleServiceChange = (id: string, checked: boolean) => {
+    setSelectedServices(prev => ({
+      ...prev,
+      [id]: checked
+    }));
   };
 
   return (
@@ -130,9 +163,9 @@ const CreateVacancyDialog = ({ open, onOpenChange }: CreateVacancyDialogProps) =
             
             <div className="space-y-2">
               <Label htmlFor="description">Descrição</Label>
-              <Textarea
+              <Input
                 id="description"
-                placeholder="Descrição da vaga"
+                placeholder="Descrição curta da vaga"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -152,39 +185,68 @@ const CreateVacancyDialog = ({ open, onOpenChange }: CreateVacancyDialogProps) =
             
             <div className="space-y-2">
               <Label className="font-medium">Distribuição de Vagas por Serviço</Label>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="operationalSlots">Operacional</Label>
-                  <Input
-                    id="operationalSlots"
-                    type="number"
-                    min="0"
-                    value={operationalSlots}
-                    onChange={(e) => setOperationalSlots(e.target.value)}
-                    placeholder="0"
+              <div className="grid gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="operational" 
+                    checked={selectedServices.operational}
+                    onCheckedChange={(checked) => handleServiceChange('operational', checked as boolean)}
                   />
+                  <Label htmlFor="operational" className="font-normal cursor-pointer">Operacional</Label>
+                  {selectedServices.operational && (
+                    <div className="flex-grow ml-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={serviceSlots.operational}
+                        onChange={(e) => setServiceSlots(prev => ({ ...prev, operational: e.target.value }))}
+                        placeholder="Número de vagas"
+                        className="w-32"
+                      />
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <Label htmlFor="administrativeSlots">Administrativo</Label>
-                  <Input
-                    id="administrativeSlots"
-                    type="number"
-                    min="0"
-                    value={administrativeSlots}
-                    onChange={(e) => setAdministrativeSlots(e.target.value)}
-                    placeholder="0"
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="administrative" 
+                    checked={selectedServices.administrative}
+                    onCheckedChange={(checked) => handleServiceChange('administrative', checked as boolean)}
                   />
+                  <Label htmlFor="administrative" className="font-normal cursor-pointer">Administrativo</Label>
+                  {selectedServices.administrative && (
+                    <div className="flex-grow ml-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={serviceSlots.administrative}
+                        onChange={(e) => setServiceSlots(prev => ({ ...prev, administrative: e.target.value }))}
+                        placeholder="Número de vagas"
+                        className="w-32"
+                      />
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <Label htmlFor="intelligenceSlots">Inteligência</Label>
-                  <Input
-                    id="intelligenceSlots"
-                    type="number"
-                    min="0"
-                    value={intelligenceSlots}
-                    onChange={(e) => setIntelligenceSlots(e.target.value)}
-                    placeholder="0"
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="intelligence" 
+                    checked={selectedServices.intelligence}
+                    onCheckedChange={(checked) => handleServiceChange('intelligence', checked as boolean)}
                   />
+                  <Label htmlFor="intelligence" className="font-normal cursor-pointer">Inteligência</Label>
+                  {selectedServices.intelligence && (
+                    <div className="flex-grow ml-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={serviceSlots.intelligence}
+                        onChange={(e) => setServiceSlots(prev => ({ ...prev, intelligence: e.target.value }))}
+                        placeholder="Número de vagas"
+                        className="w-32"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
