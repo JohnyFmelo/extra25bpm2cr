@@ -4,26 +4,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { Checkbox } from "@/components/ui/checkbox";
+import DateSelector from "./vacancy/DateSelector";
+import ServiceSlotsSelector from "./vacancy/ServiceSlotsSelector";
 
 interface CreateVacancyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-interface ServiceType {
-  id: string;
-  label: string;
-  value: number;
 }
 
 const CreateVacancyDialog = ({ open, onOpenChange }: CreateVacancyDialogProps) => {
@@ -124,6 +114,13 @@ const CreateVacancyDialog = ({ open, onOpenChange }: CreateVacancyDialogProps) =
     }));
   };
 
+  const handleServiceSlotChange = (id: string, value: string) => {
+    setServiceSlots(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -133,33 +130,7 @@ const CreateVacancyDialog = ({ open, onOpenChange }: CreateVacancyDialogProps) =
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">Data</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="date"
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP", { locale: ptBR }) : <span>Selecione uma data</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+            <DateSelector date={date} onDateChange={setDate} />
             
             <div className="space-y-2">
               <Label htmlFor="description">Descrição</Label>
@@ -183,73 +154,12 @@ const CreateVacancyDialog = ({ open, onOpenChange }: CreateVacancyDialogProps) =
               />
             </div>
             
-            <div className="space-y-2">
-              <Label className="font-medium">Distribuição de Vagas por Serviço</Label>
-              <div className="grid gap-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="operational" 
-                    checked={selectedServices.operational}
-                    onCheckedChange={(checked) => handleServiceChange('operational', checked as boolean)}
-                  />
-                  <Label htmlFor="operational" className="font-normal cursor-pointer">Operacional</Label>
-                  {selectedServices.operational && (
-                    <div className="flex-grow ml-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        value={serviceSlots.operational}
-                        onChange={(e) => setServiceSlots(prev => ({ ...prev, operational: e.target.value }))}
-                        placeholder="Número de vagas"
-                        className="w-32"
-                      />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="administrative" 
-                    checked={selectedServices.administrative}
-                    onCheckedChange={(checked) => handleServiceChange('administrative', checked as boolean)}
-                  />
-                  <Label htmlFor="administrative" className="font-normal cursor-pointer">Administrativo</Label>
-                  {selectedServices.administrative && (
-                    <div className="flex-grow ml-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        value={serviceSlots.administrative}
-                        onChange={(e) => setServiceSlots(prev => ({ ...prev, administrative: e.target.value }))}
-                        placeholder="Número de vagas"
-                        className="w-32"
-                      />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="intelligence" 
-                    checked={selectedServices.intelligence}
-                    onCheckedChange={(checked) => handleServiceChange('intelligence', checked as boolean)}
-                  />
-                  <Label htmlFor="intelligence" className="font-normal cursor-pointer">Inteligência</Label>
-                  {selectedServices.intelligence && (
-                    <div className="flex-grow ml-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        value={serviceSlots.intelligence}
-                        onChange={(e) => setServiceSlots(prev => ({ ...prev, intelligence: e.target.value }))}
-                        placeholder="Número de vagas"
-                        className="w-32"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ServiceSlotsSelector 
+              selectedServices={selectedServices}
+              serviceSlots={serviceSlots}
+              onServiceChange={handleServiceChange}
+              onServiceSlotChange={handleServiceSlotChange}
+            />
           </div>
           
           <DialogFooter>
