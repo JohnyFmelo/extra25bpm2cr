@@ -13,6 +13,10 @@ import Messages from "@/components/Messages";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
 import { TravelManagement } from "@/components/TravelManagement";
 import { useToast } from "@/hooks/use-toast";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import CreateVacancyDialog from "@/components/CreateVacancyDialog";
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
@@ -20,6 +24,7 @@ const Index = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showInformationDialog, setShowInformationDialog] = useState(false);
+  const [showCreateVacancyDialog, setShowCreateVacancyDialog] = useState(false);
   const {
     toast
   } = useToast();
@@ -49,11 +54,12 @@ const Index = () => {
   const handleNotificationsClick = () => {
     setActiveTab("notifications");
   };
-
-  // Removemos a verificação do tipo de usuário para que qualquer um possa acessar a aba "travel"
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
+
+  const isAdmin = user?.userType === "admin";
+
   return <div className="relative min-h-screen bg-[#E8F1F2]">
       <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
@@ -206,7 +212,20 @@ const Index = () => {
         {showPasswordDialog && <PasswordChangeDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} userId={user.id} currentPassword={user.password} />}
 
         {showInformationDialog && <InformationDialog open={showInformationDialog} onOpenChange={setShowInformationDialog} isAdmin={user.userType === "admin"} />}
+        
+        {showCreateVacancyDialog && <CreateVacancyDialog open={showCreateVacancyDialog} onOpenChange={setShowCreateVacancyDialog} />}
+
+        {isAdmin && (
+          <Button
+            className="fixed right-6 bottom-6 p-3 h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
+            onClick={() => setShowCreateVacancyDialog(true)}
+          >
+            <Plus className="h-6 w-6" />
+            <span className="sr-only">Criar nova vaga</span>
+          </Button>
+        )}
       </div>
     </div>;
 };
+
 export default Index;
