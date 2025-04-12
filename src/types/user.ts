@@ -1,9 +1,11 @@
+
 export interface User {
   id: string;
   email: string;
   name: string;
   userType: 'admin' | 'user';
   password?: string;
+  service?: string;
 }
 
 export interface TimeSlot {

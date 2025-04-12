@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ interface ProfileUpdateDialogProps {
     warName: string;
     rank?: string;
     registration?: string;
+    service?: string;
   };
 }
 
@@ -31,6 +33,7 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
   const [warName, setWarName] = useState(userData?.warName || "");
   const [rank, setRank] = useState(userData?.rank || "");
   const [registration, setRegistration] = useState(userData?.registration || "");
+  const [service, setService] = useState(userData?.service || "");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -41,6 +44,7 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
       setWarName(userData.warName || "");
       setRank(userData.rank || "");
       setRegistration(userData.registration || "");
+      setService(userData.service || "");
     }
   }, [userData, open]);
 
@@ -55,6 +59,7 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
         warName,
         rank,
         registration,
+        service,
         updatedAt: new Date().toISOString(),
       };
 
@@ -148,6 +153,19 @@ const ProfileUpdateDialog = ({ open, onOpenChange, userData }: ProfileUpdateDial
               value={registration}
               onChange={(e) => setRegistration(e.target.value)}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="service">Serviço</Label>
+            <Select value={service} onValueChange={setService}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione seu serviço" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Operacional">Operacional</SelectItem>
+                <SelectItem value="Administrativo">Administrativo</SelectItem>
+                <SelectItem value="Inteligência">Inteligência</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex justify-end gap-4">
             <Button

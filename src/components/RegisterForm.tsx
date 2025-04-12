@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ const RegisterForm = () => {
   const [registration, setRegistration] = useState("");
   const [password, setPassword] = useState("");
   const [userType, setUserType] = useState("user");
+  const [service, setService] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -101,6 +103,7 @@ const RegisterForm = () => {
         registration,
         password,
         userType,
+        service,
         createdAt: new Date(),
       };
 
@@ -120,6 +123,7 @@ const RegisterForm = () => {
       setRegistration("");
       setPassword("");
       setUserType("user");
+      setService("");
       setAdminPassword("");
     } catch (error) {
       console.error("Erro ao cadastrar:", error);
@@ -187,6 +191,21 @@ const RegisterForm = () => {
           onChange={(e) => setRegistration(e.target.value)}
           required
         />
+      </div>
+      <div>
+        <label htmlFor="service" className="block text-sm font-medium text-gray-700">
+          Serviço
+        </label>
+        <Select value={service} onValueChange={setService}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o serviço" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Operacional">Operacional</SelectItem>
+            <SelectItem value="Administrativo">Administrativo</SelectItem>
+            <SelectItem value="Inteligência">Inteligência</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div>
         <label htmlFor="register-password" className="block text-sm font-medium text-gray-700">

@@ -1,3 +1,4 @@
+
 //Lista de usuários
 import { useState, useEffect } from "react";
 import { collection, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
@@ -23,6 +24,7 @@ interface User {
   rank?: string;
   registration?: string;
   userType?: string;
+  service?: string;
   blocked?: boolean;
 }
 
@@ -103,7 +105,8 @@ const UsersList = () => {
   };
 
   const formatUserName = (user: User) => {
-    return `${user.rank || ''} ${user.warName}`.trim();
+    const serviceBadge = user.service ? ` (${user.service})` : '';
+    return `${user.rank || ''} ${user.warName}${serviceBadge}`.trim();
   };
 
   if (isLoading) {

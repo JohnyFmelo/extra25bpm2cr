@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ interface UserDetailsDialogProps {
     rank?: string;
     registration?: string;
     userType?: string;
+    service?: string;
   } | null;
   onUserUpdated: () => void;
 }
@@ -34,6 +36,7 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
   const [rank, setRank] = useState("");
   const [registration, setRegistration] = useState("");
   const [userType, setUserType] = useState("");
+  const [service, setService] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -44,6 +47,7 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
       setRank(userData.rank || "");
       setRegistration(userData.registration || "");
       setUserType(userData.userType || "");
+      setService(userData.service || "");
     }
   }, [userData, open]);
 
@@ -60,6 +64,7 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
         rank,
         registration,
         userType,
+        service,
         updatedAt: new Date().toISOString(),
       };
 
@@ -152,6 +157,19 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
               value={registration}
               onChange={(e) => setRegistration(e.target.value)}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="service">Serviço</Label>
+            <Select value={service} onValueChange={setService}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o serviço" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Operacional">Operacional</SelectItem>
+                <SelectItem value="Administrativo">Administrativo</SelectItem>
+                <SelectItem value="Inteligência">Inteligência</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="userType">Tipo de Usuário</Label>
