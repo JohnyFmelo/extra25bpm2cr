@@ -1,9 +1,10 @@
-import React, { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+
+import React, { useEffect, useState } from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, PartyPopper } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { useEffect, useState } from "react";
 
 interface HoursDonutChartProps {
   totalHours: number;
