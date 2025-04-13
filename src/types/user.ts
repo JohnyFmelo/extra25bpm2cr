@@ -6,6 +6,8 @@ export interface User {
   userType: 'admin' | 'user';
   password?: string;
   service?: string;
+  warName?: string;
+  rank?: string;
 }
 
 export interface TimeSlot {

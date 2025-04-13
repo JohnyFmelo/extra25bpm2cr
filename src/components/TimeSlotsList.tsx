@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TimeSlot {
   id?: string;
@@ -183,13 +184,13 @@ const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [slotLimit, setSlotLimit] = useState<number>(0);
-  const {
-    toast
-  } = useToast();
+  const [volunteerHours, setVolunteerHours] = useState<{[key: string]: string}>({});
+  const { toast } = useToast();
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
   const isAdmin = userData?.userType === 'admin';
+  
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);
@@ -204,6 +205,41 @@ const TimeSlotsList = () => {
     }
     const totalHours = diffHours + diffMinutes / 60;
     return `${totalHours}`;
+  };
+
+  const fetchVolunteerHours = async () => {
+    if (!isAdmin) return;
+    
+    try {
+      const currentMonth = format(new Date(), 'MMMM', { locale: ptBR }).toUpperCase();
+      
+      let tableName = currentMonth;
+      if (currentMonth === 'MARÇO') {
+        tableName = 'MARCO';
+      }
+      
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('Nome, Total_Geral');
+      
+      if (error) {
+        console.error('Error fetching volunteer hours:', error);
+        return;
+      }
+      
+      const hoursMap: {[key: string]: string} = {};
+      if (data) {
+        data.forEach(row => {
+          if (row.Nome && row.Total_Geral) {
+            hoursMap[row.Nome.trim()] = row.Total_Geral;
+          }
+        });
+      }
+      
+      setVolunteerHours(hoursMap);
+    } catch (error) {
+      console.error('Error in fetchVolunteerHours:', error);
+    }
   };
 
   useEffect(() => {
@@ -246,8 +282,11 @@ const TimeSlotsList = () => {
       });
       setIsLoading(false);
     });
+    if (isAdmin) {
+      fetchVolunteerHours();
+    }
     return () => unsubscribe();
-  }, [toast]);
+  }, [toast, isAdmin]);
 
   const handleVolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
@@ -543,6 +582,23 @@ const TimeSlotsList = () => {
     return <div className="p-4">Carregando horários...</div>;
   }
 
+  const getVolunteerHours = (volunteerName: string) => {
+    const volunteerNameParts = volunteerName.split(' ');
+    const warName = volunteerNameParts.slice(1).join(' ');
+    
+    if (volunteerHours[volunteerName]) {
+      return volunteerHours[volunteerName];
+    }
+    
+    for (const key in volunteerHours) {
+      if (key.includes(warName)) {
+        return volunteerHours[key];
+      }
+    }
+    
+    return null;
+  };
+
   return <div className="space-y-6 p-4">
       <TimeSlotLimitControl slotLimit={slotLimit} onUpdateLimit={handleUpdateSlotLimit} userSlotCount={userSlotCount} isAdmin={isAdmin} />
 
@@ -622,7 +678,14 @@ const TimeSlotsList = () => {
                           <div className="space-y-1">
                             {sortVolunteers(slot.volunteers).map((volunteer, index) => (
                               <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
-                                <span>{volunteer}</span>
+                                <div className="flex items-center">
+                                  <span>{volunteer}</span>
+                                  {isAdmin && getVolunteerHours(volunteer) && (
+                                    <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                                      {getVolunteerHours(volunteer)}h
+                                    </span>
+                                  )}
+                                </div>
                                 {isAdmin && (
                                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({
                                     name: volunteer,
