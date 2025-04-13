@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
-import supabase from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 interface TimeSlot {
   id?: string;
@@ -213,10 +213,8 @@ const TimeSlotsList = () => {
     try {
       const currentMonth = format(new Date(), 'MMMM', { locale: ptBR }).toUpperCase();
       
-      type TableName = "JANEIRO" | "FEVEREIRO" | "MARCO" | "ABRIL" | "MAIO" | "JUNHO" | 
-                       "JULHO" | "AGOSTO" | "SETEMBRO" | "OUTUBRO" | "NOVEMBRO" | "DEZEMBRO" | "ESCALA";
-                    
-      let tableName: TableName;
+      let tableName: "JANEIRO" | "FEVEREIRO" | "MARCO" | "ABRIL" | "MAIO" | "JUNHO" | 
+                    "JULHO" | "AGOSTO" | "SETEMBRO" | "OUTUBRO" | "NOVEMBRO" | "DEZEMBRO" | "ESCALA";
                     
       if (currentMonth === 'JANEIRO') tableName = "JANEIRO";
       else if (currentMonth === 'FEVEREIRO') tableName = "FEVEREIRO";
@@ -233,7 +231,7 @@ const TimeSlotsList = () => {
       
       const { data, error } = await supabase
         .from(tableName)
-        .select('Nome, "Total Geral"');
+        .select('Nome, Total_Geral');
       
       if (error) {
         console.error('Error fetching volunteer hours:', error);
@@ -244,9 +242,9 @@ const TimeSlotsList = () => {
       
       if (data) {
         data.forEach(row => {
-          if (row && typeof row === 'object' && 'Nome' in row && 'Total Geral' in row) {
+          if (row && typeof row === 'object' && 'Nome' in row && 'Total_Geral' in row) {
             const nome = row.Nome as string;
-            const totalGeral = row['Total Geral'] as string;
+            const totalGeral = row.Total_Geral as string;
             
             if (nome && totalGeral) {
               hoursMap[nome.trim()] = totalGeral;
@@ -602,12 +600,12 @@ const TimeSlotsList = () => {
   }
 
   const getVolunteerHours = (volunteerName: string) => {
+    const volunteerNameParts = volunteerName.split(' ');
+    const warName = volunteerNameParts.slice(1).join(' ');
+    
     if (volunteerHours[volunteerName]) {
       return volunteerHours[volunteerName];
     }
-    
-    const volunteerNameParts = volunteerName.split(' ');
-    const warName = volunteerNameParts.slice(1).join(' ');
     
     for (const key in volunteerHours) {
       if (key.includes(warName)) {
