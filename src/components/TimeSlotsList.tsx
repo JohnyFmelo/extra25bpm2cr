@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 
 interface TimeSlot {
   id?: string;
@@ -213,10 +213,21 @@ const TimeSlotsList = () => {
     try {
       const currentMonth = format(new Date(), 'MMMM', { locale: ptBR }).toUpperCase();
       
-      let tableName = currentMonth;
-      if (currentMonth === 'MARÇO') {
-        tableName = 'MARCO';
-      }
+      let tableName: "JANEIRO" | "FEVEREIRO" | "MARCO" | "ABRIL" | "MAIO" | "JUNHO" | 
+                    "JULHO" | "AGOSTO" | "SETEMBRO" | "OUTUBRO" | "NOVEMBRO" | "DEZEMBRO" | "ESCALA";
+                    
+      if (currentMonth === 'JANEIRO') tableName = "JANEIRO";
+      else if (currentMonth === 'FEVEREIRO') tableName = "FEVEREIRO";
+      else if (currentMonth === 'MARÇO') tableName = "MARCO";
+      else if (currentMonth === 'ABRIL') tableName = "ABRIL";
+      else if (currentMonth === 'MAIO') tableName = "MAIO";
+      else if (currentMonth === 'JUNHO') tableName = "JUNHO";
+      else if (currentMonth === 'JULHO') tableName = "JULHO";
+      else if (currentMonth === 'AGOSTO') tableName = "AGOSTO";
+      else if (currentMonth === 'SETEMBRO') tableName = "SETEMBRO";
+      else if (currentMonth === 'OUTUBRO') tableName = "OUTUBRO";
+      else if (currentMonth === 'NOVEMBRO') tableName = "NOVEMBRO";
+      else tableName = "DEZEMBRO";
       
       const { data, error } = await supabase
         .from(tableName)
@@ -228,10 +239,16 @@ const TimeSlotsList = () => {
       }
       
       const hoursMap: {[key: string]: string} = {};
+      
       if (data) {
         data.forEach(row => {
-          if (row.Nome && row.Total_Geral) {
-            hoursMap[row.Nome.trim()] = row.Total_Geral;
+          if (row && typeof row === 'object' && 'Nome' in row && 'Total_Geral' in row) {
+            const nome = row.Nome as string;
+            const totalGeral = row.Total_Geral as string;
+            
+            if (nome && totalGeral) {
+              hoursMap[nome.trim()] = totalGeral;
+            }
           }
         });
       }
