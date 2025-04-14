@@ -5,14 +5,14 @@ import { Button } from "./ui/button";
 import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
-import { db, getDatabase, ref, get } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { UserRoundCog, CalendarDays, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
-import supabase from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TimeSlot {
   id?: string;
@@ -30,33 +30,6 @@ interface GroupedTimeSlots {
     slots: TimeSlot[];
     dailyCost: number;
   };
-}
-
-// Função para buscar matrícula no Firebase
-async function getMatriculaFromFirebase(userId: string): Promise<string | null> {
-  const db = getDatabase();
-  const userRef = ref(db, `users/${userId}/matricula`);
-  const snapshot = await get(userRef);
-  return snapshot.exists() ? snapshot.val() : null;
-}
-
-// Função para buscar total de horas no Supabase
-async function getTotalHorasFromSupabase(matricula: string, mes: string): Promise<string | null> {
-  const tableName = mes.toUpperCase();
-  const supabase = createClient('https://evsfhznfnifmqlpktbdr.supabase.co', 'your-supabase-key');
-
-  const { data, error } = await supabase
-    .from(tableName)
-    .select('Total Geral')
-    .eq('Matricula', matricula)
-    .single();
-
-  if (error) {
-    console.error('Error fetching data from Supabase:', error);
-    return null;
-  }
-
-  return data?.['Total Geral'] || null;
 }
 
 const TimeSlotLimitControl = ({
@@ -77,61 +50,61 @@ const TimeSlotLimitControl = ({
     }
   };
   return <div className="w-full space-y-4">
-    {!isAdmin && <div className="bg-white p-4 rounded-lg shadow-sm">
-      <div className="flex items-center justify-between">
-        <div>
-          {userSlotCount >= slotLimit ? <p className="text-orange-600 font-medium">Horários esgotados</p> : <p className="text-gray-700">
-            Escolha {slotLimit - userSlotCount} {slotLimit - userSlotCount === 1 ? 'horário' : 'horários'}
-          </p>}
-          <p className="text-sm text-gray-500">
-            {userSlotCount} de {slotLimit} horários preenchidos
-          </p>
-        </div>
-        <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
-          <span className="text-gray-700 font-medium">{userSlotCount}/{slotLimit}</span>
-        </div>
-      </div>
-    </div>}
-
-    {isAdmin && <div className="bg-white p-4 rounded-lg shadow-sm">
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium text-gray-900">Limite de horários por usuário</h3>
-          <UserRoundCog className="h-5 w-5 text-gray-500" />
-        </div>
-
-        <div className="flex gap-2">
-          {predefinedLimits.map(limit => <Button key={limit} onClick={() => onUpdateLimit(limit)} variant={slotLimit === limit ? "default" : "outline"} className="flex-1">
-            {limit}
-          </Button>)}
-          <Button onClick={() => setShowCustomInput(true)} variant="outline" className="flex-1">
-            +
-          </Button>
-        </div>
-      </div>
-
-      <Dialog open={showCustomInput} onOpenChange={setShowCustomInput}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Definir limite personalizado</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Input type="number" min="1" value={customLimit} onChange={e => setCustomLimit(e.target.value)} placeholder="Digite o limite de horários" />
+      {!isAdmin && <div className="bg-white p-4 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              {userSlotCount >= slotLimit ? <p className="text-orange-600 font-medium">Horários esgotados</p> : <p className="text-gray-700">
+                  Escolha {slotLimit - userSlotCount} {slotLimit - userSlotCount === 1 ? 'horário' : 'horários'}
+                </p>}
+              <p className="text-sm text-gray-500">
+                {userSlotCount} de {slotLimit} horários preenchidos
+              </p>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowCustomInput(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCustomLimitSubmit}>
-                Confirmar
+            <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
+              <span className="text-gray-700 font-medium">{userSlotCount}/{slotLimit}</span>
+            </div>
+          </div>
+        </div>}
+
+      {isAdmin && <div className="bg-white p-4 rounded-lg shadow-sm">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-gray-900">Limite de horários por usuário</h3>
+              <UserRoundCog className="h-5 w-5 text-gray-500" />
+            </div>
+
+            <div className="flex gap-2">
+              {predefinedLimits.map(limit => <Button key={limit} onClick={() => onUpdateLimit(limit)} variant={slotLimit === limit ? "default" : "outline"} className="flex-1">
+                  {limit}
+                </Button>)}
+              <Button onClick={() => setShowCustomInput(true)} variant="outline" className="flex-1">
+                +
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>}
-  </div>;
+
+          <Dialog open={showCustomInput} onOpenChange={setShowCustomInput}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Definir limite personalizado</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Input type="number" min="1" value={customLimit} onChange={e => setCustomLimit(e.target.value)} placeholder="Digite o limite de horários" />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowCustomInput(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleCustomLimitSubmit}>
+                    Confirmar
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>}
+    </div>;
 };
 
 const getMilitaryRankWeight = (rank: string): number => {
@@ -204,7 +177,7 @@ const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(value).replace("R$", "𝑅$");
+  }).format(value).replace("R$", "R$ ");
 };
 
 const TimeSlotsList = () => {
@@ -212,17 +185,12 @@ const TimeSlotsList = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [slotLimit, setSlotLimit] = useState<number>(0);
   const [volunteerHours, setVolunteerHours] = useState<{[key: string]: string}>({});
-  const [userTotalHours, setUserTotalHours] = useState<string | null>(null);
   const { toast } = useToast();
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
   const isAdmin = userData?.userType === 'admin';
-  const userId = userData?.uid || '';
-
-  // Nome do usuário com total de horas
-  const displayedVolunteerName = userTotalHours ? `${volunteerName} ${userTotalHours}h` : volunteerName;
-
+  
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);
@@ -240,44 +208,35 @@ const TimeSlotsList = () => {
   };
 
   const fetchVolunteerHours = async () => {
+    if (!isAdmin) return;
+    
     try {
-      const matricula = await getMatriculaFromFirebase(userId);
-      if (!matricula) {
-        console.error('Matrícula não encontrada.');
+      const currentMonth = format(new Date(), 'MMMM', { locale: ptBR }).toUpperCase();
+      
+      let tableName = currentMonth;
+      if (currentMonth === 'MARÇO') {
+        tableName = 'MARCO';
+      }
+      
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('Nome, Total_Geral');
+      
+      if (error) {
+        console.error('Error fetching volunteer hours:', error);
         return;
       }
-
-      const currentMonth = format(new Date(), 'MMMM', { locale: ptBR });
-      const totalHoras = await getTotalHorasFromSupabase(matricula, currentMonth);
-      if (totalHoras) {
-        setUserTotalHours(totalHoras);
+      
+      const hoursMap: {[key: string]: string} = {};
+      if (data) {
+        data.forEach(row => {
+          if (row.Nome && row.Total_Geral) {
+            hoursMap[row.Nome.trim()] = row.Total_Geral;
+          }
+        });
       }
-
-      if (isAdmin) {
-        const { data, error } = await supabase
-          .from('your_table_name')
-          .select('Nome, "Total Geral"')
-          .eq('mes', currentMonth.toUpperCase());
-
-        if (error) {
-          console.error('Error fetching volunteer hours:', error);
-          return;
-        }
-
-        const hoursMap: {[key: string]: string} = {};
-        if (data) {
-          data.forEach(row => {
-            if (row && typeof row === 'object' && 'Nome' in row && 'Total Geral' in row) {
-              const nome = row.Nome as string;
-              const totalGeral = row['Total Geral'] as string;
-              if (nome && totalGeral) {
-                hoursMap[nome.trim()] = totalGeral;
-              }
-            }
-          });
-        }
-        setVolunteerHours(hoursMap);
-      }
+      
+      setVolunteerHours(hoursMap);
     } catch (error) {
       console.error('Error in fetchVolunteerHours:', error);
     }
@@ -323,42 +282,11 @@ const TimeSlotsList = () => {
       });
       setIsLoading(false);
     });
-    if (userId) {
+    if (isAdmin) {
       fetchVolunteerHours();
     }
     return () => unsubscribe();
-  }, [toast, isAdmin, userId]);
-
-  useEffect(() => {
-    const updateUserNameWithHours = async () => {
-      try {
-        const userData = JSON.parse(localStorage.getItem('user') || '{}');
-        const matricula = userData.registration;
-        
-        if (!matricula) {
-          console.error('Matrícula não encontrada no localStorage');
-          return;
-        }
-
-        const currentDate = new Date();
-        const currentMonth = format(currentDate, 'MMMM', { locale: ptBR });
-        
-        const totalHoras = await getTotalHorasFromSupabase(matricula, currentMonth);
-        
-        if (totalHoras) {
-          const userElement = document.querySelector('.user-name'); // Adicione esta classe ao elemento que mostra o nome do usuário
-          if (userElement) {
-            const currentName = userElement.textContent || '';
-            userElement.textContent = `${currentName} ${totalHoras}h`;
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao atualizar nome com horas:', error);
-      }
-    };
-
-    updateUserNameWithHours();
-  }, []);
+  }, [toast, isAdmin]);
 
   const handleVolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
@@ -650,188 +578,181 @@ const TimeSlotsList = () => {
 
   const weeklyDateRangeText = formatWeeklyDateRange();
 
+  if (isLoading) {
+    return <div className="p-4">Carregando horários...</div>;
+  }
+
   const getVolunteerHours = (volunteerName: string) => {
+    const volunteerNameParts = volunteerName.split(' ');
+    const warName = volunteerNameParts.slice(1).join(' ');
+    
     if (volunteerHours[volunteerName]) {
       return volunteerHours[volunteerName];
     }
-
-    const volunteerNameParts = volunteerName.split(' ');
-    const warName = volunteerNameParts.slice(1).join(' ');
-
+    
     for (const key in volunteerHours) {
       if (key.includes(warName)) {
         return volunteerHours[key];
       }
     }
-
+    
     return null;
   };
 
-  if (isLoading) {
-    return <div className="p-4">Carregando horários...</div>;
-  }
-
   return <div className="space-y-6 p-4">
-    <div className="bg-white p-4 rounded-lg shadow-sm">
-      <p className="text-lg font-medium text-gray-900">{displayedVolunteerName}</p>
-    </div>
+      <TimeSlotLimitControl slotLimit={slotLimit} onUpdateLimit={handleUpdateSlotLimit} userSlotCount={userSlotCount} isAdmin={isAdmin} />
 
-    <TimeSlotLimitControl slotLimit={slotLimit} onUpdateLimit={handleUpdateSlotLimit} userSlotCount={userSlotCount} isAdmin={isAdmin} />
-
-    {isAdmin && totalCostSummary["Total Geral"] > 0 &&
-      <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Resumo de Custos Totais</h2>
-        <div className="space-y-2">
-          <p><strong>Cb/Sd:</strong> {formatCurrency(totalCostSummary["Cb/Sd"])}</p>
-          <p><strong>St/Sgt:</strong> {formatCurrency(totalCostSummary["St/Sgt"])}</p>
-          <p><strong>Oficiais:</strong> {formatCurrency(totalCostSummary["Oficiais"])}</p>
-          <p className="font-semibold text-green-500"><strong>Total Geral:</strong> {formatCurrency(totalCostSummary["Total Geral"])}</p>
-          {weeklyCost > 0 && <p className="font-semibold text-blue-500"><strong>Custo da Semana ({weeklyDateRangeText}):</strong> {formatCurrency(weeklyCost)}</p>}
-        </div>
-      </div>
-    }
-
-    {Object.entries(calculatedGroupedTimeSlots).sort().map(([date, groupedData]) => {
-      const {
-        slots,
-        dailyCost
-      } = groupedData;
-      const isDatePast = isPast(parseISO(date));
-      const isCollapsed = isDatePast;
-      const sortedSlots = [...slots].sort((a, b) => {
-        const timeA = a.start_time;
-        const timeB = b.start_time;
-        return timeA.localeCompare(timeB);
-      });
-      return <div key={date} className="bg-white rounded-lg shadow-sm">
-        <div className="p-4 md:p-5">
-          <div className="flex flex-col items-center">
-            <div className="flex items-center justify-between w-full mb-2">
-              <div className="flex items-center gap-2">
-                <CalendarDays className={`h-5 w-5 ${isDatePast ? 'text-gray-500' : 'text-blue-500'}`} />
-                <h3 className="font-medium text-lg text-gray-800">
-                  {formatDateHeader(date)}
-                </h3>
-                {isAdmin && dailyCost > 0 &&
-                  <span className="text-green-600 font-semibold text-base">{formatCurrency(dailyCost)}</span>}
-              </div>
-              <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
-                {isDatePast ? "Extra" : "Extra"}
-              </Badge>
-            </div>
+      {isAdmin && totalCostSummary["Total Geral"] > 0 &&
+        <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
+          <h2 className="font-semibold text-gray-900 mb-4">Resumo de Custos Totais</h2>
+          <div className="space-y-2">
+            <p><strong>Cb/Sd:</strong> {formatCurrency(totalCostSummary["Cb/Sd"])}</p>
+            <p><strong>St/Sgt:</strong> {formatCurrency(totalCostSummary["St/Sgt"])}</p>
+            <p><strong>Oficiais:</strong> {formatCurrency(totalCostSummary["Oficiais"])}</p>
+            <p className="font-semibold text-green-500"><strong>Total Geral:</strong> {formatCurrency(totalCostSummary["Total Geral"])}</p>
+            {weeklyCost > 0 && <p className="font-semibold text-blue-500"><strong>Custo da Semana ({weeklyDateRangeText}):</strong> {formatCurrency(weeklyCost)}</p>}
           </div>
+        </div>
+      }
 
-          {!isCollapsed && <div className="space-y-3 mt-4">
-            {sortedSlots.map((slot, idx) => (
-              <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
-                <div className="flex flex-col space-y-3">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
-                      <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                      <p className="font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
-                        {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}-{calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)}h
-                      </p>
-                    </div>
-                    {slot.description && (
-                      <span className="text-gray-700 ml-2 max-w-[200px] truncate">
-                        {slot.description}
-                      </span>
-                    )}
+      {Object.entries(calculatedGroupedTimeSlots).sort().map(([date, groupedData]) => {
+        const {
+          slots,
+          dailyCost
+        } = groupedData;
+        const isDatePast = isPast(parseISO(date));
+        const isCollapsed = isDatePast;
+        const sortedSlots = [...slots].sort((a, b) => {
+          const timeA = a.start_time;
+          const timeB = b.start_time;
+          return timeA.localeCompare(timeB);
+        });
+        return <div key={date} className="bg-white rounded-lg shadow-sm">
+            <div className="p-4 md:p-5">
+              <div className="flex flex-col items-center">
+                <div className="flex items-center justify-between w-full mb-2">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className={`h-5 w-5 ${isDatePast ? 'text-gray-500' : 'text-blue-500'}`} />
+                    <h3 className="font-medium text-lg text-gray-800">
+                      {formatDateHeader(date)}
+                    </h3>
+                    {isAdmin && dailyCost > 0 &&
+                      <span className="text-green-600 font-semibold text-base">{formatCurrency(dailyCost)}</span>}
                   </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${isSlotFull(slot) ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
-                      <span className="text-sm font-medium whitespace-nowrap">
-                        {isSlotFull(slot) ? 'Vagas Esgotadas' : `${slot.total_slots - slot.slots_used} ${slot.total_slots - slot.slots_used === 1 ? 'vaga' : 'vagas'}`}
-                      </span>
-                    </div>
-                  </div>
+                  <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
+                    {isDatePast ? "Extra" : "Extra"}
+                  </Badge>
                 </div>
-                
-                {slot.volunteers && slot.volunteers.length > 0 && (
-                  <div className="pt-3 border-t border-gray-200">
-                    <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
-                    <div className="space-y-1">
-                      {sortVolunteers(slot.volunteers).map((volunteer, index) => (
-                        <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
-                          <div className="flex items-center">
-                            <span>{volunteer}</span>
-                            {isAdmin && getVolunteerHours(volunteer) && (
-                              <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
-                                {getVolunteerHours(volunteer)}h
-                              </span>
-                            )}
+              </div>
+
+              {!isCollapsed && <div className="space-y-3 mt-4">
+                  {sortedSlots.map((slot, idx) => (
+                    <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                      <div className="flex flex-col space-y-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
+                            <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                            <p className="font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
+                              {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}-{calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)}h
+                            </p>
                           </div>
-                          {isAdmin && (
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({
-                              name: volunteer,
-                              timeSlot: slot
-                            })}>
-                              <X className="h-4 w-4" />
-                            </Button>
+                          {slot.description && (
+                            <span className="text-gray-700 ml-2 max-w-[200px] truncate">
+                              {slot.description}
+                            </span>
                           )}
                         </div>
-                      ))}
+                        
+                        <div className="flex items-center justify-between">
+                          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${isSlotFull(slot) ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
+                            <span className="text-sm font-medium whitespace-nowrap">
+                              {isSlotFull(slot) ? 'Vagas Esgotadas' : `${slot.total_slots - slot.slots_used} ${slot.total_slots - slot.slots_used === 1 ? 'vaga' : 'vagas'}`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {slot.volunteers && slot.volunteers.length > 0 && (
+                        <div className="pt-3 border-t border-gray-200">
+                          <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
+                          <div className="space-y-1">
+                            {sortVolunteers(slot.volunteers).map((volunteer, index) => (
+                              <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
+                                <div className="flex items-center">
+                                  <span>{volunteer}</span>
+                                  {isAdmin && getVolunteerHours(volunteer) && (
+                                    <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                                      {getVolunteerHours(volunteer)}h
+                                    </span>
+                                  )}
+                                </div>
+                                {isAdmin && (
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({
+                                    name: volunteer,
+                                    timeSlot: slot
+                                  })}>
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="pt-2">
+                        {shouldShowVolunteerButton(slot) && (
+                          isVolunteered(slot) ? (
+                            <Button 
+                              onClick={() => handleUnvolunteer(slot)} 
+                              variant="destructive" 
+                              size="sm" 
+                              className="w-full shadow-sm hover:shadow"
+                            >
+                              Desmarcar
+                            </Button>
+                          ) : (
+                            !isSlotFull(slot) && canVolunteerForSlot(slot) && (
+                              <Button 
+                                onClick={() => handleVolunteer(slot)} 
+                                className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow w-full" 
+                                size="sm"
+                              >
+                                Voluntário
+                              </Button>
+                            )
+                          )
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-                
-                <div className="pt-2">
-                  {shouldShowVolunteerButton(slot) && (
-                    isVolunteered(slot) ? (
-                      <Button 
-                        onClick={() => handleUnvolunteer(slot)} 
-                        variant="destructive" 
-                        size="sm" 
-                        className="w-full shadow-sm hover:shadow"
-                      >
-                        Desmarcar
-                      </Button>
-                    ) : (
-                      !isSlotFull(slot) && canVolunteerForSlot(slot) && (
-                        <Button 
-                          onClick={() => handleVolunteer(slot)} 
-                          className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow w-full" 
-                          size="sm"
-                        >
-                          Voluntário
-                        </Button>
-                      )
-                    )
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>}
-        </div>
-      </div>;
-    })}
+                  ))}
+                </div>}
+            </div>
+          </div>;
+      })}
 
-    <AlertDialog open={!!volunteerToRemove} onOpenChange={() => setVolunteerToRemove(null)}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Remover voluntário</AlertDialogTitle>
-          <AlertDialogDescription>
-            Tem certeza que deseja remover {volunteerToRemove?.name} deste horário?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={() => {
+      <AlertDialog open={!!volunteerToRemove} onOpenChange={() => setVolunteerToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover voluntário</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover {volunteerToRemove?.name} deste horário?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
             if (volunteerToRemove) {
               handleRemoveVolunteer(volunteerToRemove.timeSlot, volunteerToRemove.name);
               setVolunteerToRemove(null);
             }
           }}>
-            Confirmar
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  </div>;
-};
-
-export default TimeSlotsList;
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>;
 };
 
 export default TimeSlotsList;
