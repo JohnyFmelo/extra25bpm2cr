@@ -832,3 +832,6 @@ const TimeSlotsList = () => {
 };
 
 export default TimeSlotsList;
+};
+
+export default TimeSlotsList;
