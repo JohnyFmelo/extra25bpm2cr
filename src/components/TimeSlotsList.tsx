@@ -42,20 +42,21 @@ async function getMatriculaFromFirebase(userId: string): Promise<string | null> 
 
 // Função para buscar total de horas no Supabase
 async function getTotalHorasFromSupabase(matricula: string, mes: string): Promise<string | null> {
-  const supabase = createClient('your-supabase-url', 'your-supabase-key');
+  const tableName = mes.toUpperCase();
+  const supabase = createClient('https://evsfhznfnifmqlpktbdr.supabase.co', 'your-supabase-key');
 
   const { data, error } = await supabase
-    .from('your_table_name')
+    .from(tableName)
     .select('Total Geral')
-    .eq('matricula', matricula)
-    .eq('mes', mes);
+    .eq('Matricula', matricula)
+    .single();
 
   if (error) {
     console.error('Error fetching data from Supabase:', error);
     return null;
   }
 
-  return data?.[0]?.['Total Geral'] || null;
+  return data?.['Total Geral'] || null;
 }
 
 const TimeSlotLimitControl = ({
@@ -327,6 +328,37 @@ const TimeSlotsList = () => {
     }
     return () => unsubscribe();
   }, [toast, isAdmin, userId]);
+
+  useEffect(() => {
+    const updateUserNameWithHours = async () => {
+      try {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        const matricula = userData.registration;
+        
+        if (!matricula) {
+          console.error('Matrícula não encontrada no localStorage');
+          return;
+        }
+
+        const currentDate = new Date();
+        const currentMonth = format(currentDate, 'MMMM', { locale: ptBR });
+        
+        const totalHoras = await getTotalHorasFromSupabase(matricula, currentMonth);
+        
+        if (totalHoras) {
+          const userElement = document.querySelector('.user-name'); // Adicione esta classe ao elemento que mostra o nome do usuário
+          if (userElement) {
+            const currentName = userElement.textContent || '';
+            userElement.textContent = `${currentName} ${totalHoras}h`;
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar nome com horas:', error);
+      }
+    };
+
+    updateUserNameWithHours();
+  }, []);
 
   const handleVolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
