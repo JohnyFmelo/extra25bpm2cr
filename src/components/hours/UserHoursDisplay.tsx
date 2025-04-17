@@ -1,9 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { HoursDonutChart } from "@/components/hours/HoursDonutChart";
 import { HoursData } from "@/types/hours";
-import { MapPin, DollarSign, AlertTriangle } from "lucide-react";
+import { MapPin, DollarSign, AlertTriangle, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useEffect, useState } from "react";
@@ -22,37 +21,56 @@ export const UserHoursDisplay = ({
   const [userRank, setUserRank] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [hasDiscrepancy, setHasDiscrepancy] = useState(false);
+  const [calendarData, setCalendarData] = useState<{[key: number]: {source: string, hours: number}[]}>({});
 
   const totalHours = data["Total Geral"] ? parseFloat(data["Total Geral"].replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
 
-  const parseWorkDays = (workDaysStr: string | undefined) => {
+  const parseWorkDays = (workDaysStr: string | undefined, source: string) => {
     if (!workDaysStr) return [];
-    return workDaysStr.split('|').map(day => day.trim()).filter(day => day);
+    return workDaysStr.split('|').map(day => {
+      const trimmed = day.trim();
+      if (!trimmed) return null;
+      
+      // Extract day and hours
+      const dayMatch = trimmed.match(/(\d+)[\/:](\d+)h/);
+      if (!dayMatch) return null;
+      
+      const dayNumber = parseInt(dayMatch[1], 10);
+      const hours = parseInt(dayMatch[2], 10);
+      
+      return { day: dayNumber, hours, source };
+    }).filter(Boolean);
   };
-  const formatDayHour = (dayHourStr: string) => {
-    if (dayHourStr.includes('/')) return dayHourStr;
-    return dayHourStr.replace(':', '/');
-  };
-  const bpmDays = parseWorkDays(data["Horas 25° BPM"]);
-  const saiopDays = parseWorkDays(data["Saiop"]);
-  const sinfraDays = parseWorkDays(data["Sinfra"]);
-
-  const calculateSectionHours = (days: string[]) => {
-    return days.reduce((total, day) => {
-      const hourMatch = day.match(/\/(\d+)h/);
-      return total + (hourMatch ? parseInt(hourMatch[1], 10) : 0);
-    }, 0);
-  };
-  const bpmTotalHours = calculateSectionHours(bpmDays);
-  const saiopTotalHours = calculateSectionHours(saiopDays);
-  const sinfraTotalHours = calculateSectionHours(sinfraDays);
-
-  const sumOfSectionHours = bpmTotalHours + saiopTotalHours + sinfraTotalHours;
 
   useEffect(() => {
+    // Parse work days from all sources
+    const bpmDays = parseWorkDays(data["Horas 25° BPM"], "25° BPM");
+    const saiopDays = parseWorkDays(data["Saiop"], "Saiop");
+    const sinfraDays = parseWorkDays(data["Sinfra"], "Sinfra");
+    
+    const allDays = [...bpmDays, ...saiopDays, ...sinfraDays];
+    
+    // Organize days by day number
+    const dayMap = {};
+    allDays.forEach(entry => {
+      if (!entry) return;
+      if (!dayMap[entry.day]) {
+        dayMap[entry.day] = [];
+      }
+      dayMap[entry.day].push({ source: entry.source, hours: entry.hours });
+    });
+    
+    setCalendarData(dayMap);
+
+    // Calculate total hours for each source
+    const bpmTotalHours = bpmDays.reduce((total, day) => total + (day?.hours || 0), 0);
+    const saiopTotalHours = saiopDays.reduce((total, day) => total + (day?.hours || 0), 0);
+    const sinfraTotalHours = sinfraDays.reduce((total, day) => total + (day?.hours || 0), 0);
+    
+    const sumOfSectionHours = bpmTotalHours + saiopTotalHours + sinfraTotalHours;
     const hasHourDiscrepancy = Math.abs(totalHours - sumOfSectionHours) > 0.1;
     setHasDiscrepancy(hasHourDiscrepancy);
-  }, [totalHours, sumOfSectionHours]);
+  }, [data]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -91,74 +109,162 @@ export const UserHoursDisplay = ({
     }
     return 41.13;
   };
+
   const hourlyRate = determineHourlyRate(userRank);
   const totalValue = totalHours * hourlyRate;
 
-  return <div className="mt-6 space-y-4 my-0">
+  const getSourceColor = (source) => {
+    switch (source) {
+      case "25° BPM":
+        return "bg-blue-100 text-blue-700";
+      case "Saiop":
+        return "bg-amber-100 text-amber-700";
+      case "Sinfra":
+        return "bg-green-100 text-green-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  const getSourceTotals = () => {
+    const totals = {
+      "25° BPM": 0,
+      "Saiop": 0,
+      "Sinfra": 0
+    };
+
+    Object.values(calendarData).forEach(dayEntries => {
+      dayEntries.forEach(entry => {
+        if (totals[entry.source] !== undefined) {
+          totals[entry.source] += entry.hours;
+        }
+      });
+    });
+
+    return totals;
+  };
+
+  const sourceTotals = getSourceTotals();
+
+  const renderCalendar = () => {
+    const daysOfWeek = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    const totalDays = 31; // Assuming a month with 31 days max
+    const weeks = [];
+    
+    // Render calendar header
+    const header = (
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {daysOfWeek.map((day, index) => (
+          <div key={`header-${index}`} className="text-center text-xs font-medium text-gray-500 py-1">
+            {day}
+          </div>
+        ))}
+      </div>
+    );
+    
+    // Render calendar days
+    let currentWeek = [];
+    for (let i = 1; i <= totalDays; i++) {
+      const dayData = calendarData[i] || [];
+      const hasDayData = dayData.length > 0;
+      
+      const dayContent = (
+        <div 
+          key={`day-${i}`} 
+          className={`relative rounded-lg text-center p-1 ${
+            hasDayData ? "bg-gray-50 shadow-sm border border-gray-100" : ""
+          }`}
+        >
+          <div className="text-xs font-medium text-gray-700">{i}</div>
+          {dayData.map((entry, idx) => (
+            <div 
+              key={`entry-${i}-${idx}`} 
+              className={`text-xs font-medium mt-1 py-1 px-2 rounded ${getSourceColor(entry.source)}`}
+            >
+              {entry.hours}h
+            </div>
+          ))}
+        </div>
+      );
+      
+      currentWeek.push(dayContent);
+      
+      if (currentWeek.length === 7 || i === totalDays) {
+        // Fill in remaining days if needed
+        while (currentWeek.length < 7) {
+          currentWeek.push(<div key={`empty-${weeks.length}-${currentWeek.length}`}></div>);
+        }
+        
+        weeks.push(
+          <div key={`week-${weeks.length}`} className="grid grid-cols-7 gap-1 mb-1">
+            {currentWeek}
+          </div>
+        );
+        
+        currentWeek = [];
+      }
+    }
+    
+    return (
+      <div className="calendar border border-gray-200 rounded-lg p-3 bg-white shadow-sm">
+        {header}
+        {weeks}
+      </div>
+    );
+  };
+
+  const renderSourceLegend = () => {
+    const sources = [
+      { name: "25° BPM", color: "bg-blue-100 text-blue-700 border-blue-200" },
+      { name: "Saiop", color: "bg-amber-100 text-amber-700 border-amber-200" },
+      { name: "Sinfra", color: "bg-green-100 text-green-700 border-green-200" }
+    ];
+    
+    return (
+      <div className="flex flex-wrap gap-2 justify-around mt-3">
+        {sources.map(source => (
+          <div key={source.name} className={`flex items-center rounded-md px-3 py-1 ${source.color} border`}>
+            <MapPin className="h-3 w-3 mr-1" />
+            <span className="text-xs font-medium">{source.name}</span>
+            <span className="text-xs font-bold ml-1">
+              {sourceTotals[source.name]}h
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="mt-6 space-y-4 my-0">
       <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
       
       <HoursDonutChart totalHours={totalHours} />
       
       {hasDiscrepancy && (
-        <Alert variant="default" className="border-yellow-400 bg-[#FEF7CD] text-amber-800">
+        <Alert variant="default" className="border-yellow-400 bg-yellow-50 text-amber-800">
           <AlertTriangle className="h-4 w-4 text-yellow-600" />
           <AlertTitle className="text-amber-800">Atenção</AlertTitle>
           <AlertDescription className="text-amber-700">
-            Existe uma discrepância entre o total de horas ({totalHours}h) e a soma dos dias trabalhados ({sumOfSectionHours}h).
+            Existe uma discrepância entre o total de horas ({totalHours}h) e a soma dos dias trabalhados ({Object.values(sourceTotals).reduce((a, b) => a + b, 0)}h).
             Procure a administração.
           </AlertDescription>
         </Alert>
       )}
       
-      <h3 className="font-medium text-gray-700">Dias Trabalhados</h3>
-      <div className="space-y-4">
-        {bpmDays.length > 0 && <div className="bg-slate-50 rounded-lg p-3 shadow-sm border border-slate-100">
-            <h3 className="font-semibold mb-2 flex items-center justify-between mx-0 px-0 text-gray-700">
-              <span className="flex items-center mx-0">
-                <MapPin className="h-4 w-4 mr-2 text-primary" />
-                25° BPM
-              </span>
-              <span className="text-primary font-medium my-0 px-0 mx-0 text-left text-emerald-600">{bpmTotalHours}h</span>
-            </h3>
-            <div className="flex flex-wrap gap-2 py-0 px-[5px] my-0 mx-0">
-              {bpmDays.map((day, index) => <Badge key={`bpm-${index}`} variant="outline" className="bg-white text-gray-800 border-gray-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
-                  {formatDayHour(day)}
-                </Badge>)}
-            </div>
-          </div>}
-        
-        {saiopDays.length > 0 && <div className="rounded-lg p-3 shadow-sm border border-blue-100 bg-slate-50">
-            <h3 className="font-semibold mb-2 text-blue-700 flex items-center justify-between">
-              <span className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2 text-blue-600" />
-                SAIOP
-              </span>
-              <span className="text-blue-600 font-medium">{saiopTotalHours}h</span>
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {saiopDays.map((day, index) => <Badge key={`saiop-${index}`} variant="outline" className="bg-white text-blue-800 border-blue-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-blue-50 transition-colors">
-                  {formatDayHour(day)}
-                </Badge>)}
-            </div>
-          </div>}
-        
-        {sinfraDays.length > 0 && <div className="bg-green-50 rounded-lg p-3 shadow-sm border border-green-100">
-            <h3 className="font-semibold mb-2 text-green-700 flex items-center justify-between">
-              <span className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2 text-green-600" />
-                SINFRA
-              </span>
-              <span className="text-green-600 font-medium">{sinfraTotalHours}h</span>
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {sinfraDays.map((day, index) => <Badge key={`sinfra-${index}`} variant="outline" className="bg-white text-green-800 border-green-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-green-50 transition-colors">
-                  {formatDayHour(day)}
-                </Badge>)}
-            </div>
-          </div>}
-      </div>
+      <Card className="bg-slate-50 border-slate-100 shadow-sm">
+        <CardContent className="p-4">
+          <h3 className="font-semibold text-gray-700 mb-3 flex items-center">
+            <Calendar className="h-5 w-5 mr-2 text-primary" />
+            Dias Trabalhados
+          </h3>
+          
+          {renderCalendar()}
+          {renderSourceLegend()}
+        </CardContent>
+      </Card>
 
-      <Card className="bg-blue-50 border-blue-100 shadow-sm mt-4">
+      <Card className="bg-blue-50 border-blue-100 shadow-sm">
         <CardContent className="p-4">
           <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
             <DollarSign className="h-5 w-5 mr-2 text-primary" />
@@ -194,5 +300,6 @@ export const UserHoursDisplay = ({
       <Button variant="destructive" className="w-full mt-4" onClick={onClose}>
         Fechar
       </Button>
-    </div>;
+    </div>
+  );
 };
