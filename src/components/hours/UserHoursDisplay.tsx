@@ -12,7 +12,6 @@ import { db } from "@/lib/firebase";
 interface UserHoursDisplayProps {
   data: HoursData;
   onClose: () => void;
-  tableName?: string; // Nome da tabela do Supabase
 }
 
 // Lista de feriados nacionais e estaduais (exemplo para 2025)
@@ -33,8 +32,7 @@ const HOLIDAYS_2025 = [
 
 export const UserHoursDisplay = ({
   data,
-  onClose,
-  tableName = ""
+  onClose
 }: UserHoursDisplayProps) => {
   const [userRank, setUserRank] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
@@ -45,92 +43,30 @@ export const UserHoursDisplay = ({
 
   const totalHours = data["Total Geral"] ? parseFloat(data["Total Geral"].replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
 
-  // Determinar mês e ano a partir do nome da tabela
-  useEffect(() => {
-    if (tableName) {
-      // Padrões comuns de nomes de tabela: "horas_extra_012025", "horas_jan_2025", "horas_janeiro_2025"
-      
-      // Tentar extrair mês e ano em formato numérico (ex: 012025 = janeiro 2025)
-      const numericMatch = tableName.match(/(\d{2})(\d{4})$/);
-      if (numericMatch) {
-        const monthNum = parseInt(numericMatch[1], 10) - 1; // Ajustar para 0-11
-        const yearNum = parseInt(numericMatch[2], 10);
-        if (monthNum >= 0 && monthNum <= 11 && yearNum >= 2020 && yearNum <= 2030) {
-          setMonth(monthNum);
-          setYear(yearNum);
-          return;
-        }
-      }
-      
-      // Tentar extrair mês por nome abreviado (ex: jan_2025)
-      const monthNames = {
-        'jan': 0, 'fev': 1, 'mar': 2, 'abr': 3, 'mai': 4, 'jun': 5,
-        'jul': 6, 'ago': 7, 'set': 8, 'out': 9, 'nov': 10, 'dez': 11
-      };
-      
-      const monthMatch = tableName.toLowerCase().match(/(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez).*?(\d{4})/);
-      if (monthMatch) {
-        const monthName = monthMatch[1];
-        const yearNum = parseInt(monthMatch[2], 10);
-        if (monthNames[monthName] !== undefined && yearNum >= 2020 && yearNum <= 2030) {
-          setMonth(monthNames[monthName]);
-          setYear(yearNum);
-          return;
-        }
-      }
-      
-      // Tentar extrair mês por nome completo (ex: janeiro_2025)
-      const fullMonthNames = {
-        'janeiro': 0, 'fevereiro': 1, 'marco': 2, 'março': 2, 'abril': 3, 'maio': 4, 'junho': 5,
-        'julho': 6, 'agosto': 7, 'setembro': 8, 'outubro': 9, 'novembro': 10, 'dezembro': 11
-      };
-      
-      const fullMonthMatch = tableName.toLowerCase().match(/(janeiro|fevereiro|marco|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro).*?(\d{4})/);
-      if (fullMonthMatch) {
-        const monthName = fullMonthMatch[1];
-        const yearNum = parseInt(fullMonthMatch[2], 10);
-        if (fullMonthNames[monthName] !== undefined && yearNum >= 2020 && yearNum <= 2030) {
-          setMonth(fullMonthNames[monthName]);
-          setYear(yearNum);
-          return;
-        }
-      }
-      
-      // Se não conseguir extrair do nome da tabela, tentar inferir pelos dados
-      inferMonthFromData();
-    } else {
-      // Se não tiver nome de tabela, tentar inferir pelos dados
-      inferMonthFromData();
-    }
-  }, [tableName]);
-
-  // Função para inferir o mês a partir dos dados
-  const inferMonthFromData = () => {
-    // Se não conseguirmos determinar pelo nome da tabela, tentamos pelos dados
-    // Assumimos que os dados são do mês atual ou do mês anterior
-    const currentDate = new Date();
-    
-    // Se estamos nos primeiros dias do mês (1-5), provavelmente os dados são do mês anterior
-    if (currentDate.getDate() <= 5) {
-      let inferredMonth = currentDate.getMonth() - 1;
-      let inferredYear = currentDate.getFullYear();
-      
-      if (inferredMonth < 0) {
-        inferredMonth = 11; // Dezembro do ano anterior
-        inferredYear -= 1;
-      }
-      
-      setMonth(inferredMonth);
-      setYear(inferredYear);
-    } else {
-      // Caso contrário, assumimos que é o mês atual
-      setMonth(currentDate.getMonth());
-      setYear(currentDate.getFullYear());
-    }
-  };
-
   const parseWorkDays = (workDaysStr: string | undefined, source: string) => {
     if (!workDaysStr) return [];
+    
+    // Tentar extrair o mês a partir da primeira data (se disponível)
+    const monthMatch = workDaysStr.match(/(\d+)\/(\d+)h/);
+    if (monthMatch && !isNaN(parseInt(monthMatch[1]))) {
+      // Verificamos qual seria o mês lógico para estes dados
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1; // getMonth() retorna 0-11
+      const currentYear = currentDate.getFullYear();
+
+      // Configurar o mês/ano para os dados (assumindo que é o mês atual ou o anterior)
+      const extractedDay = parseInt(monthMatch[1]);
+      if (extractedDay > 0 && extractedDay <= 31) {
+        // Manter o mês atual ou usar o mês anterior se estamos nos primeiros dias
+        // e os dados parecem ser do final do mês anterior
+        setMonth(currentMonth - 1);
+        setYear(currentYear);
+        if (currentMonth === 1 && monthMatch[1] > 20) {
+          setMonth(12);
+          setYear(currentYear - 1);
+        }
+      }
+    }
     
     return workDaysStr.split('|').map(day => {
       const trimmed = day.trim();
