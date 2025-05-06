@@ -106,6 +106,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {console.log(`Autor ${index} - isAuthor:`, true, `laudoPericial:`, autor.laudoPericial)} {/* Log temporário */}
                   <PersonalInfoFields 
                     data={autor} 
                     onChangeHandler={handleAutorDetalhadoChange}
@@ -152,12 +153,13 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {console.log(`Vítima ${index} - isVictim:`, true, `laudoPericial:`, vitima.laudoPericial)} {/* Log temporário */}
                   <PersonalInfoFields 
                     data={vitima} 
                     onChangeHandler={handleVitimaChange}
                     prefix={`vitima_${index}_`}
                     index={index}
-                    isVictim={true} // Novo prop para indicar Vítima
+                    isVictim={true}
                   />
                 </CardContent>
               </Card>
@@ -198,6 +200,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {console.log(`Testemunha ${index} - isAuthor:`, false, `isVictim:`, false)} {/* Log temporário */}
                   <PersonalInfoFields 
                     data={testemunha} 
                     onChangeHandler={handleTestemunhaChange}
