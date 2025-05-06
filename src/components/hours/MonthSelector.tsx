@@ -1,15 +1,14 @@
 
 import React from 'react';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-// Definição dos meses
+interface MonthSelectorProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
 const months = [
   { value: "janeiro", label: "Janeiro" },
   { value: "fevereiro", label: "Fevereiro" },
@@ -25,43 +24,29 @@ const months = [
   { value: "dezembro", label: "Dezembro" },
 ];
 
-// Função para pegar o mês atual como valor inicial (opcional)
-export const getCurrentMonthValue = () => {
-  const monthIndex = new Date().getMonth(); // 0 = Janeiro, 11 = Dezembro
-  return months[monthIndex]?.value || months[0].value; // Retorna o valor ou o primeiro mês
-};
-
-interface MonthSelectorProps {
-  value: string;
-  onChange: (value: string) => void;
-}
-
 export const MonthSelector = ({ value, onChange }: MonthSelectorProps) => {
+  // Get current month in portuguese lowercase
+  const currentMonth = format(new Date(), 'MMMM', { locale: ptBR }).toLowerCase();
+
+  // If no value is set, trigger onChange with current month
+  React.useEffect(() => {
+    if (!value) {
+      onChange(currentMonth);
+    }
+  }, [value, onChange, currentMonth]);
+
   return (
-    <div className="space-y-2">
-      <label htmlFor="month-select" className="block text-sm font-medium text-gray-700">
-        Selecione o mês
-      </label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id="month-select" className="w-full">
-          <SelectValue placeholder="Selecione um mês" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            {months.map((month) => (
-              <SelectItem key={month.value} value={month.value}>
-                {month.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </div>
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger>
+        <SelectValue placeholder="Selecione o mês" />
+      </SelectTrigger>
+      <SelectContent>
+        {months.map((month) => (
+          <SelectItem key={month.value} value={month.value}>
+            {month.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 };
-
-// Export the months array so it can be used elsewhere
-export { months };
-
-// Also add a default export to support both import styles
-export default MonthSelector;
