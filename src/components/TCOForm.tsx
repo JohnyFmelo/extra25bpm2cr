@@ -34,6 +34,7 @@ interface Pessoa {
   cpf: string;
   celular: string;
   email: string;
+  laudoPericial: string; // Novo campo: "Sim" ou "Não"
 }
 
 // --- Funções Auxiliares ---
@@ -159,19 +160,19 @@ const TCOForm = () => {
     nome: "", sexo: "", estadoCivil: "", profissao: "",
     endereco: "", dataNascimento: "", naturalidade: "",
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
-    celular: "", email: ""
+    celular: "", email: "", laudoPericial: "Não"
   }]);
   const [testemunhas, setTestemunhas] = useState<Pessoa[]>([{
     nome: "", sexo: "", estadoCivil: "", profissao: "",
     endereco: "", dataNascimento: "", naturalidade: "",
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
-    celular: "", email: ""
+    celular: "", email: "", laudoPericial: "Não"
   }]);
   const [autores, setAutores] = useState<Pessoa[]>([{
     nome: "", sexo: "", estadoCivil: "", profissao: "",
     endereco: "", dataNascimento: "", naturalidade: "",
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
-    celular: "", email: ""
+    celular: "", email: "", laudoPericial: "Não"
   }]);
   // Template do relato policial
   const relatoPolicialTemplate = `POR VOLTA DAS [HORÁRIO] DO DIA [DATA], NESTA CIDADE DE VÁRZEA GRANDE-MT, A GUARNIÇÃO DA VIATURA [GUARNIÇÃO][OPERACAO_TEXT] COMPOSTA PELOS MILITARES [GUPM], DURANTE RONDAS NO BAIRRO [BAIRRO], FOI ACIONADA VIA [MEIO DE ACIONAMENTO] PARA ATENDER A UMA OCORRÊNCIA DE [NATUREZA] NO [LOCAL], ONDE [VERSÃO INICIAL]. CHEGANDO NO LOCAL, A EQUIPE [O QUE A PM DEPAROU]. A VERSÃO DAS PARTES FOI REGISTRADA EM CAMPO PRÓPRIO. [VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]. [DILIGÊNCIAS E APREENSÕES REALIZADAS]. DIANTE DISSO, [ENCAMINHAMENTO PARA REGISTRO DOS FATOS].`;
@@ -307,7 +308,7 @@ const TCOForm = () => {
           nome: autor, sexo: "", estadoCivil: "", profissao: "",
           endereco: "", dataNascimento: "", naturalidade: "",
           filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
-          celular: "", email: ""
+          celular: "", email: "", laudoPericial: "Não"
         });
       } else {
         newAutores[0] = { ...newAutores[0], nome: autor };
@@ -342,7 +343,12 @@ const TCOForm = () => {
   }, []);
 
   const handleAddVitima = () => {
-    setVitimas([...vitimas, { nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "" }]);
+    setVitimas([...vitimas, {
+      nome: "", sexo: "", estadoCivil: "", profissao: "",
+      endereco: "", dataNascimento: "", naturalidade: "",
+      filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
+      celular: "", email: "", laudoPericial: "Não"
+    }]);
   };
   const handleRemoveVitima = (index: number) => {
     if (vitimas.length > 0) {
@@ -351,7 +357,12 @@ const TCOForm = () => {
     }
   };
   const handleAddTestemunha = () => {
-    setTestemunhas([...testemunhas, { nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "" }]);
+    setTestemunhas([...testemunhas, {
+      nome: "", sexo: "", estadoCivil: "", profissao: "",
+      endereco: "", dataNascimento: "", naturalidade: "",
+      filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
+      celular: "", email: "", laudoPericial: "Não"
+    }]);
   };
   const handleRemoveTestemunha = (index: number) => {
     if (testemunhas.length > 0) {
@@ -360,7 +371,12 @@ const TCOForm = () => {
     }
   };
   const handleAddAutor = () => {
-    setAutores([...autores, { nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "" }]);
+    setAutores([...autores, {
+      nome: "", sexo: "", estadoCivil: "", profissao: "",
+      endereco: "", dataNascimento: "", naturalidade: "",
+      filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
+      celular: "", email: "", laudoPericial: "Não"
+    }]);
   };
   const handleRemoveAutor = (index: number) => {
     if (autores.length > 0) {
@@ -381,10 +397,13 @@ const TCOForm = () => {
       }
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
+    } else if (field === 'laudoPericial') {
+      processedValue = value; // "Sim" ou "Não"
     }
     newVitimas[index] = { ...newVitimas[index], [field]: processedValue };
     setVitimas(newVitimas);
   };
+
   const handleTestemunhaChange = (index: number, field: string, value: string) => {
     const newTestemunhas = [...testemunhas];
     let processedValue = value;
@@ -395,10 +414,13 @@ const TCOForm = () => {
       }
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
+    } else if (field === 'laudoPericial') {
+      processedValue = value; // "Sim" ou "Não"
     }
     newTestemunhas[index] = { ...newTestemunhas[index], [field]: processedValue };
     setTestemunhas(newTestemunhas);
   };
+
   const handleAutorDetalhadoChange = (index: number, field: string, value: string) => {
     const newAutores = [...autores];
     let processedValue = value;
@@ -420,6 +442,8 @@ const TCOForm = () => {
           toast({ variant: "destructive", title: "Atenção: Autor Menor de Idade", description: "Avalie se cabe TCO." });
         }
       }
+    } else if (field === 'laudoPericial') {
+      processedValue = value; // "Sim" ou "Não"
     }
     newAutores[index] = { ...newAutores[index], [field]: processedValue };
     setAutores(newAutores);
@@ -581,7 +605,7 @@ const TCOForm = () => {
         />
         <PessoasEnvolvidasTab
           activeTab={activeTab} setActiveTab={setActiveTab}
-          autorDetalhes={autores[0] || { nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "" }}
+          autorDetalhes={autores[0] || { nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "", laudoPericial: "Não" }}
           vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
           testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
           autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
