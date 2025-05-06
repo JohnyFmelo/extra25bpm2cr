@@ -24,6 +24,12 @@ const formatarDataPorExtenso = (date) => {
     }
 };
 
+/** Capitaliza a primeira letra de uma string */
+const capitalizeFirstLetter = (str) => {
+    if (!str) return str;
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+};
+
 /** Adiciona Requisição de Exame de Lesão Corporal (em página nova) */
 export const addRequisicaoExameLesao = (doc, data) => {
     const periciado = data.periciadoNome;
@@ -34,8 +40,10 @@ export const addRequisicaoExameLesao = (doc, data) => {
         return null;
     }
 
-    // Define o pronome com base no sexo
+    // Define pronomes e termos com base no sexo
     const pronome = sexo === "MASCULINO" ? "NO SR." : sexo === "FEMININO" ? "NA SRA." : "NO(A) SR.(A)";
+    const qualificado = sexo === "MASCULINO" ? "QUALIFICADO" : sexo === "FEMININO" ? "QUALIFICADA" : "QUALIFICADO(A)";
+    const periciadoLabel = sexo === "MASCULINO" ? "PERICIADO" : sexo === "FEMININO" ? "PERICIADA" : "PERICIADO(A)";
 
     let yPos = addNewPage(doc, data);
     const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
@@ -48,10 +56,11 @@ export const addRequisicaoExameLesao = (doc, data) => {
     doc.text("REQUISIÇÃO DE EXAME DE LESÃO CORPORAL", PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 10;
 
-    const textoRequisicao = `REQUISITO A POLITEC - PERÍCIA OFICIAL E IDENTIFICAÇÃO TÉCNICA, NOS TERMOS DOS ARTIGOS 158 E SEGUINTES DO CÓDIGO DE PROCESSO PENAL E ARTIGO 69, CAPUT, DA LEI Nº 9.099/1995, A REALIZAÇÃO DE EXAME DE CORPO DE DELITO ${pronome} ${periciado.toUpperCase()}, QUALIFICADO(A) NO TERMO CIRCUNSTANCIADO DE OCORRÊNCIA EM REFERÊNCIA, EM RAZÃO DE FATOS DE NATUREZA "${naturezaLesao.toUpperCase()}", OCORRIDOS NA DATA ${dataOcorrencia}. PARA TANTO, SOLICITO QUE SEJA RESPONDIDO AOS QUESITOS OFICIAIS, CONFORME LEGISLAÇÃO PERTINENTE (ART. 159, § 3º CPP E PORTARIAS DA POLITEC):`;
+    const textoRequisicao = `REQUISITO A POLITEC - PERÍCIA OFICIAL E IDENTIFICAÇÃO TÉCNICA, NOS TERMOS DOS ARTIGOS 158 E SEGUINTES DO CÓDIGO DE PROCESSO PENAL E ARTIGO 69, CAPUT, DA LEI Nº 9.099/1995, A REALIZAÇÃO DE EXAME DE CORPO DE DELITO ${pronome} ${periciado.toUpperCase()}, ${qualificado} NO TERMO CIRCUNSTANCIADO DE OCORRÊNCIA EM REFERÊNCIA, EM RAZÃO DE FATOS DE NATUREZA "${naturezaLesao.toUpperCase()}", OCORRIDOS NA DATA ${dataOcorrencia}. PARA TANTO, SOLICITO QUE SEJA RESPONDIDO AOS QUESITOS OFICIAIS, CONFORME LEGISLAÇÃO PERTINENTE (ART. 159, § 3º CPP E PORTARIAS DA POLITEC):`;
     yPos = addWrappedText(doc, yPos, textoRequisicao, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 8;
 
+    // Lista de quesitos, excluindo o item 11 para homens
     const quesitos = [
         "1. Houve ofensa à integridade corporal ou à saúde do(a) periciando(a)?",
         "2. Em caso afirmativo, qual o instrumento ou meio que a produziu?",
@@ -62,9 +71,11 @@ export const addRequisicaoExameLesao = (doc, data) => {
         "7. Resultou incapacidade permanente para o trabalho?",
         "8. Resultou enfermidade incurável?",
         "9. Resultou perda ou inutilização de membro, sentido ou função?",
-        "10. Resultou deformidade permanente?",
-        "11. Resultou aborto?"
+        "10. Resultou deformidade permanente?"
     ];
+    if (sexo !== "MASCULINO") {
+        quesitos.push("11. Resultou aborto?");
+    }
 
     doc.setFont("helvetica", "normal"); doc.setFontSize(10);
     quesitos.forEach(q => {
@@ -76,14 +87,14 @@ export const addRequisicaoExameLesao = (doc, data) => {
     // Usa dataTerminoRegistro ou a data atual como fallback
     const dataRegistro = data.dataTerminoRegistro || new Date();
     const dataAtualFormatada = formatarDataPorExtenso(dataRegistro);
-    const cidadeReq = data.municipio || "VÁRZEA GRANDE";
+    const cidadeReq = capitalizeFirstLetter(data.municipio || "Várzea Grande");
     doc.setFont("helvetica", "normal"); doc.setFontSize(12);
-    const dateText = `${cidadeReq.toUpperCase()}-MT, ${dataAtualFormatada}.`;
+    const dateText = `${cidadeReq}-MT, ${dataAtualFormatada}.`;
     yPos = checkPageBreak(doc, yPos, 10, data);
     doc.text(dateText, PAGE_WIDTH - MARGIN_RIGHT, yPos, { align: 'right' });
     yPos += 15;
 
-    yPos = addSignatureWithNameAndRole(doc, yPos, periciado.toUpperCase(), "PERICIADO(A)", data);
+    yPos = addSignatureWithNameAndRole(doc, yPos, periciado.toUpperCase(), periciadoLabel, data);
     const nomeCondutor = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
     yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutor, "CONDUTOR DA OCORRÊNCIA / REQUISITANTE", data);
 
