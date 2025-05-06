@@ -3,453 +3,486 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { 
+  RadioGroup, 
+  RadioGroupItem 
+} from "@/components/ui/radio-group";
 
-// Helper function to get current date in YYYY-MM-DD format
-const getCurrentDate = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+// Lista de naturezas de TCO
+const naturezas = [
+  { id: "drogas", label: "Art. 28 - Posse de droga para consumo pessoal", 
+    pena: "I - advertência sobre os efeitos das drogas; II - prestação de serviços à comunidade; III - medida educativa de comparecimento a programa ou curso educativo." },
+  { id: "perturbacao", label: "Art. 65 - Perturbação do sossego alheio", 
+    pena: "Prisão simples, de quinze dias a três meses, ou multa." },
+  { id: "ameaca", label: "Art. 147 - Ameaça", 
+    pena: "Detenção, de um a seis meses, ou multa." },
+  { id: "lesao_leve", label: "Art. 129 § 6º - Lesão corporal leve", 
+    pena: "Detenção, de três meses a um ano." },
+  { id: "desacato", label: "Art. 331 - Desacato", 
+    pena: "Detenção, de seis meses a dois anos, ou multa." },
+  { id: "outro", label: "Outro (especificar)", pena: "" }
+];
+
+// Formato de hora (24h)
+const formatTime = (date) => {
+  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 };
 
-// Helper function to get current time in HH:MM format
-const getCurrentTime = () => {
-  const now = new Date();
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-};
-
-// Define Naturezas and Penalties
-const naturezasEOpcoes: { [key: string]: string } = {
-  'Ameaça': 'Pena - detenção, de um a seis meses, ou multa.',
-  'Vias de fato': 'Pena - prisão simples, de quinze dias a três meses, ou multa.',
-  'Lesão corporal leve': 'Pena - detenção, de três meses a um ano.',
-  'Perturbação do trabalho ou do sossego alheios': 'Pena - prisão simples, de quinze dias a três meses, ou multa.',
-  'Dano simples': 'Pena - detenção, de um a seis meses, ou multa.',
-  'Desacato': 'Pena - detenção, de seis meses a dois anos, ou multa.',
-  'Posse de droga para consumo pessoal': 'Pena - advertência sobre os efeitos das drogas, prestação de serviços à comunidade, medida educativa de comparecimento a programa ou curso educativo.',
-  // Adicione outras naturezas comuns de TCO aqui
-  'Outros': '', // No predefined penalty
+// Formato de data (DD/MM/YYYY)
+const formatDate = (date) => {
+  return date.toLocaleDateString('pt-BR');
 };
 
 const TCOForm = () => {
   const { toast } = useToast();
+  const now = new Date();
+  
+  // Estado para controle dos campos do formulário
+  const [formData, setFormData] = useState({
+    numeroTCO: "",
+    natureza: "",
+    naturezaOutro: "",
+    // Dados da droga
+    quantidade: "",
+    tipoDroga: "",
+    corDroga: "",
+    indiciosDroga: "",
+    descricaoMaterial: "",
+    solicitarPericia: "sim",
+    // Dados da ocorrência
+    dataFato: formatDate(now),
+    horaFato: formatTime(now),
+    dataInicioRegistro: formatDate(now),
+    horaInicioRegistro: formatTime(now),
+    dataFimRegistro: "",
+    horaFimRegistro: "",
+    // Campos originais
+    location: "",
+    defendant: "",
+    description: "",
+    witnesses: "",
+    officer: "",
+  });
 
-  const getInitialFormData = () => {
-    const now = new Date();
-    return {
-      tcoNumber: "",
+  // Estado para armazenar a pena da natureza selecionada
+  const [penaNatureza, setPenaNatureza] = useState("");
+  
+  // Estado para controlar a visibilidade da seção de drogas
+  const [mostrarSecaoDroga, setMostrarSecaoDroga] = useState(false);
+
+  // Efeito para atualizar o horário de início do registro
+  useEffect(() => {
+    const dataInicioRegistro = formatDate(new Date());
+    const horaInicioRegistro = formatTime(new Date());
+    
+    setFormData(prev => ({
+      ...prev,
+      dataInicioRegistro,
+      horaInicioRegistro
+    }));
+  }, []);
+
+  // Função para inferir os indícios com base no tipo e cor da droga
+  const inferirIndiciosDroga = (tipo, cor) => {
+    if (!tipo || !cor) return "";
+    
+    if (tipo === "vegetal" && cor === "verde") {
+      return "Maconha";
+    } else if (tipo === "mineral" && cor === "amarelada") {
+      return "Pasta Base";
+    } else if (tipo === "mineral" && cor === "branca") {
+      return "Cocaína";
+    } else {
+      return "Material Desconhecido";
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (name, value) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Lógica para natureza
+    if (name === "natureza") {
+      const naturezaSelecionada = naturezas.find(n => n.id === value);
+      setPenaNatureza(naturezaSelecionada?.pena || "");
+      setMostrarSecaoDroga(value === "drogas");
+    }
+    
+    // Lógica para inferir indícios de droga quando tipo ou cor são alterados
+    if (name === "tipoDroga" || name === "corDroga") {
+      const tipo = name === "tipoDroga" ? value : formData.tipoDroga;
+      const cor = name === "corDroga" ? value : formData.corDroga;
+      const indiciosDroga = inferirIndiciosDroga(tipo, cor);
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: value,
+        indiciosDroga
+      }));
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Atualizar data e hora de fim do registro
+    const dataFimRegistro = formatDate(new Date());
+    const horaFimRegistro = formatTime(new Date());
+    
+    const formDataFinal = {
+      ...formData,
+      dataFimRegistro,
+      horaFimRegistro
+    };
+    
+    // Aqui você enviaria para o backend
+    console.log("TCO Form submitted:", formDataFinal);
+    
+    toast({
+      title: "TCO Registrado",
+      description: "O registro foi salvo com sucesso.",
+      duration: 3000,
+    });
+    
+    // Reset form after submission
+    setFormData({
+      numeroTCO: "",
       natureza: "",
-      outraNatureza: "",
-      dataFato: getCurrentDate(),
-      horaFato: "",
-      dataInicioRegistro: getCurrentDate(),
-      horaInicioRegistro: getCurrentTime(),
-      // dataFimRegistro: "", // Hidden/Internal - manage on submit if needed
-      // horaFimRegistro: "", // Hidden/Internal - manage on submit if needed
+      naturezaOutro: "",
+      quantidade: "",
+      tipoDroga: "",
+      corDroga: "",
+      indiciosDroga: "",
+      descricaoMaterial: "",
+      solicitarPericia: "sim",
+      dataFato: formatDate(now),
+      horaFato: formatTime(now),
+      dataInicioRegistro: formatDate(now),
+      horaInicioRegistro: formatTime(now),
+      dataFimRegistro: "",
+      horaFimRegistro: "",
       location: "",
       defendant: "",
       description: "",
       witnesses: "",
       officer: "",
-      // Drug related fields
-      drugQuantity: "",
-      drugType: "", // 'Vegetal' | 'Mineral' | ''
-      drugColor: "", // 'Verde' | 'Amarelada' | 'Branco' | ''
-      drugDescription: "", // For unknown material
-      solicitarPericia: "Sim", // Default to 'Sim'
-    };
-  };
-
-  const [formData, setFormData] = useState(getInitialFormData);
-  const [penaPrevista, setPenaPrevista] = useState("");
-  const [indiciosDroga, setIndiciosDroga] = useState<string | null>(null);
-
-  // Effect to update penalty when natureza changes
-  useEffect(() => {
-    setPenaPrevista(naturezasEOpcoes[formData.natureza] || "");
-  }, [formData.natureza]);
-
-  // Effect to determine drug indications
-  useEffect(() => {
-    if (formData.natureza !== 'Posse de droga para consumo pessoal') {
-        setIndiciosDroga(null);
-        return;
-    }
-
-    const { drugType, drugColor } = formData;
-
-    if (drugType === "Vegetal" && drugColor === "Verde") {
-      setIndiciosDroga("Maconha");
-    } else if (drugType === "Mineral" && drugColor === "Amarelada") {
-      setIndiciosDroga("Pasta Base");
-    } else if (drugType === "Mineral" && drugColor === "Branco") {
-      setIndiciosDroga("Cocaína");
-    } else if (drugType && drugColor) {
-        // Only set to unknown if both type and color are selected but don't match known combos
-        setIndiciosDroga("Material Desconhecido");
-    } else {
-        setIndiciosDroga(null); // Not enough info yet
-    }
-  }, [formData.natureza, formData.drugType, formData.drugColor]);
-
-  // Generic handler for Input and Textarea
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Handler for Select components
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => {
-        const newState = { ...prev, [name]: value };
-        // Reset conditional fields if parent changes
-        if (name === 'natureza') {
-            if (value !== 'Outros') newState.outraNatureza = '';
-            if (value !== 'Posse de droga para consumo pessoal') {
-                newState.drugQuantity = '';
-                newState.drugType = '';
-                newState.drugColor = '';
-                newState.drugDescription = '';
-                // Keep solicitarPericia default? Or reset only if needed? Let's keep it for now.
-            }
-        }
-        if (name === 'drugType' || name === 'drugColor') {
-           // Reset description if type/color changes and indication is no longer 'Unknown'
-           // The useEffect handles recalculating 'indicios', just need to maybe clear description
-            if(indiciosDroga === 'Material Desconhecido') {
-                // Check if new state will *not* be unknown
-                const nextIndicios = determineIndicios(newState.drugType, newState.drugColor);
-                 if (nextIndicios !== 'Material Desconhecido') {
-                    newState.drugDescription = '';
-                 }
-            }
-        }
-        return newState;
     });
-  };
-
-    // Helper specifically for the indicios logic used above
-    const determineIndicios = (type?: string, color?: string): string | null => {
-        if (type === "Vegetal" && color === "Verde") return "Maconha";
-        if (type === "Mineral" && color === "Amarelada") return "Pasta Base";
-        if (type === "Mineral" && color === "Branco") return "Cocaína";
-        if (type && color) return "Material Desconhecido";
-        return null;
-    }
-
-
-  // Handler for RadioGroup
-  const handleRadioChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Add data/hora final do registro here if needed
-    const finalFormData = {
-        ...formData,
-        // dataFimRegistro: getCurrentDate(),
-        // horaFimRegistro: getCurrentTime(),
-        indiciosDroga: indiciosDroga // Include derived indication in submission data
-    };
-
-    console.log("TCO Form submitted:", finalFormData);
-
-    toast({
-      title: "TCO Registrado",
-      description: "O registro foi salvo com sucesso.",
-    });
-
-    // Reset form after submission to initial state
-    setFormData(getInitialFormData());
-    setPenaPrevista("");
-    setIndiciosDroga(null);
+    setPenaNatureza("");
+    setMostrarSecaoDroga(false);
   };
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
-      <h2 className="text-2xl font-semibold mb-6">Registro de Termo Circunstanciado de Ocorrência (TCO)</h2>
+      <h2 className="text-2xl font-semibold mb-6">Registro de TCO</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
-
-        {/* Informações da Ocorrência */}
-        <div className="border p-4 rounded-md space-y-4">
-           <h3 className="text-lg font-medium mb-2">Detalhes da Ocorrência</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                 <div className="space-y-2">
-                    <Label htmlFor="tcoNumber">Nº do TCO</Label>
-                    <Input
-                    id="tcoNumber"
-                    name="tcoNumber"
-                    value={formData.tcoNumber}
-                    onChange={handleChange}
-                    placeholder="Número do TCO"
-                    />
-                 </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="dataFato">Data do Fato</Label>
-                    <Input
-                        id="dataFato"
-                        name="dataFato"
-                        type="date"
-                        value={formData.dataFato}
-                        onChange={handleChange}
-                        required
-                    />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="horaFato">Hora do Fato</Label>
-                    <Input
-                        id="horaFato"
-                        name="horaFato"
-                        type="time"
-                        value={formData.horaFato}
-                        onChange={handleChange}
-                        required
-                    />
-                </div>
-             </div>
-             <div className="space-y-2">
-                 <Label htmlFor="location">Local da Ocorrência</Label>
-                 <Input
-                    id="location"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    placeholder="Endereço completo do local"
-                    required
-                 />
-             </div>
-
-              {/* Informações de Registro (Automáticas/Informativas) */}
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-sm text-gray-600">
-                <div>
-                    <p><strong>Início do Registro:</strong></p>
-                    <p>Data: {formData.dataInicioRegistro}</p>
-                    <p>Hora: {formData.horaInicioRegistro}</p>
-                </div>
-                 {/* Data/Hora Fim podem ser adicionadas aqui ou gerenciadas internamente */}
-             </div>
-        </div>
-
-
-        {/* Natureza da Ocorrência */}
-        <div className="border p-4 rounded-md space-y-4">
-             <h3 className="text-lg font-medium mb-2">Natureza da Ocorrência</h3>
-             <div className="space-y-2">
-                <Label htmlFor="natureza">Natureza Principal</Label>
-                <Select
-                  name="natureza"
-                  value={formData.natureza}
-                  onValueChange={(value) => handleSelectChange('natureza', value)}
+        {/* Seção de Identificação do TCO */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Dados do TCO</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="numeroTCO">Nº do TCO</Label>
+                <Input
+                  id="numeroTCO"
+                  name="numeroTCO"
+                  value={formData.numeroTCO}
+                  onChange={handleChange}
+                  placeholder="Número do TCO"
                   required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="natureza">Natureza</Label>
+                <Select 
+                  onValueChange={(value) => handleSelectChange("natureza", value)}
+                  value={formData.natureza}
                 >
-                  <SelectTrigger id="natureza">
-                    <SelectValue placeholder="Selecione a natureza da ocorrência" />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a natureza do TCO" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.keys(naturezasEOpcoes).map((key) => (
-                      <SelectItem key={key} value={key}>{key}</SelectItem>
+                    {naturezas.map((natureza) => (
+                      <SelectItem key={natureza.id} value={natureza.id}>{natureza.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-             </div>
-
-             {/* Mostra campo Outros se Natureza for 'Outros' */}
-             {formData.natureza === 'Outros' && (
-               <div className="space-y-2">
-                 <Label htmlFor="outraNatureza">Descreva a Natureza</Label>
-                 <Input
-                   id="outraNatureza"
-                   name="outraNatureza"
-                   value={formData.outraNatureza}
-                   onChange={handleChange}
-                   placeholder="Descreva a natureza manualmente"
-                   required={formData.natureza === 'Outros'} // Required only if 'Outros' is selected
-                 />
-               </div>
-             )}
-
-             {/* Mostra Pena Prevista se houver */}
-             {penaPrevista && (
-                <div className="p-3 bg-gray-100 rounded border border-gray-200 text-sm">
-                    <p><strong>Pena Prevista:</strong> {penaPrevista}</p>
-                </div>
-             )}
-        </div>
-
-
-        {/* Detalhes de Droga (Condicional) */}
-        {formData.natureza === 'Posse de droga para consumo pessoal' && (
-            <div className="border p-4 rounded-md space-y-4 bg-blue-50 border-blue-200">
-                <h3 className="text-lg font-medium mb-2 text-blue-800">Detalhes da Droga Apreendida</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <div className="space-y-2">
-                        <Label htmlFor="drugQuantity">Quantidade (aprox.)</Label>
-                        <Input
-                            id="drugQuantity"
-                            name="drugQuantity"
-                            type="number" // Use number or text depending on unit needs
-                            value={formData.drugQuantity}
-                            onChange={handleChange}
-                            placeholder="Ex: 5 (gramas, unidades)"
-                            required
-                        />
-                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="drugType">Tipo</Label>
-                         <Select
-                            name="drugType"
-                            value={formData.drugType}
-                            onValueChange={(value) => handleSelectChange('drugType', value)}
-                            required
-                        >
-                            <SelectTrigger id="drugType">
-                                <SelectValue placeholder="Selecione o tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Vegetal">Vegetal</SelectItem>
-                                <SelectItem value="Mineral">Mineral</SelectItem>
-                            </SelectContent>
-                        </Select>
-                     </div>
-                     <div className="space-y-2">
-                         <Label htmlFor="drugColor">Cor Predominante</Label>
-                         <Select
-                            name="drugColor"
-                            value={formData.drugColor}
-                            onValueChange={(value) => handleSelectChange('drugColor', value)}
-                            required
-                        >
-                            <SelectTrigger id="drugColor">
-                                <SelectValue placeholder="Selecione a cor" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Verde">Verde</SelectItem>
-                                <SelectItem value="Amarelada">Amarelada</SelectItem>
-                                <SelectItem value="Branco">Branco</SelectItem>
-                                {/* Add more colors if needed */}
-                            </SelectContent>
-                        </Select>
-                     </div>
-                </div>
-
-                {/* Indícios Calculados */}
-                {indiciosDroga && (
-                    <div className="p-3 bg-yellow-50 rounded border border-yellow-200 text-sm">
-                        <p><strong>Indícios Sugerem:</strong> {indiciosDroga}</p>
-                    </div>
-                )}
-
-                {/* Descrição para Material Desconhecido */}
-                {indiciosDroga === 'Material Desconhecido' && (
-                    <div className="space-y-2">
-                        <Label htmlFor="drugDescription">Descrição do Material Apreendido</Label>
-                        <Textarea
-                            id="drugDescription"
-                            name="drugDescription"
-                            value={formData.drugDescription}
-                            onChange={handleChange}
-                            placeholder="Descreva o material (cor, textura, cheiro, formato)"
-                            rows={3}
-                            required={indiciosDroga === 'Material Desconhecido'}
-                        />
-                    </div>
-                )}
-
-                {/* Solicitar Perícia */}
-                 <div className="space-y-2 pt-2">
-                    <Label>Solicitar Perícia no Material?</Label>
-                    <RadioGroup
-                        name="solicitarPericia"
-                        value={formData.solicitarPericia}
-                        onValueChange={(value) => handleRadioChange('solicitarPericia', value)}
-                        className="flex space-x-4"
-                        required
-                    >
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="Sim" id="periciaSim" />
-                            <Label htmlFor="periciaSim">Sim</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="Não" id="periciaNao" />
-                            <Label htmlFor="periciaNao">Não</Label>
-                        </div>
-                    </RadioGroup>
-                </div>
+              </div>
             </div>
-        )}
-
-
-        {/* Envolvidos e Descrição */}
-        <div className="border p-4 rounded-md space-y-4">
-            <h3 className="text-lg font-medium mb-2">Envolvidos e Narrativa</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                    <Label htmlFor="defendant">Nome do Infrator</Label>
-                    <Input
-                        id="defendant"
-                        name="defendant"
-                        value={formData.defendant}
-                        onChange={handleChange}
-                        placeholder="Nome completo"
-                        required
-                    />
-                </div>
-
-                 <div className="space-y-2">
-                    <Label htmlFor="officer">Policial Responsável pelo Registro</Label>
-                    <Input
-                        id="officer"
-                        name="officer"
-                        value={formData.officer}
-                        onChange={handleChange}
-                        placeholder="Nome e Matrícula/Identificação"
-                        required
-                    />
-                </div>
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="description">Descrição Detalhada do Fato</Label>
-                <Textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
+            
+            {/* Campo para especificar outra natureza */}
+            {formData.natureza === "outro" && (
+              <div className="space-y-2">
+                <Label htmlFor="naturezaOutro">Especifique a natureza</Label>
+                <Input
+                  id="naturezaOutro"
+                  name="naturezaOutro"
+                  value={formData.naturezaOutro}
+                  onChange={handleChange}
+                  placeholder="Descreva a natureza do TCO"
+                  required
+                />
+              </div>
+            )}
+            
+            {/* Exibir pena prevista */}
+            {penaNatureza && (
+              <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
+                <h4 className="font-medium text-blue-800">Pena prevista:</h4>
+                <p className="text-blue-700">{penaNatureza}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        {/* Seção específica para Drogas */}
+        {mostrarSecaoDroga && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Informações sobre a Droga</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="quantidade">Quantidade (g)</Label>
+                  <Input
+                    id="quantidade"
+                    name="quantidade"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.quantidade}
                     onChange={handleChange}
-                    placeholder="Descreva como a ocorrência se desenvolveu, ações tomadas, etc."
-                    rows={5}
+                    placeholder="Quantidade em gramas"
                     required
-                />
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="witnesses">Testemunhas (Opcional)</Label>
-                <Textarea
-                    id="witnesses"
-                    name="witnesses"
-                    value={formData.witnesses}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="tipoDroga">Tipo</Label>
+                  <Select 
+                    onValueChange={(value) => handleSelectChange("tipoDroga", value)}
+                    value={formData.tipoDroga}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="vegetal">Vegetal</SelectItem>
+                      <SelectItem value="mineral">Mineral</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="corDroga">Cor</Label>
+                  <Select 
+                    onValueChange={(value) => handleSelectChange("corDroga", value)}
+                    value={formData.corDroga}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a cor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="verde">Verde</SelectItem>
+                      <SelectItem value="amarelada">Amarelada</SelectItem>
+                      <SelectItem value="branca">Branca</SelectItem>
+                      <SelectItem value="outra">Outra</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Indícios */}
+              <div className="space-y-2">
+                <Label>Indícios:</Label>
+                <div className="p-3 bg-gray-100 rounded-md">
+                  <p className="font-medium">
+                    {formData.indiciosDroga || "Aguardando informações..."}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Descrição para material desconhecido */}
+              {formData.indiciosDroga === "Material Desconhecido" && (
+                <div className="space-y-2">
+                  <Label htmlFor="descricaoMaterial">Descrição do Material</Label>
+                  <Textarea
+                    id="descricaoMaterial"
+                    name="descricaoMaterial"
+                    value={formData.descricaoMaterial}
                     onChange={handleChange}
-                    placeholder="Nome completo e contato das testemunhas (uma por linha)"
-                    rows={3}
+                    placeholder="Descreva o material encontrado"
+                    rows={2}
+                    required
+                  />
+                </div>
+              )}
+              
+              {/* Solicitar Perícia */}
+              <div className="space-y-2">
+                <Label>Solicitar Perícia?</Label>
+                <RadioGroup
+                  defaultValue="sim"
+                  value={formData.solicitarPericia}
+                  onValueChange={(value) => handleSelectChange("solicitarPericia", value)}
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="sim" id="sim" />
+                    <Label htmlFor="sim">Sim</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="nao" id="nao" />
+                    <Label htmlFor="nao">Não</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Seção de Dados da Ocorrência */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Dados da Ocorrência</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="dataFato">Data do Fato</Label>
+                <Input
+                  id="dataFato"
+                  name="dataFato"
+                  type="date"
+                  value={formData.dataFato}
+                  onChange={handleChange}
+                  required
                 />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="horaFato">Hora do Fato</Label>
+                <Input
+                  id="horaFato"
+                  name="horaFato"
+                  type="time"
+                  value={formData.horaFato}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="dataInicioRegistro">Data de Início do Registro</Label>
+                <Input
+                  id="dataInicioRegistro"
+                  name="dataInicioRegistro"
+                  type="text"
+                  value={formData.dataInicioRegistro}
+                  disabled
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="horaInicioRegistro">Hora de Início do Registro</Label>
+                <Input
+                  id="horaInicioRegistro"
+                  name="horaInicioRegistro"
+                  type="text"
+                  value={formData.horaInicioRegistro}
+                  disabled
+                />
+              </div>
             </div>
-        </div>
-
-
-        {/* Submit Button */}
-        <div className="flex justify-end pt-4">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="location">Local da Ocorrência</Label>
+                <Input
+                  id="location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  placeholder="Local da ocorrência"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="defendant">Nome do Infrator</Label>
+                <Input
+                  id="defendant"
+                  name="defendant"
+                  value={formData.defendant}
+                  onChange={handleChange}
+                  placeholder="Nome completo"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="officer">Policial Responsável</Label>
+                <Input
+                  id="officer"
+                  name="officer"
+                  value={formData.officer}
+                  onChange={handleChange}
+                  placeholder="Nome do policial"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrição da Ocorrência</Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Descreva detalhes da ocorrência"
+                rows={4}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="witnesses">Testemunhas</Label>
+              <Textarea
+                id="witnesses"
+                name="witnesses"
+                value={formData.witnesses}
+                onChange={handleChange}
+                placeholder="Nome e contato das testemunhas (se houver)"
+                rows={2}
+              />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <div className="flex justify-end gap-4">
+          <Button type="button" variant="outline">Cancelar</Button>
           <Button type="submit">Registrar TCO</Button>
         </div>
       </form>
