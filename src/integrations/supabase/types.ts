@@ -39,6 +39,66 @@ export type Database = {
         }
         Relationships: []
       }
+      AGOSTO: {
+        Row: {
+          "Horas 25° BPM": string | null
+          Matricula: number
+          Nome: string
+          Sinfra: string | null
+          Sonora: string | null
+          "Total 25° BPM": string | null
+          "Total Geral": string | null
+        }
+        Insert: {
+          "Horas 25° BPM"?: string | null
+          Matricula: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
+        }
+        Update: {
+          "Horas 25° BPM"?: string | null
+          Matricula?: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
+        }
+        Relationships: []
+      }
+      DEZEMBRO: {
+        Row: {
+          "Horas 25° BPM": string | null
+          Matricula: number
+          Nome: string
+          Sinfra: string | null
+          Sonora: string | null
+          "Total 25° BPM": string | null
+          "Total Geral": string | null
+        }
+        Insert: {
+          "Horas 25° BPM"?: string | null
+          Matricula: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
+        }
+        Update: {
+          "Horas 25° BPM"?: string | null
+          Matricula?: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
+        }
+        Relationships: []
+      }
       ESCALA: {
         Row: {
           data1: string | null
@@ -159,13 +219,13 @@ export type Database = {
         }
         Relationships: []
       }
-      MAIO: {
+      JULHO: {
         Row: {
           "Horas 25° BPM": string | null
           Matricula: number
           Nome: string
-          Saiop: string | null
           Sinfra: string | null
+          Sonora: string | null
           "Total 25° BPM": string | null
           "Total Geral": string | null
         }
@@ -173,8 +233,8 @@ export type Database = {
           "Horas 25° BPM"?: string | null
           Matricula: number
           Nome?: string
-          Saiop?: string | null
           Sinfra?: string | null
+          Sonora?: string | null
           "Total 25° BPM"?: string | null
           "Total Geral"?: string | null
         }
@@ -182,8 +242,68 @@ export type Database = {
           "Horas 25° BPM"?: string | null
           Matricula?: number
           Nome?: string
-          Saiop?: string | null
           Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
+        }
+        Relationships: []
+      }
+      JUNHO: {
+        Row: {
+          "Horas 25° BPM": string | null
+          Matricula: number
+          Nome: string
+          Sinfra: string | null
+          Sonora: string | null
+          "Total 25° BPM": string | null
+          "Total Geral": string | null
+        }
+        Insert: {
+          "Horas 25° BPM"?: string | null
+          Matricula: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
+        }
+        Update: {
+          "Horas 25° BPM"?: string | null
+          Matricula?: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
+        }
+        Relationships: []
+      }
+      MAIO: {
+        Row: {
+          "Horas 25° BPM": string | null
+          Matricula: number
+          Nome: string
+          Sinfra: string | null
+          Sonora: string | null
+          "Total 25° BPM": string | null
+          "Total Geral": string | null
+        }
+        Insert: {
+          "Horas 25° BPM"?: string | null
+          Matricula: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
+        }
+        Update: {
+          "Horas 25° BPM"?: string | null
+          Matricula?: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
           "Total 25° BPM"?: string | null
           "Total Geral"?: string | null
         }
@@ -219,45 +339,93 @@ export type Database = {
         }
         Relationships: []
       }
-      police_officers: {
+      NOVEMBRO: {
         Row: {
-          cpf: string | null
-          created_at: string | null
-          graduacao: string
-          id: string
-          mae: string | null
-          naturalidade: string | null
-          nome: string
-          pai: string | null
-          rgpm: string
-          telefone: string | null
-          updated_at: string | null
+          "Horas 25° BPM": string | null
+          Matricula: number
+          Nome: string
+          Sinfra: string | null
+          Sonora: string | null
+          "Total 25° BPM": string | null
+          "Total Geral": string | null
         }
         Insert: {
-          cpf?: string | null
-          created_at?: string | null
-          graduacao: string
-          id?: string
-          mae?: string | null
-          naturalidade?: string | null
-          nome: string
-          pai?: string | null
-          rgpm: string
-          telefone?: string | null
-          updated_at?: string | null
+          "Horas 25° BPM"?: string | null
+          Matricula: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
         }
         Update: {
-          cpf?: string | null
-          created_at?: string | null
-          graduacao?: string
-          id?: string
-          mae?: string | null
-          naturalidade?: string | null
-          nome?: string
-          pai?: string | null
-          rgpm?: string
-          telefone?: string | null
-          updated_at?: string | null
+          "Horas 25° BPM"?: string | null
+          Matricula?: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
+        }
+        Relationships: []
+      }
+      OUTUBRO: {
+        Row: {
+          "Horas 25° BPM": string | null
+          Matricula: number
+          Nome: string
+          Sinfra: string | null
+          Sonora: string | null
+          "Total 25° BPM": string | null
+          "Total Geral": string | null
+        }
+        Insert: {
+          "Horas 25° BPM"?: string | null
+          Matricula: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
+        }
+        Update: {
+          "Horas 25° BPM"?: string | null
+          Matricula?: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
+        }
+        Relationships: []
+      }
+      SETEMBRO: {
+        Row: {
+          "Horas 25° BPM": string | null
+          Matricula: number
+          Nome: string
+          Sinfra: string | null
+          Sonora: string | null
+          "Total 25° BPM": string | null
+          "Total Geral": string | null
+        }
+        Insert: {
+          "Horas 25° BPM"?: string | null
+          Matricula: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
+        }
+        Update: {
+          "Horas 25° BPM"?: string | null
+          Matricula?: number
+          Nome?: string
+          Sinfra?: string | null
+          Sonora?: string | null
+          "Total 25° BPM"?: string | null
+          "Total Geral"?: string | null
         }
         Relationships: []
       }

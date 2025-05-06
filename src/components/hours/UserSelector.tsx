@@ -4,29 +4,24 @@ import { UserOption } from "@/types/hours";
 
 interface UserSelectorProps {
   users: UserOption[];
-  onSelectUser: (value: string) => void;
-  disabled?: boolean;
+  value: string;
+  onChange: (value: string) => void;
 }
 
-export const UserSelector = ({ users, onSelectUser, disabled }: UserSelectorProps) => {
+export const UserSelector = ({ users, value, onChange }: UserSelectorProps) => {
   return (
-    <div className="space-y-2">
-      <label htmlFor="user-select" className="block text-sm font-medium text-gray-700">
-        Selecione o usuário
-      </label>
-      <Select onValueChange={onSelectUser} disabled={disabled}>
-        <SelectTrigger id="user-select">
-          <SelectValue placeholder="Selecione o usuário" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos os usuários</SelectItem>
-          {users.map((user) => (
-            <SelectItem key={user.registration} value={user.value}>
-              {user.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger>
+        <SelectValue placeholder="Selecione o usuário" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todos os usuários</SelectItem>
+        {users.map((user) => (
+          <SelectItem key={user.registration} value={user.registration}>
+            {user.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 };
