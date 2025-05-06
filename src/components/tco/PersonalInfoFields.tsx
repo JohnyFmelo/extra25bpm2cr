@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -21,11 +20,13 @@ interface PersonalInfoFieldsProps {
     cpf: string;
     celular: string;
     email: string;
+    laudoPericial: string; // Novo campo: "Sim" ou "Não"
   };
   onChangeHandler: (index: number | null, field: string, value: string) => void;
   prefix?: string;
   index: number;
   isAuthor?: boolean;
+  isVictim?: boolean; // Novo prop para Vítimas
 }
 
 const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({ 
@@ -33,7 +34,8 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
   onChangeHandler, 
   prefix = "", 
   index,
-  isAuthor = false
+  isAuthor = false,
+  isVictim = false
 }) => {
   const [ageWarning, setAgeWarning] = useState<string | null>(null);
   const [cpfError, setCpfError] = useState<string | null>(null);
@@ -293,6 +295,26 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
           />
         </div>
       </div>
+
+      {(isAuthor || isVictim) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor={`${prefix}laudoPericial_${index}`}>Laudo Pericial</Label>
+            <Select 
+              value={data.laudoPericial || "Não"} 
+              onValueChange={(value) => onChangeHandler(index !== undefined ? index : null, 'laudoPericial', value)}
+            >
+              <SelectTrigger id={`${prefix}laudoPericial_${index}`}>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Não">Não</SelectItem>
+                <SelectItem value="Sim">Sim</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
