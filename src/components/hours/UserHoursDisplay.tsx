@@ -9,13 +9,11 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
 interface UserHoursDisplayProps {
   data: HoursData;
   onClose: () => void;
   monthName: string; // <-- Nova propriedade adicionada
 }
-
 export const UserHoursDisplay = ({
   data,
   onClose,
@@ -24,25 +22,20 @@ export const UserHoursDisplay = ({
   const [userRank, setUserRank] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [hasDiscrepancy, setHasDiscrepancy] = useState(false);
-
   const totalHours = data["Total Geral"] ? parseFloat(data["Total Geral"].replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
-
   const parseWorkDays = (workDaysStr: string | undefined) => {
     if (!workDaysStr) return [];
     return workDaysStr.split('|').map(day => day.trim()).filter(day => day);
   };
-
   const formatDayHour = (dayHourStr: string) => {
     if (dayHourStr.includes('/')) return dayHourStr;
     // Simplesmente substitui o primeiro ':' por '/' se não houver '/'
     // Pode precisar de ajuste se o formato for mais complexo
     return dayHourStr.replace(':', '/');
   };
-
   const bpmDays = parseWorkDays(data["Horas 25° BPM"]);
   const saiopDays = parseWorkDays(data["Saiop"]);
   const sinfraDays = parseWorkDays(data["Sinfra"]);
-
   const calculateSectionHours = (days: string[]) => {
     return days.reduce((total, day) => {
       // Tenta encontrar o padrão DIA/MES/HORASh ou DIA/HORASh
@@ -50,19 +43,15 @@ export const UserHoursDisplay = ({
       return total + (hourMatch ? parseInt(hourMatch[1], 10) : 0);
     }, 0);
   };
-
   const bpmTotalHours = calculateSectionHours(bpmDays);
   const saiopTotalHours = calculateSectionHours(saiopDays);
   const sinfraTotalHours = calculateSectionHours(sinfraDays);
-
   const sumOfSectionHours = bpmTotalHours + saiopTotalHours + sinfraTotalHours;
-
   useEffect(() => {
     // Use uma pequena tolerância para comparações de ponto flutuante
     const hasHourDiscrepancy = Math.abs(totalHours - sumOfSectionHours) > 0.1;
     setHasDiscrepancy(hasHourDiscrepancy);
   }, [totalHours, sumOfSectionHours]);
-
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoading(true);
@@ -78,7 +67,7 @@ export const UserHoursDisplay = ({
           const localUserData = JSON.parse(localStorage.getItem('user') || '{}');
           // Verifica se a matrícula no localStorage corresponde (se necessário)
           // if (localUserData?.registration === data.Matricula.toString()) {
-             setUserRank(localUserData?.rank || "");
+          setUserRank(localUserData?.rank || "");
           // } else {
           //   setUserRank(""); // Ou outra lógica de fallback
           // }
@@ -107,35 +96,27 @@ export const UserHoursDisplay = ({
     }
     return 41.13; // Fallback para taxa padrão
   };
-
   const hourlyRate = determineHourlyRate(userRank);
   const totalValue = totalHours * hourlyRate;
-
-  return (
-    <div className="mt-6 space-y-4 my-0">
+  return <div className="mt-6 space-y-4 my-0">
       <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
       {/* Exibe o mês aqui */}
-      <p className="text-center text-sm text-gray-600 mb-4">
-        Horas Referentes a: <span className="font-medium">{monthName}</span>
-      </p>
+      
 
       <HoursDonutChart totalHours={totalHours} />
 
-      {hasDiscrepancy && (
-        <Alert variant="default" className="border-yellow-400 bg-[#FEF7CD] text-amber-800">
+      {hasDiscrepancy && <Alert variant="default" className="border-yellow-400 bg-[#FEF7CD] text-amber-800">
           <AlertTriangle className="h-4 w-4 text-yellow-600" />
           <AlertTitle className="text-amber-800">Atenção</AlertTitle>
           <AlertDescription className="text-amber-700">
             Existe uma discrepância entre o total de horas ({totalHours.toFixed(2).replace('.', ',')}h) e a soma dos dias trabalhados ({sumOfSectionHours.toFixed(2).replace('.', ',')}h).
             Procure a administração.
           </AlertDescription>
-        </Alert>
-      )}
+        </Alert>}
 
       <h3 className="font-medium text-gray-700 pt-2">Dias Trabalhados</h3>
       <div className="space-y-4">
-        {bpmDays.length > 0 && (
-          <div className="bg-slate-50 rounded-lg p-3 shadow-sm border border-slate-100">
+        {bpmDays.length > 0 && <div className="bg-slate-50 rounded-lg p-3 shadow-sm border border-slate-100">
             <h3 className="font-semibold mb-2 flex items-center justify-between mx-0 px-0 text-gray-700">
               <span className="flex items-center mx-0">
                 <MapPin className="h-4 w-4 mr-2 text-primary" />
@@ -144,17 +125,13 @@ export const UserHoursDisplay = ({
               <span className="text-primary font-medium my-0 px-0 mx-0 text-left text-emerald-600">{bpmTotalHours}h</span>
             </h3>
             <div className="flex flex-wrap gap-2 py-0 px-[5px] my-0 mx-0">
-              {bpmDays.map((day, index) => (
-                <Badge key={`bpm-${index}`} variant="outline" className="bg-white text-gray-800 border-gray-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
+              {bpmDays.map((day, index) => <Badge key={`bpm-${index}`} variant="outline" className="bg-white text-gray-800 border-gray-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
                   {formatDayHour(day)}
-                </Badge>
-              ))}
+                </Badge>)}
             </div>
-          </div>
-        )}
+          </div>}
 
-        {saiopDays.length > 0 && (
-          <div className="rounded-lg p-3 shadow-sm border border-blue-100 bg-slate-50">
+        {saiopDays.length > 0 && <div className="rounded-lg p-3 shadow-sm border border-blue-100 bg-slate-50">
             <h3 className="font-semibold mb-2 text-blue-700 flex items-center justify-between">
               <span className="flex items-center">
                 <MapPin className="h-4 w-4 mr-2 text-blue-600" />
@@ -163,17 +140,13 @@ export const UserHoursDisplay = ({
               <span className="text-blue-600 font-medium">{saiopTotalHours}h</span>
             </h3>
             <div className="flex flex-wrap gap-2">
-              {saiopDays.map((day, index) => (
-                <Badge key={`saiop-${index}`} variant="outline" className="bg-white text-blue-800 border-blue-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-blue-50 transition-colors">
+              {saiopDays.map((day, index) => <Badge key={`saiop-${index}`} variant="outline" className="bg-white text-blue-800 border-blue-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-blue-50 transition-colors">
                   {formatDayHour(day)}
-                </Badge>
-              ))}
+                </Badge>)}
             </div>
-          </div>
-        )}
+          </div>}
 
-        {sinfraDays.length > 0 && (
-          <div className="bg-green-50 rounded-lg p-3 shadow-sm border border-green-100">
+        {sinfraDays.length > 0 && <div className="bg-green-50 rounded-lg p-3 shadow-sm border border-green-100">
             <h3 className="font-semibold mb-2 text-green-700 flex items-center justify-between">
               <span className="flex items-center">
                 <MapPin className="h-4 w-4 mr-2 text-green-600" />
@@ -182,14 +155,11 @@ export const UserHoursDisplay = ({
               <span className="text-green-600 font-medium">{sinfraTotalHours}h</span>
             </h3>
             <div className="flex flex-wrap gap-2">
-              {sinfraDays.map((day, index) => (
-                <Badge key={`sinfra-${index}`} variant="outline" className="bg-white text-green-800 border-green-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-green-50 transition-colors">
+              {sinfraDays.map((day, index) => <Badge key={`sinfra-${index}`} variant="outline" className="bg-white text-green-800 border-green-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-green-50 transition-colors">
                   {formatDayHour(day)}
-                </Badge>
-              ))}
+                </Badge>)}
             </div>
-          </div>
-        )}
+          </div>}
       </div>
 
       <Card className="bg-blue-50 border-blue-100 shadow-sm mt-4">
@@ -228,6 +198,5 @@ export const UserHoursDisplay = ({
       <Button variant="destructive" className="w-full mt-4" onClick={onClose}>
         Fechar
       </Button>
-    </div>
-  );
+    </div>;
 };
