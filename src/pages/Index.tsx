@@ -15,6 +15,7 @@ import { TravelManagement } from "@/components/TravelManagement";
 import { useToast } from "@/hooks/use-toast";
 import TCOForm from "@/components/TCOForm";
 import { Button } from "@/components/ui/button";
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
@@ -27,6 +28,7 @@ const Index = () => {
   } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
+
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
@@ -61,9 +63,14 @@ const Index = () => {
   const handleTCOClick = () => {
     setActiveTab("tco");
   };
-  return <div className="relative min-h-screen bg-[#E8F1F2]">
-      <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+
+  return (
+    // 1. Div raiz da página: Adicionado flex flex-col
+    <div className="relative min-h-screen bg-[#E8F1F2] flex flex-col">
+      {/* 2. Div principal de conteúdo: Adicionado flex flex-col flex-grow */}
+      <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto flex flex-col flex-grow w-full"> {/* Adicionado w-full para garantir que max-w-7xl não impeça o crescimento se o conteúdo for menor */}
+        {/* 3. Componente Tabs: Adicionado flex flex-col flex-grow */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8 flex flex-col flex-grow">
           <TabsList className="hidden">
             <TabsTrigger value="main">Main</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
@@ -213,14 +220,19 @@ const Index = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="tco">
-            <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
+          {/* 4. TabsContent para o TCO: Adicionado flex flex-col flex-grow */}
+          {/* O TabsContent em si já é um flex item do Tabs, então flex-grow aqui o faz ocupar espaço. */}
+          {/* flex-col é para organizar o conteúdo interno (o div.relative e o botão de voltar) */}
+          <TabsContent value="tco" className="flex flex-col flex-grow">
+            {/* 5. Div relative dentro do TabsContent: Adicionado flex flex-col flex-grow */}
+            <div className="relative flex flex-col flex-grow">
+              <div className="absolute right-0 -top-12 mb-4"> {/* Este botão de voltar fica posicionado absoluto, não interfere no flex */}
                 <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <div className="bg-white rounded-xl shadow-lg">
+              {/* 6. Div bg-white que envolve o TCOForm: Adicionado flex flex-col flex-grow overflow-y-auto */}
+              <div className="bg-white rounded-xl shadow-lg flex flex-col flex-grow overflow-y-auto">
                 <TCOForm />
               </div>
             </div>
@@ -233,6 +245,7 @@ const Index = () => {
 
         {showInformationDialog && <InformationDialog open={showInformationDialog} onOpenChange={setShowInformationDialog} isAdmin={user.userType === "admin"} />}
       </div>
-    </div>;
+    </div>
+  );
 };
 export default Index;
