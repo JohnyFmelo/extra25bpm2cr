@@ -1,4 +1,4 @@
-import { jsPDF } from "jspdf";
+import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
@@ -55,7 +55,12 @@ export const generatePDF = (inputData: any) => {
         console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
     }
 
-    addTermoManifestacao(doc, data);
+    // Adiciona Termo de Manifestação apenas se NÃO for caso de droga
+    if (data.natureza !== "Porte de drogas para consumo") {
+        addTermoManifestacao(doc, data);
+    } else {
+        console.log("Caso de droga detectado, pulando Termo de Manifestação da Vítima.");
+    }
 
     if (data.apreensaoDescrição || data.apreensoes) {
         addTermoApreensao(doc, data);
