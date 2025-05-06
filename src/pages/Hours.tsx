@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { MonthSelector, getCurrentMonthValue, months } from "@/components/hours/MonthSelector";
 import { UserSelector } from "@/components/hours/UserSelector";
@@ -31,10 +30,10 @@ const Hours = () => {
   const [showUserHours, setShowUserHours] = useState(false);
   const [searchTerm, setSearchTerm] = useState(""); // Add search term state for AllUsersHours
 
-  // Find the month name based on the selected month value
+  // Define the getSelectedMonthName function after the state declaration
   const getSelectedMonthName = () => {
-    const selectedMonth = months.find(month => month.value === selectedMonth);
-    return selectedMonth ? selectedMonth.label : "";
+    const found = months.find(month => month.value === selectedMonth);
+    return found ? found.label : "";
   };
 
   useEffect(() => {
@@ -60,11 +59,11 @@ const Hours = () => {
       if (data && data.length > 0) {
         // Extract unique user names
         const uniqueUsers = [...new Set(data.map(item => item.Nome))].sort();
-        // Fix 3: Include registration property in UserOption
-        const userOptions = uniqueUsers.map(name => ({
-          value: name,
-          label: name,
-          registration: name // Using name as registration as a fallback
+        // Fix type casting - explicitly cast each property as string
+        const userOptions: UserOption[] = uniqueUsers.map(name => ({
+          value: String(name),
+          label: String(name),
+          registration: String(name) // Using name as registration as a fallback
         }));
         setUsers(userOptions);
         setAllUsersData(data);
@@ -170,13 +169,11 @@ const Hours = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <IconCard
-                // Fix 4: Use proper icon component
                 icon={ArrowLeft}
                 label="Ver Todos os Usuários"
                 onClick={() => setViewMode("all")}
               />
               <IconCard
-                // Fix 4: Use proper icon component
                 icon={ArrowLeft}
                 label="Resumo Mensal"
                 onClick={() => setViewMode("monthly-summary")}
@@ -186,7 +183,6 @@ const Hours = () => {
             <Separator className="my-6" />
 
             {viewMode === "all" && (
-              // Fix 5: Add missing props to AllUsersHours component
               <AllUsersHours
                 users={allUsersData}
                 searchTerm={searchTerm}
