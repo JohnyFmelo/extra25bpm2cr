@@ -149,6 +149,7 @@ const TCOForm = () => {
   const [guarnicao, setGuarnicao] = useState("");
   const [operacao, setOperacao] = useState("");
   const [apreensoes, setApreensoes] = useState("");
+  const [lacreNumero, setLacreNumero] = useState(""); // Novo estado para Lacre
   const [componentesGuarnicao, setComponentesGuarnicao] = useState<ComponenteGuarnicao[]>([]);
   const [quantidade, setQuantidade] = useState("");
   const [substancia, setSubstancia] = useState("");
@@ -218,6 +219,8 @@ const TCOForm = () => {
           setApreensoes(descriptiveText);
         }
       }
+    } else if (natureza !== "Porte de drogas para consumo") {
+      setLacreNumero(""); // Limpa lacre se natureza não for Droga
     }
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, apreensoes]);
 
@@ -522,6 +525,7 @@ const TCOForm = () => {
         relatoTestemunha: relatoTestemunha.trim(),
         apreensoes: apreensoes.trim(),
         conclusaoPolicial: conclusaoPolicial.trim(),
+        lacreNumero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : "", // Novo campo Lacre
         drogaQuantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : undefined,
         drogaTipo: natureza === "Porte de drogas para consumo" ? substancia : undefined,
         drogaCor: natureza === "Porte de drogas para consumo" ? cor : undefined,
@@ -584,6 +588,7 @@ const TCOForm = () => {
             indicios={indicios}
             customMaterialDesc={customMaterialDesc} setCustomMaterialDesc={setCustomMaterialDesc}
             isUnknownMaterial={isUnknownMaterial}
+            lacreNumero={lacreNumero} setLacreNumero={setLacreNumero} // Novo campo Lacre
           />
         )}
         <GeneralInformationTab
