@@ -1,5 +1,4 @@
-
-import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Gavel, Plus } from "lucide-react";
+import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Scale, Plus } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -41,7 +40,11 @@ const Index = () => {
   };
   
   const handleBackClick = () => {
-    setActiveTab("main");
+    if (activeTab === "editor") {
+      setActiveTab("extra");
+    } else {
+      setActiveTab("main");
+    }
   };
   
   const handleSettingsClick = () => {
@@ -92,7 +95,7 @@ const Index = () => {
               {user.userType === "admin" && <>
                   <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
                   <IconCard icon={MessageSquare} label="Recados" onClick={handleMessageClick} />
-                  <IconCard icon={Gavel} label="TCO" onClick={handleTCOClick} />
+                  <IconCard icon={Scale} label="TCO" onClick={handleTCOClick} />
                 </>}
               <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
               <IconCard icon={Settings} label="Configurações" onClick={handleSettingsClick} />
@@ -108,7 +111,7 @@ const Index = () => {
                 </button>
               </div>
               {user.userType === "admin" && (
-                <div className="fixed bottom-20 right-6 z-10">
+                <div className="fixed bottom-6 right-6 z-10">
                   <Button 
                     onClick={handleEditorClick} 
                     className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center"
@@ -151,7 +154,7 @@ const Index = () => {
           <TabsContent value="editor">
             <div className="relative">
               <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para aba extra">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
