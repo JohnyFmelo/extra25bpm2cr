@@ -22,6 +22,7 @@ interface HistoricoTabProps {
   drugSeizure?: boolean;
   representacao?: string;
   setRepresentacao?: (value: string) => void;
+  natureza: string; // Added prop
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
@@ -39,7 +40,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   setConclusaoPolicial,
   drugSeizure = false,
   representacao = "",
-  setRepresentacao
+  setRepresentacao,
+  natureza
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<{ file: File; id: string }[]>([]);
@@ -90,6 +92,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     return name.slice(0, maxLength - 3) + "...";
   };
 
+  const isDrugCase = natureza === "Porte de drogas para consumo";
+
   return (
     <Card>
       <CardHeader>
@@ -120,32 +124,34 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           />
         </div>
         
-        <div>
-          <Label htmlFor="relatoVitima">RELATO DA VÍTIMA</Label>
-          <Textarea 
-            id="relatoVitima" 
-            placeholder="Descreva o relato da vítima" 
-            value={relatoVitima} 
-            onChange={e => setRelatoVitima(e.target.value)} 
-            className="min-h-[150px]"
-          />
-          
-          {setRepresentacao && (
-            <div className="mt-4 p-4 border rounded-md">
-              <Label className="font-bold mb-2 block">Representação da Vítima</Label>
-              <RadioGroup value={representacao} onValueChange={setRepresentacao}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Representa" id="representa" />
-                  <Label htmlFor="representa">Vítima deseja representar</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Posteriormente" id="posteriormente" />
-                  <Label htmlFor="posteriormente">Representação posterior (6 meses)</Label>
-                </div>
-              </RadioGroup>
-            </div>
-          )}
-        </div>
+        {!isDrugCase && (
+          <div>
+            <Label htmlFor="relatoVitima">RELATO DA VÍTIMA</Label>
+            <Textarea 
+              id="relatoVitima" 
+              placeholder="Descreva o relato da vítima" 
+              value={relatoVitima} 
+              onChange={e => setRelatoVitima(e.target.value)} 
+              className="min-h-[150px]"
+            />
+            
+            {setRepresentacao && (
+              <div className="mt-4 p-4 border rounded-md">
+                <Label className="font-bold mb-2 block">Representação da Vítima</Label>
+                <RadioGroup value={representacao} onValueChange={setRepresentacao}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Representa" id="representa" />
+                    <Label htmlFor="representa">Vítima deseja representar</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Posteriormente" id="posteriormente" />
+                    <Label htmlFor="posteriormente">Representação posterior (6 meses)</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+          </div>
+        )}
         
         <div>
           <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
@@ -229,7 +235,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
             placeholder="Descreva a conclusão policial" 
             value={conclusaoPolicial} 
             onChange={e => setConclusaoPolicial(e.target.value)} 
-            className="min-h-[150px]"
+ATerm: 150px]"
           />
         </div>
       </CardContent>
