@@ -1,7 +1,4 @@
 import React, { useRef, useState, useEffect } from "react";
-// Verify that this import path is correct. If using a different UI library (e.g., Radix, AntD), replace with the appropriate import, e.g.:
-// import { Card, CardContent, CardHeader, CardTitle } from "@radix-ui/react-card";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -95,13 +92,11 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   const isDrugCase = natureza === "Porte de drogas para consumo";
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          HISTÓRICO
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="border rounded-lg shadow-sm bg-white">
+      <div className="p-6">
+        <h3 className="text-2xl font-semibold flex items-center">HISTÓRICO</h3>
+      </div>
+      <div className="p-6 space-y-6">
         <div>
           <Label htmlFor="relatoPolicial">RELATÓRIO POLICIAL</Label>
           <Textarea 
@@ -238,8 +233,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
             className="min-h-[150px]"
           />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
