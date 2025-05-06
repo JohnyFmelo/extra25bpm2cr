@@ -68,14 +68,14 @@ export const generatePDF = (inputData: any) => {
     // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
     // Verifica se algum autor ou vítima tem laudoPericial: "Sim"
     const pessoasComLaudo = [
-        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, tipo: "Autor" })),
-        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, tipo: "Vítima" }))
+        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
+        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
     ].filter(p => p.nome && p.nome.trim()); // Filtra nomes válidos
 
     if (pessoasComLaudo.length > 0) {
         pessoasComLaudo.forEach(pessoa => {
-            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo})`);
-            addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome });
+            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
+            addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
         });
     } else {
         console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
