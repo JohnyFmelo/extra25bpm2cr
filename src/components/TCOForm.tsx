@@ -83,14 +83,14 @@ const validateCPF = (cpf: string) => {
   return digit2 === parseInt(cpf.charAt(10));
 };
 
-// Função auxiliar para formatar a guarnição com "e" antes do último policial
+// Função para formatar a guarnição com "E" antes do último policial
 const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
   console.log("Componentes recebidos em formatarGuarnicao:", componentes); // Depuração
-  if (!componentes || componentes.length === 0) return "[LISTA DE POLICIAIS PENDENTE]";
+  if (!componentes || componentes.length === 0) return "[GUPM PENDENTE]";
   const nomesFormatados = componentes
-    .filter(c => c.nome && c.posto && c.rg) // Garante que apenas policiais válidos sejam incluídos
+    .filter(c => c.nome && c.posto) // Garante que apenas policiais válidos sejam incluídos
     .map(c => `${c.posto} PM ${c.nome}`);
-  if (nomesFormatados.length === 0) return "[LISTA DE POLICIAIS PENDENTE]";
+  if (nomesFormatados.length === 0) return "[GUPM PENDENTE]";
   if (nomesFormatados.length === 1) return nomesFormatados[0].toUpperCase();
   if (nomesFormatados.length === 2) return `${nomesFormatados[0]} E ${nomesFormatados[1]}`.toUpperCase();
   return `${nomesFormatados.slice(0, -1).join(", ")} E ${nomesFormatados[nomesFormatados.length - 1]}`.toUpperCase();
@@ -173,12 +173,8 @@ const TCOForm = () => {
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
     celular: "", email: ""
   }]);
-  // Template do relato policial em caixa alta
-  const relatoPolicialTemplate = `POR VOLTA DAS [HORA DO FATO] DO DIA [DATA DO FATO], NESTA CIDADE DE VÁRZEA GRANDE-MT, A GUARNIÇÃO DA VIATURA [GUARNIÇÃO] COMPOSTA PELOS MILITARES [LISTA DE POLICIAIS], DURANTE RONDAS[OPERACAO_TEXT], FOI ACIONADA VIA [COMUNICANTE], PARA ATENDER A UMA OCORRÊNCIA DE [NATUREZA] NO [ENDEREÇO]. CHEGANDO NO LOCAL...
-- [DETALHAR O QUE A PM DEPAROU]
-- [RESUMO DAS VERSÕES]
-- [DESCREVER DILIGÊNCIAS/APREENSÕES]
-DIANTE DISSO, [DETALHAR ENCAMINHAMENTO].`;
+  // Template do relato policial
+  const relatoPolicialTemplate = `POR VOLTA DAS [HORÁRIO] DO DIA [DATA], NESTA CIDADE DE VÁRZEA GRANDE-MT, A GUARNIÇÃO DA VIATURA [GUARNIÇÃO][OPERACAO_TEXT] COMPOSTA PELOS MILITARES [GUPM], DURANTE RONDAS NO BAIRRO [BAIRRO], FOI ACIONADA VIA [MEIO DE ACIONAMENTO] PARA ATENDER A UMA OCORRÊNCIA DE [NATUREZA] NO [LOCAL], ONDE [VERSÃO INICIAL]. CHEGANDO NO LOCAL, A EQUIPE [O QUE A PM DEPAROU]. A VERSÃO DAS PARTES FOI REGISTRADA EM CAMPO PRÓPRIO. [VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]. [DILIGÊNCIAS E APREENSÕES REALIZADAS]. DIANTE DISSO, [ENCAMINHAMENTO PARA REGISTRO DOS FATOS].`;
   const [relatoPolicial, setRelatoPolicial] = useState(relatoPolicialTemplate);
   const [relatoAutor, setRelatoAutor] = useState(formatarRelatoAutor(autores));
   const [relatoVitima, setRelatoVitima] = useState("RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
@@ -251,31 +247,34 @@ DIANTE DISSO, [DETALHAR ENCAMINHAMENTO].`;
       autores.length === 1 ? (autores[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
       autores.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
     const testemunhaTexto = testemunhas.filter(t => t.nome.trim()).length > 1 ? "TESTEMUNHAS" : "TESTEMUNHA";
-    const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES E ${testemunhaTexto}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
+    const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES E ${testemunhaTexto}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LavrATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
 
     setConclusaoPolicial(conclusaoBase);
   }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
 
   useEffect(() => {
     let updatedRelato = relatoPolicialTemplate;
-    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "OUTROS" : natureza;
-    const operacaoText = operacao ? ` PELA OPERAÇÃO ${operacao}` : "";
+    const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
     const gupm = formatarGuarnicao(componentesGuarnicao);
     console.log("Valor de gupm antes da substituição:", gupm); // Depuração
+    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "OUTROS" : natureza;
+    const operacaoText = operacao ? `, DURANTE A ${operacao},` : "";
 
     updatedRelato = updatedRelato
-      .replace("[HORA DO FATO]", horaFato || "[HORA DO FATO]")
-      .replace("[DATA DO FATO]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR') : "[DATA DO FATO]")
+      .replace("[HORÁRIO]", horaFato || "[HORÁRIO]")
+      .replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR') : "[DATA]")
       .replace("[GUARNIÇÃO]", guarnicao || "[GUARNIÇÃO PENDENTE]")
-      .replace("[LISTA DE POLICIAIS]", gupm)
       .replace("[OPERACAO_TEXT]", operacaoText)
-      .replace("[COMUNICANTE]", comunicante || "[COMUNICANTE PENDENTE]")
+      .replace("[GUPM]", gupm)
+      .replace("[BAIRRO]", bairro)
+      .replace("[MEIO DE ACIONAMENTO]", comunicante || "[ACIONAMENTO]")
       .replace("[NATUREZA]", displayNaturezaReal || "[NATUREZA PENDENTE]")
-      .replace("[ENDEREÇO]", endereco || "[ENDEREÇO PENDENTE]")
-      .replace("[DETALHAR O QUE A PM DEPAROU]", "[DETALHAR O QUE A PM DEPAROU]")
-      .replace("[RESUMO DAS VERSÕES]", "[RESUMO DAS VERSÕES]")
-      .replace("[DESCREVER DILIGÊNCIAS/APREENSÕES]", "[DESCREVER DILIGÊNCIAS/APREENSÕES]")
-      .replace("[DETALHAR ENCAMINHAMENTO]", "[DETALHAR ENCAMINHAMENTO]");
+      .replace("[LOCAL]", localFato || "[LOCAL PENDENTE]")
+      .replace("[VERSÃO INICIAL]", "[DETALHAR VERSÃO INICIAL]")
+      .replace("[O QUE A PM DEPAROU]", "[DETALHAR O QUE A PM DEPAROU]")
+      .replace("[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]", "[RESUMO DAS VERSÕES]")
+      .replace("[DILIGÊNCIAS E APREENSÕES REALIZADAS]", "[DESCREVER DILIGÊNCIAS/APREENSÕES]")
+      .replace("[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]", "[DETALHAR ENCAMINHAMENTO]");
 
     updatedRelato = updatedRelato.toUpperCase();
     console.log("Relato atualizado:", updatedRelato); // Depuração
@@ -283,14 +282,15 @@ DIANTE DISSO, [DETALHAR ENCAMINHAMENTO].`;
     if (
       relatoPolicial === relatoPolicialTemplate ||
       relatoPolicial.includes("[GUARNIÇÃO PENDENTE]") ||
-      relatoPolicial.includes("[LISTA DE POLICIAIS PENDENTE]") ||
-      relatoPolicial.includes("[COMUNICANTE PENDENTE]") ||
+      relatoPolicial.includes("[GUPM PENDENTE]") ||
+      relatoPolicial.includes("[BAIRRO PENDENTE]") ||
+      relatoPolicial.includes("[ACIONAMENTO]") ||
       relatoPolicial.includes("[NATUREZA PENDENTE]") ||
-      relatoPolicial.includes("[ENDEREÇO PENDENTE]")
+      relatoPolicial.includes("[LOCAL PENDENTE]")
     ) {
       setRelatoPolicial(updatedRelato);
     }
-  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, relatoPolicial]);
+  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicial]);
 
   useEffect(() => {
     const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
