@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +19,7 @@ interface PersonalInfo {
   cpf: string;
   celular: string;
   email: string;
+  laudoPericial: string; // Novo campo: "Sim" ou "Não"
 }
 
 interface PessoasEnvolvidasTabProps {
@@ -157,6 +157,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                     onChangeHandler={handleVitimaChange}
                     prefix={`vitima_${index}_`}
                     index={index}
+                    isVictim={true} // Novo prop para indicar Vítima
                   />
                 </CardContent>
               </Card>
