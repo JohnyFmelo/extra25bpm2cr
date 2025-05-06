@@ -551,7 +551,8 @@ const TCOForm = () => {
   const condutorParaDisplay = componentesGuarnicao[0];
 
   return (
-    <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto"> {/* Adicionado mx-auto */}
+    // Linha 539
+    <div className="w-full max-w-5xl mx-auto px-4 py-6 md:py-10 min-h-screen flex flex-col"> {/* Adicionado mx-auto */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Tabs/Componentes Filhos */}
 
