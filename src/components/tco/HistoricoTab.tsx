@@ -22,7 +22,7 @@ interface HistoricoTabProps {
   drugSeizure?: boolean;
   representacao?: string;
   setRepresentacao?: (value: string) => void;
-  natureza: string; // Added prop
+  natureza: string;
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
@@ -46,7 +46,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<{ file: File; id: string }[]>([]);
 
-  // Clean up object URLs when files are removed or component unmounts
   useEffect(() => {
     return () => {
       selectedFiles.forEach(({ file }) => {
@@ -86,7 +85,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     });
   };
 
-  // Função para encurtar o nome do arquivo
   const truncateFileName = (name: string, maxLength: number = 15): string => {
     if (name.length <= maxLength) return name;
     return name.slice(0, maxLength - 3) + "...";
@@ -235,7 +233,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
             placeholder="Descreva a conclusão policial" 
             value={conclusaoPolicial} 
             onChange={e => setConclusaoPolicial(e.target.value)} 
-ATerm: 150px]"
+            className="min-h-[150px]"
           />
         </div>
       </CardContent>
