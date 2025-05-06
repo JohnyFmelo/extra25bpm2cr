@@ -67,11 +67,11 @@ const validateCPF = (cpf: string) => {
 // Função auxiliar para formatar a guarnição com "e" antes do último policial
 const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
   console.log("Componentes recebidos em formatarGuarnicao:", componentes); // Depuração
-  if (!componentes || componentes.length === 0) return "[GUPM PENDENTE]";
+  if (!componentes || componentes.length === 0) return "[LISTA DE POLICIAIS PENDENTE]";
   const nomesFormatados = componentes
     .filter(c => c.nome && c.posto)
     .map(c => `${c.posto} PM ${c.nome}`);
-  if (nomesFormatados.length === 0) return "[GUPM PENDENTE]";
+  if (nomesFormatados.length === 0) return "[LISTA DE POLICIAIS PENDENTE]";
   if (nomesFormatados.length === 1) return nomesFormatados[0];
   if (nomesFormatados.length === 2) return `${nomesFormatados[0]} e ${nomesFormatados[1]}`;
   return `${nomesFormatados.slice(0, -1).join(", ")} e ${nomesFormatados[nomesFormatados.length - 1]}`;
@@ -139,8 +139,12 @@ const TCOForm = () => {
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
     celular: "", email: ""
   }]);
-  // Atualizado para usar "composta pelos militares"
-  const relatoPolicialTemplate = "Por volta das [HORÁRIO] do dia [DATA], nesta cidade de Várzea Grande-MT, a guarnição da viatura [GUARNIÇÃO][OPERACAO_TEXT] composta pelos militares [GUPM], durante rondas no bairro [BAIRRO], foi acionada via [MEIO DE ACIONAMENTO] para atender a uma ocorrência de [NATUREZA] no [LOCAL], onde [VERSÃO INICIAL]. Chegando no local, a equipe [O QUE A PM DEPAROU]. A versão das partes foi registrada em campo próprio. [VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]. [DILIGÊNCIAS E APREENSÕES REALIZADAS]. Diante disso, [ENCAMINHAMENTO PARA REGISTRO DOS FATOS].";
+  // Novo template para relatoPolicial
+  const relatoPolicialTemplate = `Por volta das [HORA DO FATO] do dia [DATA DO FATO], nesta cidade de Várzea Grande-MT, a guarnição da viatura [GUARNIÇÃO] composta pelos militares [LISTA DE POLICIAIS], durante rondas[OPERACAO_TEXT], foi acionada via [COMUNICANTE], para atender a uma ocorrência de [NATUREZA] no [ENDEREÇO]. Chegando no local...
+- [DETALHAR O QUE A PM DEPAROU]
+- [RESUMO DAS VERSÕES]
+- [DESCREVER DILIGÊNCIAS/APREENSÕES]
+Diante disso, [DETALHAR ENCAMINHAMENTO].`;
   const [relatoPolicial, setRelatoPolicial] = useState(relatoPolicialTemplate);
   const [relatoAutor, setRelatoAutor] = useState("O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
   const [relatoVitima, setRelatoVitima] = useState("RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
@@ -217,31 +221,35 @@ const TCOForm = () => {
 
   useEffect(() => {
     let updatedRelato = relatoPolicialTemplate;
-    const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
-    const gupm = formatarGuarnicao(componentesGuarnicao);
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "Outros" : natureza;
-    const operacaoText = operacao ? `, durante a ${operacao},` : "";
+    const operacaoText = operacao ? ` pela operação ${operacao}` : "";
+    const gupm = formatarGuarnicao(componentesGuarnicao);
 
     updatedRelato = updatedRelato
-      .replace("[HORÁRIO]", horaFato || "[HORÁRIO]")
-      .replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR') : "[DATA]")
+      .replace("[HORA DO FATO]", horaFato || "[HORA DO FATO]")
+      .replace("[DATA DO FATO]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR') : "[DATA DO FATO]")
       .replace("[GUARNIÇÃO]", guarnicao || "[GUARNIÇÃO PENDENTE]")
+      .replace("[LISTA DE POLICIAIS]", gupm)
       .replace("[OPERACAO_TEXT]", operacaoText)
-      .replace("[GUPM]", gupm)
-      .replace("[BAIRRO]", bairro)
-      .replace("[MEIO DE ACIONAMENTO]", comunicante || "[ACIONAMENTO]")
+      .replace("[COMUNICANTE]", comunicante || "[COMUNICANTE PENDENTE]")
       .replace("[NATUREZA]", displayNaturezaReal || "[NATUREZA PENDENTE]")
-      .replace("[LOCAL]", localFato || "[LOCAL PENDENTE]")
-      .replace("[VERSÃO INICIAL]", "[DETALHAR VERSÃO INICIAL]")
-      .replace("[O QUE A PM DEPAROU]", "[DETALHAR O QUE A PM DEPAROU]")
-      .replace("[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]", "[RESUMO DAS VERSÕES]")
-      .replace("[DILIGÊNCIAS E APREENSÕES REALIZADAS]", "[DESCREVER DILIGÊNCIAS/APREENSÕES]")
-      .replace("[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]", "[DETALHAR ENCAMINHAMENTO]");
+      .replace("[ENDEREÇO]", endereco || "[ENDEREÇO PENDENTE]")
+      .replace("[DETALHAR O QUE A PM DEPAROU]", "[DETALHAR O QUE A PM DEPAROU]")
+      .replace("[RESUMO DAS VERSÕES]", "[RESUMO DAS VERSÕES]")
+      .replace("[DESCREVER DILIGÊNCIAS/APREENSÕES]", "[DESCREVER DILIGÊNCIAS/APREENSÕES]")
+      .replace("[DETALHAR ENCAMINHAMENTO]", "[DETALHAR ENCAMINHAMENTO]");
 
-    if (relatoPolicial === relatoPolicialTemplate || relatoPolicial.includes("[GUARNIÇÃO PENDENTE]") || relatoPolicial.includes("[GUPM PENDENTE]") || relatoPolicial.includes("[BAIRRO PENDENTE]")) {
+    if (
+      relatoPolicial === relatoPolicialTemplate ||
+      relatoPolicial.includes("[GUARNIÇÃO PENDENTE]") ||
+      relatoPolicial.includes("[LISTA DE POLICIAIS PENDENTE]") ||
+      relatoPolicial.includes("[COMUNICANTE PENDENTE]") ||
+      relatoPolicial.includes("[NATUREZA PENDENTE]") ||
+      relatoPolicial.includes("[ENDEREÇO PENDENTE]")
+    ) {
       setRelatoPolicial(updatedRelato);
     }
-  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicial]);
+  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, relatoPolicial]);
 
   useEffect(() => {
     if (autores.length > 0 && autores[0].nome !== autor) {
