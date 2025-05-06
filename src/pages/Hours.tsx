@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { MonthSelector, getCurrentMonthValue, months } from "@/components/hours/MonthSelector";
 import { UserSelector } from "@/components/hours/UserSelector";
@@ -12,15 +13,19 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
 import { Separator } from "@/components/ui/separator";
 import IconCard from "@/components/IconCard";
-import { fetchHoursByMonth } from "@/services/hoursService";
 
 type ViewMode = "all" | "individual" | "monthly-summary";
+
+interface UserOption {
+  value: string;
+  label: string;
+}
 
 const Hours = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthValue());
-  const [users, setUsers] = useState<string[]>([]);
+  const [users, setUsers] = useState<UserOption[]>([]);
   const [selectedUserData, setSelectedUserData] = useState<HoursData | null>(null);
   const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,12 +51,22 @@ const Hours = () => {
     setSelectedUserData(null);
 
     try {
-      const data = await fetchHoursByMonth(selectedMonth);
+      // Fetch hours data from Supabase
+      const { data, error } = await supabase
+        .from('hours')
+        .select('*')
+        .eq('month', selectedMonth);
+
+      if (error) throw error;
       
       if (data && data.length > 0) {
         // Extract unique user names
         const uniqueUsers = [...new Set(data.map(item => item.Nome))].sort();
-        setUsers(uniqueUsers);
+        const userOptions = uniqueUsers.map(name => ({
+          value: name,
+          label: name
+        }));
+        setUsers(userOptions);
         setAllUsersData(data);
       } else {
         setUsers([]);
@@ -167,8 +182,8 @@ const Hours = () => {
             {viewMode === "all" && (
               <AllUsersHours
                 data={allUsersData}
-                onUserSelect={(data) => {
-                  setSelectedUserData(data);
+                onUserSelect={(userData) => {
+                  setSelectedUserData(userData);
                   setShowUserHours(true);
                 }}
                 monthName={getSelectedMonthName()}

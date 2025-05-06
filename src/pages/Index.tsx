@@ -1,4 +1,5 @@
-import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Scale } from "lucide-react";
+
+import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Scale, Home, Plus } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -14,6 +15,7 @@ import NotificationsList, { useNotifications } from "@/components/NotificationsL
 import { TravelManagement } from "@/components/TravelManagement";
 import { useToast } from "@/hooks/use-toast";
 import BottomBar from "@/components/BottomBar";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -23,6 +25,7 @@ const Index = () => {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showInformationDialog, setShowInformationDialog] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
   const isAdmin = user.userType === "admin";
@@ -64,7 +67,7 @@ const Index = () => {
   };
 
   const handleHoursClick = () => {
-    setActiveTab("hours");
+    navigate('/hours');
   };
 
   const handleTcoClick = () => {
@@ -80,7 +83,7 @@ const Index = () => {
   };
   
   return (
-    <div className="relative min-h-screen bg-[#E8F1F2] pb-20">
+    <div className="relative min-h-screen bg-[#E8F1F2] pb-28">
       <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
           <TabsList className="hidden">
@@ -113,8 +116,21 @@ const Index = () => {
 
           <TabsContent value="extra">
             <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+              <div className="absolute right-0 -top-12 mb-4 flex gap-2">
+                {isAdmin && (
+                  <button 
+                    onClick={handleEditorClick}
+                    className="p-2 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center"
+                    aria-label="Adicionar Extra"
+                  >
+                    <Plus className="h-6 w-6" />
+                  </button>
+                )}
+                <button 
+                  onClick={handleBackClick} 
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" 
+                  aria-label="Voltar para home"
+                >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
@@ -256,6 +272,7 @@ const Index = () => {
         onExtraClick={handleExtraClick}
         onTravelClick={handleTravelClick}
         onTcoClick={handleTcoClick}
+        onEditorClick={handleEditorClick}
       />
     </div>
   );
