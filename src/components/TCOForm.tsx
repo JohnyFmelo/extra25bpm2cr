@@ -66,6 +66,7 @@ const validateCPF = (cpf: string) => {
 
 // Função auxiliar para formatar a guarnição com "e" antes do último policial
 const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
+  console.log("Componentes recebidos em formatarGuarnicao:", componentes); // Depuração
   if (!componentes || componentes.length === 0) return "[GUPM PENDENTE]";
   const nomesFormatados = componentes
     .filter(c => c.nome && c.posto)
@@ -138,7 +139,8 @@ const TCOForm = () => {
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
     celular: "", email: ""
   }]);
-  const relatoPolicialTemplate = "Por volta das [HORÁRIO] do dia [DATA], nesta cidade de Várzea Grande-MT, a guarnição da viatura [GUARNIÇÃO][OPERACAO_TEXT] composta por [GUPM], durante rondas no bairro [BAIRRO], foi acionada via [MEIO DE ACIONAMENTO] para atender a uma ocorrência de [NATUREZA] no [LOCAL], onde [VERSÃO INICIAL]. Chegando no local, a equipe [O QUE A PM DEPAROU]. A versão das partes foi registrada em campo próprio. [VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]. [DILIGÊNCIAS E APREENSÕES REALIZADAS]. Diante disso, [ENCAMINHAMENTO PARA REGISTRO DOS FATOS].";
+  // Atualizado para usar "composta pelos militares"
+  const relatoPolicialTemplate = "Por volta das [HORÁRIO] do dia [DATA], nesta cidade de Várzea Grande-MT, a guarnição da viatura [GUARNIÇÃO][OPERACAO_TEXT] composta pelos militares [GUPM], durante rondas no bairro [BAIRRO], foi acionada via [MEIO DE ACIONAMENTO] para atender a uma ocorrência de [NATUREZA] no [LOCAL], onde [VERSÃO INICIAL]. Chegando no local, a equipe [O QUE A PM DEPAROU]. A versão das partes foi registrada em campo próprio. [VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]. [DILIGÊNCIAS E APREENSÕES REALIZADAS]. Diante disso, [ENCAMINHAMENTO PARA REGISTRO DOS FATOS].";
   const [relatoPolicial, setRelatoPolicial] = useState(relatoPolicialTemplate);
   const [relatoAutor, setRelatoAutor] = useState("O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
   const [relatoVitima, setRelatoVitima] = useState("RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
