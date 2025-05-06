@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -15,9 +15,6 @@ export const HoursDonutChart = ({
   totalHours,
   maxHours = 50
 }: HoursDonutChartProps) => {
-  // State for celebration animation
-  const [showCelebration, setShowCelebration] = useState(false);
-  
   // Ensure hours are numeric values
   const hours = typeof totalHours === 'number' ? totalHours : parseFloat(totalHours as any) || 0;
   const remainingHours = Math.max(0, maxHours - hours);
@@ -25,20 +22,6 @@ export const HoursDonutChart = ({
   const isOverMaxHours = hours > maxHours;
   const isExactlyMax = hours === maxHours;
   const isAtOrAboveMax = hours >= maxHours;
-
-  // Trigger celebration animation when component mounts if hours are at or above max
-  useEffect(() => {
-    if (isAtOrAboveMax) {
-      setShowCelebration(true);
-      
-      // Hide celebration after 5 seconds
-      const timer = setTimeout(() => {
-        setShowCelebration(false);
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isAtOrAboveMax]);
 
   // Determine color based on hour thresholds
   const getColor = (hours: number) => {
@@ -96,33 +79,6 @@ export const HoursDonutChart = ({
 
   return (
     <div className="flex flex-col items-center mt-4 space-y-2 relative">
-      {showCelebration && (
-        <div className="absolute inset-0 z-10 pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-full">
-            {Array.from({ length: 15 }).map((_, i) => (
-              <div
-                key={i}
-                className={`absolute animate-fade-in rounded-full bg-primary-${i % 4 === 0 ? 'blue' : i % 3 === 0 ? 'green' : i % 2 === 0 ? 'yellow' : 'red'}`}
-                style={{
-                  top: `${Math.random() * 100}%`,
-                  left: `${Math.random() * 100}%`,
-                  width: `${Math.random() * 12 + 8}px`,
-                  height: `${Math.random() * 12 + 8}px`,
-                  backgroundColor: ['#22C55E', '#3B82F6', '#EAB308', '#EC4899'][Math.floor(Math.random() * 4)],
-                  boxShadow: '0 0 8px rgba(255, 255, 255, 0.8)',
-                  animation: `confetti-fall ${Math.random() * 2 + 3}s linear forwards`,
-                }}
-              />
-            ))}
-          </div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-scale-in animate-fade-in bg-primary/10 rounded-full p-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600 animate-pulse">Meta Atingida!</div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="h-40 w-full relative">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -131,20 +87,6 @@ export const HoursDonutChart = ({
                 <stop offset="0%" stopColor={gradientColors.start} />
                 <stop offset="100%" stopColor={gradientColors.end} />
               </linearGradient>
-
-              {/* Keyframes for confetti animation */}
-              <style type="text/css">{`
-                @keyframes confetti-fall {
-                  0% {
-                    transform: translateY(-10px) rotate(0deg);
-                    opacity: 1;
-                  }
-                  100% {
-                    transform: translateY(100vh) rotate(720deg);
-                    opacity: 0;
-                  }
-                }
-              `}</style>
             </defs>
             <Pie 
               data={data} 
