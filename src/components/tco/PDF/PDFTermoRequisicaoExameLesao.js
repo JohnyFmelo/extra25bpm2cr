@@ -1,4 +1,3 @@
-// src/components/tco/PDF/PDFTermoRequisicaoExameLesao.js
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak, formatarDataSimples
@@ -6,12 +5,10 @@ import {
 
 /** Adiciona Requisição de Exame de Lesão Corporal (em página nova) */
 export const addRequisicaoExameLesao = (doc, data) => {
-    const periciado = data.periciadoNome
-                     || data.vitimas?.find(v => v?.nome)?.nome
-                     || data.autores?.find(a => a?.nome)?.nome;
+    const periciado = data.periciadoNome;
 
-    if (!periciado) {
-        console.warn("Nenhuma pessoa identificada para perícia (periciadoNome, vítima ou autor). Pulando Requisição de Exame de Lesão.");
+    if (!periciado || !periciado.trim()) {
+        console.warn("Nenhum periciadoNome válido fornecido. Pulando Requisição de Exame de Lesão.");
         return null;
     }
 
