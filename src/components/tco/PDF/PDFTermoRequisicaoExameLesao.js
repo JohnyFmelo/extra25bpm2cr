@@ -3,11 +3,11 @@ import {
     addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak, formatarDataSimples
 } from './pdfUtils.js';
 
-/** Formata a data por extenso (ex.: "06 de maio de 2025") */
+/** Formata a data por extenso em caixa alta (ex.: "05 DE MAIO DE 2025") */
 const formatarDataPorExtenso = (date) => {
     const meses = [
-        "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-        "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
+        "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
+        "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
     ];
     try {
         const d = new Date(date);
@@ -17,17 +17,11 @@ const formatarDataPorExtenso = (date) => {
         const dia = d.getDate().toString().padStart(2, '0');
         const mes = meses[d.getMonth()];
         const ano = d.getFullYear();
-        return `${dia} de ${mes} de ${ano}`;
+        return `${dia} DE ${mes} DE ${ano}`;
     } catch (error) {
         console.warn("Erro ao formatar data por extenso:", error);
-        return "Data inválida";
+        return "DATA INVÁLIDA";
     }
-};
-
-/** Capitaliza a primeira letra de uma string */
-const capitalizeFirstLetter = (str) => {
-    if (!str) return str;
-    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 };
 
 /** Adiciona Requisição de Exame de Lesão Corporal (em página nova) */
@@ -44,6 +38,7 @@ export const addRequisicaoExameLesao = (doc, data) => {
     const pronome = sexo === "MASCULINO" ? "NO SR." : sexo === "FEMININO" ? "NA SRA." : "NO(A) SR.(A)";
     const qualificado = sexo === "MASCULINO" ? "QUALIFICADO" : sexo === "FEMININO" ? "QUALIFICADA" : "QUALIFICADO(A)";
     const periciadoLabel = sexo === "MASCULINO" ? "PERICIADO" : sexo === "FEMININO" ? "PERICIADA" : "PERICIADO(A)";
+    const quesitoPronome = sexo === "MASCULINO" ? "do periciando" : sexo === "FEMININO" ? "da pericianda" : "do(a) periciando(a)";
 
     let yPos = addNewPage(doc, data);
     const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
@@ -62,7 +57,7 @@ export const addRequisicaoExameLesao = (doc, data) => {
 
     // Lista de quesitos, excluindo o item 11 para homens
     const quesitos = [
-        "1. Houve ofensa à integridade corporal ou à saúde do(a) periciando(a)?",
+        `1. Houve ofensa à integridade corporal ou à saúde ${quesitoPronome}?`,
         "2. Em caso afirmativo, qual o instrumento ou meio que a produziu?",
         "3. A ofensa foi produzida com emprego de veneno, fogo, explosivo, asfixia, tortura ou outro meio insidioso ou cruel, ou de que podia resultar perigo comum?",
         "4. Resultou incapacidade para as ocupações habituais por mais de 30 (trinta) dias?",
@@ -87,7 +82,7 @@ export const addRequisicaoExameLesao = (doc, data) => {
     // Usa dataTerminoRegistro ou a data atual como fallback
     const dataRegistro = data.dataTerminoRegistro || new Date();
     const dataAtualFormatada = formatarDataPorExtenso(dataRegistro);
-    const cidadeReq = capitalizeFirstLetter(data.municipio || "Várzea Grande");
+    const cidadeReq = (data.municipio || "VÁRZEA GRANDE").toUpperCase();
     doc.setFont("helvetica", "normal"); doc.setFontSize(12);
     const dateText = `${cidadeReq}-MT, ${dataAtualFormatada}.`;
     yPos = checkPageBreak(doc, yPos, 10, data);
