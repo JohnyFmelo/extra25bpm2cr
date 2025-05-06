@@ -88,7 +88,7 @@ const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
   console.log("Componentes recebidos em formatarGuarnicao:", componentes); // Depuração
   if (!componentes || componentes.length === 0) return "[LISTA DE POLICIAIS PENDENTE]";
   const nomesFormatados = componentes
-    .filter(c => c.nome && c.posto)
+    .filter(c => c.nome && c.posto && c.rg) // Garante que apenas policiais válidos sejam incluídos
     .map(c => `${c.posto} PM ${c.nome}`);
   if (nomesFormatados.length === 0) return "[LISTA DE POLICIAIS PENDENTE]";
   if (nomesFormatados.length === 1) return nomesFormatados[0].toUpperCase();
@@ -261,6 +261,7 @@ DIANTE DISSO, [DETALHAR ENCAMINHAMENTO].`;
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "OUTROS" : natureza;
     const operacaoText = operacao ? ` PELA OPERAÇÃO ${operacao}` : "";
     const gupm = formatarGuarnicao(componentesGuarnicao);
+    console.log("Valor de gupm antes da substituição:", gupm); // Depuração
 
     updatedRelato = updatedRelato
       .replace("[HORA DO FATO]", horaFato || "[HORA DO FATO]")
@@ -277,6 +278,7 @@ DIANTE DISSO, [DETALHAR ENCAMINHAMENTO].`;
       .replace("[DETALHAR ENCAMINHAMENTO]", "[DETALHAR ENCAMINHAMENTO]");
 
     updatedRelato = updatedRelato.toUpperCase();
+    console.log("Relato atualizado:", updatedRelato); // Depuração
 
     if (
       relatoPolicial === relatoPolicialTemplate ||
@@ -319,10 +321,11 @@ DIANTE DISSO, [DETALHAR ENCAMINHAMENTO].`;
     const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
     if (!alreadyExists) {
       setComponentesGuarnicao(prevList => {
-        if (prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto)) {
-          return [novoPolicial];
-        }
-        return [...prevList, novoPolicial];
+        const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto)
+          ? [novoPolicial]
+          : [...prevList, novoPolicial];
+        console.log("Novo policial adicionado:", novoPolicial, "Nova lista:", newList); // Depuração
+        return newList;
       });
       toast({ title: "Adicionado", description: `Policial ${novoPolicial.nome} adicionado à guarnição.` });
     } else {
@@ -333,6 +336,7 @@ DIANTE DISSO, [DETALHAR ENCAMINHAMENTO].`;
   const handleRemovePolicialFromList = useCallback((indexToRemove: number) => {
     setComponentesGuarnicao(prevList => {
       const newList = prevList.filter((_, index) => index !== indexToRemove);
+      console.log("Policial removido, nova lista:", newList); // Depuração
       return newList;
     });
   }, []);
