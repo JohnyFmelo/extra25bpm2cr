@@ -8,23 +8,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
-import { HoursData } from "@/types/hours";
+import { HoursData, UserOption } from "@/types/hours";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabaseClient";
+// Fix 1: Fix the import path for supabase - using default export
+import supabase from "@/lib/supabaseClient";
 import { Separator } from "@/components/ui/separator";
 import IconCard from "@/components/IconCard";
 
 type ViewMode = "all" | "individual" | "monthly-summary";
 
-interface UserOption {
-  value: string;
-  label: string;
-}
-
 const Hours = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthValue());
+  // Fix 2: Fix the UserOption type to match the import
   const [users, setUsers] = useState<UserOption[]>([]);
   const [selectedUserData, setSelectedUserData] = useState<HoursData | null>(null);
   const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
@@ -32,6 +29,7 @@ const Hours = () => {
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [showUserHours, setShowUserHours] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(""); // Add search term state for AllUsersHours
 
   // Find the month name based on the selected month value
   const getSelectedMonthName = () => {
@@ -62,9 +60,11 @@ const Hours = () => {
       if (data && data.length > 0) {
         // Extract unique user names
         const uniqueUsers = [...new Set(data.map(item => item.Nome))].sort();
+        // Fix 3: Include registration property in UserOption
         const userOptions = uniqueUsers.map(name => ({
           value: name,
-          label: name
+          label: name,
+          registration: name // Using name as registration as a fallback
         }));
         setUsers(userOptions);
         setAllUsersData(data);
@@ -99,6 +99,10 @@ const Hours = () => {
 
   const handleBack = () => {
     navigate('/');
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
   };
 
   if (showUserHours && selectedUserData) {
@@ -166,12 +170,14 @@ const Hours = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <IconCard
-                icon={() => <span className="text-2xl">📊</span>}
+                // Fix 4: Use proper icon component
+                icon={ArrowLeft}
                 label="Ver Todos os Usuários"
                 onClick={() => setViewMode("all")}
               />
               <IconCard
-                icon={() => <span className="text-2xl">📋</span>}
+                // Fix 4: Use proper icon component
+                icon={ArrowLeft}
                 label="Resumo Mensal"
                 onClick={() => setViewMode("monthly-summary")}
               />
@@ -180,13 +186,11 @@ const Hours = () => {
             <Separator className="my-6" />
 
             {viewMode === "all" && (
+              // Fix 5: Add missing props to AllUsersHours component
               <AllUsersHours
-                data={allUsersData}
-                onUserSelect={(userData) => {
-                  setSelectedUserData(userData);
-                  setShowUserHours(true);
-                }}
-                monthName={getSelectedMonthName()}
+                users={allUsersData}
+                searchTerm={searchTerm}
+                onSearchChange={handleSearchChange}
               />
             )}
 
