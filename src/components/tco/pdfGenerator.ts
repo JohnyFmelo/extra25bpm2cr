@@ -1,4 +1,3 @@
-// src/components/tco/pdfGenerator.js
 import { jsPDF } from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -66,7 +65,21 @@ export const generatePDF = (inputData: any) => {
         addTermoConstatacaoDroga(doc, data);
     }
 
-    addRequisicaoExameLesao(doc, data);
+    // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
+    // Verifica se algum autor ou vítima tem laudoPericial: "Sim"
+    const pessoasComLaudo = [
+        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, tipo: "Autor" })),
+        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, tipo: "Vítima" }))
+    ].filter(p => p.nome && p.nome.trim()); // Filtra nomes válidos
+
+    if (pessoasComLaudo.length > 0) {
+        pessoasComLaudo.forEach(pessoa => {
+            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo})`);
+            addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome });
+        });
+    } else {
+        console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
+    }
 
     addTermoEncerramentoRemessa(doc, data);
 
