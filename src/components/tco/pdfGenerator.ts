@@ -1,3 +1,4 @@
+
 // src/components/tco/pdfGenerator.js
 import { jsPDF } from "jspdf";
 
@@ -6,11 +7,11 @@ import {
     MARGIN_TOP, MARGIN_BOTTOM, MARGIN_RIGHT, getPageConstants,
     addNewPage,
     addStandardFooterContent // Precisamos dela aqui para a numeração de página
-} from './PDF/pdfUtils.js'; // <-- Caminho atualizado
+} from './PDF/pdfUtils.js';
 
 // Importa geradores de conteúdo da subpasta PDF
-import { generateAutuacaoPage } from './PDF/PDFautuacao.js'; // <-- Caminho atualizado
-import { generateHistoricoContent } from './PDF/PDFhistorico.js'; // <-- Caminho atualizado
+import { generateAutuacaoPage } from './PDF/PDFautuacao.js';
+import { generateHistoricoContent } from './PDF/PDFhistorico.js';
 import {
     addTermoCompromisso,
     addTermoManifestacao,
@@ -18,10 +19,10 @@ import {
     addTermoConstatacaoDroga,
     addRequisicaoExameLesao,
     addTermoEncerramentoRemessa
-} from './PDF/PDFtermos.js'; // <-- Caminho atualizado
+} from './PDF/PDFtermos.js';
 
 // --- Função Principal de Geração ---
-export const generatePDF = (inputData) => { // Nome mantido como no pedido original
+export const generatePDF = (inputData: any) => { // Nome mantido como no pedido original
 
     if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
         console.error("Input data missing or invalid. Cannot generate PDF.");

@@ -27,11 +27,8 @@ interface GeneralInformationTabProps {
   comunicante: string;
   setComunicante: (value: string) => void;
   condutorNome: string;
-  setCondutorNome: (value: string) => void;
   condutorPosto: string;
-  setCondutorPosto: (value: string) => void;
   condutorRg: string;
-  setCondutorRg: (value: string) => void;
   guarnicao: string;
   setGuarnicao: (value: string) => void;
   operacao: string;
@@ -60,11 +57,8 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   comunicante,
   setComunicante,
   condutorNome,
-  setCondutorNome,
   condutorPosto,
-  setCondutorPosto,
   condutorRg,
-  setCondutorRg,
   guarnicao,
   setGuarnicao,
   operacao,
