@@ -1,5 +1,4 @@
-
-import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Gavel, Plus } from "lucide-react";
+import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -14,9 +13,6 @@ import Messages from "@/components/Messages";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
 import { TravelManagement } from "@/components/TravelManagement";
 import { useToast } from "@/hooks/use-toast";
-import TCOForm from "@/components/TCOForm";
-import { Button } from "@/components/ui/button";
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
@@ -24,50 +20,40 @@ const Index = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showInformationDialog, setShowInformationDialog] = useState(false);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
-  
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
-  
   const handleExtraClick = () => {
     setActiveTab("extra");
   };
-  
   const handleUsersClick = () => {
     setActiveTab("users");
   };
-  
   const handleBackClick = () => {
     setActiveTab("main");
   };
-  
   const handleSettingsClick = () => {
     setActiveTab("settings");
   };
-  
   const handleScheduleClick = () => {
     setActiveTab("schedule");
   };
-  
   const handleMessageClick = () => {
     setActiveTab("messages");
   };
-  
   const handleNotificationsClick = () => {
     setActiveTab("notifications");
   };
 
+  // Removemos a verificação do tipo de usuário para que qualquer um possa acessar a aba "travel"
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
-  
-  const handleTCOClick = () => {
-    setActiveTab("tco");
-  };
-
   return <div className="relative min-h-screen bg-[#E8F1F2]">
       <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
@@ -81,7 +67,6 @@ const Index = () => {
             <TabsTrigger value="messages">Messages</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="travel">Travel</TabsTrigger>
-            <TabsTrigger value="tco">TCO</TabsTrigger>
           </TabsList>
 
           <TabsContent value="main">
@@ -90,9 +75,9 @@ const Index = () => {
               <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
               <IconCard icon={Bell} label="Notificações" onClick={handleNotificationsClick} badge={unreadCount > 0 ? unreadCount : undefined} />
               {user.userType === "admin" && <>
+                  <IconCard icon={Pencil} label="Editor" onClick={handleEditorClick} />
                   <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
                   <IconCard icon={MessageSquare} label="Recados" onClick={handleMessageClick} />
-                  <IconCard icon={Gavel} label="TCO" onClick={handleTCOClick} />
                 </>}
               <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
               <IconCard icon={Settings} label="Configurações" onClick={handleSettingsClick} />
@@ -107,16 +92,6 @@ const Index = () => {
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              {user.userType === "admin" && (
-                <div className="fixed bottom-20 right-6 z-10">
-                  <Button 
-                    onClick={handleEditorClick} 
-                    className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center"
-                  >
-                    <Plus className="h-6 w-6" />
-                  </Button>
-                </div>
-              )}
               <TimeSlotsList />
             </div>
           </TabsContent>
@@ -224,19 +199,6 @@ const Index = () => {
               </div>
             </div>
           </TabsContent>
-
-          <TabsContent value="tco">
-            <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="bg-white rounded-xl shadow-lg">
-                <TCOForm />
-              </div>
-            </div>
-          </TabsContent>
         </Tabs>
 
         {showProfileDialog && <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={user} />}
@@ -247,5 +209,4 @@ const Index = () => {
       </div>
     </div>;
 };
-
 export default Index;
