@@ -1,57 +1,80 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { HoursDonutChart } from "@/components/hours/HoursDonutChart";
+import { WorkedDaysCalendar } from "@/components/hours/WorkedDaysCalendar";
 import { HoursData } from "@/types/hours";
-import { MapPin, DollarSign, AlertTriangle } from "lucide-react";
+import { DollarSign, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+
 interface UserHoursDisplayProps {
   data: HoursData;
   onClose: () => void;
-  monthName: string; // <-- Nova propriedade adicionada
+  isAdmin?: boolean;
 }
+
 export const UserHoursDisplay = ({
   data,
   onClose,
-  monthName // <-- Desestruture a nova propriedade
+  isAdmin = false
 }: UserHoursDisplayProps) => {
   const [userRank, setUserRank] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [hasDiscrepancy, setHasDiscrepancy] = useState(false);
+
   const totalHours = data["Total Geral"] ? parseFloat(data["Total Geral"].replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
-  const parseWorkDays = (workDaysStr: string | undefined) => {
+
+  const parseWorkDays = (workDaysStr: string | undefined, location: 'bpm' | 'saiop' | 'sinfra') => {
     if (!workDaysStr) return [];
-    return workDaysStr.split('|').map(day => day.trim()).filter(day => day);
+    
+    return workDaysStr.split('|').map(day => {
+      const [dayNumber, hoursWithH] = day.trim().split('/');
+      
+      if (!hoursWithH) {
+        return {
+          day: dayNumber || '',
+          hours: '',
+          location
+        };
+      }
+      
+      return {
+        day: dayNumber || '',
+        hours: hoursWithH.replace('h', ''),
+        location
+      };
+    }).filter(day => day.day);
   };
-  const formatDayHour = (dayHourStr: string) => {
-    if (dayHourStr.includes('/')) return dayHourStr;
-    // Simplesmente substitui o primeiro ':' por '/' se não houver '/'
-    // Pode precisar de ajuste se o formato for mais complexo
-    return dayHourStr.replace(':', '/');
-  };
-  const bpmDays = parseWorkDays(data["Horas 25° BPM"]);
-  const saiopDays = parseWorkDays(data["Saiop"]);
-  const sinfraDays = parseWorkDays(data["Sinfra"]);
-  const calculateSectionHours = (days: string[]) => {
-    return days.reduce((total, day) => {
-      // Tenta encontrar o padrão DIA/MES/HORASh ou DIA/HORASh
-      const hourMatch = day.match(/\/(\d+)h/i); // Case-insensitive 'h'
+
+  const bpmDays = parseWorkDays(data["Horas 25° BPM"], 'bpm');
+  const saiopDays = parseWorkDays(data["Saiop"], 'saiop');
+  const sinfraDays = parseWorkDays(data["Sinfra"], 'sinfra');
+
+  const allWorkedDays = [...bpmDays, ...saiopDays, ...sinfraDays];
+
+  const calculateSectionHours = (workDaysStr: string | undefined) => {
+    if (!workDaysStr) return 0;
+    
+    return workDaysStr.split('|').reduce((total, day) => {
+      const hourMatch = day.match(/\/(\d+)h/);
       return total + (hourMatch ? parseInt(hourMatch[1], 10) : 0);
     }, 0);
   };
-  const bpmTotalHours = calculateSectionHours(bpmDays);
-  const saiopTotalHours = calculateSectionHours(saiopDays);
-  const sinfraTotalHours = calculateSectionHours(sinfraDays);
+
+  const bpmTotalHours = data["Horas 25° BPM"] ? calculateSectionHours(data["Horas 25° BPM"]) : 0;
+  const saiopTotalHours = data["Saiop"] ? calculateSectionHours(data["Saiop"]) : 0;
+  const sinfraTotalHours = data["Sinfra"] ? calculateSectionHours(data["Sinfra"]) : 0;
+
   const sumOfSectionHours = bpmTotalHours + saiopTotalHours + sinfraTotalHours;
+
   useEffect(() => {
-    // Use uma pequena tolerância para comparações de ponto flutuante
     const hasHourDiscrepancy = Math.abs(totalHours - sumOfSectionHours) > 0.1;
     setHasDiscrepancy(hasHourDiscrepancy);
   }, [totalHours, sumOfSectionHours]);
+
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoading(true);
@@ -63,18 +86,11 @@ export const UserHoursDisplay = ({
           const userData = querySnapshot.docs[0].data();
           setUserRank(userData.rank || "");
         } else {
-          // Fallback para localStorage se não encontrar no Firebase
           const localUserData = JSON.parse(localStorage.getItem('user') || '{}');
-          // Verifica se a matrícula no localStorage corresponde (se necessário)
-          // if (localUserData?.registration === data.Matricula.toString()) {
           setUserRank(localUserData?.rank || "");
-          // } else {
-          //   setUserRank(""); // Ou outra lógica de fallback
-          // }
         }
       } catch (error) {
         console.error("Error fetching user data from Firebase:", error);
-        // Fallback para localStorage em caso de erro de rede/firebase
         const localUserData = JSON.parse(localStorage.getItem('user') || '{}');
         setUserRank(localUserData?.rank || "");
       } finally {
@@ -82,10 +98,10 @@ export const UserHoursDisplay = ({
       }
     };
     fetchUserData();
-  }, [data.Matricula]); // Dependência apenas na matrícula, rank vem do fetch
+  }, [data.Matricula]);
 
   const determineHourlyRate = (rank: string) => {
-    if (!rank) return 41.13; // Taxa padrão se o rank não for encontrado/informado
+    if (!rank) return 41.13;
     const lowerRank = rank.toLowerCase();
     if (lowerRank.includes('cb') || lowerRank.includes('sd')) {
       return 41.13;
@@ -94,99 +110,66 @@ export const UserHoursDisplay = ({
     } else if (lowerRank.includes('ten') || lowerRank.includes('cap') || lowerRank.includes('maj') || lowerRank.includes('cel')) {
       return 87.02;
     }
-    return 41.13; // Fallback para taxa padrão
+    return 41.13;
   };
   const hourlyRate = determineHourlyRate(userRank);
   const totalValue = totalHours * hourlyRate;
-  return <div className="mt-6 space-y-4 my-0">
+
+  const getMonthYear = () => {
+    const currentDate = new Date();
+    return `${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
+  };
+
+  return (
+    <div className="mt-6 space-y-4 my-0">
       <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
-      {/* Exibe o mês aqui */}
       
-
       <HoursDonutChart totalHours={totalHours} />
-
-      {hasDiscrepancy && <Alert variant="default" className="border-yellow-400 bg-[#FEF7CD] text-amber-800">
+      
+      {hasDiscrepancy && (
+        <Alert variant="default" className="border-yellow-400 bg-[#FEF7CD] text-amber-800">
           <AlertTriangle className="h-4 w-4 text-yellow-600" />
           <AlertTitle className="text-amber-800">Atenção</AlertTitle>
           <AlertDescription className="text-amber-700">
-            Existe uma discrepância entre o total de horas ({totalHours.toFixed(2).replace('.', ',')}h) e a soma dos dias trabalhados ({sumOfSectionHours.toFixed(2).replace('.', ',')}h).
+            Existe uma discrepância entre o total de horas ({totalHours}h) e a soma dos dias trabalhados ({sumOfSectionHours}h).
             Procure a administração.
           </AlertDescription>
-        </Alert>}
-
-      <h3 className="font-medium text-gray-700 pt-2">Dias Trabalhados</h3>
-      <div className="space-y-4">
-        {bpmDays.length > 0 && <div className="bg-slate-50 rounded-lg p-3 shadow-sm border border-slate-100">
-            <h3 className="font-semibold mb-2 flex items-center justify-between mx-0 px-0 text-gray-700">
-              <span className="flex items-center mx-0">
-                <MapPin className="h-4 w-4 mr-2 text-primary" />
-                25° BPM
-              </span>
-              <span className="text-primary font-medium my-0 px-0 mx-0 text-left text-emerald-600">{bpmTotalHours}h</span>
-            </h3>
-            <div className="flex flex-wrap gap-2 py-0 px-[5px] my-0 mx-0">
-              {bpmDays.map((day, index) => <Badge key={`bpm-${index}`} variant="outline" className="bg-white text-gray-800 border-gray-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
-                  {formatDayHour(day)}
-                </Badge>)}
-            </div>
-          </div>}
-
-        {saiopDays.length > 0 && <div className="rounded-lg p-3 shadow-sm border border-blue-100 bg-slate-50">
-            <h3 className="font-semibold mb-2 text-blue-700 flex items-center justify-between">
-              <span className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2 text-blue-600" />
-                SAIOP
-              </span>
-              <span className="text-blue-600 font-medium">{saiopTotalHours}h</span>
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {saiopDays.map((day, index) => <Badge key={`saiop-${index}`} variant="outline" className="bg-white text-blue-800 border-blue-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-blue-50 transition-colors">
-                  {formatDayHour(day)}
-                </Badge>)}
-            </div>
-          </div>}
-
-        {sinfraDays.length > 0 && <div className="bg-green-50 rounded-lg p-3 shadow-sm border border-green-100">
-            <h3 className="font-semibold mb-2 text-green-700 flex items-center justify-between">
-              <span className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2 text-green-600" />
-                SINFRA
-              </span>
-              <span className="text-green-600 font-medium">{sinfraTotalHours}h</span>
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {sinfraDays.map((day, index) => <Badge key={`sinfra-${index}`} variant="outline" className="bg-white text-green-800 border-green-200 py-1.5 px-3 rounded-lg shadow-sm hover:bg-green-50 transition-colors">
-                  {formatDayHour(day)}
-                </Badge>)}
-            </div>
-          </div>}
-      </div>
+        </Alert>
+      )}
+      
+      <h3 className="font-medium text-gray-700">Dias Trabalhados</h3>
+      <WorkedDaysCalendar
+        monthYear={getMonthYear()}
+        workedDays={allWorkedDays}
+        total={totalHours.toString()}
+        isAdmin={isAdmin}
+      />
 
       <Card className="bg-blue-50 border-blue-100 shadow-sm mt-4">
         <CardContent className="p-4">
           <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
             <DollarSign className="h-5 w-5 mr-2 text-primary" />
-            Resumo Financeiro {isLoading ? '(Carregando...)' : ''}
+            Resumo Financeiro
           </h3>
-
+          
           <div className="text-sm space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Graduação:</span>
-              <span className="font-medium">{userRank || (isLoading ? "Carregando..." : "Não informada")}</span>
+              <span className="font-medium">{userRank || "Não informada"}</span>
             </div>
-
+            
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Valor por hora:</span>
               <span className="font-medium">R$ {hourlyRate.toFixed(2).replace('.', ',')}</span>
             </div>
-
+            
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Horas trabalhadas:</span>
-              <span className="font-medium">{totalHours.toFixed(2).replace('.', ',')}h</span>
+              <span className="font-medium">{totalHours}h</span>
             </div>
-
+            
             <Separator className="my-2 bg-blue-200/50" />
-
+            
             <div className="flex justify-between items-center">
               <span className="text-gray-700 font-medium">Valor Estimado:</span>
               <span className="text-emerald-600 font-semibold text-lg">R$ {totalValue.toFixed(2).replace('.', ',')}</span>
@@ -198,5 +181,6 @@ export const UserHoursDisplay = ({
       <Button variant="destructive" className="w-full mt-4" onClick={onClose}>
         Fechar
       </Button>
-    </div>;
+    </div>
+  );
 };
