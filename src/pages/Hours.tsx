@@ -1,249 +1,228 @@
-import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { MonthSelector } from "@/components/hours/MonthSelector";
+import React, { useState, useEffect } from "react";
+import { MonthSelector, getCurrentMonthValue, months } from "@/components/hours/MonthSelector";
 import { UserSelector } from "@/components/hours/UserSelector";
+import { AllUsersHours } from "@/components/hours/AllUsersHours";
+import { ArrowLeft } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
-import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
-import type { HoursData, UserOption } from "@/types/hours";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HoursData } from "@/types/hours";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabaseClient";
+import { Separator } from "@/components/ui/separator";
+import IconCard from "@/components/IconCard";
+import { fetchHoursByMonth } from "@/services/hoursService";
+
+type ViewMode = "all" | "individual" | "monthly-summary";
+
 const Hours = () => {
-  const [selectedMonth, setSelectedMonth] = useState<string>("");
-  const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
-  const [selectedUser, setSelectedUser] = useState<string>("");
-  const [loading, setLoading] = useState(false);
-  const [loadingGeneral, setLoadingGeneral] = useState(false);
-  const [data, setData] = useState<HoursData | null>(null);
-  const [generalData, setGeneralData] = useState<HoursData | null>(null);
-  const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
-  const [userData, setUserData] = useState<any>(null);
-  const [users, setUsers] = useState<UserOption[]>([]);
-  const [activeConsult, setActiveConsult] = useState<'individual' | 'general'>('individual');
-  const {
-    toast
-  } = useToast();
   const navigate = useNavigate();
-  useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-    setUserData(storedUser);
-    const handleStorageChange = () => {
-      const updatedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      setUserData(updatedUser);
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-  useEffect(() => {
-    if (userData?.userType === 'admin') {
-      fetchUsersList();
-    }
-  }, [userData?.userType]);
-  const fetchUsersList = async () => {
-    try {
-      const fetchedUsers = await fetchAllUsers();
-      setUsers(fetchedUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Erro ao carregar lista de usuários."
-      });
-    }
+  const { toast } = useToast();
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthValue());
+  const [users, setUsers] = useState<string[]>([]);
+  const [selectedUserData, setSelectedUserData] = useState<HoursData | null>(null);
+  const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
+  const [showUserHours, setShowUserHours] = useState(false);
+
+  // Find the month name based on the selected month value
+  const getSelectedMonthName = () => {
+    const selectedMonth = months.find(month => month.value === selectedMonth);
+    return selectedMonth ? selectedMonth.label : "";
   };
-  const handleConsult = async () => {
-    if (!userData?.registration) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Usuário não autenticado ou sem matrícula cadastrada. Por favor, atualize seu cadastro."
-      });
-      return;
+
+  useEffect(() => {
+    if (selectedMonth) {
+      fetchData();
     }
-    if (!selectedMonth) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Selecione um mês"
-      });
-      return;
-    }
+  }, [selectedMonth]);
+
+  const fetchData = async () => {
     setLoading(true);
+    setError(null);
+    setSelectedUserData(null);
+
     try {
-      const result = await fetchUserHours(selectedMonth, userData.registration);
-      if (result.error) {
-        throw new Error(result.error);
+      const data = await fetchHoursByMonth(selectedMonth);
+      
+      if (data && data.length > 0) {
+        // Extract unique user names
+        const uniqueUsers = [...new Set(data.map(item => item.Nome))].sort();
+        setUsers(uniqueUsers);
+        setAllUsersData(data);
+      } else {
+        setUsers([]);
+        setAllUsersData([]);
+        setError("Nenhum dado encontrado para este mês.");
       }
-      if (!result || result.length === 0) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Matrícula não localizada"
-        });
-        setData(null);
-        return;
-      }
-      setData(result[0]);
     } catch (error) {
-      console.error('Error fetching data:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao consultar dados. Por favor, tente novamente mais tarde."
-      });
+      console.error("Error fetching data:", error);
+      setError("Erro ao carregar dados. Por favor, tente novamente.");
     } finally {
       setLoading(false);
     }
   };
-  const handleGeneralConsult = async () => {
-    if (!selectedGeneralMonth) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Selecione um mês"
-      });
-      return;
-    }
-    if (!selectedUser) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Selecione um usuário"
-      });
-      return;
-    }
-    setLoadingGeneral(true);
-    try {
-      if (selectedUser === 'all') {
-        const allUsersResults = [];
-        for (const user of users) {
-          try {
-            const result = await fetchUserHours(selectedGeneralMonth, user.registration);
-            if (result && result.length > 0) {
-              allUsersResults.push(result[0]);
-            }
-          } catch (error) {
-            console.error(`Error fetching data for user ${user.registration}:`, error);
-          }
-        }
-        if (allUsersResults.length === 0) {
-          toast({
-            variant: "destructive",
-            title: "Erro",
-            description: "Nenhum dado encontrado para o período selecionado"
-          });
-          setAllUsersData([]);
-          return;
-        }
-        const sortedResults = [...allUsersResults].sort((a, b) => {
-          const totalA = a["Total Geral"] ? parseFloat(a["Total Geral"].toString().replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
-          const totalB = b["Total Geral"] ? parseFloat(b["Total Geral"].toString().replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
-          return totalB - totalA;
-        });
-        setAllUsersData(sortedResults);
-        setGeneralData(null);
-      } else {
-        const result = await fetchUserHours(selectedGeneralMonth, selectedUser);
-        if (result.error) {
-          throw new Error(result.error);
-        }
-        if (!result || result.length === 0) {
-          toast({
-            variant: "destructive",
-            title: "Erro",
-            description: "Matrícula não localizada"
-          });
-          setGeneralData(null);
-          return;
-        }
-        setGeneralData(result[0]);
-        setAllUsersData([]);
-      }
-    } catch (error) {
-      console.error('Error fetching general data:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Erro ao consultar dados."
-      });
-    } finally {
-      setLoadingGeneral(false);
+
+  const handleMonthChange = (value: string) => {
+    setSelectedMonth(value);
+    setSelectedUserData(null);
+  };
+
+  const handleUserSelect = (userName: string) => {
+    const userData = allUsersData.find(data => data.Nome === userName);
+    if (userData) {
+      setSelectedUserData(userData);
     }
   };
-  return <div className="container mx-auto p-4">
-      <div className="relative h-12">
-        <div className="absolute right-0 top-0">
-          <button onClick={() => navigate('/')} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
-            <ArrowLeft className="h-6 w-6" />
-          </button>
-        </div>
+
+  const clearSelectedUser = () => {
+    setSelectedUserData(null);
+  };
+
+  const handleBack = () => {
+    navigate('/');
+  };
+
+  if (showUserHours && selectedUserData) {
+    return (
+      <div className="p-6">
+        <Button
+          variant="outline"
+          className="mb-4"
+          onClick={() => setShowUserHours(false)}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+        </Button>
+        <Card>
+          <CardContent className="pt-6">
+            <UserHoursDisplay 
+              data={selectedUserData} 
+              onClose={() => setShowUserHours(false)} 
+              monthName={getSelectedMonthName()}
+            />
+          </CardContent>
+        </Card>
       </div>
+    );
+  }
 
-      <Tabs defaultValue="individual" value={activeConsult} onValueChange={value => setActiveConsult(value as 'individual' | 'general')} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-white/50 rounded-xl mb-6">
-          <TabsTrigger value="individual" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
-            Consulta Individual
-          </TabsTrigger>
-          {userData?.userType === 'admin' && <TabsTrigger value="general" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
-              Consulta Geral
-            </TabsTrigger>}
-        </TabsList>
+  return (
+    <div className="p-6">
+      <Button
+        variant="outline"
+        className="mb-4"
+        onClick={handleBack}
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+      </Button>
 
-        <TabsContent value="individual">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
-            <div className="space-y-4">
-              <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
+      <div className="space-y-6">
+        <MonthSelector
+          value={selectedMonth}
+          onChange={handleMonthChange}
+        />
 
-              <Button onClick={handleConsult} disabled={loading || !userData?.registration} className="w-full">
-                {loading ? <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Consultando...
-                  </> : "Consultar"}
-              </Button>
+        <UserSelector
+          disabled={!selectedMonth || loading}
+          onSelectUser={handleUserSelect}
+          users={users}
+        />
 
-              {!userData?.registration && <p className="text-sm text-red-500">
-                  Você precisa cadastrar sua matrícula para consultar as horas.
-                </p>}
-
-              {data && <UserHoursDisplay data={data} onClose={() => setData(null)} />}
-            </div>
+        {selectedUserData && (
+          <div className="mt-4">
+            <Card>
+              <CardContent className="pt-6">
+                <UserHoursDisplay 
+                  data={selectedUserData} 
+                  onClose={clearSelectedUser}
+                  monthName={getSelectedMonthName()}
+                />
+              </CardContent>
+            </Card>
           </div>
-        </TabsContent>
+        )}
 
-        {userData?.userType === 'admin' && <TabsContent value="general">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
-              <div className="space-y-4">
-                <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
-
-                <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
-
-                <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full">
-                  {loadingGeneral ? <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Consultando...
-                    </> : "Consultar"}
-                </Button>
-
-                {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-stone-50">
-                    
-                    <UserHoursDisplay data={userData} onClose={() => {
-                const updatedData = [...allUsersData];
-                updatedData.splice(index, 1);
-                setAllUsersData(updatedData);
-              }} />
-                  </div>)}
-
-                {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} />}
-              </div>
+        {selectedMonth && !selectedUserData && !error && (
+          <div className="mt-4">
+            <h2 className="text-xl font-bold mb-4">Relatório do mês: {getSelectedMonthName()}</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <IconCard
+                icon={() => <span className="text-2xl">📊</span>}
+                label="Ver Todos os Usuários"
+                onClick={() => setViewMode("all")}
+              />
+              <IconCard
+                icon={() => <span className="text-2xl">📋</span>}
+                label="Resumo Mensal"
+                onClick={() => setViewMode("monthly-summary")}
+              />
             </div>
-          </TabsContent>}
-      </Tabs>
-    </div>;
+
+            <Separator className="my-6" />
+
+            {viewMode === "all" && (
+              <AllUsersHours
+                data={allUsersData}
+                onUserSelect={(data) => {
+                  setSelectedUserData(data);
+                  setShowUserHours(true);
+                }}
+                monthName={getSelectedMonthName()}
+              />
+            )}
+
+            {viewMode === "monthly-summary" && (
+              <Card>
+                <CardContent className="pt-6">
+                  <h3 className="text-lg font-medium mb-4">Resumo de Horas - {getSelectedMonthName()}</h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <h4 className="font-medium text-blue-800">Total de Usuários</h4>
+                        <p className="text-2xl font-bold text-blue-600">{allUsersData.length}</p>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+                        <h4 className="font-medium text-green-800">Total de Horas</h4>
+                        <p className="text-2xl font-bold text-green-600">
+                          {allUsersData.reduce((sum, user) => {
+                            const hours = user["Total Geral"] 
+                              ? parseFloat(user["Total Geral"].replace(/[^0-9,.]/g, '').replace(',', '.')) 
+                              : 0;
+                            return sum + hours;
+                          }, 0).toFixed(2).replace('.', ',')}h
+                        </p>
+                      </div>
+                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                        <h4 className="font-medium text-purple-800">Média por Usuário</h4>
+                        <p className="text-2xl font-bold text-purple-600">
+                          {(allUsersData.reduce((sum, user) => {
+                            const hours = user["Total Geral"] 
+                              ? parseFloat(user["Total Geral"].replace(/[^0-9,.]/g, '').replace(',', '.')) 
+                              : 0;
+                            return sum + hours;
+                          }, 0) / (allUsersData.length || 1)).toFixed(2).replace('.', ',')}h
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md">
+            {error}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
+
 export default Hours;

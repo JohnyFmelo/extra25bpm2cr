@@ -1,4 +1,4 @@
-import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned } from "lucide-react";
+import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Scale } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -13,6 +13,8 @@ import Messages from "@/components/Messages";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
 import { TravelManagement } from "@/components/TravelManagement";
 import { useToast } from "@/hooks/use-toast";
+import BottomBar from "@/components/BottomBar";
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
@@ -20,41 +22,65 @@ const Index = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showInformationDialog, setShowInformationDialog] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
+  const isAdmin = user.userType === "admin";
+  
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
+  
   const handleExtraClick = () => {
     setActiveTab("extra");
   };
+  
   const handleUsersClick = () => {
     setActiveTab("users");
   };
+  
   const handleBackClick = () => {
     setActiveTab("main");
   };
+  
   const handleSettingsClick = () => {
     setActiveTab("settings");
   };
+  
   const handleScheduleClick = () => {
     setActiveTab("schedule");
   };
+  
   const handleMessageClick = () => {
     setActiveTab("messages");
   };
+  
   const handleNotificationsClick = () => {
     setActiveTab("notifications");
   };
 
-  // Removemos a verificação do tipo de usuário para que qualquer um possa acessar a aba "travel"
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
-  return <div className="relative min-h-screen bg-[#E8F1F2]">
+
+  const handleHoursClick = () => {
+    setActiveTab("hours");
+  };
+
+  const handleTcoClick = () => {
+    if (isAdmin) {
+      setActiveTab("tco");
+    } else {
+      toast({
+        title: "Acesso Restrito",
+        description: "Em desenvolvimento. Disponível apenas para administradores.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  return (
+    <div className="relative min-h-screen bg-[#E8F1F2] pb-20">
       <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
           <TabsList className="hidden">
@@ -67,21 +93,21 @@ const Index = () => {
             <TabsTrigger value="messages">Messages</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="travel">Travel</TabsTrigger>
+            <TabsTrigger value="tco">TCO</TabsTrigger>
           </TabsList>
 
           <TabsContent value="main">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <IconCard icon={Clock} label="Horas" />
-              <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
-              <IconCard icon={Bell} label="Notificações" onClick={handleNotificationsClick} badge={unreadCount > 0 ? unreadCount : undefined} />
-              {user.userType === "admin" && <>
+              {user.userType === "admin" && (
+                <>
                   <IconCard icon={Pencil} label="Editor" onClick={handleEditorClick} />
                   <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
                   <IconCard icon={MessageSquare} label="Recados" onClick={handleMessageClick} />
-                </>}
+                </>
+              )}
+              <IconCard icon={Bell} label="Notificações" onClick={handleNotificationsClick} badge={unreadCount > 0 ? unreadCount : undefined} />
               <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
               <IconCard icon={Settings} label="Configurações" onClick={handleSettingsClick} />
-              <IconCard icon={MapPinned} label="Viagens" onClick={handleTravelClick} />
             </div>
           </TabsContent>
 
@@ -199,6 +225,23 @@ const Index = () => {
               </div>
             </div>
           </TabsContent>
+
+          <TabsContent value="tco">
+            <div className="relative">
+              <div className="absolute right-0 -top-12 mb-4">
+                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-semibold mb-6">TCO - Termo Circunstanciado de Ocorrência</h2>
+                <p className="text-gray-600">
+                  Gerenciamento e acompanhamento de TCOs. Esta funcionalidade está disponível apenas para administradores.
+                </p>
+                {/* Conteúdo da aba TCO a ser desenvolvido */}
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
 
         {showProfileDialog && <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={user} />}
@@ -207,6 +250,15 @@ const Index = () => {
 
         {showInformationDialog && <InformationDialog open={showInformationDialog} onOpenChange={setShowInformationDialog} isAdmin={user.userType === "admin"} />}
       </div>
-    </div>;
+      
+      <BottomBar 
+        onHoursClick={handleHoursClick}
+        onExtraClick={handleExtraClick}
+        onTravelClick={handleTravelClick}
+        onTcoClick={handleTcoClick}
+      />
+    </div>
+  );
 };
+
 export default Index;
