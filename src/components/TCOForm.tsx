@@ -13,7 +13,6 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
 
-// --- Interfaces ---
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
@@ -34,10 +33,9 @@ interface Pessoa {
   cpf: string;
   celular: string;
   email: string;
-  laudoPericial: string; // Novo campo: "Sim" ou "Não"
+  laudoPericial: string;
 }
 
-// --- Funções Auxiliares ---
 const formatRepresentacao = (representacao: string): string => {
   if (representacao === "Representa") return "representar";
   if (representacao === "Posteriormente") return "decidir_posteriormente";
@@ -84,12 +82,11 @@ const validateCPF = (cpf: string) => {
   return digit2 === parseInt(cpf.charAt(10));
 };
 
-// Função para formatar a guarnição com "E" antes do último policial
 const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
-  console.log("Componentes recebidos em formatarGuarnicao:", componentes); // Depuração
+  console.log("Componentes recebidos em formatarGuarnicao:", componentes);
   if (!componentes || componentes.length === 0) return "[GUPM PENDENTE]";
   const nomesFormatados = componentes
-    .filter(c => c.nome && c.posto) // Garante que apenas policiais válidos sejam incluídos
+    .filter(c => c.nome && c.posto)
     .map(c => `${c.posto} PM ${c.nome}`);
   if (nomesFormatados.length === 0) return "[GUPM PENDENTE]";
   if (nomesFormatados.length === 1) return nomesFormatados[0].toUpperCase();
@@ -97,7 +94,6 @@ const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
   return `${nomesFormatados.slice(0, -1).join(", ")} E ${nomesFormatados[nomesFormatados.length - 1]}`.toUpperCase();
 };
 
-// Função para formatar o relato do autor com base no gênero e número de autores
 const formatarRelatoAutor = (autores: Pessoa[]): string => {
   if (autores.length === 0) {
     return "O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.";
@@ -112,23 +108,19 @@ const formatarRelatoAutor = (autores: Pessoa[]): string => {
   return `${pronomePlural} DOS FATOS ABAIXO ASSINADOS, JÁ QUALIFICADOS NOS AUTOS, CIENTIFICADOS DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLARARAM QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.`;
 };
 
-// --- Componente Principal do Formulário TCO ---
 const TCOForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
 
-  // Timer state
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
 
-  // Current date and time
   const now = new Date();
   const formattedDate = now.toISOString().split('T')[0];
   const formattedTime = now.toTimeString().slice(0, 5);
 
-  // --- ESTADOS DO FORMULÁRIO ---
   const [tcoNumber, setTcoNumber] = useState("");
   const [natureza, setNatureza] = useState("Vias de Fato");
   const [customNatureza, setCustomNatureza] = useState("");
@@ -149,7 +141,7 @@ const TCOForm = () => {
   const [guarnicao, setGuarnicao] = useState("");
   const [operacao, setOperacao] = useState("");
   const [apreensoes, setApreensoes] = useState("");
-  const [lacreNumero, setLacreNumero] = useState(""); // Novo estado para Lacre
+  const [lacreNumero, setLacreNumero] = useState("");
   const [componentesGuarnicao, setComponentesGuarnicao] = useState<ComponenteGuarnicao[]>([]);
   const [quantidade, setQuantidade] = useState("");
   const [substancia, setSubstancia] = useState("");
@@ -175,18 +167,14 @@ const TCOForm = () => {
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
     celular: "", email: "", laudoPericial: "Não"
   }]);
-  // Template do relato policial
   const relatoPolicialTemplate = `POR VOLTA DAS [HORÁRIO] DO DIA [DATA], NESTA CIDADE DE VÁRZEA GRANDE-MT, A GUARNIÇÃO DA VIATURA [GUARNIÇÃO][OPERACAO_TEXT] COMPOSTA PELOS MILITARES [GUPM], DURANTE RONDAS NO BAIRRO [BAIRRO], FOI ACIONADA VIA [MEIO DE ACIONAMENTO] PARA ATENDER A UMA OCORRÊNCIA DE [NATUREZA] NO [LOCAL], ONDE [VERSÃO INICIAL]. CHEGANDO NO LOCAL, A EQUIPE [O QUE A PM DEPAROU]. A VERSÃO DAS PARTES FOI REGISTRADA EM CAMPO PRÓPRIO. [VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]. [DILIGÊNCIAS E APREENSÕES REALIZADAS]. DIANTE DISSO, [ENCAMINHAMENTO PARA REGISTRO DOS FATOS].`;
   const [relatoPolicial, setRelatoPolicial] = useState(relatoPolicialTemplate);
   const [relatoAutor, setRelatoAutor] = useState(formatarRelatoAutor(autores));
   const [relatoVitima, setRelatoVitima] = useState("RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
   const [relatoTestemunha, setRelatoTestemunha] = useState("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
   const [conclusaoPolicial, setConclusaoPolicial] = useState("");
-
-  // Estado para rastrear edições manuais
   const [isRelatoPolicialManuallyEdited, setIsRelatoPolicialManuallyEdited] = useState(false);
 
-  // --- useEffects ---
   useEffect(() => {
     if (tcoNumber && !isTimerRunning) {
       setStartTime(new Date());
@@ -214,15 +202,18 @@ const TCOForm = () => {
     if (natureza === "Porte de drogas para consumo" && indicios) {
       const indicioFinal = isUnknownMaterial && customMaterialDesc ? customMaterialDesc : indicios;
       if (indicioFinal) {
-        const descriptiveText = `01 (UMA) PORÇÃO PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()} [DESCRIÇÃO EMBALAGEM], CONFORME FOTO EM ANEXO.`;
+        const descriptiveText = isUnknownMaterial
+          ? `${quantidade || "01 (UMA)"} PORÇÃO PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${customMaterialDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.`
+          : `01 (UMA) PORÇÃO PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()} [DESCRIÇÃO EMBALAGEM], CONFORME FOTO EM ANEXO.`;
         if (!apreensoes || apreensoes === "Descreva os objetos ou documentos apreendidos, se houver" || apreensoes === relatoPolicialTemplate) {
           setApreensoes(descriptiveText);
         }
       }
     } else if (natureza !== "Porte de drogas para consumo") {
-      setLacreNumero(""); // Limpa lacre se natureza não for Droga
+      setLacreNumero("");
+      setVitimas([]); // Clear vitimas for non-drug cases
     }
-  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, apreensoes]);
+  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, apreensoes, quantidade]);
 
   useEffect(() => {
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
@@ -249,7 +240,6 @@ const TCOForm = () => {
       setPenaDescricao(penaAtual);
     }
 
-    // Ajustar conclusaoPolicial com gênero, plural e inclusão de natureza/tipo penal
     const autorTexto = autores.length === 0 ? "O(A) AUTOR(A)" :
       autores.length === 1 ? (autores[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
       autores.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
@@ -260,17 +250,16 @@ const TCOForm = () => {
   }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
 
   useEffect(() => {
-    // Pular atualização automática se o relato foi editado manualmente
     if (isRelatoPolicialManuallyEdited) {
       console.log("Atualização automática de relatoPolicial pulada devido a edição manual.");
       return;
     }
 
-    console.log("Atualizando relatoPolicial com:", { horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato }); // Depuração
+    console.log("Atualizando relatoPolicial com:", { horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato });
     let updatedRelato = relatoPolicialTemplate;
     const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
     const gupm = formatarGuarnicao(componentesGuarnicao);
-    console.log("Valor de gupm antes da substituição:", gupm); // Depuração
+    console.log("Valor de gupm antes da substituição:", gupm);
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "OUTROS" : natureza;
     const operacaoText = operacao ? `, DURANTE A ${operacao},` : "";
 
@@ -291,7 +280,7 @@ const TCOForm = () => {
       .replace("[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]", "[DETALHAR ENCAMINHAMENTO]");
 
     updatedRelato = updatedRelato.toUpperCase();
-    console.log("Relato atualizado:", updatedRelato); // Depuração
+    console.log("Relato atualizado:", updatedRelato);
 
     setRelatoPolicial(updatedRelato);
   }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato]);
@@ -320,7 +309,6 @@ const TCOForm = () => {
     }
   }, [autor, autores]);
 
-  // --- Funções de Callback para os Filhos ---
   const handleAddPolicialToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
     const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
     if (!alreadyExists) {
@@ -328,7 +316,7 @@ const TCOForm = () => {
         const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto)
           ? [novoPolicial]
           : [...prevList, novoPolicial];
-        console.log("Novo policial adicionado:", novoPolicial, "Nova lista:", newList); // Depuração
+        console.log("Novo policial adicionado:", novoPolicial, "Nova lista:", newList);
         return newList;
       });
       toast({ title: "Adicionado", description: `Policial ${novoPolicial.nome} adicionado à guarnição.` });
@@ -340,7 +328,7 @@ const TCOForm = () => {
   const handleRemovePolicialFromList = useCallback((indexToRemove: number) => {
     setComponentesGuarnicao(prevList => {
       const newList = prevList.filter((_, index) => index !== indexToRemove);
-      console.log("Policial removido, nova lista:", newList); // Depuração
+      console.log("Policial removido, nova lista:", newList);
       return newList;
     });
   }, []);
@@ -401,7 +389,7 @@ const TCOForm = () => {
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
     } else if (field === 'laudoPericial') {
-      processedValue = value; // "Sim" ou "Não"
+      processedValue = value;
     }
     newVitimas[index] = { ...newVitimas[index], [field]: processedValue };
     setVitimas(newVitimas);
@@ -418,7 +406,7 @@ const TCOForm = () => {
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
     } else if (field === 'laudoPericial') {
-      processedValue = value; // "Sim" ou "Não"
+      processedValue = value;
     }
     newTestemunhas[index] = { ...newTestemunhas[index], [field]: processedValue };
     setTestemunhas(newTestemunhas);
@@ -446,21 +434,19 @@ const TCOForm = () => {
         }
       }
     } else if (field === 'laudoPericial') {
-      processedValue = value; // "Sim" ou "Não"
+      processedValue = value;
     }
     newAutores[index] = { ...newAutores[index], [field]: processedValue };
     setAutores(newAutores);
     if (index === 0 && field === 'nome') setAutor(processedValue);
   };
 
-  // Função para detectar edição manual no relatoPolicial
   const handleRelatoPolicialChange = (value: string) => {
     setRelatoPolicial(value);
     setIsRelatoPolicialManuallyEdited(true);
-    console.log("Relato policial editado manualmente:", value); // Depuração
+    console.log("Relato policial editado manualmente:", value);
   };
 
-  // --- Função de Submissão Principal ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -477,12 +463,8 @@ const TCOForm = () => {
       return;
     }
 
-    if (vitimas.length > 0 && !vitimas[0].nome) {
-      // console.warn("Vítima adicionada mas sem nome preenchido.");
-    }
-
-    if (natureza === "Porte de drogas para consumo" && (!quantidade || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc))) {
-      toast({ variant: "destructive", title: "Dados da Droga Incompletos", description: "Preencha Quantidade, Substância, Cor e Descrição (se material desconhecido)." });
+    if (natureza === "Porte de drogas para consumo" && (!quantidade || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc) || !lacreNumero)) {
+      toast({ variant: "destructive", title: "Dados da Droga Incompletos", description: "Preencha Quantidade, Substância, Cor, Descrição (se material desconhecido) e Número do Lacre." });
       return;
     }
 
@@ -492,7 +474,7 @@ const TCOForm = () => {
     try {
       const displayNaturezaReal = natureza === "Outros" ? customNatureza : natureza;
       const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc : indicios) : "";
-      const vitimasFiltradas = vitimas.filter(v => v.nome?.trim());
+      const vitimasFiltradas = natureza === "Porte de drogas para consumo" ? [] : vitimas.filter(v => v.nome?.trim());
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim());
 
       const tcoDataParaSalvar = {
@@ -515,17 +497,17 @@ const TCOForm = () => {
         autores,
         vitimas: vitimasFiltradas,
         testemunhas: testemunhasFiltradas,
-        representacao: formatRepresentacao(representacao),
+        ...(natureza !== "Porte de drogas para consumo" && { representacao: formatRepresentacao(representacao) }),
         guarnicao: guarnicao.trim(),
         operacao: operacao.trim(),
         componentesGuarnicao,
         relatoPolicial: relatoPolicial.trim(),
         relatoAutor: relatoAutor.trim(),
-        relatoVitima: relatoVitima.trim(),
+        ...(natureza !== "Porte de drogas para consumo" && { relatoVitima: relatoVitima.trim() }),
         relatoTestemunha: relatoTestemunha.trim(),
         apreensoes: apreensoes.trim(),
         conclusaoPolicial: conclusaoPolicial.trim(),
-        lacreNumero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : "", // Novo campo Lacre
+        lacreNumero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : "",
         drogaQuantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : undefined,
         drogaTipo: natureza === "Porte de drogas para consumo" ? substancia : undefined,
         drogaCor: natureza === "Porte de drogas para consumo" ? cor : undefined,
@@ -588,7 +570,7 @@ const TCOForm = () => {
             indicios={indicios}
             customMaterialDesc={customMaterialDesc} setCustomMaterialDesc={setCustomMaterialDesc}
             isUnknownMaterial={isUnknownMaterial}
-            lacreNumero={lacreNumero} setLacreNumero={setLacreNumero} // Novo campo Lacre
+            lacreNumero={lacreNumero} setLacreNumero={setLacreNumero}
           />
         )}
         <GeneralInformationTab
@@ -614,6 +596,7 @@ const TCOForm = () => {
           vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
           testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
           autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
+          natureza={natureza} // Added prop
         />
         <GuarnicaoTab
           currentGuarnicaoList={componentesGuarnicao}
