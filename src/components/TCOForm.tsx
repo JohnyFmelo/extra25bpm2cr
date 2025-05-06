@@ -108,15 +108,6 @@ const formatarRelatoAutor = (autores: Pessoa[]): string => {
   return `${pronomePlural} DOS FATOS ABAIXO ASSINADOS, JÁ QUALIFICADOS NOS AUTOS, CIENTIFICADOS DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLARARAM QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.`;
 };
 
-// Função para converter números até 10 em texto
-const numberToText = (num: number): string => {
-  const numbers = [
-    "ZERO", "UMA", "DUAS", "TRÊS", "QUATRO",
-    "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"
-  ];
-  return num >= 0 && num <= 10 ? numbers[num] : num.toString();
-};
-
 const TCOForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -211,30 +202,18 @@ const TCOForm = () => {
     if (natureza === "Porte de drogas para consumo" && indicios) {
       const indicioFinal = isUnknownMaterial && customMaterialDesc ? customMaterialDesc : indicios;
       if (indicioFinal) {
-        // Extrair número da quantidade (ex: "2 porções" -> 2)
-        const quantidadeNum = parseInt(quantidade.match(/\d+/)?.[0] || "1", 10);
-        const quantidadeText = quantidadeNum <= 10 ? numberToText(quantidadeNum) : quantidadeNum.toString();
-        const plural = quantidadeNum > 1 ? "PORÇÕES" : "PORÇÃO";
         const descriptiveText = isUnknownMaterial
-          ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${customMaterialDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.`
-          : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, ${customMaterialDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.`;
-        if (!apreensoes || apreensoes.includes("[DESCRIÇÃO]") || apreensoes === relatoPolicialTemplate) {
+          ? `${quantidade || "01 (UMA)"} PORÇÃO PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${customMaterialDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.`
+          : `01 (UMA) PORÇÃO PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()} [DESCRIÇÃO EMBALAGEM], CONFORME FOTO EM ANEXO.`;
+        if (!apreensoes || apreensoes === "Descreva os objetos ou documentos apreendidos, se houver" || apreensoes === relatoPolicialTemplate) {
           setApreensoes(descriptiveText);
         }
       }
     } else if (natureza !== "Porte de drogas para consumo") {
       setLacreNumero("");
-      setVitimas([]);
+      setVitimas([]); // Clear vitimas for non-drug cases
     }
-  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]);
-
-  useEffect(() => {
-    if (natureza === "Porte de drogas para consumo") {
-      setVitimas([]);
-      setRelatoVitima("");
-      setRepresentacao("");
-    }
-  }, [natureza]);
+  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, apreensoes, quantidade]);
 
   useEffect(() => {
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
@@ -617,7 +596,7 @@ const TCOForm = () => {
           vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
           testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
           autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
-          natureza={natureza}
+          natureza={natureza} // Added prop
         />
         <GuarnicaoTab
           currentGuarnicaoList={componentesGuarnicao}
@@ -633,7 +612,6 @@ const TCOForm = () => {
           conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial}
           drugSeizure={natureza === "Porte de drogas para consumo"}
           representacao={representacao} setRepresentacao={setRepresentacao}
-          natureza={natureza} // Added prop
         />
         <div className="flex justify-end mt-8">
           <Button type="submit" disabled={isSubmitting} size="lg">
