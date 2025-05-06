@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-
 interface PersonalInfoFieldsProps {
   data: {
     nome: string;
@@ -28,11 +27,10 @@ interface PersonalInfoFieldsProps {
   isAuthor?: boolean;
   isVictim?: boolean; // Novo prop para Vítimas
 }
-
-const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({ 
-  data, 
-  onChangeHandler, 
-  prefix = "", 
+const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
+  data,
+  onChangeHandler,
+  prefix = "",
   index,
   isAuthor = false,
   isVictim = false
@@ -44,7 +42,6 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
   // Format CPF: 000.000.000-00
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, '');
-    
     if (numbers.length <= 3) return numbers;
     if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
     if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
@@ -54,7 +51,6 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
   // Format phone: (00) 00000-0000
   const formatPhone = (value: string) => {
     const numbers = value.replace(/\D/g, '');
-    
     if (numbers.length <= 2) return `(${numbers}`;
     if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
@@ -67,13 +63,12 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
       setCpfError('CPF deve conter 11 dígitos');
       return;
     }
-    
+
     // Check for repeated digits (simple validation)
     if (/^(\d)\1+$/.test(stripped)) {
       setCpfError('CPF inválido');
       return;
     }
-    
     setCpfError(null);
   };
 
@@ -92,60 +87,44 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
     if (data.dataNascimento && isAuthor) {
       const birthDate = new Date(data.dataNascimento);
       const today = new Date();
-      
       let years = today.getFullYear() - birthDate.getFullYear();
       const months = today.getMonth() - birthDate.getMonth();
       const days = today.getDate() - birthDate.getDate();
-      
-      if (months < 0 || (months === 0 && days < 0)) {
+      if (months < 0 || months === 0 && days < 0) {
         years--;
       }
-      
       if (years < 18) {
         // Calculate exact age in years, months and days
         let ageMonths = months < 0 ? 12 + months : months;
         let ageDays = days < 0 ? new Date(today.getFullYear(), today.getMonth(), 0).getDate() + days : days;
-        
         if (days < 0) {
           ageMonths--;
           if (ageMonths < 0) ageMonths = 11;
         }
-        
         setAgeWarning(`ATENÇÃO: O Autor é menor de idade (${years} anos, ${ageMonths} meses e ${ageDays} dias). Avalie corretamente se cabe TCO contra esse suspeito.`);
       } else {
         setAgeWarning(null);
       }
     }
   }, [data.dataNascimento, isAuthor]);
-
-  return (
-    <div className="space-y-4">
-      {isAuthor && ageWarning && (
-        <Alert variant="destructive">
+  return <div className="space-y-4">
+      {isAuthor && ageWarning && <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Atenção</AlertTitle>
           <AlertDescription>
             {ageWarning}
           </AlertDescription>
-        </Alert>
-      )}
+        </Alert>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}nome_${index}`}>Nome completo *</Label>
-          <Input 
-            id={`${prefix}nome_${index}`} 
-            value={data.nome} 
-            onChange={(e) => onChangeHandler(index !== undefined ? index : null, 'nome', e.target.value)}
-          />
+          <Input id={`${prefix}nome_${index}`} value={data.nome} onChange={e => onChangeHandler(index !== undefined ? index : null, 'nome', e.target.value)} />
         </div>
         
         <div>
           <Label htmlFor={`${prefix}sexo_${index}`}>Sexo</Label>
-          <Select 
-            value={data.sexo || ""} 
-            onValueChange={(value) => onChangeHandler(index !== undefined ? index : null, 'sexo', value)}
-          >
+          <Select value={data.sexo || ""} onValueChange={value => onChangeHandler(index !== undefined ? index : null, 'sexo', value)}>
             <SelectTrigger id={`${prefix}sexo_${index}`}>
               <SelectValue placeholder="Selecione o sexo" />
             </SelectTrigger>
@@ -160,10 +139,7 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}estadoCivil_${index}`}>Estado Civil</Label>
-          <Select 
-            value={data.estadoCivil || ""} 
-            onValueChange={(value) => onChangeHandler(index !== undefined ? index : null, 'estadoCivil', value)}
-          >
+          <Select value={data.estadoCivil || ""} onValueChange={value => onChangeHandler(index !== undefined ? index : null, 'estadoCivil', value)}>
             <SelectTrigger id={`${prefix}estadoCivil_${index}`}>
               <SelectValue placeholder="Selecione o estado civil" />
             </SelectTrigger>
@@ -179,91 +155,51 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
         
         <div>
           <Label htmlFor={`${prefix}profissao_${index}`}>Profissão</Label>
-          <Input 
-            id={`${prefix}profissao_${index}`} 
-            value={data.profissao} 
-            onChange={(e) => onChangeHandler(index !== undefined ? index : null, 'profissao', e.target.value)}
-          />
+          <Input id={`${prefix}profissao_${index}`} value={data.profissao} onChange={e => onChangeHandler(index !== undefined ? index : null, 'profissao', e.target.value)} />
         </div>
       </div>
 
       <div>
         <Label htmlFor={`${prefix}endereco_${index}`}>Endereço</Label>
-        <Input 
-          id={`${prefix}endereco_${index}`} 
-          placeholder="RUA, NÚMERO/QUADRA/LOTE, BAIRRO" 
-          value={data.endereco} 
-          onChange={(e) => onChangeHandler(index !== undefined ? index : null, 'endereco', e.target.value)}
-        />
+        <Input id={`${prefix}endereco_${index}`} placeholder="RUA, NÚMERO/QUADRA/LOTE, BAIRRO" value={data.endereco} onChange={e => onChangeHandler(index !== undefined ? index : null, 'endereco', e.target.value)} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}dataNascimento_${index}`}>Data de Nascimento</Label>
-          <Input 
-            id={`${prefix}dataNascimento_${index}`} 
-            type="date" 
-            value={data.dataNascimento} 
-            onChange={(e) => onChangeHandler(index !== undefined ? index : null, 'dataNascimento', e.target.value)}
-          />
+          <Input id={`${prefix}dataNascimento_${index}`} type="date" value={data.dataNascimento} onChange={e => onChangeHandler(index !== undefined ? index : null, 'dataNascimento', e.target.value)} />
         </div>
         
         <div>
           <Label htmlFor={`${prefix}naturalidade_${index}`}>Naturalidade</Label>
-          <Input 
-            id={`${prefix}naturalidade_${index}`} 
-            placeholder="MUNICÍPIO" 
-            value={data.naturalidade} 
-            onChange={(e) => onChangeHandler(index !== undefined ? index : null, 'naturalidade', e.target.value)}
-          />
+          <Input id={`${prefix}naturalidade_${index}`} placeholder="MUNICÍPIO" value={data.naturalidade} onChange={e => onChangeHandler(index !== undefined ? index : null, 'naturalidade', e.target.value)} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}filiacaoMae_${index}`}>Filiação - Mãe</Label>
-          <Input 
-            id={`${prefix}filiacaoMae_${index}`} 
-            placeholder="NOME COMPLETO" 
-            value={data.filiacaoMae} 
-            onChange={(e) => onChangeHandler(index !== undefined ? index : null, 'filiacaoMae', e.target.value)}
-          />
+          <Input id={`${prefix}filiacaoMae_${index}`} placeholder="NOME COMPLETO" value={data.filiacaoMae} onChange={e => onChangeHandler(index !== undefined ? index : null, 'filiacaoMae', e.target.value)} />
         </div>
         
         <div>
           <Label htmlFor={`${prefix}filiacaoPai_${index}`}>Filiação - Pai</Label>
-          <Input 
-            id={`${prefix}filiacaoPai_${index}`} 
-            placeholder="NOME COMPLETO" 
-            value={data.filiacaoPai} 
-            onChange={(e) => onChangeHandler(index !== undefined ? index : null, 'filiacaoPai', e.target.value)}
-          />
+          <Input id={`${prefix}filiacaoPai_${index}`} placeholder="NOME COMPLETO" value={data.filiacaoPai} onChange={e => onChangeHandler(index !== undefined ? index : null, 'filiacaoPai', e.target.value)} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}rg_${index}`}>RG ou Documento</Label>
-          <Input 
-            id={`${prefix}rg_${index}`} 
-            placeholder="RG 00000000 UF" 
-            value={data.rg} 
-            onChange={(e) => onChangeHandler(index !== undefined ? index : null, 'rg', e.target.value)}
-          />
+          <Input id={`${prefix}rg_${index}`} placeholder="RG 00000000 UF" value={data.rg} onChange={e => onChangeHandler(index !== undefined ? index : null, 'rg', e.target.value)} />
         </div>
         
         <div>
           <Label htmlFor={`${prefix}cpf_${index}`}>CPF</Label>
-          <Input 
-            id={`${prefix}cpf_${index}`} 
-            placeholder="000.000.000-00" 
-            value={data.cpf}
-            onChange={(e) => {
-              const formatted = formatCPF(e.target.value);
-              onChangeHandler(index !== undefined ? index : null, 'cpf', formatted);
-            }}
-            onBlur={() => validateCPF(data.cpf)}
-          />
+          <Input id={`${prefix}cpf_${index}`} placeholder="000.000.000-00" value={data.cpf} onChange={e => {
+          const formatted = formatCPF(e.target.value);
+          onChangeHandler(index !== undefined ? index : null, 'cpf', formatted);
+        }} onBlur={() => validateCPF(data.cpf)} />
           {cpfError && <p className="text-red-500 text-xs mt-1">{cpfError}</p>}
         </div>
       </div>
@@ -271,39 +207,23 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}celular_${index}`}>Celular</Label>
-          <Input 
-            id={`${prefix}celular_${index}`} 
-            placeholder="(65) 90000-0000" 
-            value={data.celular}
-            onChange={(e) => {
-              const formatted = formatPhone(e.target.value);
-              onChangeHandler(index !== undefined ? index : null, 'celular', formatted);
-            }}
-            onBlur={() => validatePhone(data.celular)}
-          />
+          <Input id={`${prefix}celular_${index}`} placeholder="(65) 90000-0000" value={data.celular} onChange={e => {
+          const formatted = formatPhone(e.target.value);
+          onChangeHandler(index !== undefined ? index : null, 'celular', formatted);
+        }} onBlur={() => validatePhone(data.celular)} />
           {phoneError && <p className="text-red-500 text-xs mt-1">{phoneError}</p>}
         </div>
         
         <div>
           <Label htmlFor={`${prefix}email_${index}`}>E-mail</Label>
-          <Input 
-            id={`${prefix}email_${index}`} 
-            type="email" 
-            placeholder="contato@exemplo.com" 
-            value={data.email} 
-            onChange={(e) => onChangeHandler(index !== undefined ? index : null, 'email', e.target.value)}
-          />
+          <Input id={`${prefix}email_${index}`} type="email" placeholder="contato@exemplo.com" value={data.email} onChange={e => onChangeHandler(index !== undefined ? index : null, 'email', e.target.value)} />
         </div>
       </div>
 
-      {(isAuthor || isVictim) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {(isAuthor || isVictim) && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor={`${prefix}laudoPericial_${index}`}>Laudo Pericial</Label>
-            <Select 
-              value={data.laudoPericial || "Não"} 
-              onValueChange={(value) => onChangeHandler(index !== undefined ? index : null, 'laudoPericial', value)}
-            >
+            <Label htmlFor={`${prefix}laudoPericial_${index}`}>Solicitar Corpo de Delito?</Label>
+            <Select value={data.laudoPericial || "Não"} onValueChange={value => onChangeHandler(index !== undefined ? index : null, 'laudoPericial', value)}>
               <SelectTrigger id={`${prefix}laudoPericial_${index}`}>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -313,10 +233,7 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
               </SelectContent>
             </Select>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        </div>}
+    </div>;
 };
-
 export default PersonalInfoFields;
