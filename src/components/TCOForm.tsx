@@ -20,12 +20,29 @@ interface ComponenteGuarnicao {
   posto: string;
 }
 
+interface Pessoa {
+  nome: string;
+  sexo: string;
+  estadoCivil: string;
+  profissao: string;
+  endereco: string;
+  dataNascimento: string;
+  naturalidade: string;
+  filiacaoMae: string;
+  filiacaoPai: string;
+  rg: string;
+  cpf: string;
+  celular: string;
+  email: string;
+}
+
 // --- Funções Auxiliares ---
 const formatRepresentacao = (representacao: string): string => {
   if (representacao === "Representa") return "representar";
   if (representacao === "Posteriormente") return "decidir_posteriormente";
   return "";
 };
+
 const formatCPF = (cpf: string) => {
   cpf = cpf.replace(/\D/g, '');
   if (cpf.length <= 11) {
@@ -35,6 +52,7 @@ const formatCPF = (cpf: string) => {
   }
   return cpf;
 };
+
 const formatPhone = (phone: string) => {
   phone = phone.replace(/\D/g, '');
   if (phone.length === 11) {
@@ -48,6 +66,7 @@ const formatPhone = (phone: string) => {
   }
   return phone;
 };
+
 const validateCPF = (cpf: string) => {
   cpf = cpf.replace(/\D/g, '');
   if (cpf.length !== 11) return false;
@@ -72,9 +91,24 @@ const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
     .filter(c => c.nome && c.posto)
     .map(c => `${c.posto} PM ${c.nome}`);
   if (nomesFormatados.length === 0) return "[LISTA DE POLICIAIS PENDENTE]";
-  if (nomesFormatados.length === 1) return nomesFormatados[0];
-  if (nomesFormatados.length === 2) return `${nomesFormatados[0]} e ${nomesFormatados[1]}`;
-  return `${nomesFormatados.slice(0, -1).join(", ")} e ${nomesFormatados[nomesFormatados.length - 1]}`;
+  if (nomesFormatados.length === 1) return nomesFormatados[0].toUpperCase();
+  if (nomesFormatados.length === 2) return `${nomesFormatados[0]} E ${nomesFormatados[1]}`.toUpperCase();
+  return `${nomesFormatados.slice(0, -1).join(", ")} E ${nomesFormatados[nomesFormatados.length - 1]}`.toUpperCase();
+};
+
+// Função para formatar o relato do autor com base no gênero e número de autores
+const formatarRelatoAutor = (autores: Pessoa[]): string => {
+  if (autores.length === 0) {
+    return "O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.";
+  }
+  if (autores.length === 1) {
+    const sexo = autores[0].sexo.toLowerCase();
+    const pronome = sexo === "feminino" ? "A AUTORA" : "O AUTOR";
+    return `${pronome} DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.`;
+  }
+  const todosFemininos = autores.every(a => a.sexo.toLowerCase() === "feminino");
+  const pronomePlural = todosFemininos ? "AS AUTORAS" : "OS AUTORES";
+  return `${pronomePlural} DOS FATOS ABAIXO ASSINADOS, JÁ QUALIFICADOS NOS AUTOS, CIENTIFICADOS DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLARARAM QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.`;
 };
 
 // --- Componente Principal do Formulário TCO ---
@@ -121,32 +155,32 @@ const TCOForm = () => {
   const [indicios, setIndicios] = useState("");
   const [customMaterialDesc, setCustomMaterialDesc] = useState("");
   const [isUnknownMaterial, setIsUnknownMaterial] = useState(false);
-  const [vitimas, setVitimas] = useState([{
+  const [vitimas, setVitimas] = useState<Pessoa[]>([{
     nome: "", sexo: "", estadoCivil: "", profissao: "",
     endereco: "", dataNascimento: "", naturalidade: "",
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
     celular: "", email: ""
   }]);
-  const [testemunhas, setTestemunhas] = useState([{
+  const [testemunhas, setTestemunhas] = useState<Pessoa[]>([{
     nome: "", sexo: "", estadoCivil: "", profissao: "",
     endereco: "", dataNascimento: "", naturalidade: "",
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
     celular: "", email: ""
   }]);
-  const [autores, setAutores] = useState([{
+  const [autores, setAutores] = useState<Pessoa[]>([{
     nome: "", sexo: "", estadoCivil: "", profissao: "",
     endereco: "", dataNascimento: "", naturalidade: "",
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
     celular: "", email: ""
   }]);
-  // Novo template para relatoPolicial
-  const relatoPolicialTemplate = `Por volta das [HORA DO FATO] do dia [DATA DO FATO], nesta cidade de Várzea Grande-MT, a guarnição da viatura [GUARNIÇÃO] composta pelos militares [LISTA DE POLICIAIS], durante rondas[OPERACAO_TEXT], foi acionada via [COMUNICANTE], para atender a uma ocorrência de [NATUREZA] no [ENDEREÇO]. Chegando no local...
+  // Template do relato policial em caixa alta
+  const relatoPolicialTemplate = `POR VOLTA DAS [HORA DO FATO] DO DIA [DATA DO FATO], NESTA CIDADE DE VÁRZEA GRANDE-MT, A GUARNIÇÃO DA VIATURA [GUARNIÇÃO] COMPOSTA PELOS MILITARES [LISTA DE POLICIAIS], DURANTE RONDAS[OPERACAO_TEXT], FOI ACIONADA VIA [COMUNICANTE], PARA ATENDER A UMA OCORRÊNCIA DE [NATUREZA] NO [ENDEREÇO]. CHEGANDO NO LOCAL...
 - [DETALHAR O QUE A PM DEPAROU]
 - [RESUMO DAS VERSÕES]
 - [DESCREVER DILIGÊNCIAS/APREENSÕES]
-Diante disso, [DETALHAR ENCAMINHAMENTO].`;
+DIANTE DISSO, [DETALHAR ENCAMINHAMENTO].`;
   const [relatoPolicial, setRelatoPolicial] = useState(relatoPolicialTemplate);
-  const [relatoAutor, setRelatoAutor] = useState("O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
+  const [relatoAutor, setRelatoAutor] = useState(formatarRelatoAutor(autores));
   const [relatoVitima, setRelatoVitima] = useState("RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
   const [relatoTestemunha, setRelatoTestemunha] = useState("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
   const [conclusaoPolicial, setConclusaoPolicial] = useState("");
@@ -189,40 +223,43 @@ Diante disso, [DETALHAR ENCAMINHAMENTO].`;
 
   useEffect(() => {
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
-    let conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE O(A) AUTOR(A) INFRINGIU, EM TESE, O DISPOSITIVO LEGAL CORRESPONDENTE À CONDUTA DE ${displayNaturezaReal.toUpperCase()}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES E TESTEMUNHA(S), SE HOUVER, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DO(A) AUTOR(A) TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
     let tipificacaoAtual = "";
     let penaAtual = "";
 
     if (natureza === "Outros") {
-      tipificacaoAtual = tipificacao || "";
+      tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
       penaAtual = penaDescricao || "";
     } else {
       switch (natureza) {
-        case "Ameaça": tipificacaoAtual = "Art. 147 do Código Penal"; penaAtual = "Detenção de 1 a 6 meses, ou multa"; break;
-        case "Vias de Fato": tipificacaoAtual = "Art. 21 da Lei de Contravenções Penais"; penaAtual = "Prisão simples de 15 dias a 3 meses, ou multa"; break;
-        case "Lesão Corporal": tipificacaoAtual = "Art. 129 do Código Penal"; penaAtual = "Detenção de 3 meses a 1 ano"; break;
-        case "Dano": tipificacaoAtual = "Art. 163 do Código Penal"; penaAtual = "Detenção de 1 a 6 meses, ou multa"; break;
-        case "Injúria": tipificacaoAtual = "Art. 140 do Código Penal"; penaAtual = "Detenção de 1 a 6 meses, ou multa"; break;
-        case "Difamação": tipificacaoAtual = "Art. 139 do Código Penal"; penaAtual = "Detenção de 3 meses a 1 ano, e multa"; break;
-        case "Calúnia": tipificacaoAtual = "Art. 138 do Código Penal"; penaAtual = "Detenção de 6 meses a 2 anos, e multa"; break;
-        case "Perturbação do Sossego": tipificacaoAtual = "Art. 42 da Lei de Contravenções Penais"; penaAtual = "Prisão simples de 15 dias a 3 meses, ou multa"; break;
-        case "Porte de drogas para consumo": tipificacaoAtual = "Art. 28 da Lei nº 11.343/2006 (Lei de Drogas)"; penaAtual = "Advertência sobre os efeitos das drogas, prestação de serviços à comunidade ou medida educativa de comparecimento a programa ou curso educativo."; break;
-        default: tipificacaoAtual = ""; penaAtual = "";
+        case "Ameaça": tipificacaoAtual = "ART. 147 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
+        case "Vias de Fato": tipificacaoAtual = "ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS"; penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA"; break;
+        case "Lesão Corporal": tipificacaoAtual = "ART. 129 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO"; break;
+        case "Dano": tipificacaoAtual = "ART. 163 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
+        case "Injúria": tipificacaoAtual = "ART. 140 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
+        case "Difamação": tipificacaoAtual = "ART. 139 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO, E MULTA"; break;
+        case "Calúnia": tipificacaoAtual = "ART. 138 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 6 MESES A 2 ANOS, E MULTA"; break;
+        case "Perturbação do Sossego": tipificacaoAtual = "ART. 42 DA LEI DE CONTRAVENÇÕES PENAIS"; penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA"; break;
+        case "Porte de drogas para consumo": tipificacaoAtual = "ART. 28 DA LEI Nº 11.343/2006 (LEI DE DROGAS)"; penaAtual = "ADVERTÊNCIA SOBRE OS EFEITOS DAS DROGAS, PRESTAÇÃO DE SERVIÇOS À COMUNIDADE OU MEDIDA EDUCATIVA DE COMPARECIMENTO A PROGRAMA OU CURSO EDUCATIVO."; break;
+        default: tipificacaoAtual = "[TIPIFICAÇÃO NÃO MAPEADA]"; penaAtual = "";
       }
       setTipificacao(tipificacaoAtual);
       setPenaDescricao(penaAtual);
     }
 
-    const tipificacaoParaConclusao = tipificacaoAtual || (natureza === "Outros" ? "[TIPIFICAÇÃO LEGAL A SER INSERIDA]" : "[TIPIFICAÇÃO NÃO MAPEADA]");
-    conclusaoBase = conclusaoBase.replace("[DISPOSITIVO LEGAL CORRESPONDENTE À CONDUTA]", tipificacaoParaConclusao);
+    // Ajustar conclusaoPolicial com gênero, plural e inclusão de natureza/tipo penal
+    const autorTexto = autores.length === 0 ? "O(A) AUTOR(A)" :
+      autores.length === 1 ? (autores[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
+      autores.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
+    const testemunhaTexto = testemunhas.filter(t => t.nome.trim()).length > 1 ? "TESTEMUNHAS" : "TESTEMUNHA";
+    const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES E ${testemunhaTexto}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
 
     setConclusaoPolicial(conclusaoBase);
-  }, [natureza, customNatureza, tipificacao, penaDescricao]);
+  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
 
   useEffect(() => {
     let updatedRelato = relatoPolicialTemplate;
-    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "Outros" : natureza;
-    const operacaoText = operacao ? ` pela operação ${operacao}` : "";
+    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "OUTROS" : natureza;
+    const operacaoText = operacao ? ` PELA OPERAÇÃO ${operacao}` : "";
     const gupm = formatarGuarnicao(componentesGuarnicao);
 
     updatedRelato = updatedRelato
@@ -239,6 +276,8 @@ Diante disso, [DETALHAR ENCAMINHAMENTO].`;
       .replace("[DESCREVER DILIGÊNCIAS/APREENSÕES]", "[DESCREVER DILIGÊNCIAS/APREENSÕES]")
       .replace("[DETALHAR ENCAMINHAMENTO]", "[DETALHAR ENCAMINHAMENTO]");
 
+    updatedRelato = updatedRelato.toUpperCase();
+
     if (
       relatoPolicial === relatoPolicialTemplate ||
       relatoPolicial.includes("[GUARNIÇÃO PENDENTE]") ||
@@ -250,6 +289,11 @@ Diante disso, [DETALHAR ENCAMINHAMENTO].`;
       setRelatoPolicial(updatedRelato);
     }
   }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, relatoPolicial]);
+
+  useEffect(() => {
+    const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
+    setRelatoAutor(novoRelatoAutor);
+  }, [autores]);
 
   useEffect(() => {
     if (autores.length > 0 && autores[0].nome !== autor) {
