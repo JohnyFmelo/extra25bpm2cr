@@ -101,7 +101,7 @@ const Index = () => {
                 </button>
               </div>
               {user.userType === "admin" && <div className="fixed bottom-6 right-6 z-10">
-                  <Button onClick={handleEditorClick} className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 flex items-center justify-center text-gray-50 bg-red-400 hover:bg-red-300">
+                  <Button onClick={handleEditorClick} className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 flex items-center justify-center text-gray-50 bg-red-500 hover:bg-red-400">
                     <Plus className="h-6 w-6" />
                   </Button>
                 </div>}
