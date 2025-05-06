@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react"; // Adicionado useCallback
+ import React, { useState, useEffect, useCallback } from "react"; // Adicionado useCallback
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -329,7 +329,7 @@ const TCOForm = () => {
   const handleAddVitima = () => { /* ...código original... */
      setVitimas([...vitimas, { nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "" }]);
   };
-  const handleRemoveVitima = (index: number) => { /* ...código original... */
+  const handleRemoveVitima = (index) => { /* ...código original... */
      if (vitimas.length > 0) { // Permite remover mesmo se for o último
         const newVitimas = vitimas.filter((_, i) => i !== index);
         setVitimas(newVitimas);
@@ -338,7 +338,7 @@ const TCOForm = () => {
   const handleAddTestemunha = () => { /* ...código original... */
     setTestemunhas([...testemunhas, { nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "" }]);
   };
-  const handleRemoveTestemunha = (index: number) => { /* ...código original... */
+  const handleRemoveTestemunha = (index) => { /* ...código original... */
      if (testemunhas.length > 0) {
        const newTestemunhas = testemunhas.filter((_, i) => i !== index);
         setTestemunhas(newTestemunhas);
@@ -347,7 +347,7 @@ const TCOForm = () => {
   const handleAddAutor = () => { /* ...código original... */
     setAutores([...autores, { nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "" }]);
   };
-  const handleRemoveAutor = (index: number) => { /* ...código original... */
+  const handleRemoveAutor = (index) => { /* ...código original... */
      if (autores.length > 0) {
         const newAutores = autores.filter((_, i) => i !== index);
         setAutores(newAutores);
@@ -358,7 +358,7 @@ const TCOForm = () => {
   };
 
    // Funções para ATUALIZAR campos detalhados de Pessoas (Com validação/formatação) - Mantidas
-   const handleVitimaChange = (index: number, field: string, value: string) => { /* ...código original com formatCPF/Phone e validação... */
+   const handleVitimaChange = (index, field, value) => { /* ...código original com formatCPF/Phone e validação... */
         const newVitimas = [...vitimas];
         let processedValue = value;
         if (field === 'cpf') { processedValue = formatCPF(value); if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) { toast({ variant: "destructive", title: "CPF Inválido (Vítima)", description: "O CPF informado não é válido." }); } }
@@ -366,7 +366,7 @@ const TCOForm = () => {
         newVitimas[index] = { ...newVitimas[index], [field]: processedValue };
         setVitimas(newVitimas);
    };
-  const handleTestemunhaChange = (index: number, field: string, value: string) => { /* ...código original com formatCPF/Phone e validação... */
+  const handleTestemunhaChange = (index, field, value) => { /* ...código original com formatCPF/Phone e validação... */
         const newTestemunhas = [...testemunhas];
         let processedValue = value;
         if (field === 'cpf') { processedValue = formatCPF(value); if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) { toast({ variant: "destructive", title: "CPF Inválido (Testemunha)", description: "O CPF informado não é válido." }); } }
@@ -374,7 +374,7 @@ const TCOForm = () => {
         newTestemunhas[index] = { ...newTestemunhas[index], [field]: processedValue };
         setTestemunhas(newTestemunhas);
    };
-   const handleAutorDetalhadoChange = (index: number, field: string, value: string) => { /* ...código original com format/validate CPF/Phone e validação de idade... */
+   const handleAutorDetalhadoChange = (index, field, value) => { /* ...código original com format/validate CPF/Phone e validação de idade... */
         const newAutores = [...autores];
         let processedValue = value;
         if (field === 'cpf') { processedValue = formatCPF(value); if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) { toast({ variant: "destructive", title: "CPF Inválido (Autor)", description: "O CPF informado não é válido." }); } }
@@ -409,7 +409,7 @@ const TCOForm = () => {
 
 
   // --- Função de Submissão Principal ---
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const completionNow = new Date();
@@ -451,7 +451,7 @@ const TCOForm = () => {
       const vitimasFiltradas = vitimas.filter(v => v.nome?.trim());
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim());
 
-      const tcoDataParaSalvar: any = { // Usar 'any' temporariamente para facilitar a remoção de undefined
+      const tcoDataParaSalvar = {
         // Basic Info
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
@@ -551,10 +551,8 @@ const TCOForm = () => {
   const condutorParaDisplay = componentesGuarnicao[0];
 
   return (
-    // AQUI ESTÁ A ALTERAÇÃO: adicionado min-h-screen, flex, flex-col
-    <div className="container min-h-screen flex flex-col px-4 py-6 md:py-10 max-w-5xl mx-auto">
-      {/* O form pode opcionalmente usar flex-grow se você quiser que ele expanda para preencher o espaço vertical */}
-      <form onSubmit={handleSubmit} className="space-y-6"> {/* Pode adicionar flex-grow aqui se desejado */}
+    <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto"> {/* Adicionado mx-auto */}
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Tabs/Componentes Filhos */}
 
         <BasicInformationTab
@@ -629,10 +627,7 @@ const TCOForm = () => {
          />
 
         {/* Submit Button */}
-        {/* Adicionado mt-auto ao div do botão se o form for flex-grow e o container pai for flex flex-col min-h-screen */}
-        {/* Para um efeito "sticky footer" do botão, o <form> precisaria ser flex-grow e o container pai (o div alterado) ser flex flex-col. */}
-        {/* Exemplo: <form onSubmit={handleSubmit} className="flex flex-col flex-grow space-y-6"> ... <div className="flex justify-end mt-auto pt-8"> */}
-        <div className="flex justify-end mt-8"> {/* Aumentado margin top. Se quiser que fique no fundo, use mt-auto e ajuste o form para ser flex-grow */}
+        <div className="flex justify-end mt-8"> {/* Aumentado margin top */}
           <Button type="submit" disabled={isSubmitting} size="lg"> {/* Botão maior */}
             <FileText className="mr-2 h-5 w-5" />
             {isSubmitting ? "Gerando e Salvando..." : "Finalizar e Gerar TCO"}
