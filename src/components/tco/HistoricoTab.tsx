@@ -1,4 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
+// Verify that this import path is correct. If using a different UI library (e.g., Radix, AntD), replace with the appropriate import, e.g.:
+// import { Card, CardContent, CardHeader, CardTitle } from "@radix-ui/react-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
