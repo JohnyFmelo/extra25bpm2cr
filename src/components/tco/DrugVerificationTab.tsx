@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -18,6 +17,8 @@ interface DrugVerificationTabProps {
   customMaterialDesc: string;
   setCustomMaterialDesc: (value: string) => void;
   isUnknownMaterial: boolean;
+  lacreNumero: string; // Added prop
+  setLacreNumero: (value: string) => void; // Added prop
 }
 
 const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
@@ -30,7 +31,9 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   indicios,
   customMaterialDesc,
   setCustomMaterialDesc,
-  isUnknownMaterial
+  isUnknownMaterial,
+  lacreNumero,
+  setLacreNumero
 }) => {
   return (
     <Card>
@@ -43,17 +46,17 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
       <CardContent>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="quantidade">Porção (quantidade)</Label>
-            <Input 
-              id="quantidade" 
-              placeholder="Informe a quantidade" 
-              value={quantidade} 
-              onChange={e => setQuantidade(e.target.value)} 
+            <Label htmlFor="quantidade">Porção (quantidade) *</Label>
+            <Input
+              id="quantidade"
+              placeholder="Informe a quantidade (ex: 1 porção)"
+              value={quantidade}
+              onChange={(e) => setQuantidade(e.target.value)}
             />
           </div>
-          
+
           <div>
-            <Label htmlFor="substancia">Substância</Label>
+            <Label htmlFor="substancia">Substância *</Label>
             <Select value={substancia} onValueChange={setSubstancia}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o tipo de substância" />
@@ -66,7 +69,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
           </div>
 
           <div>
-            <Label htmlFor="cor">Cor</Label>
+            <Label htmlFor="cor">Cor *</Label>
             <Select value={cor} onValueChange={setCor}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a cor da substância" />
@@ -86,16 +89,27 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
 
           {isUnknownMaterial && (
             <div>
-              <Label htmlFor="customMaterialDesc">Descrição do Material</Label>
-              <Textarea 
-                id="customMaterialDesc" 
-                placeholder="Descreva o tipo de material encontrado" 
+              <Label htmlFor="customMaterialDesc">Descrição do Material *</Label>
+              <Textarea
+                id="customMaterialDesc"
+                placeholder="Descreva o tipo de material encontrado"
                 value={customMaterialDesc}
-                onChange={e => setCustomMaterialDesc(e.target.value)}
+                onChange={(e) => setCustomMaterialDesc(e.target.value)}
                 className="min-h-[100px]"
               />
             </div>
           )}
+
+          <div>
+            <Label htmlFor="lacreNumero">Número do Lacre *</Label>
+            <Input
+              id="lacreNumero"
+              placeholder="Informe o número do lacre (ex: 00000000)"
+              value={lacreNumero}
+              onChange={(e) => setLacreNumero(e.target.value)}
+              maxLength={8} // Assuming an 8-digit lacre number based on PDFTermoApreensao.js
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
