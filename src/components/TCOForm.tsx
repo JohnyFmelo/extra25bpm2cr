@@ -181,6 +181,9 @@ const TCOForm = () => {
   const [relatoTestemunha, setRelatoTestemunha] = useState("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
   const [conclusaoPolicial, setConclusaoPolicial] = useState("");
 
+  // Estado para rastrear edições manuais
+  const [isRelatoPolicialManuallyEdited, setIsRelatoPolicialManuallyEdited] = useState(false);
+
   // --- useEffects ---
   useEffect(() => {
     if (tcoNumber && !isTimerRunning) {
@@ -247,12 +250,19 @@ const TCOForm = () => {
       autores.length === 1 ? (autores[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
       autores.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
     const testemunhaTexto = testemunhas.filter(t => t.nome.trim()).length > 1 ? "TESTEMUNHAS" : "TESTEMUNHA";
-    const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES E ${testemunhaTexto}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LavrATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
+    const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES E ${testemunhaTexto}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
 
     setConclusaoPolicial(conclusaoBase);
   }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
 
   useEffect(() => {
+    // Pular atualização automática se o relato foi editado manualmente
+    if (isRelatoPolicialManuallyEdited) {
+      console.log("Atualização automática de relatoPolicial pulada devido a edição manual.");
+      return;
+    }
+
+    console.log("Atualizando relatoPolicial com:", { horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato }); // Depuração
     let updatedRelato = relatoPolicialTemplate;
     const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
     const gupm = formatarGuarnicao(componentesGuarnicao);
@@ -279,18 +289,8 @@ const TCOForm = () => {
     updatedRelato = updatedRelato.toUpperCase();
     console.log("Relato atualizado:", updatedRelato); // Depuração
 
-    if (
-      relatoPolicial === relatoPolicialTemplate ||
-      relatoPolicial.includes("[GUARNIÇÃO PENDENTE]") ||
-      relatoPolicial.includes("[GUPM PENDENTE]") ||
-      relatoPolicial.includes("[BAIRRO PENDENTE]") ||
-      relatoPolicial.includes("[ACIONAMENTO]") ||
-      relatoPolicial.includes("[NATUREZA PENDENTE]") ||
-      relatoPolicial.includes("[LOCAL PENDENTE]")
-    ) {
-      setRelatoPolicial(updatedRelato);
-    }
-  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicial]);
+    setRelatoPolicial(updatedRelato);
+  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato]);
 
   useEffect(() => {
     const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
@@ -424,6 +424,13 @@ const TCOForm = () => {
     newAutores[index] = { ...newAutores[index], [field]: processedValue };
     setAutores(newAutores);
     if (index === 0 && field === 'nome') setAutor(processedValue);
+  };
+
+  // Função para detectar edição manual no relatoPolicial
+  const handleRelatoPolicialChange = (value: string) => {
+    setRelatoPolicial(value);
+    setIsRelatoPolicialManuallyEdited(true);
+    console.log("Relato policial editado manualmente:", value); // Depuração
   };
 
   // --- Função de Submissão Principal ---
@@ -585,7 +592,7 @@ const TCOForm = () => {
           onRemovePolicial={handleRemovePolicialFromList}
         />
         <HistoricoTab
-          relatoPolicial={relatoPolicial} setRelatoPolicial={setRelatoPolicial}
+          relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange}
           relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor}
           relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima}
           relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha}
