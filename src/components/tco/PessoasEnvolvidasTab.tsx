@@ -19,7 +19,7 @@ interface PersonalInfo {
   cpf: string;
   celular: string;
   email: string;
-  laudoPericial: string; // Novo campo: "Sim" ou "Não"
+  laudoPericial: string;
 }
 
 interface PessoasEnvolvidasTabProps {
@@ -39,6 +39,7 @@ interface PessoasEnvolvidasTabProps {
   handleAutorDetalhadoChange: (index: number, field: string, value: string) => void;
   handleAddAutor: () => void;
   handleRemoveAutor: (index: number) => void;
+  natureza: string; // Added prop to control visibility of Vítimas tab
 }
 
 const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
@@ -57,8 +58,10 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
   autores,
   handleAutorDetalhadoChange,
   handleAddAutor,
-  handleRemoveAutor
+  handleRemoveAutor,
+  natureza
 }) => {
+  const isDrugCase = natureza === "Porte de drogas para consumo";
   return (
     <Card>
       <CardHeader>
@@ -69,15 +72,17 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="autor" className="w-full">
-          <TabsList className="grid grid-cols-3 mb-6">
+          <TabsList className={`grid ${isDrugCase ? "grid-cols-2" : "grid-cols-3"} mb-6`}>
             <TabsTrigger value="autor" onClick={() => setActiveTab("autor")}>
               <User className="mr-2 h-4 w-4" />
               Autores do Fato
             </TabsTrigger>
-            <TabsTrigger value="vitimas" onClick={() => setActiveTab("vitimas")}>
-              <User className="mr-2 h-4 w-4" />
-              Vítimas
-            </TabsTrigger>
+            {!isDrugCase && (
+              <TabsTrigger value="vitimas" onClick={() => setActiveTab("vitimas")}>
+                <User className="mr-2 h-4 w-4" />
+                Vítimas
+              </TabsTrigger>
+            )}
             <TabsTrigger value="testemunhas" onClick={() => setActiveTab("testemunhas")}>
               <Users className="mr-2 h-4 w-4" />
               Testemunhas
@@ -106,7 +111,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {console.log(`Autor ${index} - isAuthor:`, true, `laudoPericial:`, autor.laudoPericial)} {/* Log temporário */}
+                  {console.log(`Autor ${index} - isAuthor:`, true, `laudoPericial:`, autor.laudoPericial)}
                   <PersonalInfoFields 
                     data={autor} 
                     onChangeHandler={handleAutorDetalhadoChange}
@@ -131,52 +136,54 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
             </div>
           </TabsContent>
           
-          <TabsContent value="vitimas" className="space-y-6">
-            {vitimas.map((vitima, index) => (
-              <Card key={`vitima_${index}`} className="border-dashed">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex justify-between items-center">
-                    <span className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      Vítima
-                    </span>
-                    {vitimas.length > 1 && (
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleRemoveVitima(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {console.log(`Vítima ${index} - isVictim:`, true, `laudoPericial:`, vitima.laudoPericial)} {/* Log temporário */}
-                  <PersonalInfoFields 
-                    data={vitima} 
-                    onChangeHandler={handleVitimaChange}
-                    prefix={`vitima_${index}_`}
-                    index={index}
-                    isVictim={true}
-                  />
-                </CardContent>
-              </Card>
-            ))}
-            
-            <div className="flex justify-center mt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={handleAddVitima}
-                className="w-full md:w-auto"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Adicionar Vítima
-              </Button>
-            </div>
-          </TabsContent>
+          {!isDrugCase && (
+            <TabsContent value="vitimas" className="space-y-6">
+              {vitimas.map((vitima, index) => (
+                <Card key={`vitima_${index}`} className="border-dashed">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex justify-between items-center">
+                      <span className="flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        Vítima
+                      </span>
+                      {vitimas.length > 1 && (
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleRemoveVitima(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {console.log(`Vítima ${index} - isVictim:`, true, `laudoPericial:`, vitima.laudoPericial)}
+                    <PersonalInfoFields 
+                      data={vitima} 
+                      onChangeHandler={handleVitimaChange}
+                      prefix={`vitima_${index}_`}
+                      index={index}
+                      isVictim={true}
+                    />
+                  </CardContent>
+                </Card>
+              ))}
+              
+              <div className="flex justify-center mt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleAddVitima}
+                  className="w-full md:w-auto"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Adicionar Vítima
+                </Button>
+              </div>
+            </TabsContent>
+          )}
           
           <TabsContent value="testemunhas" className="space-y-6">
             {testemunhas.map((testemunha, index) => (
@@ -200,7 +207,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {console.log(`Testemunha ${index} - isAuthor:`, false, `isVictim:`, false)} {/* Log temporário */}
+                  {console.log(`Testemunha ${index} - isAuthor:`, false, `isVictim:`, false)}
                   <PersonalInfoFields 
                     data={testemunha} 
                     onChangeHandler={handleTestemunhaChange}
