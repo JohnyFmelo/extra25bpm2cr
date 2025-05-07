@@ -216,7 +216,7 @@ const TCOForm = () => {
         const plural = quantidadeNum > 1 ? "PORÇÕES" : "PORÇÃO";
         const descriptiveText = isUnknownMaterial
           ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${customMaterialDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.`
-          : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, ${customMaterialDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.`;
+          : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`;
         if (!apreensoes || apreensoes.includes("[DESCRIÇÃO]") || apreensoes === relatoPolicialTemplate) {
           setApreensoes(descriptiveText);
         }
@@ -227,7 +227,7 @@ const TCOForm = () => {
       setRelatoVitima("");
       setRepresentacao("");
     }
-  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]);
+  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes, relatoPolicialTemplate]);
 
   useEffect(() => {
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
