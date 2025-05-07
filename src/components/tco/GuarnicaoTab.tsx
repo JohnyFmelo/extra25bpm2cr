@@ -152,6 +152,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
         .single();
 
       console.log("[GuarnicaoTab] Resposta Supabase:", { data, error });
+      console.log("[GuarnicaoTab] Telefone retornado:", data?.telefone);
 
       if (error && error.code === 'PGRST116') {
         toast({ variant: "warning", title: "Não Encontrado", description: `Nenhum policial encontrado com o RGPM ${rgpmToSearch}. Considere cadastrá-lo.` });
