@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
