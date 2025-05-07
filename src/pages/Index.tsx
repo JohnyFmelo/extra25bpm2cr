@@ -317,12 +317,7 @@ const Index = () => {
                             </TableCell>
                             <TableCell>{tco.natureza}</TableCell>
                             <TableCell>
-                              <Button variant="ghost" size="sm" onClick={() => {
-                          setSelectedTco(tco);
-                          setTcoTab("form");
-                        }} aria-label={`Editar TCO ${tco.tcoNumber}`}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
+                              
                               <Button variant="ghost" size="sm" onClick={() => handleDeleteTco(tco.id)} aria-label={`Excluir TCO ${tco.tcoNumber}`}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
