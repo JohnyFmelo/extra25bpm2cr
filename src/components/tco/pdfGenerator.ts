@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
-import { addTermoCompromisso } from "./PDF/PDFTermoCompromisso";
-import { addTermoApreensao } from "./PDF/PDFTermoApreensao";
-import { addHistorico } from "./PDF/PDFhistorico";
+import { addTermoCompromisso } from "./PDFTermoCompromisso";
+import { addTermoApreensao } from "./PDFTermoApreensao";
+import { addHistorico } from "./PDFhistorico";
 
 interface Autor {
   nome: string;
@@ -10,8 +10,8 @@ interface Autor {
   celular: string;
   endereco: string;
   municipio: string;
-  assinatura?: string; // Made optional
-  sexo: string;
+  assinatura: string;
+  sexo: string; // Compatível com "Masculino" ou "Feminino" de TCOForm.tsx
   estadoCivil: string;
   profissao: string;
   dataNascimento: string;
@@ -52,7 +52,6 @@ interface Pessoa {
   celular: string;
   email: string;
   laudoPericial: string;
-  assinatura?: string;
 }
 
 interface FormData {
