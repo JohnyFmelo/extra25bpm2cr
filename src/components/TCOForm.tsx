@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
@@ -234,7 +235,7 @@ const TCOForm = () => {
     let tipificacaoAtual = "";
     let penaAtual = "";
 
- steels if (natureza === "Outros") {
+    if (natureza === "Outros") {
       tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
       penaAtual = penaDescricao || "";
     } else {
