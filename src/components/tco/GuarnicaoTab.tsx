@@ -1,101 +1,20 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Trash2, Users, UserPlus, Info, Search } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertTriangle, Save, Plus, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import ComponenteGuarnicaoFields from "./ComponenteGuarnicaoFields";
+import { useIsMobile } from '@/hooks/use-mobile';
 
-// --- Funções Auxiliares ---
-const somenteNumeros = (value: string | null | undefined): string => {
-  return value?.replace(/\D/g, '') || '';
-};
-
-const formatarCPF = (value: string): string => {
-  const numeros = somenteNumeros(value);
-  let cpfFormatado = numeros.slice(0, 11);
-  cpfFormatado = cpfFormatado.replace(/^(\d{3})(\d)/, '$1.$2');
-  cpfFormatado = cpfFormatado.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
-  cpfFormatado = cpfFormatado.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
-  return cpfFormatado;
-};
-
-const formatarCelular = (value: string): string => {
-  const numeros = somenteNumeros(value);
-  let foneFormatado = numeros.slice(0, 11);
-  if (foneFormatado.length === 11) {
-    foneFormatado = foneFormatado.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-  } else if (foneFormatado.length === 10) {
-    foneFormatado = foneFormatado.replace(/^(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-  } else if (foneFormatado.length > 6) {
-    foneFormatado = foneFormatado.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
-  } else if (foneFormatado.length > 2) {
-    foneFormatado = foneFormatado.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
-  }
-  return foneFormatado;
-};
-
-const validateCPF = (cpf: string) => {
-  cpf = somenteNumeros(cpf);
-  if (cpf.length !== 11) return false;
-  if (/^(\d)\1{10}$/.test(cpf)) return false;
-  let sum = 0;
-  for (let i = 0; i < 9; i++) { sum += parseInt(cpf.charAt(i)) * (10 - i); }
-  let remainder = sum % 11;
-  let digit1 = remainder < 2 ? 0 : 11 - remainder;
-  if (digit1 !== parseInt(cpf.charAt(9))) return false;
-  sum = 0;
-  for (let i = 0; i < 10; i++) { sum += parseInt(cpf.charAt(i)) * (11 - i); }
-  remainder = sum % 11;
-  let digit2 = remainder < 2 ? 0 : 11 - remainder;
-  return digit2 === parseInt(cpf.charAt(10));
-};
-
-// --- Interfaces ---
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
   posto: string;
-  pai?: string;
-  mae?: string;
-  naturalidade?: string;
-  cpf?: string;
-  telefone?: string;
 }
-
-interface PoliceOfficerSearchResult {
-  nome: string | null;
-  graduacao: string | null;
-  pai: string | null;
-  mae: string | null;
-  naturalidade: string | null;
-  cpf: string | null;
-  telefone: string | null;
-}
-
-interface PoliceOfficerFormData {
-  rgpm: string;
-  nome: string;
-  graduacao: string;
-  pai: string;
-  mae: string;
-  naturalidade: string;
-  cpf: string;
-  telefone: string;
-}
-
-const initialOfficerFormData: PoliceOfficerFormData = {
-  rgpm: "", nome: "", graduacao: "", pai: "", mae: "",
-  naturalidade: "", cpf: "", telefone: ""
-};
-
-const graduacoes = [
-  "SD PM", "CB PM", "3º SGT PM", "2º SGT PM", "1º SGT PM",
-  "SUB TEN PM", "ASPIRANTE PM", "2º TEN PM", "1º TEN PM",
-  "CAP PM", "MAJ PM", "TEN CEL PM", "CEL PM"
-];
 
 interface GuarnicaoTabProps {
   currentGuarnicaoList: ComponenteGuarnicao[];
@@ -103,305 +22,251 @@ interface GuarnicaoTabProps {
   onRemovePolicial: (index: number) => void;
 }
 
-// --- Componente GuarnicaoTab ---
 const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
   currentGuarnicaoList,
   onAddPolicial,
   onRemovePolicial
 }) => {
   const { toast } = useToast();
-  const [searchRgpm, setSearchRgpm] = useState<string>("");
-  const [isSearching, setIsSearching] = useState<boolean>(false);
-  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState<boolean>(false);
-  const [newOfficerFormData, setNewOfficerFormData] = useState<PoliceOfficerFormData>(initialOfficerFormData);
+  const isMobile = useIsMobile();
+  const [rgPM, setRgPM] = useState('');
+  const [nomePM, setNomePM] = useState('');
+  const [postoPM, setPostoPM] = useState('');
+  const [cadastrando, setCadastrando] = useState(false);
+  const [policiais, setPoliciais] = useState<{ id: string, nome: string, rg: string, posto: string }[]>([]);
+  const [selectedPolicial, setSelectedPolicial] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    console.log("[GuarnicaoTab] Prop 'currentGuarnicaoList' recebida:", currentGuarnicaoList);
-  }, [currentGuarnicaoList]);
-
-  const handleSearchRgpmChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = event.target.value;
-    const numeros = somenteNumeros(rawValue).slice(0, 6);
-    setSearchRgpm(numeros);
-  };
-
-  const handleSearchAndAdd = useCallback(async () => {
-    const rgpmToSearch = searchRgpm;
-    console.log("[GuarnicaoTab] Iniciando busca por RGPM:", rgpmToSearch);
-
-    if (rgpmToSearch.length !== 6) {
-      toast({ variant: "destructive", title: "RGPM Inválido", description: "O RGPM da busca deve conter exatamente 6 dígitos." });
-      return;
-    }
-
-    const alreadyExists = currentGuarnicaoList.some(comp => comp.rg === rgpmToSearch);
-    if (alreadyExists) {
-      console.log("[GuarnicaoTab] RGPM já existe na lista (prop):", rgpmToSearch);
-      toast({ variant: "warning", title: "Duplicado", description: "Este policial já está na guarnição." });
-      setSearchRgpm("");
-      return;
-    }
-
-    setIsSearching(true);
-    console.log("[GuarnicaoTab] Buscando no Supabase...");
-    try {
-      const { data, error } = await supabase
-        .from("police_officers")
-        .select("nome, graduacao, pai, mae, naturalidade, cpf, telefone")
-        .eq("rgpm", rgpmToSearch)
-        .single();
-
-      console.log("[GuarnicaoTab] Resposta Supabase:", { data, error });
-      console.log("[GuarnicaoTab] Telefone retornado do Supabase:", data?.telefone);
-
-      if (error && error.code === 'PGRST116') {
-        toast({ variant: "warning", title: "Não Encontrado", description: `Nenhum policial encontrado com o RGPM ${rgpmToSearch}. Considere cadastrá-lo.` });
-      } else if (error) {
-        throw error;
-      } else if (data) {
-        const officerData = data as PoliceOfficerSearchResult;
-        const newComponente: ComponenteGuarnicao = {
-          rg: rgpmToSearch,
-          nome: officerData.nome?.toUpperCase() || "NOME NÃO INFORMADO",
-          posto: officerData.graduacao || "POSTO NÃO INFORMADO",
-          pai: officerData.pai?.toUpperCase() || "NÃO INFORMADO",
-          mae: officerData.mae?.toUpperCase() || "NÃO INFORMADO",
-          naturalidade: officerData.naturalidade?.toUpperCase() || "NÃO INFORMADO",
-          cpf: officerData.cpf ? formatarCPF(officerData.cpf) : "NÃO INFORMADO",
-          telefone: officerData.telefone ? formatarCelular(officerData.telefone) : "NÃO INFORMADO"
-        };
-        console.log("[GuarnicaoTab] Componente criado com telefone:", newComponente.telefone);
-        console.log("[GuarnicaoTab] Policial encontrado. Chamando onAddPolicial:", newComponente);
-        onAddPolicial(newComponente);
-        setSearchRgpm("");
+    const carregarPoliciais = async () => {
+      try {
+        // Simula uma chamada de API
+        // Em um cenário real, aqui você buscaria os dados do banco
+        setTimeout(() => {
+          const policiaisSimulados = [
+            { id: '1', nome: 'JOÃO SILVA', rg: '12345', posto: 'SD' },
+            { id: '2', nome: 'MARIA OLIVEIRA', rg: '23456', posto: '3º SGT' },
+            { id: '3', nome: 'CARLOS SANTOS', rg: '34567', posto: 'CB' },
+            { id: '4', nome: 'ANA PEREIRA', rg: '45678', posto: 'SD' },
+            { id: '5', nome: 'PEDRO SOUZA', rg: '56789', posto: 'SD' },
+          ];
+          setPoliciais(policiaisSimulados);
+          setLoading(false);
+        }, 1000);
+      } catch (error) {
+        console.error("Erro ao carregar policiais:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível carregar a lista de policiais."
+        });
+        setLoading(false);
       }
-    } catch (error: any) {
-      console.error("[GuarnicaoTab] Erro na busca:", error);
-      toast({ variant: "destructive", title: "Erro na Busca", description: `Falha ao buscar dados: ${error.message || 'Erro desconhecido'}` });
-    } finally {
-      setIsSearching(false);
-      console.log("[GuarnicaoTab] Busca finalizada.");
-    }
-  }, [searchRgpm, currentGuarnicaoList, toast, onAddPolicial]);
+    };
 
-  const handleRemove = (index: number) => {
-    const itemToRemove = currentGuarnicaoList[index];
-    console.log("[GuarnicaoTab] Chamando onRemovePolicial para índice:", index, itemToRemove);
-    onRemovePolicial(index);
-    toast({ title: "Removido", description: `Componente ${itemToRemove?.nome || ''} removido da guarnição.` });
-  };
+    setLoading(true);
+    carregarPoliciais();
+  }, [toast]);
 
-  const openRegisterDialog = () => setIsRegisterDialogOpen(true);
-  const closeRegisterDialog = () => {
-    setIsRegisterDialogOpen(false);
-    setNewOfficerFormData(initialOfficerFormData);
-  };
-
-  const handleRegisterInputChange = (field: keyof PoliceOfficerFormData, value: string) => {
-    let processedValue = value;
-    if (field === 'cpf') { processedValue = formatarCPF(value); }
-    else if (field === 'telefone') { processedValue = formatarCelular(value); }
-    else if (field === 'rgpm') { processedValue = somenteNumeros(value).slice(0, 6); }
-    else if (['nome', 'pai', 'mae', 'naturalidade'].includes(field)) { processedValue = value.toUpperCase(); }
-    setNewOfficerFormData(prev => ({ ...prev, [field]: processedValue }));
-  };
-
-  const handleSaveNewOfficer = async () => {
-    console.log("[GuarnicaoTab] Tentando salvar novo policial no BD:", newOfficerFormData);
-    const { rgpm, nome, graduacao, pai, mae, naturalidade, cpf, telefone } = newOfficerFormData;
-
-    const camposObrigatorios: (keyof PoliceOfficerFormData)[] = ['rgpm', 'nome', 'graduacao', 'pai', 'mae', 'naturalidade', 'cpf', 'telefone'];
-    const camposFaltando = camposObrigatorios.filter(key => !newOfficerFormData[key]?.trim());
-    if (camposFaltando.length > 0) {
-      toast({ variant: "destructive", title: "Campos Obrigatórios", description: `Preencha: ${camposFaltando.join(', ')}` });
+  const handleAddClick = () => {
+    if (!rgPM.trim() || !nomePM.trim() || !postoPM) {
+      toast({
+        variant: "destructive",
+        title: "Campos Incompletos",
+        description: "Preencha todos os campos para adicionar um policial."
+      });
       return;
     }
 
-    const rgpmNumeros = somenteNumeros(rgpm);
-    if (rgpmNumeros.length !== 6) {
-      toast({ variant: "destructive", title: "RGPM Inválido", description: "O RGPM deve ter 6 dígitos." });
+    // Verifica se o RG já existe na lista
+    const rgExists = currentGuarnicaoList.some(p => p.rg === rgPM);
+    if (rgExists) {
+      toast({ 
+        title: "RG Duplicado", 
+        description: "Um policial com este RG já está na guarnição."
+      });
       return;
     }
 
-    const cpfNumeros = somenteNumeros(cpf);
-    if (cpfNumeros.length !== 11 || !validateCPF(cpf)) {
-      toast({ variant: "destructive", title: "CPF Inválido", description: "Verifique o CPF." });
-      return;
-    }
+    onAddPolicial({
+      rg: rgPM,
+      nome: nomePM.toUpperCase(),
+      posto: postoPM
+    });
 
-    const telefoneNumeros = somenteNumeros(telefone);
-    if (telefoneNumeros.length !== 10 && telefoneNumeros.length !== 11) {
-      toast({ variant: "destructive", title: "Telefone Inválido", description: "Formato DDD + 8 ou 9 dígitos." });
-      return;
-    }
-
-    try {
-      const dataToSave = {
-        rgpm: rgpmNumeros,
-        nome: nome.toUpperCase(),
-        graduacao: graduacao,
-        pai: pai.toUpperCase(),
-        mae: mae.toUpperCase(),
-        naturalidade: naturalidade.toUpperCase(),
-        cpf: cpfNumeros,
-        telefone: telefoneNumeros
-      };
-      console.log("[GuarnicaoTab] Dados a serem salvos/atualizados no BD com telefone:", dataToSave.telefone);
-      const { error } = await supabase
-        .from("police_officers")
-        .upsert(dataToSave, { onConflict: "rgpm" });
-
-      if (error) {
-        throw error;
-      }
-
-      toast({ title: "Sucesso", description: "Policial cadastrado/atualizado no banco de dados." });
-      closeRegisterDialog();
-    } catch (error: any) {
-      console.error("[GuarnicaoTab] Erro ao salvar policial no BD:", error);
-      toast({ variant: "destructive", title: "Erro ao Salvar no BD", description: `Falha: ${error.message || 'Erro desconhecido'}` });
-    }
+    // Limpa os campos após adicionar
+    setRgPM('');
+    setNomePM('');
+    setPostoPM('');
+    setCadastrando(false);
   };
 
-  const isSaveDisabled = useCallback((): boolean => {
-    const { rgpm, nome, graduacao, pai, mae, naturalidade, cpf, telefone } = newOfficerFormData;
-    if (!rgpm || !nome || !graduacao || !pai || !mae || !naturalidade || !cpf || !telefone) return true;
-    if (somenteNumeros(rgpm).length !== 6) return true;
-    if (somenteNumeros(cpf).length !== 11 || !validateCPF(cpf)) return true;
-    const telNums = somenteNumeros(telefone);
-    if (telNums.length !== 10 && telNums.length !== 11) return true;
-    return false;
-  }, [newOfficerFormData]);
+  const handleSelectPolicial = () => {
+    if (!selectedPolicial) {
+      toast({
+        title: "Seleção Vazia",
+        description: "Selecione um policial da lista."
+      });
+      return;
+    }
+
+    const policial = policiais.find(p => p.id === selectedPolicial);
+    if (!policial) return;
+
+    // Verifica se o RG já existe na lista
+    const rgExists = currentGuarnicaoList.some(p => p.rg === policial.rg);
+    if (rgExists) {
+      toast({
+        title: "RG Duplicado",
+        description: "Este policial já está na guarnição."
+      });
+      return;
+    }
+
+    onAddPolicial({
+      rg: policial.rg,
+      nome: policial.nome,
+      posto: policial.posto
+    });
+
+    setSelectedPolicial('');
+  };
 
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="flex items-center">
-              <Users className="mr-2 h-5 w-5" /> GUARNIÇÃO
-            </CardTitle>
-            <CardDescription>Adicione os componentes buscando por RGPM</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={openRegisterDialog}>
-            <UserPlus className="h-4 w-4 mr-2" /> Cadastrar/Atualizar Policial
-          </Button>
-        </div>
+        <CardTitle>Guarnição Policial Militar (GUPM)</CardTitle>
+        <CardDescription>
+          Adicione os policiais que compõem a guarnição
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex gap-2 items-center">
-            <Input
-              id="rgpmSearchInput"
-              type="text"
-              inputMode="numeric"
-              placeholder="Buscar por RGPM (6 dígitos)"
-              value={searchRgpm}
-              onChange={handleSearchRgpmChange}
-              disabled={isSearching}
-              className="flex-grow"
-              maxLength={6}
-              onKeyDown={e => { if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd(); }}
-            />
-            <Button onClick={handleSearchAndAdd} disabled={isSearching || searchRgpm.length !== 6}>
-              {isSearching ? "Buscando..." : <><Search className="h-4 w-4 mr-1" /> Adicionar</>}
-            </Button>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Componentes da Guarnição Atual</Label>
+
+      <CardContent className="space-y-6">
+        {/* Lista de componentes da guarnição */}
+        <div>
+          <h3 className="text-lg font-medium mb-2">Componentes da Guarnição</h3>
+          
           {currentGuarnicaoList.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4 border rounded-md border-dashed">
-              Nenhum componente adicionado. Use a busca acima.
-            </p>
+            <div className="flex items-center p-4 border border-dashed rounded-lg text-amber-600 bg-amber-50">
+              <AlertTriangle className="h-5 w-5 mr-2" />
+              <p>Nenhum policial adicionado à guarnição.</p>
+            </div>
           ) : (
-            <div className="border rounded-md overflow-hidden">
+            <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-3'} gap-4`}>
               {currentGuarnicaoList.map((componente, index) => (
-                <div
-                  key={`${componente.rg}-${index}`}
-                  className={`flex items-center justify-between p-3 ${index > 0 ? "border-t" : ""} ${index === 0 ? "bg-blue-50" : "bg-background"}`}
-                >
-                  <div className="flex flex-col flex-grow mr-2 truncate">
-                    <span
-                      className="text-sm font-medium truncate"
-                      title={`${componente.posto} ${componente.nome} (RGPM: ${componente.rg})`}
+                <div key={index} className="p-4 border rounded-lg bg-gray-50">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold">{componente.posto} PM {componente.nome}</p>
+                      <p className="text-sm text-gray-600">RG: {componente.rg}</p>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => onRemovePolicial(index)}
+                      className="h-8 w-8 p-0"
                     >
-                      {index === 0 && <span className="font-bold text-blue-800">(Condutor) </span>}
-                      <span>{componente.posto || "Sem Posto"}</span>{' '}
-                      <span>{componente.nome || "Sem Nome"}</span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">RGPM: {componente.rg || "Não informado"}</span>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0"
-                    onClick={() => handleRemove(index)}
-                    aria-label={`Remover ${componente.nome}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               ))}
             </div>
           )}
         </div>
-      </CardContent>
-      <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle>Cadastrar ou Atualizar Policial</DialogTitle>
-            <DialogDescription>Preencha ou corrija os dados. Salvar atualizará o policial com este RGPM no banco de dados.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-3 px-[5px]">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dlg-rgpm">RGPM (6 dígitos) * <Info className="inline h-3 w-3 text-muted-foreground ml-1" title="Usado para buscar e identificar o policial. Não pode ser alterado após cadastro inicial (a menos que haja erro)." /></Label>
-                <Input id="dlg-rgpm" value={newOfficerFormData.rgpm} onChange={e => handleRegisterInputChange("rgpm", e.target.value)} placeholder="000000" required inputMode="numeric" maxLength={6} />
-              </div>
-              <div>
-                <Label htmlFor="dlg-graduacao">Graduação *</Label>
-                <select id="dlg-graduacao" value={newOfficerFormData.graduacao} onChange={e => handleRegisterInputChange("graduacao", e.target.value)} required className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-                  <option value="">Selecione...</option>
-                  {graduacoes.map((grad) => (<option key={grad} value={grad}>{grad}</option>))}
-                </select>
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Adicionar Policial</h3>
+
+          {/* Opções para adicionar policial */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 border rounded-lg">
+              <h4 className="font-medium mb-2">Selecionar da Lista</h4>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="policialSelect">Policial</Label>
+                  <Select value={selectedPolicial} onValueChange={setSelectedPolicial}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um policial" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {loading ? (
+                        <SelectItem value="loading" disabled>Carregando...</SelectItem>
+                      ) : (
+                        policiais.map(p => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.posto} PM {p.nome} (RG: {p.rg})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Button 
+                  onClick={handleSelectPolicial} 
+                  disabled={loading || !selectedPolicial}
+                  className="w-full"
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Adicionar Selecionado
+                </Button>
               </div>
             </div>
-            <div>
-              <Label htmlFor="dlg-nome">Nome Completo *</Label>
-              <Input id="dlg-nome" value={newOfficerFormData.nome} onChange={e => handleRegisterInputChange("nome", e.target.value)} placeholder="Nome completo" required />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dlg-cpf">CPF *</Label>
-                <Input id="dlg-cpf" value={newOfficerFormData.cpf} onChange={e => handleRegisterInputChange("cpf", e.target.value)} placeholder="000.000.000-00" required inputMode="numeric" maxLength={14}/>
-              </div>
-              <div>
-                <Label htmlFor="dlg-telefone">Telefone (com DDD) *</Label>
-                <Input id="dlg-telefone" value={newOfficerFormData.telefone} onChange={e => handleRegisterInputChange("telefone", e.target.value)} placeholder="(00) 00000-0000" required inputMode="tel" maxLength={15}/>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="dlg-naturalidade">Naturalidade (Cidade/UF) *</Label>
-              <Input id="dlg-naturalidade" value={newOfficerFormData.naturalidade} onChange={e => handleRegisterInputChange("naturalidade", e.target.value)} placeholder="Ex: Cuiabá/MT" required />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dlg-pai">Nome do Pai *</Label>
-                <Input id="dlg-pai" value={newOfficerFormData.pai} onChange={e => handleRegisterInputChange("pai", e.target.value)} required placeholder="Nome completo do pai"/>
-              </div>
-              <div>
-                <Label htmlFor="dlg-mae">Nome da Mãe *</Label>
-                <Input id="dlg-mae" value={newOfficerFormData.mae} onChange={e => handleRegisterInputChange("mae", e.target.value)} required placeholder="Nome completo da mãe"/>
-              </div>
+
+            <div className="p-4 border rounded-lg">
+              <h4 className="font-medium mb-2">Cadastrar Novo</h4>
+              
+              {!cadastrando ? (
+                <Button onClick={() => setCadastrando(true)} className="w-full">
+                  <Plus className="mr-2 h-4 w-4" /> Cadastrar Manualmente
+                </Button>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="rgPM">RG PM</Label>
+                    <Input 
+                      id="rgPM" 
+                      type="text" 
+                      placeholder="Informe o RG do PM" 
+                      value={rgPM} 
+                      onChange={e => setRgPM(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="nomePM">Nome</Label>
+                    <Input 
+                      id="nomePM" 
+                      type="text" 
+                      placeholder="Nome completo do PM" 
+                      value={nomePM} 
+                      onChange={e => setNomePM(e.target.value)}
+                    />
+                  </div>
+                  
+                  <ComponenteGuarnicaoFields 
+                    posto={postoPM}
+                    setPosto={setPostoPM}
+                  />
+                  
+                  <div className="flex space-x-2">
+                    <Button onClick={handleAddClick} className="flex-1">
+                      <Save className="mr-2 h-4 w-4" /> Adicionar
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setCadastrando(false)} 
+                      className="flex-1"
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeRegisterDialog}> Cancelar </Button>
-            <Button onClick={handleSaveNewOfficer} disabled={isSaveDisabled()}> Salvar no Banco </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </CardContent>
     </Card>
   );
 };

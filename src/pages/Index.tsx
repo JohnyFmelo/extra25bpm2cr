@@ -15,7 +15,6 @@ import { TravelManagement } from "@/components/TravelManagement";
 import { useToast } from "@/hooks/use-toast";
 import TCOForm from "@/components/TCOForm";
 import { Button } from "@/components/ui/button";
-import TCOList from "@/components/tco/TCOList";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -64,9 +63,6 @@ const Index = () => {
   const handleTCOClick = () => {
     setActiveTab("tco");
   };
-  const handleTCOFormClick = () => {
-    setActiveTab("tco-form");
-  };
 
   return (
     <div className="relative min-h-screen bg-[#E8F1F2] flex flex-col">
@@ -83,7 +79,6 @@ const Index = () => {
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="travel">Travel</TabsTrigger>
             <TabsTrigger value="tco">TCO</TabsTrigger>
-            <TabsTrigger value="tco-form">TCO Form</TabsTrigger>
           </TabsList>
 
           <TabsContent value="main">
@@ -229,28 +224,7 @@ const Index = () => {
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <div className="bg-white rounded-xl shadow-lg flex flex-col flex-grow overflow-y-auto">
-                <TCOList />
-              </div>
-              <div className="fixed bottom-6 right-6 z-10">
-                <Button 
-                  onClick={handleTCOFormClick} 
-                  className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 flex items-center justify-center text-white"
-                >
-                  <Plus className="h-6 w-6" />
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="tco-form" className="flex flex-col flex-grow">
-            <div className="relative flex flex-col flex-grow">
-              <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={() => setActiveTab("tco")} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para lista de TCOs">
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="bg-white rounded-xl shadow-lg flex flex-col flex-grow overflow-y-auto">
+              <div className="bg-white rounded-xl shadow-lg flex flex-col flex-grow overflow-hidden">
                 <TCOForm />
               </div>
             </div>
