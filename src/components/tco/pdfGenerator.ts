@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
-import { addTermoCompromisso } from "./PDFTermoCompromisso.js";
-import { addTermoApreensao } from "./PDFTermoApreensao.js";
-import { addHistorico } from "./PDFhistorico.js";
+import { addTermoCompromisso } from "./PDFTermoCompromisso";
+import { addTermoApreensao } from "./PDFTermoApreensao";
+import { addHistorico } from "./PDFhistorico";
 
 interface Autor {
   nome: string;
