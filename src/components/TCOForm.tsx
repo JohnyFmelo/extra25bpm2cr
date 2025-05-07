@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
@@ -491,7 +492,7 @@ const TCOForm = () => {
       const vitimasFiltradas = natureza === "Porte de drogas para consumo" ? [] : vitimas.filter(v => v.nome?.trim());
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim());
 
-      const tcoDataParaSalvar = {
+      const tcoDataParaSalvar: any = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
         originalNatureza: natureza,
@@ -529,7 +530,9 @@ const TCOForm = () => {
         startTime: startTime?.toISOString(),
         endTime: completionNow.toISOString(),
         createdAt: new Date(),
-        createdBy: JSON.parse(localStorage.getItem("user") || "{}").id
+        createdBy: JSON.parse(localStorage.getItem("user") || "{}").id,
+        lacre: "", // Add missing property
+        objetosApreendidos: [] // Add missing property
       };
 
       // Excluir relatoVitima e representacao para casos de droga

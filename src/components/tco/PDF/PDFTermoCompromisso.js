@@ -1,3 +1,4 @@
+
 // src/components/tco/PDF/PDFTermoCompromisso.js
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
