@@ -1,4 +1,4 @@
-import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Scale, Plus } from "lucide-react";
+import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Scale, Plus, Trash2 } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -15,7 +15,7 @@ import { TravelManagement } from "@/components/TravelManagement";
 import { useToast } from "@/hooks/use-toast";
 import TCOForm from "@/components/TCOForm";
 import { Button } from "@/components/ui/button";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -27,16 +27,15 @@ const Index = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showInformationDialog, setShowInformationDialog] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
 
-  // Add state for TCO list
+  // States for TCO management
   const [tcoList, setTcoList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTco, setSelectedTco] = useState(null);
+  const [tcoTab, setTcoTab] = useState("list"); // Controls sub-tabs in TCO section
 
   // Function to fetch user's TCOs
   const fetchUserTcos = async () => {
@@ -56,8 +55,33 @@ const Index = () => {
       setTcoList(tcos);
     } catch (error) {
       console.error("Error fetching TCOs:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Falha ao carregar os TCOs."
+      });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Function to delete a TCO
+  const handleDeleteTco = async (tcoId) => {
+    try {
+      await deleteDoc(doc(db, "tcos", tcoId));
+      setTcoList(tcoList.filter(tco => tco.id !== tcoId));
+      if (selectedTco?.id === tcoId) setSelectedTco(null);
+      toast({
+        title: "TCO Excluído",
+        description: "O TCO foi removido com sucesso."
+      });
+    } catch (error) {
+      console.error("Error deleting TCO:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Falha ao excluir o TCO."
+      });
     }
   };
 
@@ -256,55 +280,123 @@ const Index = () => {
             </div>
           </TabsContent>
 
-          {/* Modified TCO tab with two-column layout */}
+          {/* Modified TCO tab with navigation bar */}
           <TabsContent value="tco" className="flex flex-col flex-grow">
-            <div className="relative flex flex-col flex-grow">
-              <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
+            <div className="flex flex-col flex-grow">
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-semibold">Gestão de TCOs</h1>
+                <Button variant="ghost" onClick={handleBackClick} aria-label="Voltar para home">
+                  <ArrowLeft className="h-6 w-6 mr-2" /> Voltar
+                </Button>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-                {/* First column - TCO List */}
-                <div className="bg-white rounded-xl shadow-lg p-6 overflow-y-auto">
-                  <h2 className="text-2xl font-semibold mb-6">TCOs Produzidos</h2>
+              <Tabs value={tcoTab} onValueChange={setTcoTab} className="space-y-6 flex flex-col flex-grow">
+                <TabsList className="bg-white rounded-xl shadow-lg p-2 grid grid-cols-2 gap-2">
+                  <TabsTrigger 
+                    value="list" 
+                    className="py-2 px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white"
+                    aria-label="Visualizar Meus TCOs"
+                  >
+                    Meus TCOs
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="form" 
+                    className="py-2 px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white"
+                    aria-label="Criar ou editar TCO"
+                    onClick={() => setSelectedTco(null)}
+                  >
+                    Novo TCO
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="list" className="bg-white rounded-xl shadow-lg p-4 flex-grow">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-semibold">Meus TCOs</h2>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTcoTab("form")}
+                      aria-label="Criar novo TCO"
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Novo TCO
+                    </Button>
+                  </div>
                   {isLoading ? (
                     <p className="text-center py-8">Carregando TCOs...</p>
                   ) : tcoList.length === 0 ? (
                     <p className="text-center py-8 text-gray-500">Nenhum TCO encontrado</p>
                   ) : (
-                    <Table>
+                    <Table role="grid">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Número</TableHead>
                           <TableHead>Data</TableHead>
                           <TableHead>Natureza</TableHead>
+                          <TableHead>Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {tcoList.map((tco) => (
                           <TableRow 
                             key={tco.id} 
+                            aria-selected={selectedTco?.id === tco.id}
                             className={`cursor-pointer ${selectedTco?.id === tco.id ? 'bg-primary/10' : ''}`}
-                            onClick={() => setSelectedTco(tco)}
                           >
                             <TableCell className="font-medium">{tco.tcoNumber}</TableCell>
                             <TableCell>
                               {tco.createdAt ? format(new Date(tco.createdAt.seconds * 1000), 'dd/MM/yyyy') : '-'}
                             </TableCell>
                             <TableCell>{tco.natureza}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedTco(tco);
+                                  setTcoTab("form");
+                                }}
+                                aria-label={`Editar TCO ${tco.tcoNumber}`}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteTco(tco.id)}
+                                aria-label={`Excluir TCO ${tco.tcoNumber}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   )}
-                </div>
-                
-                {/* Second column - TCO Form */}
-                <div className="bg-white rounded-xl shadow-lg flex flex-col flex-grow overflow-y-auto">
-                  <TCOForm />
-                </div>
-              </div>
+                </TabsContent>
+
+                <TabsContent value="form" className="bg-white rounded-xl shadow-lg p-4 flex-grow">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-semibold">
+                      {selectedTco ? `Editar TCO #${selectedTco.tcoNumber}` : "Novo TCO"}
+                    </h2>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedTco(null);
+                        setTcoTab("list");
+                      }}
+                      aria-label="Cancelar e voltar para lista de TCOs"
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                  <TCOForm selectedTco={selectedTco} onClear={() => {
+                    setSelectedTco(null);
+                    setTcoTab("list");
+                  }} />
+                </TabsContent>
+              </Tabs>
             </div>
           </TabsContent>
         </Tabs>
