@@ -1,80 +1,69 @@
-import {
-    MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
-    addNewPage, addWrappedText, addSignatureWithNameAndRole, addField, checkPageBreak, formatarDataHora
-} from './pdfUtils.js';
+import jsPDF from "jspdf";
 
-// Função para converter números até 10 em texto
-const numberToText = (num) => {
-    const numbers = [
-        "ZERO", "UMA", "DUAS", "TRÊS", "QUATRO",
-        "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"
-    ];
-    return num >= 0 && num <= 10 ? numbers[num] : num.toString();
-};
+export function addTermoApreensao(doc, data, startY) {
+  const centeredX = doc.internal.pageSize.getWidth() / 2;
 
-/** Adiciona Termo de Apreensão (em página nova) */
-export const addTermoApreensao = (doc, data) => {
-    let yPos = addNewPage(doc, data);
-    const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
-    const condutor = data.componentesGuarnicao?.[0];
-    const autor = data.autores?.[0];
-    const isDroga = data.natureza && data.natureza.toLowerCase() === "porte de drogas para consumo";
-    const lacreNumero = data.lacreNumero || "00000000";
+  doc.setFont("Helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("TERMO DE APREENSÃO", centeredX, 30, { align: "center" });
 
-    // Define o título com ou sem lacre
-    const titulo = isDroga ? `TERMO DE APREENSÃO LACRE Nº ${lacreNumero}` : "TERMO DE APREENSÃO";
-    doc.setFont("helvetica", "bold"); doc.setFontSize(12);
-    yPos = checkPageBreak(doc, yPos, 15, data);
-    doc.text(titulo, PAGE_WIDTH / 2, yPos, { align: "center" });
-    yPos += 10;
+  doc.setFont("Helvetica", "normal");
+  doc.setFontSize(12);
 
-    // Usa dataTerminoRegistro e horaTerminoRegistro
-    const dataHoraApreensao = formatarDataHora(data.dataTerminoRegistro || data.dataFato, data.horaTerminoRegistro || data.horaFato);
-    yPos = addField(doc, yPos, "DATA/HORA:", dataHoraApreensao, data);
-    yPos = addField(doc, yPos, "LOCAL:", "25º BPM", data);
-    yPos = addField(doc, yPos, "NOME DO POLICIAL MILITAR:", condutor?.nome || "Não informado", data);
-    yPos = addField(doc, yPos, "GRADUAÇÃO:", condutor?.posto || "Não informado", data);
-    yPos = addField(doc, yPos, "RGPM:", condutor?.rg || "Não informado", data);
-    yPos = addField(doc, yPos, "FILIAÇÃO - PAI:", condutor?.pai || "Não informado", data);
-    yPos = addField(doc, yPos, "FILIAÇÃO - MÃE:", condutor?.mae || "Não informado", data);
-    yPos = addField(doc, yPos, "NATURALIDADE:", condutor?.naturalidade || "Não informado", data);
-    yPos = addField(doc, yPos, "CPF:", condutor?.cpf || "Não informado", data);
-    yPos = addField(doc, yPos, "TELEFONE:", condutor?.celular || "Não informado", data);
-    yPos = addField(doc, yPos, "ENDEREÇO:", "AV. DR. PARANÁ, S/N° COMPLEXO DA UNIVAG, AO LADO DO NÚCLEO DE PRÁTICA JURÍDICA. BAIRRO CRISTO REI CEP 78.110-100, VÁRZEA GRANDE - MT", data);
-    yPos = addField(doc, yPos, "MUNICÍPIO:", "VÁRZEA GRANDE - MT", data);
-    yPos += 2;
+  let yPos = startY || 50;
+  const lineHeight = 10;
 
-    // Adiciona Constatação Preliminar de Droga se for natureza "Porte de drogas para consumo"
-    if (isDroga) {
-        doc.setFont("helvetica", "bold"); doc.setFontSize(12);
-        yPos = checkPageBreak(doc, yPos, 15, data);
-        doc.text("CONSTAÇÃO PRELIMINAR DE DROGA", MARGIN_LEFT, yPos);
-        yPos += 6;
-        doc.setFont("helvetica", "normal"); doc.setFontSize(12);
-        yPos = addField(doc, yPos, "LACRE:", lacreNumero, data);
-        yPos += 5;
-    }
+  data.margin = 20;
+  data.lineHeight = lineHeight;
 
-    doc.setFont("helvetica", "normal"); doc.setFontSize(12);
-    let textoApreensao = data.apreensoes || "Nenhum objeto/documento descrito para apreensão.";
-    if (isDroga) {
-        const quantidadeNum = parseInt(data.drogaQuantidade.match(/\d+/)?.[0] || "1", 10);
-        const quantidadeText = quantidadeNum <= 10 ? numberToText(quantidadeNum) : quantidadeNum.toString();
-        const plural = quantidadeNum > 1 ? "PORÇÕES" : "PORÇÃO";
-        textoApreensao = data.drogaIsUnknown
-            ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${data.drogaCustomDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.`
-            : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${data.drogaNomeComum.toUpperCase()}, ${data.drogaCustomDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.`;
-    }
-    yPos = addWrappedText(doc, yPos, textoApreensao, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-    yPos += 5;
+  function addField(doc, yPos, label, value, data) {
+    // Remove trailing colon from label if present
+    const cleanLabel = label.replace(/:+$/, '');
+    doc.text(`${cleanLabel}: ${value || "Não informado"}`, data.margin, yPos);
+    return yPos + data.lineHeight;
+  }
 
-    const textoLegal = "O PRESENTE TERMO DE APREENSÃO FOI LAVRADO COM BASE NO ART. 6º, II, DO CÓDIGO DE PROCESSO PENAL, E ART. 92 DA LEI 9.099/1995.";
-    yPos = addWrappedText(doc, yPos, textoLegal, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-    yPos += 10;
+  yPos = addField(doc, yPos, "LACRE", data.lacre, data);
+  yPos = addField(doc, yPos, "NÚMERO DO LACRE", data.numeroLacre, data);
+  yPos = addField(doc, yPos, "DATA/HORA", data.dataHora, data);
+  yPos = addField(doc, yPos, "LOCAL", data.local, data);
 
-    yPos = addSignatureWithNameAndRole(doc, yPos, autor?.nome, "AUTOR DOS FATOS", data);
-    const nomeCondutor = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
-    yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutor, "CONDUTOR DA OCORRÊNCIA", data);
+  const condutor = data.componentesGuarnicao?.[0];
+  yPos = addField(doc, yPos, "NOME DO POLICIAL MILITAR", condutor?.nome, data);
+  yPos = addField(doc, yPos, "GRADUAÇÃO", condutor?.posto, data);
+  yPos = addField(doc, yPos, "RGPM", condutor?.rg, data);
+  yPos = addField(doc, yPos, "FILIAÇÃO - PAI", condutor?.pai, data);
+  yPos = addField(doc, yPos, "FILIAÇÃO - MÃE", condutor?.mae, data);
+  yPos = addField(doc, yPos, "NATURALIDADE", condutor?.naturalidade, data);
+  yPos = addField(doc, yPos, "CPF", condutor?.cpf, data);
+  yPos = addField(doc, yPos, "TELEFONE", condutor?.telefone, data);
 
-    return yPos;
-};
+  yPos += lineHeight;
+  doc.setFont("Helvetica", "bold");
+  doc.text("OBJETOS APREENDIDOS:", data.margin, yPos);
+  yPos += lineHeight;
+  doc.setFont("Helvetica", "normal");
+  const objetos = data.objetosApreendidos || [];
+  if (objetos.length === 0) {
+    doc.text("Nenhum objeto apreendido informado.", data.margin, yPos);
+    yPos += lineHeight;
+  } else {
+    objetos.forEach((objeto, index) => {
+      doc.text(`${index + 1}. ${objeto.descricao || "Não informado"} - Quantidade: ${objeto.quantidade || "1"}`, data.margin, yPos);
+      yPos += lineHeight;
+    });
+  }
+
+  yPos += lineHeight;
+  doc.setFont("Helvetica", "bold");
+  doc.text("HISTÓRICO:", data.margin, yPos);
+  yPos += lineHeight;
+  doc.setFont("Helvetica", "normal");
+  const historicoLines = doc.splitTextToSize(data.historico || "Não informado", doc.internal.pageSize.getWidth() - 2 * data.margin);
+  historicoLines.forEach(line => {
+    doc.text(line, data.margin, yPos);
+    yPos += lineHeight;
+  });
+
+  return yPos;
+}
