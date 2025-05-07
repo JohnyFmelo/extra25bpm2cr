@@ -32,13 +32,21 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     // Adiciona campos usando a função utilitária, passando doc, yPos e data
     yPos = addFieldBoldLabel(doc, yPos, "NATUREZA", data.natureza, data);
     yPos = addFieldBoldLabel(doc, yPos, "AUTOR DO FATO", primeiroAutor?.nome, data);
-    yPos = addFieldBoldLabel(doc, yPos, "VÍTIMA", primeiraVitima?.nome, data);
+
+    // Verifica se a natureza está relacionada a drogas (case-insensitive)
+    const isDrugRelated = data.natureza && /droga|narcotráfico/i.test(data.natureza);
+    if (!isDrugRelated) {
+        yPos = addFieldBoldLabel(doc, yPos, "VÍTIMA", primeiraVitima?.nome, data);
+    }
+
     yPos += 15; // Espaço extra
 
     // --- Título "AUTUAÇÃO" ---
     // Precisamos verificar a página antes de adicionar conteúdo potencialmente grande
     // Estima a altura: Título + Texto + Assinatura = ~15 + 40 + 30 = 85
-    yPos = checkPageBreak(doc, yPos, 85, data); // checkPageBreak usa 'data' para o header em nova página
+    // Adiciona espaço de 2.5 cm (aproximadamente 70.875 pontos) antes do título
+    yPos = checkPageBreak(doc, yPos, 85 + 70.875, data); // Ajusta altura estimada com espaço extra
+    yPos += 70.875; // Espaço de 2.5 cm antes do título
     doc.setFont("helvetica", "bold"); doc.setFontSize(14);
     doc.text("AUTUAÇÃO", PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 15;
