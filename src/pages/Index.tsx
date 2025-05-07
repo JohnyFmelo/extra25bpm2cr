@@ -299,18 +299,16 @@ const Index = () => {
 
                 <TabsContent value="list" className="bg-white rounded-xl shadow-lg p-4 flex-grow">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-semibold">Meus TCOs</h2>
-                    <Button variant="outline" size="sm" onClick={() => setTcoTab("form")} aria-label="Criar novo TCO">
-                      <Plus className="h-4 w-4 mr-2" /> Novo TCO
-                    </Button>
+                    
+                    
                   </div>
                   {isLoading ? <p className="text-center py-8">Carregando TCOs...</p> : tcoList.length === 0 ? <p className="text-center py-8 text-gray-500">Nenhum TCO encontrado</p> : <Table role="grid">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Número</TableHead>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Natureza</TableHead>
-                          <TableHead>Ações</TableHead>
+                          <TableHead className="bg-slate-400">Número</TableHead>
+                          <TableHead className="bg-slate-400">Data</TableHead>
+                          <TableHead className="bg-slate-400">Natureza</TableHead>
+                          <TableHead className="bg-slate-400">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -338,15 +336,8 @@ const Index = () => {
 
                 <TabsContent value="form" className="bg-white rounded-xl shadow-lg p-4 flex-grow">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-semibold">
-                      {selectedTco ? `Editar TCO #${selectedTco.tcoNumber}` : "Novo TCO"}
-                    </h2>
-                    <Button variant="outline" size="sm" onClick={() => {
-                    setSelectedTco(null);
-                    setTcoTab("list");
-                  }} aria-label="Cancelar e voltar para lista de TCOs">
-                      Cancelar
-                    </Button>
+                    
+                    
                   </div>
                   <TCOForm selectedTco={selectedTco} onClear={() => {
                   setSelectedTco(null);
