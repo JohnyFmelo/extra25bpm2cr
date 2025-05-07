@@ -152,7 +152,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
         .single();
 
       console.log("[GuarnicaoTab] Resposta Supabase:", { data, error });
-      console.log("[GuarnicaoTab] Telefone retornado do Supabase:", data?.telefone);
+      console.log("[GuarnicaoTab] Telefone retornado:", data?.telefone);
 
       if (error && error.code === 'PGRST116') {
         toast({ variant: "warning", title: "Não Encontrado", description: `Nenhum policial encontrado com o RGPM ${rgpmToSearch}. Considere cadastrá-lo.` });
@@ -170,7 +170,6 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
           cpf: officerData.cpf ? formatarCPF(officerData.cpf) : "NÃO INFORMADO",
           telefone: officerData.telefone ? formatarCelular(officerData.telefone) : "NÃO INFORMADO"
         };
-        console.log("[GuarnicaoTab] Componente criado com telefone:", newComponente.telefone);
         console.log("[GuarnicaoTab] Policial encontrado. Chamando onAddPolicial:", newComponente);
         onAddPolicial(newComponente);
         setSearchRgpm("");
@@ -246,7 +245,8 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
         cpf: cpfNumeros,
         telefone: telefoneNumeros
       };
-      console.log("[GuarnicaoTab] Dados a serem salvos/atualizados no BD com telefone:", dataToSave.telefone);
+      console.log("[GuarnicaoTab] Dados a serem salvos/atualizados no BD:", dataToSave);
+
       const { error } = await supabase
         .from("police_officers")
         .upsert(dataToSave, { onConflict: "rgpm" });
