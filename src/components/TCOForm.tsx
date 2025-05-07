@@ -216,7 +216,7 @@ const TCOForm = () => {
         const plural = quantidadeNum > 1 ? "PORÇÕES" : "PORÇÃO";
         const descriptiveText = isUnknownMaterial
           ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${customMaterialDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.`
-          : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`;
+          : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, ${customMaterialDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.`;
         if (!apreensoes || apreensoes.includes("[DESCRIÇÃO]") || apreensoes === relatoPolicialTemplate) {
           setApreensoes(descriptiveText);
         }
@@ -227,7 +227,7 @@ const TCOForm = () => {
       setRelatoVitima("");
       setRepresentacao("");
     }
-  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes, relatoPolicialTemplate]);
+  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]);
 
   useEffect(() => {
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
@@ -491,7 +491,7 @@ const TCOForm = () => {
       const vitimasFiltradas = natureza === "Porte de drogas para consumo" ? [] : vitimas.filter(v => v.nome?.trim());
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim());
 
-      const tcoDataParaSalvar: any = {
+      const tcoDataParaSalvar = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
         originalNatureza: natureza,
@@ -529,9 +529,7 @@ const TCOForm = () => {
         startTime: startTime?.toISOString(),
         endTime: completionNow.toISOString(),
         createdAt: new Date(),
-        createdBy: JSON.parse(localStorage.getItem("user") || "{}").id,
-        lacre: "", // Add missing property
-        objetosApreendidos: [] // Add missing property
+        createdBy: JSON.parse(localStorage.getItem("user") || "{}").id
       };
 
       // Excluir relatoVitima e representacao para casos de droga
