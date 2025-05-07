@@ -19,7 +19,6 @@ import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/fire
 import { db } from "@/lib/firebase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
@@ -27,7 +26,9 @@ const Index = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showInformationDialog, setShowInformationDialog] = useState(false);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
 
@@ -40,18 +41,18 @@ const Index = () => {
   // Function to fetch user's TCOs
   const fetchUserTcos = async () => {
     if (!user.id) return;
-    
     setIsLoading(true);
     try {
       const tcoRef = collection(db, "tcos");
       const q = query(tcoRef, where("createdBy", "==", user.id));
       const querySnapshot = await getDocs(q);
-      
       const tcos = [];
-      querySnapshot.forEach((doc) => {
-        tcos.push({ id: doc.id, ...doc.data() });
+      querySnapshot.forEach(doc => {
+        tcos.push({
+          id: doc.id,
+          ...doc.data()
+        });
       });
-      
       setTcoList(tcos);
     } catch (error) {
       console.error("Error fetching TCOs:", error);
@@ -66,7 +67,7 @@ const Index = () => {
   };
 
   // Function to delete a TCO
-  const handleDeleteTco = async (tcoId) => {
+  const handleDeleteTco = async tcoId => {
     try {
       await deleteDoc(doc(db, "tcos", tcoId));
       setTcoList(tcoList.filter(tco => tco.id !== tcoId));
@@ -91,7 +92,6 @@ const Index = () => {
       fetchUserTcos();
     }
   }, [activeTab, user.id]);
-
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
@@ -126,9 +126,7 @@ const Index = () => {
   const handleTCOClick = () => {
     setActiveTab("tco");
   };
-
-  return (
-    <div className="relative min-h-screen bg-[#E8F1F2] flex flex-col">
+  return <div className="relative min-h-screen bg-[#E8F1F2] flex flex-col">
       <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto flex flex-col flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8 flex flex-col flex-grow">
           <TabsList className="hidden">
@@ -290,20 +288,11 @@ const Index = () => {
                 </Button>
               </div>
               <Tabs value={tcoTab} onValueChange={setTcoTab} className="space-y-6 flex flex-col flex-grow">
-                <TabsList className="bg-white rounded-xl shadow-lg p-2 grid grid-cols-2 gap-2">
-                  <TabsTrigger 
-                    value="list" 
-                    className="py-2 px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white"
-                    aria-label="Visualizar Meus TCOs"
-                  >
+                <TabsList className="bg-white rounded-xl shadow-lg p-2 grid grid-cols-2 gap-2 my-0 py-0">
+                  <TabsTrigger value="list" className="py-2 px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white" aria-label="Visualizar Meus TCOs">
                     Meus TCOs
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="form" 
-                    className="py-2 px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white"
-                    aria-label="Criar ou editar TCO"
-                    onClick={() => setSelectedTco(null)}
-                  >
+                  <TabsTrigger value="form" aria-label="Criar ou editar TCO" onClick={() => setSelectedTco(null)} className="px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white my-0 py-[6px]">
                     Novo TCO
                   </TabsTrigger>
                 </TabsList>
@@ -311,21 +300,11 @@ const Index = () => {
                 <TabsContent value="list" className="bg-white rounded-xl shadow-lg p-4 flex-grow">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-2xl font-semibold">Meus TCOs</h2>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setTcoTab("form")}
-                      aria-label="Criar novo TCO"
-                    >
+                    <Button variant="outline" size="sm" onClick={() => setTcoTab("form")} aria-label="Criar novo TCO">
                       <Plus className="h-4 w-4 mr-2" /> Novo TCO
                     </Button>
                   </div>
-                  {isLoading ? (
-                    <p className="text-center py-8">Carregando TCOs...</p>
-                  ) : tcoList.length === 0 ? (
-                    <p className="text-center py-8 text-gray-500">Nenhum TCO encontrado</p>
-                  ) : (
-                    <Table role="grid">
+                  {isLoading ? <p className="text-center py-8">Carregando TCOs...</p> : tcoList.length === 0 ? <p className="text-center py-8 text-gray-500">Nenhum TCO encontrado</p> : <Table role="grid">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Número</TableHead>
@@ -335,43 +314,26 @@ const Index = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {tcoList.map((tco) => (
-                          <TableRow 
-                            key={tco.id} 
-                            aria-selected={selectedTco?.id === tco.id}
-                            className={`cursor-pointer ${selectedTco?.id === tco.id ? 'bg-primary/10' : ''}`}
-                          >
+                        {tcoList.map(tco => <TableRow key={tco.id} aria-selected={selectedTco?.id === tco.id} className={`cursor-pointer ${selectedTco?.id === tco.id ? 'bg-primary/10' : ''}`}>
                             <TableCell className="font-medium">{tco.tcoNumber}</TableCell>
                             <TableCell>
                               {tco.createdAt ? format(new Date(tco.createdAt.seconds * 1000), 'dd/MM/yyyy') : '-'}
                             </TableCell>
                             <TableCell>{tco.natureza}</TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedTco(tco);
-                                  setTcoTab("form");
-                                }}
-                                aria-label={`Editar TCO ${tco.tcoNumber}`}
-                              >
+                              <Button variant="ghost" size="sm" onClick={() => {
+                          setSelectedTco(tco);
+                          setTcoTab("form");
+                        }} aria-label={`Editar TCO ${tco.tcoNumber}`}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteTco(tco.id)}
-                                aria-label={`Excluir TCO ${tco.tcoNumber}`}
-                              >
+                              <Button variant="ghost" size="sm" onClick={() => handleDeleteTco(tco.id)} aria-label={`Excluir TCO ${tco.tcoNumber}`}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </TableCell>
-                          </TableRow>
-                        ))}
+                          </TableRow>)}
                       </TableBody>
-                    </Table>
-                  )}
+                    </Table>}
                 </TabsContent>
 
                 <TabsContent value="form" className="bg-white rounded-xl shadow-lg p-4 flex-grow">
@@ -379,22 +341,17 @@ const Index = () => {
                     <h2 className="text-2xl font-semibold">
                       {selectedTco ? `Editar TCO #${selectedTco.tcoNumber}` : "Novo TCO"}
                     </h2>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedTco(null);
-                        setTcoTab("list");
-                      }}
-                      aria-label="Cancelar e voltar para lista de TCOs"
-                    >
+                    <Button variant="outline" size="sm" onClick={() => {
+                    setSelectedTco(null);
+                    setTcoTab("list");
+                  }} aria-label="Cancelar e voltar para lista de TCOs">
                       Cancelar
                     </Button>
                   </div>
                   <TCOForm selectedTco={selectedTco} onClear={() => {
-                    setSelectedTco(null);
-                    setTcoTab("list");
-                  }} />
+                  setSelectedTco(null);
+                  setTcoTab("list");
+                }} />
                 </TabsContent>
               </Tabs>
             </div>
@@ -407,7 +364,6 @@ const Index = () => {
 
         {showInformationDialog && <InformationDialog open={showInformationDialog} onOpenChange={setShowInformationDialog} isAdmin={user.userType === "admin"} />}
       </div>
-    </div>
-  );
+    </div>;
 };
 export default Index;
