@@ -31,10 +31,11 @@ const Index = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
 
-  // Add state for TCO list
+  // States for TCO management
   const [tcoList, setTcoList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTco, setSelectedTco] = useState(null);
+  const [tcoTab, setTcoTab] = useState("list"); // Controls sub-tabs in TCO section
 
   // Function to fetch user's TCOs
   const fetchUserTcos = async () => {
@@ -279,7 +280,7 @@ const Index = () => {
             </div>
           </TabsContent>
 
-          {/* Modified TCO tab with organized columns based on PessoasEnvolvidasTab */}
+          {/* Modified TCO tab with navigation bar */}
           <TabsContent value="tco" className="flex flex-col flex-grow">
             <div className="flex flex-col flex-grow">
               <div className="flex items-center justify-between mb-6">
@@ -288,15 +289,32 @@ const Index = () => {
                   <ArrowLeft className="h-6 w-6 mr-2" /> Voltar
                 </Button>
               </div>
-              <div className="grid grid-cols-2 gap-12 overflow-x-auto h-full">
-                {/* First column - TCO List */}
-                <div className="bg-white rounded-xl shadow-lg p-4 min-w-[250px] flex flex-col">
+              <Tabs value={tcoTab} onValueChange={setTcoTab} className="space-y-6 flex flex-col flex-grow">
+                <TabsList className="bg-white rounded-xl shadow-lg p-2 grid grid-cols-2 gap-2">
+                  <TabsTrigger 
+                    value="list" 
+                    className="py-2 px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white"
+                    aria-label="Visualizar Meus TCOs"
+                  >
+                    Meus TCOs
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="form" 
+                    className="py-2 px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white"
+                    aria-label="Criar ou editar TCO"
+                    onClick={() => setSelectedTco(null)}
+                  >
+                    Novo TCO
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="list" className="bg-white rounded-xl shadow-lg p-4 flex-grow">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-semibold">TCOs Produzidos</h2>
+                    <h2 className="text-2xl font-semibold">Meus TCOs</h2>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setSelectedTco(null)}
+                      onClick={() => setTcoTab("form")}
                       aria-label="Criar novo TCO"
                     >
                       <Plus className="h-4 w-4 mr-2" /> Novo TCO
@@ -322,7 +340,6 @@ const Index = () => {
                             key={tco.id} 
                             aria-selected={selectedTco?.id === tco.id}
                             className={`cursor-pointer ${selectedTco?.id === tco.id ? 'bg-primary/10' : ''}`}
-                            onClick={() => setSelectedTco(tco)}
                           >
                             <TableCell className="font-medium">{tco.tcoNumber}</TableCell>
                             <TableCell>
@@ -333,7 +350,10 @@ const Index = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => setSelectedTco(tco)}
+                                onClick={() => {
+                                  setSelectedTco(tco);
+                                  setTcoTab("form");
+                                }}
                                 aria-label={`Editar TCO ${tco.tcoNumber}`}
                               >
                                 <Pencil className="h-4 w-4" />
@@ -352,16 +372,31 @@ const Index = () => {
                       </TableBody>
                     </Table>
                   )}
-                </div>
-                
-                {/* Second column - TCO Form */}
-                <div className="bg-white rounded-xl shadow-lg p-4 min-w-[250px] flex flex-col flex-grow">
-                  <h2 className="text-2xl font-semibold mb-6">
-                    {selectedTco ? `Editar TCO #${selectedTco.tcoNumber}` : "Novo TCO"}
-                  </h2>
-                  <TCOForm selectedTco={selectedTco} onClear={() => setSelectedTco(null)} />
-                </div>
-              </div>
+                </TabsContent>
+
+                <TabsContent value="form" className="bg-white rounded-xl shadow-lg p-4 flex-grow">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-semibold">
+                      {selectedTco ? `Editar TCO #${selectedTco.tcoNumber}` : "Novo TCO"}
+                    </h2>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedTco(null);
+                        setTcoTab("list");
+                      }}
+                      aria-label="Cancelar e voltar para lista de TCOs"
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                  <TCOForm selectedTco={selectedTco} onClear={() => {
+                    setSelectedTco(null);
+                    setTcoTab("list");
+                  }} />
+                </TabsContent>
+              </Tabs>
             </div>
           </TabsContent>
         </Tabs>
