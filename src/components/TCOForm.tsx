@@ -5,7 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { useIsMobile } from "@/hooks/use-mobile";
 import BasicInformationTab from "./tco/BasicInformationTab";
 import GeneralInformationTab from "./tco/GeneralInformationTab";
 import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
@@ -102,7 +101,7 @@ const formatarRelatoAutor = (autores: Pessoa[]): string => {
   if (autores.length === 1) {
     const sexo = autores[0].sexo.toLowerCase();
     const pronome = sexo === "feminino" ? "A AUTORA" : "O AUTOR";
-    return `${pronome} DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.`;
+    return `${pronome} DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.`;
   }
   const todosFemininos = autores.every(a => a.sexo.toLowerCase() === "feminino");
   const pronomePlural = todosFemininos ? "AS AUTORAS" : "OS AUTORES";
@@ -121,7 +120,6 @@ const numberToText = (num: number): string => {
 const TCOForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
 
@@ -480,11 +478,7 @@ const TCOForm = () => {
     }
 
     if (natureza === "Porte de drogas para consumo" && (!quantidade || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc) || !lacreNumero)) {
-      toast({ 
-        variant: "destructive", 
-        title: "Dados da Droga Incompletos", 
-        description: "Preencha Quantidade, Substância, Cor, Descrição (se material desconhecido) e Número do Lacre." 
-      });
+      toast({ variant: "destructive", title: "Dados da Droga Incompletos", description: "Preencha Quantidade, Substância, Cor, Descrição (se material desconhecido) e Número do Lacre." });
       return;
     }
 
@@ -497,7 +491,7 @@ const TCOForm = () => {
       const vitimasFiltradas = natureza === "Porte de drogas para consumo" ? [] : vitimas.filter(v => v.nome?.trim());
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim());
 
-      const tcoDataParaSalvar: any = {
+      const tcoDataParaSalvar = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
         originalNatureza: natureza,
@@ -538,7 +532,7 @@ const TCOForm = () => {
         createdBy: JSON.parse(localStorage.getItem("user") || "{}").id
       };
 
-      // Adicionar relatoVitima e representacao apenas para casos que não são de droga
+      // Excluir relatoVitima e representacao para casos de droga
       if (natureza !== "Porte de drogas para consumo") {
         tcoDataParaSalvar.relatoVitima = relatoVitima.trim();
         tcoDataParaSalvar.representacao = formatRepresentacao(representacao);
@@ -576,7 +570,7 @@ const TCOForm = () => {
   const condutorParaDisplay = componentesGuarnicao[0];
 
   return (
-    <div className={`container px-2 py-4 md:px-4 md:py-6 mx-auto ${isMobile ? 'w-full' : 'max-w-5xl'}`}>
+    <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
         <BasicInformationTab
           tcoNumber={tcoNumber} setTcoNumber={setTcoNumber}
@@ -621,7 +615,6 @@ const TCOForm = () => {
           testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
           autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
           natureza={natureza}
-          handleAutorChange={handleAutorDetalhadoChange}
         />
         <GuarnicaoTab
           currentGuarnicaoList={componentesGuarnicao}
