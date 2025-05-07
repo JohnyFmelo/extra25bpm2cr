@@ -2,7 +2,7 @@ import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, Me
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UsersList from "@/components/UsersList";
 import ProfileUpdateDialog from "@/components/ProfileUpdateDialog";
@@ -15,6 +15,10 @@ import { TravelManagement } from "@/components/TravelManagement";
 import { useToast } from "@/hooks/use-toast";
 import TCOForm from "@/components/TCOForm";
 import { Button } from "@/components/ui/button";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -28,6 +32,41 @@ const Index = () => {
   } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
+
+  // Add state for TCO list
+  const [tcoList, setTcoList] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedTco, setSelectedTco] = useState(null);
+
+  // Function to fetch user's TCOs
+  const fetchUserTcos = async () => {
+    if (!user.id) return;
+    
+    setIsLoading(true);
+    try {
+      const tcoRef = collection(db, "tcos");
+      const q = query(tcoRef, where("createdBy", "==", user.id));
+      const querySnapshot = await getDocs(q);
+      
+      const tcos = [];
+      querySnapshot.forEach((doc) => {
+        tcos.push({ id: doc.id, ...doc.data() });
+      });
+      
+      setTcoList(tcos);
+    } catch (error) {
+      console.error("Error fetching TCOs:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch TCOs when tab changes to tco
+  useEffect(() => {
+    if (activeTab === "tco") {
+      fetchUserTcos();
+    }
+  }, [activeTab, user.id]);
 
   const handleEditorClick = () => {
     setActiveTab("editor");
@@ -65,11 +104,8 @@ const Index = () => {
   };
 
   return (
-    // 1. Div raiz da página: Adicionado flex flex-col
     <div className="relative min-h-screen bg-[#E8F1F2] flex flex-col">
-      {/* 2. Div principal de conteúdo: Adicionado flex flex-col flex-grow */}
-      <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto flex flex-col flex-grow w-full"> {/* Adicionado w-full para garantir que max-w-7xl não impeça o crescimento se o conteúdo for menor */}
-        {/* 3. Componente Tabs: Adicionado flex flex-col flex-grow */}
+      <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto flex flex-col flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8 flex flex-col flex-grow">
           <TabsList className="hidden">
             <TabsTrigger value="main">Main</TabsTrigger>
@@ -220,20 +256,54 @@ const Index = () => {
             </div>
           </TabsContent>
 
-          {/* 4. TabsContent para o TCO: Adicionado flex flex-col flex-grow */}
-          {/* O TabsContent em si já é um flex item do Tabs, então flex-grow aqui o faz ocupar espaço. */}
-          {/* flex-col é para organizar o conteúdo interno (o div.relative e o botão de voltar) */}
+          {/* Modified TCO tab with two-column layout */}
           <TabsContent value="tco" className="flex flex-col flex-grow">
-            {/* 5. Div relative dentro do TabsContent: Adicionado flex flex-col flex-grow */}
             <div className="relative flex flex-col flex-grow">
-              <div className="absolute right-0 -top-12 mb-4"> {/* Este botão de voltar fica posicionado absoluto, não interfere no flex */}
+              <div className="absolute right-0 -top-12 mb-4">
                 <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              {/* 6. Div bg-white que envolve o TCOForm: Adicionado flex flex-col flex-grow overflow-y-auto */}
-              <div className="bg-white rounded-xl shadow-lg flex flex-col flex-grow overflow-y-auto">
-                <TCOForm />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+                {/* First column - TCO List */}
+                <div className="bg-white rounded-xl shadow-lg p-6 overflow-y-auto">
+                  <h2 className="text-2xl font-semibold mb-6">TCOs Produzidos</h2>
+                  {isLoading ? (
+                    <p className="text-center py-8">Carregando TCOs...</p>
+                  ) : tcoList.length === 0 ? (
+                    <p className="text-center py-8 text-gray-500">Nenhum TCO encontrado</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Número</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Natureza</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tcoList.map((tco) => (
+                          <TableRow 
+                            key={tco.id} 
+                            className={`cursor-pointer ${selectedTco?.id === tco.id ? 'bg-primary/10' : ''}`}
+                            onClick={() => setSelectedTco(tco)}
+                          >
+                            <TableCell className="font-medium">{tco.tcoNumber}</TableCell>
+                            <TableCell>
+                              {tco.createdAt ? format(new Date(tco.createdAt.seconds * 1000), 'dd/MM/yyyy') : '-'}
+                            </TableCell>
+                            <TableCell>{tco.natureza}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+                
+                {/* Second column - TCO Form */}
+                <div className="bg-white rounded-xl shadow-lg flex flex-col flex-grow overflow-y-auto">
+                  <TCOForm />
+                </div>
               </div>
             </div>
           </TabsContent>
