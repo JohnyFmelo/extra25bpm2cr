@@ -25,12 +25,13 @@ export function addTermoApreensao(doc, data) {
     const isDroga = data.natureza && data.natureza.toLowerCase() === "porte de drogas para consumo";
     const lacreNumero = data.lacreNumero || "00000000";
 
-    // Título sem lacre
+    // Título com lacre para droga
+    const titulo = isDroga ? `TERMO DE APREENSÃO LACRE Nº ${lacreNumero}` : "TERMO DE APREENSÃO";
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
-    doc.text("TERMO DE APREENSÃO", PAGE_WIDTH / 2, yPos, { align: "center" });
-    console.log("[PDFTermoApreensao] Título renderizado: TERMO DE APREENSÃO");
+    doc.text(titulo, PAGE_WIDTH / 2, yPos, { align: "center" });
+    console.log("[PDFTermoApreensao] Título renderizado:", titulo);
     yPos += 10;
 
     // Função addField com correção de dois-pontos
@@ -43,7 +44,9 @@ export function addTermoApreensao(doc, data) {
 
     // Usa dataTerminoRegistro e horaTerminoRegistro
     const dataHoraApreensao = formatarDataHora(data.dataTerminoRegistro || data.dataFato, data.horaTerminoRegistro || data.horaFato);
-    yPos = addFieldWrapper(doc, yPos, "LACRE", lacreNumero, data);
+    if (!isDroga) {
+        yPos = addFieldWrapper(doc, yPos, "LACRE", lacreNumero, data);
+    }
     yPos = addFieldWrapper(doc, yPos, "NÚMERO DO LACRE", lacreNumero, data);
     yPos = addFieldWrapper(doc, yPos, "DATA/HORA", dataHoraApreensao, data);
     yPos = addFieldWrapper(doc, yPos, "LOCAL", "25º BPM", data);
