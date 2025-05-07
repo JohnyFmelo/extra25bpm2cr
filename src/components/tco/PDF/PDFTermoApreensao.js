@@ -17,6 +17,7 @@ const numberToText = (num) => {
 export function addTermoApreensao(doc, data) {
     console.log("[PDFTermoApreensao] Iniciando renderização do Termo de Apreensão");
     console.log("[PDFTermoApreensao] Condutor telefone:", data.componentesGuarnicao?.[0]?.telefone);
+    console.log("[PDFTermoApreensao] Autor sexo:", data.autores?.[0]?.sexo);
 
     let yPos = addNewPage(doc, data);
     const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
@@ -91,8 +92,8 @@ export function addTermoApreensao(doc, data) {
     yPos = addWrappedText(doc, yPos, textoLegal, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 10;
 
-    // Usa "AUTORA DOS FATOS" para sexo feminino, "AUTOR DOS FATOS" para masculino ou não informado
-    const autorLabel = autor?.sexo === "F" ? "AUTORA DOS FATOS" : "AUTOR DOS FATOS";
+    // Usa "AUTORA DOS FATOS" para sexo "Feminino", "AUTOR DOS FATOS" para "Masculino" ou não informado
+    const autorLabel = autor?.sexo === "Feminino" ? "AUTORA DOS FATOS" : "AUTOR DOS FATOS";
     yPos = addSignatureWithNameAndRole(doc, yPos, autor?.nome, autorLabel, data);
     const nomeCondutor = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
     yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutor, "CONDUTOR DA OCORRÊNCIA", data);
