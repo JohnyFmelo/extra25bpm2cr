@@ -1,5 +1,6 @@
+
 import { useMemo, useState } from 'react';
-import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DateAnnotationDialog } from './DateAnnotationDialog';
 
@@ -33,6 +34,7 @@ export const WorkedDaysCalendar = ({
   const [isAnnotationDialogOpen, setIsAnnotationDialogOpen] = useState(false);
 
   const calendarDays = useMemo(() => {
+    // Parse the monthYear string to create an actual date object
     const [month, year] = monthYear.split('/');
     const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
     const endDate = endOfMonth(startDate);
@@ -67,11 +69,11 @@ export const WorkedDaysCalendar = ({
   const getLocationColor = (location: string | undefined) => {
     switch (location) {
       case 'bpm':
-        return 'bg-purple-600 text-white';  // Vibrant purple for BPM
+        return 'bg-purple-600 text-white';
       case 'saiop':
-        return 'bg-green-500 text-white';   // Vibrant green for SAIOP
+        return 'bg-green-500 text-white';
       case 'sinfra':
-        return 'bg-blue-500 text-white';    // Vibrant blue for SINFRA
+        return 'bg-blue-500 text-white';
       default:
         return 'bg-white';
     }
@@ -120,13 +122,18 @@ export const WorkedDaysCalendar = ({
   const [month, year] = monthYear.split('/');
   const monthYearFormatted = format(new Date(parseInt(year), parseInt(month) - 1), 'MMMM yyyy', { locale: ptBR });
 
+  const isCurrentMonth = (date: Date) => {
+    const monthYearDate = parse(monthYear, 'M/yyyy', new Date());
+    return date.getMonth() === monthYearDate.getMonth() && date.getFullYear() === monthYearDate.getFullYear();
+  };
+
   return (
     <div className="rounded-xl border border-slate-200 p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium capitalize">{monthYearFormatted}</h3>
       </div>
       
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-2 max-w-3xl mx-auto">
         {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => (
           <div key={day} className="text-center text-sm font-medium text-gray-500">
             {day}
@@ -135,9 +142,9 @@ export const WorkedDaysCalendar = ({
         
         {calendarDays.map((date, index) => {
           const dayNum = date.getDate();
-          const isCurrentMonth = format(date, 'M/yyyy') === monthYear;
-          const location = isCurrentMonth ? getLocationForDay(dayNum) : undefined;
-          const hours = isCurrentMonth ? getHoursForDay(dayNum) : '';
+          const belongsToCurrentMonth = isCurrentMonth(date);
+          const location = belongsToCurrentMonth ? getLocationForDay(dayNum) : undefined;
+          const hours = belongsToCurrentMonth ? getHoursForDay(dayNum) : '';
           const locationClasses = getLocationColor(location);
           const dateKey = format(date, 'yyyy-MM-dd');
           const annotation = annotations[dateKey];
@@ -148,16 +155,17 @@ export const WorkedDaysCalendar = ({
               onClick={() => handleDayClick(date)}
               className={`
                 aspect-square rounded-lg p-1 flex flex-col items-center justify-start
-                ${isCurrentMonth ? '' : 'bg-gray-50'}
+                ${belongsToCurrentMonth ? '' : 'bg-gray-50 text-gray-400'}
                 ${locationClasses}
                 ${isAdmin ? 'cursor-pointer hover:opacity-80' : ''}
+                text-base md:text-sm
               `}
             >
-              <span className={`text-sm ${isCurrentMonth && !location ? '' : ''}`}>
+              <span className={`font-medium ${belongsToCurrentMonth && !location ? '' : ''}`}>
                 {dayNum}
               </span>
               {hours && (
-                <span className="text-xs font-medium">{hours}h</span>
+                <span className="font-medium">{hours}h</span>
               )}
               {annotation && (
                 <span className={`text-xs ${location ? 'text-white' : 'text-gray-600'} truncate max-w-full px-1`}>
