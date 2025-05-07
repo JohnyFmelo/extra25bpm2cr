@@ -46,7 +46,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     // --- Texto da Autuação ---
     const dataAtualExtenso = getDataAtualExtenso();
     const cidadeAutuacao = data.municipio || "VÁRZEA GRANDE"; // Usa município do TCO ou padrão
-    const localAutuacao = data.localEncerramento || "NO QUARTEL DO 25º BATALHÃO DE POLÍCIA MILITAR 2º COMANDO REGIONAL"; // Local padrão
+    const localAutuacao = data.localEncerramento || "NO CISC PARQUE DO LAGO"; // Local padrão
     const autuacaoText = `${dataAtualExtenso}, NESTA CIDADE DE ${cidadeAutuacao.toUpperCase()}, ESTADO DE MATO GROSSO, ${localAutuacao.toUpperCase()}, AUTUO AS PEÇAS QUE ADIANTE SE SEGUEM, DO QUE PARA CONSTAR, LAVREI E ASSINO ESTE TERMO.`;
     // Usa MAX_LINE_WIDTH implícito pelo getPageConstants dentro de addWrappedText
     yPos = addWrappedText(doc, yPos, autuacaoText, MARGIN_LEFT, 12, "normal", null, 'justify', data);
