@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
@@ -35,6 +34,7 @@ interface Pessoa {
   celular: string;
   email: string;
   laudoPericial: string;
+  assinatura?: string; // Added for Autor compatibility
 }
 
 const formatRepresentacao = (representacao: string): string => {
@@ -163,19 +163,22 @@ const TCOForm = () => {
     nome: "", sexo: "", estadoCivil: "", profissao: "",
     endereco: "", dataNascimento: "", naturalidade: "",
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
-    celular: "", email: "", laudoPericial: "Não"
+    celular: "", email: "", laudoPericial: "Não",
+    assinatura: ""
   }]);
   const [testemunhas, setTestemunhas] = useState<Pessoa[]>([{
     nome: "", sexo: "", estadoCivil: "", profissao: "",
     endereco: "", dataNascimento: "", naturalidade: "",
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
-    celular: "", email: "", laudoPericial: "Não"
+    celular: "", email: "", laudoPericial: "Não",
+    assinatura: ""
   }]);
   const [autores, setAutores] = useState<Pessoa[]>([{
     nome: "", sexo: "", estadoCivil: "", profissao: "",
     endereco: "", dataNascimento: "", naturalidade: "",
     filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
-    celular: "", email: "", laudoPericial: "Não"
+    celular: "", email: "", laudoPericial: "Não",
+    assinatura: ""
   }]);
   const relatoPolicialTemplate = `POR VOLTA DAS [HORÁRIO] DO DIA [DATA], NESTA CIDADE DE VÁRZEA GRANDE-MT, A GUARNIÇÃO DA VIATURA [GUARNIÇÃO][OPERACAO_TEXT] COMPOSTA PELOS MILITARES [GUPM], DURANTE RONDAS NO BAIRRO [BAIRRO], FOI ACIONADA VIA [MEIO DE ACIONAMENTO] PARA ATENDER A UMA OCORRÊNCIA DE [NATUREZA] NO [LOCAL], ONDE [VERSÃO INICIAL]. CHEGANDO NO LOCAL, A EQUIPE [O QUE A PM DEPAROU]. A VERSÃO DAS PARTES FOI REGISTRADA EM CAMPO PRÓPRIO. [VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]. [DILIGÊNCIAS E APREENSÕES REALIZADAS]. DIANTE DISSO, [ENCAMINHAMENTO PARA REGISTRO DOS FATOS].`;
   const [relatoPolicial, setRelatoPolicial] = useState(relatoPolicialTemplate);
@@ -315,7 +318,8 @@ const TCOForm = () => {
           nome: autor, sexo: "", estadoCivil: "", profissao: "",
           endereco: "", dataNascimento: "", naturalidade: "",
           filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
-          celular: "", email: "", laudoPericial: "Não"
+          celular: "", email: "", laudoPericial: "Não",
+          assinatura: ""
         });
       } else {
         newAutores[0] = { ...newAutores[0], nome: autor };
@@ -353,7 +357,8 @@ const TCOForm = () => {
       nome: "", sexo: "", estadoCivil: "", profissao: "",
       endereco: "", dataNascimento: "", naturalidade: "",
       filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
-      celular: "", email: "", laudoPericial: "Não"
+      celular: "", email: "", laudoPericial: "Não",
+      assinatura: ""
     }]);
   };
   const handleRemoveVitima = (index: number) => {
@@ -367,7 +372,8 @@ const TCOForm = () => {
       nome: "", sexo: "", estadoCivil: "", profissao: "",
       endereco: "", dataNascimento: "", naturalidade: "",
       filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
-      celular: "", email: "", laudoPericial: "Não"
+      celular: "", email: "", laudoPericial: "Não",
+      assinatura: ""
     }]);
   };
   const handleRemoveTestemunha = (index: number) => {
@@ -381,7 +387,8 @@ const TCOForm = () => {
       nome: "", sexo: "", estadoCivil: "", profissao: "",
       endereco: "", dataNascimento: "", naturalidade: "",
       filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
-      celular: "", email: "", laudoPericial: "Não"
+      celular: "", email: "", laudoPericial: "Não",
+      assinatura: ""
     }]);
   };
   const handleRemoveAutor = (index: number) => {
@@ -521,6 +528,8 @@ const TCOForm = () => {
         apreensoes: apreensoes.trim(),
         conclusaoPolicial: conclusaoPolicial.trim(),
         lacreNumero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : "",
+        lacre: "",
+        objetosApreendidos: [],
         drogaQuantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : undefined,
         drogaTipo: natureza === "Porte de drogas para consumo" ? substancia : undefined,
         drogaCor: natureza === "Porte de drogas para consumo" ? cor : undefined,
@@ -530,9 +539,7 @@ const TCOForm = () => {
         startTime: startTime?.toISOString(),
         endTime: completionNow.toISOString(),
         createdAt: new Date(),
-        createdBy: JSON.parse(localStorage.getItem("user") || "{}").id,
-        lacre: "", // Add missing property
-        objetosApreendidos: [] // Add missing property
+        createdBy: JSON.parse(localStorage.getItem("user") || "{}").id
       };
 
       // Excluir relatoVitima e representacao para casos de droga
@@ -549,7 +556,8 @@ const TCOForm = () => {
 
       toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
 
-      generatePDF(tcoDataParaSalvar);
+      const pdfDoc = generatePDF(tcoDataParaSalvar);
+      pdfDoc.save(`TCO_${tcoDataParaSalvar.tcoNumber}.pdf`);
 
       navigate("/?tab=tco");
     } catch (error: any) {
@@ -613,7 +621,7 @@ const TCOForm = () => {
         />
         <PessoasEnvolvidasTab
           activeTab={activeTab} setActiveTab={setActiveTab}
-          autorDetalhes={autores[0] || { nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "", laudoPericial: "Não" }}
+          autorDetalhes={autores[0] || { nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "", laudoPericial: "Não", assinatura: "" }}
           vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
           testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
           autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
