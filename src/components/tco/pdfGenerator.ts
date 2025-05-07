@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 import { addTermoCompromisso } from "./PDF/PDFTermoCompromisso";
 import { addTermoApreensao } from "./PDF/PDFTermoApreensao";
@@ -11,7 +10,7 @@ interface Autor {
   celular: string;
   endereco: string;
   municipio: string;
-  assinatura: string;
+  assinatura?: string; // Made optional
   sexo: string;
   estadoCivil: string;
   profissao: string;
@@ -53,6 +52,7 @@ interface Pessoa {
   celular: string;
   email: string;
   laudoPericial: string;
+  assinatura?: string;
 }
 
 interface FormData {
