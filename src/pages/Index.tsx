@@ -289,8 +289,19 @@ const Index = () => {
               </div>
               <Tabs value={tcoTab} onValueChange={setTcoTab} className="space-y-6 flex flex-col flex-grow">
                 <TabsList className="bg-white rounded-xl shadow-lg p-2 grid grid-cols-2 gap-2 my-0 py-0">
-                  <TabsTrigger value="list" aria-label="Visualizar Meus TCOs" className="py-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white px-[8px] mx-0">Meus TCO's</TabsTrigger>
-                  <TabsTrigger value="form" aria-label="Criar ou editar TCO" onClick={() => setSelectedTco(null)} className="px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white my-0 py-[6px]">
+                  <TabsTrigger
+                    value="list"
+                    aria-label="Visualizar Meus TCOs"
+                    className="py-2 rounded-lg text-gray-700 data-[state=active]:bg-primary data-[state=active]:text-white px-[8px] mx-0"
+                  >
+                    Meus TCO's
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="form"
+                    aria-label="Criar ou editar TCO"
+                    onClick={() => setSelectedTco(null)}
+                    className="px-4 rounded-lg text-gray-700 data-[state=active]:bg-primary data-[state=active]:text-white my-0 py-[6px]"
+                  >
                     Novo TCO
                   </TabsTrigger>
                 </TabsList>
