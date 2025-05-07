@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { HoursDonutChart } from "@/components/hours/HoursDonutChart";
@@ -14,12 +15,14 @@ interface UserHoursDisplayProps {
   data: HoursData;
   onClose: () => void;
   isAdmin?: boolean;
+  monthYear?: string;
 }
 
 export const UserHoursDisplay = ({
   data,
   onClose,
-  isAdmin = false
+  isAdmin = false,
+  monthYear
 }: UserHoursDisplayProps) => {
   const [userRank, setUserRank] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
@@ -115,7 +118,10 @@ export const UserHoursDisplay = ({
   const hourlyRate = determineHourlyRate(userRank);
   const totalValue = totalHours * hourlyRate;
 
+  // Use the provided monthYear or generate a default one for current month
   const getMonthYear = () => {
+    if (monthYear) return monthYear;
+    
     const currentDate = new Date();
     return `${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
   };
