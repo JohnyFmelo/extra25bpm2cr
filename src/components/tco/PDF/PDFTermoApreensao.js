@@ -16,8 +16,11 @@ const numberToText = (num) => {
 /** Adiciona Termo de Apreensão (em página nova) */
 export function addTermoApreensao(doc, data) {
     console.log("[PDFTermoApreensao] Iniciando renderização do Termo de Apreensão");
+    console.log("[PDFTermoApreensao] Dados recebidos:", data);
     console.log("[PDFTermoApreensao] Condutor telefone:", data.componentesGuarnicao?.[0]?.telefone);
+    console.log("[PDFTermoApreensao] Autor completo:", data.autores?.[0]);
     console.log("[PDFTermoApreensao] Autor sexo:", data.autores?.[0]?.sexo);
+    console.log("[PDFTermoApreensao] Relato autor:", data.relatoAutor);
 
     let yPos = addNewPage(doc, data);
     const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
@@ -92,8 +95,11 @@ export function addTermoApreensao(doc, data) {
     yPos = addWrappedText(doc, yPos, textoLegal, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 10;
 
-    // Usa "AUTORA DOS FATOS" para sexo "Feminino", "AUTOR DOS FATOS" para "Masculino" ou não informado
-    const autorLabel = autor?.sexo === "Feminino" ? "AUTORA DOS FATOS" : "AUTOR DOS FATOS";
+    // Usa relatoAutor para determinar o rótulo, com fallback para sexo
+    const relatoAutor = data.relatoAutor || '';
+    const autorLabel = relatoAutor.toUpperCase().includes("AUTORA") ? "AUTORA DOS FATOS" : "AUTOR DOS FATOS";
+    const sexo = autor?.sexo ? autor.sexo.toLowerCase().trim() : '';
+    console.log("[PDFTermoApreensao] Sexo processado:", sexo, "Relato autor contém 'AUTORA':", relatoAutor.toUpperCase().includes("AUTORA"), "Label escolhida:", autorLabel);
     yPos = addSignatureWithNameAndRole(doc, yPos, autor?.nome, autorLabel, data);
     const nomeCondutor = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
     yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutor, "CONDUTOR DA OCORRÊNCIA", data);
