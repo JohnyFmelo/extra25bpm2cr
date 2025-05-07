@@ -1,115 +1,120 @@
 import jsPDF from "jspdf";
+import { addTermoCompromisso } from "./PDFTermoCompromisso";
+import { addTermoApreensao } from "./PDFTermoApreensao";
+import { addHistorico } from "./PDFhistorico";
 
-// Importa funções auxiliares e de página da subpasta PDF
-import {
-    MARGIN_TOP, MARGIN_BOTTOM, MARGIN_RIGHT, getPageConstants,
-    addNewPage,
-    addStandardFooterContent
-} from './PDF/pdfUtils.js';
+interface Autor {
+  nome: string;
+  rg: string;
+  cpf: string;
+  celular: string;
+  endereco: string;
+  municipio: string;
+  assinatura: string;
+  sexo: string; // Compatível com "Masculino" ou "Feminino" de TCOForm.tsx
+  estadoCivil: string;
+  profissao: string;
+  dataNascimento: string;
+  naturalidade: string;
+  filiacaoMae: string;
+  filiacaoPai: string;
+  laudoPericial: string;
+}
 
-// Importa geradores de conteúdo da subpasta PDF
-import { generateAutuacaoPage } from './PDF/PDFautuacao.js';
-import { generateHistoricoContent } from './PDF/PDFhistorico.js';
-import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
-import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
-import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
-import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
-import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
-import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
+interface ComponenteGuarnicao {
+  rg: string;
+  nome: string;
+  posto: string;
+  pai?: string;
+  mae?: string;
+  naturalidade?: string;
+  cpf?: string;
+  telefone?: string;
+}
 
-// --- Função Principal de Geração ---
-export const generatePDF = (inputData: any) => {
-    if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
-        console.error("Input data missing or invalid. Cannot generate PDF.");
-        alert("Erro: Dados inválidos para gerar o PDF.");
-        return;
-    }
+interface ObjetoApreendido {
+  descricao: string;
+  quantidade: string;
+}
 
-    // Cria a instância do jsPDF
-    const doc = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-    });
+interface Pessoa {
+  nome: string;
+  sexo: string;
+  estadoCivil: string;
+  profissao: string;
+  endereco: string;
+  dataNascimento: string;
+  naturalidade: string;
+  filiacaoMae: string;
+  filiacaoPai: string;
+  rg: string;
+  cpf: string;
+  celular: string;
+  email: string;
+  laudoPericial: string;
+}
 
-    // Clona os dados para evitar mutações inesperadas no objeto original
-    const data = { ...inputData };
+interface FormData {
+  tcoNumber: string;
+  natureza: string;
+  originalNatureza: string;
+  customNatureza: string;
+  tipificacao: string;
+  penaDescricao: string;
+  dataFato: string;
+  horaFato: string;
+  dataInicioRegistro: string;
+  horaInicioRegistro: string;
+  dataTerminoRegistro: string;
+  horaTerminoRegistro: string;
+  localFato: string;
+  endereco: string;
+  municipio: string;
+  comunicante: string;
+  guarnicao: string;
+  operacao: string;
+  lacre: string;
+  lacreNumero: string;
+  apreensoes: string;
+  relatoPolicial: string;
+  relatoAutor: string;
+  relatoTestemunha: string;
+  relatoVitima?: string;
+  representacao?: string;
+  autores: Autor[];
+  vitimas: Pessoa[];
+  testemunhas: Pessoa[];
+  componentesGuarnicao: ComponenteGuarnicao[];
+  objetosApreendidos: ObjetoApreendido[];
+  drogaQuantidade: string;
+  drogaTipo?: string;
+  drogaCor?: string;
+  drogaNomeComum: string;
+  drogaCustomDesc: string;
+  drogaIsUnknown: boolean;
+  startTime?: string;
+  endTime?: string;
+  createdAt?: Date;
+  createdBy?: string;
+}
 
-    // Pega as constantes da página
-    const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
-    let yPosition;
+export const generatePDF = (data: FormData): jsPDF => {
+  console.log("[pdfGenerator] Iniciando geração do PDF com dados:", data);
+  const doc = new jsPDF({ format: "a4" });
+  let yPos = 0;
 
-    // --- PÁGINA 1: AUTUAÇÃO ---
-    yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
+  // Adiciona Termo de Compromisso
+  yPos = addTermoCompromisso(doc, data, yPos);
+  console.log("[pdfGenerator] Termo de Compromisso adicionado, yPos:", yPos);
 
-    // --- RESTANTE DO TCO (PÁGINAS 2+) ---
-    yPosition = addNewPage(doc, data);
+  // Adiciona Termo de Apreensão (em nova página)
+  yPos = addTermoApreensao(doc, data);
+  console.log("[pdfGenerator] Termo de Apreensão adicionado, yPos:", yPos);
 
-    // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
-    yPosition = generateHistoricoContent(doc, yPosition, data);
+  // Adiciona Histórico
+  yPos = addHistorico(doc, data, yPos);
+  console.log("[pdfGenerator] Histórico adicionado, yPos:", yPos);
 
-    // --- ADIÇÃO DOS TERMOS ---
-    if (data.autores && data.autores.length > 0) {
-        addTermoCompromisso(doc, data);
-    } else {
-        console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
-    }
-
-    // Adiciona Termo de Manifestação apenas se NÃO for caso de droga
-    if (data.natureza !== "Porte de drogas para consumo") {
-        addTermoManifestacao(doc, data);
-    } else {
-        console.log("Caso de droga detectado, pulando Termo de Manifestação da Vítima.");
-    }
-
-    if (data.apreensaoDescrição || data.apreensoes) {
-        addTermoApreensao(doc, data);
-    }
-
-    if (data.drogaTipo || data.drogaNomeComum) {
-        addTermoConstatacaoDroga(doc, data);
-    }
-
-    // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
-    // Verifica se algum autor ou vítima tem laudoPericial: "Sim"
-    const pessoasComLaudo = [
-        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
-        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-    ].filter(p => p.nome && p.nome.trim()); // Filtra nomes válidos
-
-    if (pessoasComLaudo.length > 0) {
-        pessoasComLaudo.forEach(pessoa => {
-            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
-            addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
-        });
-    } else {
-        console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
-    }
-
-    addTermoEncerramentoRemessa(doc, data);
-
-    // --- Finalização: Adiciona Números de Página e Salva ---
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFont("helvetica", "normal"); doc.setFontSize(8);
-        doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
-
-        if (i > 1) {
-            addStandardFooterContent(doc);
-        }
-    }
-
-    // --- Salvamento ---
-    const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
-
-    try {
-        doc.save(fileName);
-        console.log(`PDF Gerado: ${fileName}`);
-    } catch (error) {
-        console.error("Erro ao salvar o PDF:", error);
-        alert("Ocorreu um erro ao tentar salvar o PDF.");
-    }
+  console.log("[pdfGenerator] PDF gerado com sucesso");
+  return doc;
 };
