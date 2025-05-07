@@ -15,6 +15,7 @@ import { TravelManagement } from "@/components/TravelManagement";
 import { useToast } from "@/hooks/use-toast";
 import TCOForm from "@/components/TCOForm";
 import { Button } from "@/components/ui/button";
+import TCOList from "@/components/tco/TCOList";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -63,13 +64,13 @@ const Index = () => {
   const handleTCOClick = () => {
     setActiveTab("tco");
   };
+  const handleTCOFormClick = () => {
+    setActiveTab("tco-form");
+  };
 
   return (
-    // 1. Div raiz da página: Adicionado flex flex-col
     <div className="relative min-h-screen bg-[#E8F1F2] flex flex-col">
-      {/* 2. Div principal de conteúdo: Adicionado flex flex-col flex-grow */}
-      <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto flex flex-col flex-grow w-full"> {/* Adicionado w-full para garantir que max-w-7xl não impeça o crescimento se o conteúdo for menor */}
-        {/* 3. Componente Tabs: Adicionado flex flex-col flex-grow */}
+      <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto flex flex-col flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8 flex flex-col flex-grow">
           <TabsList className="hidden">
             <TabsTrigger value="main">Main</TabsTrigger>
@@ -82,6 +83,7 @@ const Index = () => {
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="travel">Travel</TabsTrigger>
             <TabsTrigger value="tco">TCO</TabsTrigger>
+            <TabsTrigger value="tco-form">TCO Form</TabsTrigger>
           </TabsList>
 
           <TabsContent value="main">
@@ -220,18 +222,34 @@ const Index = () => {
             </div>
           </TabsContent>
 
-          {/* 4. TabsContent para o TCO: Adicionado flex flex-col flex-grow */}
-          {/* O TabsContent em si já é um flex item do Tabs, então flex-grow aqui o faz ocupar espaço. */}
-          {/* flex-col é para organizar o conteúdo interno (o div.relative e o botão de voltar) */}
           <TabsContent value="tco" className="flex flex-col flex-grow">
-            {/* 5. Div relative dentro do TabsContent: Adicionado flex flex-col flex-grow */}
             <div className="relative flex flex-col flex-grow">
-              <div className="absolute right-0 -top-12 mb-4"> {/* Este botão de voltar fica posicionado absoluto, não interfere no flex */}
+              <div className="absolute right-0 -top-12 mb-4">
                 <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              {/* 6. Div bg-white que envolve o TCOForm: Adicionado flex flex-col flex-grow overflow-y-auto */}
+              <div className="bg-white rounded-xl shadow-lg flex flex-col flex-grow overflow-y-auto">
+                <TCOList />
+              </div>
+              <div className="fixed bottom-6 right-6 z-10">
+                <Button 
+                  onClick={handleTCOFormClick} 
+                  className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 flex items-center justify-center text-white"
+                >
+                  <Plus className="h-6 w-6" />
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="tco-form" className="flex flex-col flex-grow">
+            <div className="relative flex flex-col flex-grow">
+              <div className="absolute right-0 -top-12 mb-4">
+                <button onClick={() => setActiveTab("tco")} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para lista de TCOs">
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
               <div className="bg-white rounded-xl shadow-lg flex flex-col flex-grow overflow-y-auto">
                 <TCOForm />
               </div>
