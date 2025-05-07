@@ -1,91 +1,115 @@
+import jsPDF from "jspdf";
 
-import { jsPDF } from "jspdf";
-import { PDFautuacao } from "./PDF/PDFautuacao";
-import { PDFhistorico } from "./PDF/PDFhistorico";
-import { PDFTermoManifestacao } from "./PDF/PDFTermoManifestacao";
-import { PDFTermoCompromisso } from "./PDF/PDFTermoCompromisso";
-import { PDFTermoEncerramentoRemessa } from "./PDF/PDFTermoEncerramentoRemessa";
-import { PDFTermoRequisicaoExameLesao } from "./PDF/PDFTermoRequisicaoExameLesao";
-import { PDFTermoApreensao } from "./PDF/PDFTermoApreensao";
-import { PDFTermoConstatacaoDroga } from "./PDF/PDFTermoConstatacaoDroga";
+// Importa funções auxiliares e de página da subpasta PDF
+import {
+    MARGIN_TOP, MARGIN_BOTTOM, MARGIN_RIGHT, getPageConstants,
+    addNewPage,
+    addStandardFooterContent
+} from './PDF/pdfUtils.js';
 
-/**
- * Gera o PDF do Termo Circunstanciado de Ocorrência com todos os anexos
- * @param data Dados do TCO
- */
-export const generatePDF = (data) => {
-  console.log("Iniciando geração do PDF:", { data });
+// Importa geradores de conteúdo da subpasta PDF
+import { generateAutuacaoPage } from './PDF/PDFautuacao.js';
+import { generateHistoricoContent } from './PDF/PDFhistorico.js';
+import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
+import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
+import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
+import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
+import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
+import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
 
-  try {
-    // Cria um novo documento PDF com orientação retrato
+// --- Função Principal de Geração ---
+export const generatePDF = (inputData: any) => {
+    if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
+        console.error("Input data missing or invalid. Cannot generate PDF.");
+        alert("Erro: Dados inválidos para gerar o PDF.");
+        return;
+    }
+
+    // Cria a instância do jsPDF
     const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
     });
 
-    // Definir margens padrão
-    const margin = {
-      top: 20,
-      right: 20,
-      bottom: 20,
-      left: 20,
-    };
+    // Clona os dados para evitar mutações inesperadas no objeto original
+    const data = { ...inputData };
 
-    // Cabeçalho e rodapé
-    let pageNumber = 1;
-    
-    // Página de Autuação
-    PDFautuacao(doc, data, margin, pageNumber++);
-    doc.addPage();
-    
-    // Página de Histórico
-    PDFhistorico(doc, data, margin, pageNumber++);
-    doc.addPage();
-    
-    // Se não for caso de drogas e tiver vítimas, gera o Termo de Manifestação
-    if (data.natureza !== "Porte de drogas para consumo" && data.vitimas && data.vitimas.length > 0) {
-      PDFTermoManifestacao(doc, data, margin, pageNumber++);
-      doc.addPage();
+    // Pega as constantes da página
+    const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
+    let yPosition;
+
+    // --- PÁGINA 1: AUTUAÇÃO ---
+    yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
+
+    // --- RESTANTE DO TCO (PÁGINAS 2+) ---
+    yPosition = addNewPage(doc, data);
+
+    // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
+    yPosition = generateHistoricoContent(doc, yPosition, data);
+
+    // --- ADIÇÃO DOS TERMOS ---
+    if (data.autores && data.autores.length > 0) {
+        addTermoCompromisso(doc, data);
+    } else {
+        console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
     }
-    
-    // Termo de Compromisso
-    PDFTermoCompromisso(doc, data, margin, pageNumber++);
-    doc.addPage();
-    
-    // Se houve apreensão de objetos/materiais (incluindo drogas)
-    if (data.natureza === "Porte de drogas para consumo" || (data.apreensoes && data.apreensoes.trim().length > 0)) {
-      PDFTermoApreensao(doc, data, margin, pageNumber++);
-      doc.addPage();
-      
-      // Se for caso de drogas, gera o Termo de Constatação
-      if (data.natureza === "Porte de drogas para consumo") {
-        PDFTermoConstatacaoDroga(doc, data, margin, pageNumber++);
-        doc.addPage();
-      }
+
+    // Adiciona Termo de Manifestação apenas se NÃO for caso de droga
+    if (data.natureza !== "Porte de drogas para consumo") {
+        addTermoManifestacao(doc, data);
+    } else {
+        console.log("Caso de droga detectado, pulando Termo de Manifestação da Vítima.");
     }
-    
-    // Se tiver vítima com laudo pericial "Sim"
-    if (data.vitimas && data.vitimas.some(v => v.laudoPericial === "Sim")) {
-      PDFTermoRequisicaoExameLesao(doc, data, margin, pageNumber++);
-      doc.addPage();
+
+    if (data.apreensaoDescrição || data.apreensoes) {
+        addTermoApreensao(doc, data);
     }
-    
-    // Termo de Encerramento e Remessa
-    PDFTermoEncerramentoRemessa(doc, data, margin, pageNumber);
-    
-    // Remove a última página em branco
-    if (doc.getNumberOfPages() > pageNumber) {
-      doc.deletePage(doc.getNumberOfPages());
+
+    if (data.drogaTipo || data.drogaNomeComum) {
+        addTermoConstatacaoDroga(doc, data);
     }
-    
-    // Salva o PDF com o nome contendo o número do TCO
-    const fileName = `TCO-${data.tcoNumber.replace(/\//g, '-')}.pdf`;
-    doc.save(fileName);
-    
-    console.log("PDF gerado com sucesso:", fileName);
-  } catch (error) {
-    console.error("Erro ao gerar PDF:", error);
-    throw new Error(`Erro ao gerar PDF: ${error.message}`);
-  }
+
+    // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
+    // Verifica se algum autor ou vítima tem laudoPericial: "Sim"
+    const pessoasComLaudo = [
+        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
+        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
+    ].filter(p => p.nome && p.nome.trim()); // Filtra nomes válidos
+
+    if (pessoasComLaudo.length > 0) {
+        pessoasComLaudo.forEach(pessoa => {
+            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
+            addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
+        });
+    } else {
+        console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
+    }
+
+    addTermoEncerramentoRemessa(doc, data);
+
+    // --- Finalização: Adiciona Números de Página e Salva ---
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+        doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
+
+        if (i > 1) {
+            addStandardFooterContent(doc);
+        }
+    }
+
+    // --- Salvamento ---
+    const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
+
+    try {
+        doc.save(fileName);
+        console.log(`PDF Gerado: ${fileName}`);
+    } catch (error) {
+        console.error("Erro ao salvar o PDF:", error);
+        alert("Ocorreu um erro ao tentar salvar o PDF.");
+    }
 };
