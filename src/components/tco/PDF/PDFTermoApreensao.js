@@ -71,8 +71,6 @@ export function addTermoApreensao(doc, data) {
         yPos += 6;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(12);
-        yPos = addFieldWrapper(doc, yPos, "LACRE", lacreNumero, data);
-        yPos += 5;
     }
 
     doc.setFont("helvetica", "normal");
