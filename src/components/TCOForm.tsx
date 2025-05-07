@@ -335,7 +335,7 @@ const TCOForm = () => {
       });
       toast({ title: "Adicionado", description: `Policial ${novoPolicial.nome} adicionado à guarnição.` });
     } else {
-      toast({ variant: "destructive", title: "Duplicado", description: "Este policial já está na guarnição." });
+      toast({ variant: "warning", title: "Duplicado", description: "Este policial já está na guarnição." });
     }
   }, [componentesGuarnicao, toast]);
 
