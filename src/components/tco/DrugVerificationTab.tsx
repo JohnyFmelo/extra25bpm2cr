@@ -84,6 +84,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
             <Input id="indicios" value={indicios} readOnly className="bg-gray-100" />
           </div>
 
+          {/* O campo de descrição só aparece se isUnknownMaterial for true E ambos substancia e cor estiverem selecionados */}
           {isUnknownMaterial && substancia !== "" && cor !== "" && (
             <div>
               <Label htmlFor="customMaterialDesc">Descrição do Material *</Label>
