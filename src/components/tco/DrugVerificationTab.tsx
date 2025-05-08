@@ -35,7 +35,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
 }) => {
   return <Card>
       <CardHeader className="my-0 py-[8px]">
-        <CardTitle>Constatação Preliminar de Droga</CardTitle>
+        <CardTitle className="py-[10px]">Constatação Preliminar de Droga</CardTitle>
         
       </CardHeader>
       <CardContent>
