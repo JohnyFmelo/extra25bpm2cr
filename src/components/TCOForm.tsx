@@ -24,7 +24,7 @@ interface Pessoa {
   sexo: string;
   estadoCivil: string;
   profissao: string;
-  endereco: string;
+  // endereco: string; // Original field
   dataNascimento: string;
   naturalidade: string;
   filiacaoMae: string;
@@ -34,13 +34,30 @@ interface Pessoa {
   celular: string;
   email: string;
   laudoPericial: string;
+
+  // Campos de endereço atualizados/novos
+  cep: string;
+  endereco: string; // Armazenará Logradouro, Bairro
+  numero: string;
+  complemento: string;
+  cidade: string; // Armazenará a cidade do CEP
+  uf: string;     // Armazenará o UF do CEP
 }
 
 const initialPersonData: Pessoa = {
   nome: "", sexo: "", estadoCivil: "", profissao: "",
-  endereco: "", dataNascimento: "", naturalidade: "",
+  // endereco: "", // Original field initialization
+  dataNascimento: "", naturalidade: "",
   filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
-  celular: "", email: "", laudoPericial: "Não"
+  celular: "", email: "", laudoPericial: "Não",
+
+  // Initialize new/updated address fields
+  cep: "",
+  endereco: "", // Para "Logradouro, Bairro"
+  numero: "",
+  complemento: "",
+  cidade: "",
+  uf: ""
 };
 
 const formatRepresentacao = (representacao: string): string => {
@@ -150,7 +167,7 @@ const TCOForm = () => {
   const [dataTerminoRegistro, setDataTerminoRegistro] = useState(formattedDate);
   const [horaTerminoRegistro, setHoraTerminoRegistro] = useState(formattedTime);
   const [localFato, setLocalFato] = useState("");
-  const [endereco, setEndereco] = useState("");
+  const [endereco, setEndereco] = useState(""); // Este é o endereço DO FATO
   const [municipio] = useState("Várzea Grande");
   const [comunicante, setComunicante] = useState("CIOSP");
   const [guarnicao, setGuarnicao] = useState("");
@@ -279,7 +296,8 @@ const TCOForm = () => {
     if (isRelatoPolicialManuallyEdited) return;
 
     let updatedRelato = relatoPolicialTemplate;
-    const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
+    // 'endereco' aqui é o state 'endereco' do TCOForm, que é o endereço do fato.
+    const bairroDoFato = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
     const gupm = formatarGuarnicao(componentesGuarnicao);
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "OUTROS" : natureza;
     const operacaoText = operacao ? `, DURANTE A ${operacao},` : "";
@@ -290,7 +308,7 @@ const TCOForm = () => {
       .replace("[GUARNIÇÃO]", guarnicao || "[GUARNIÇÃO PENDENTE]")
       .replace("[OPERACAO_TEXT]", operacaoText)
       .replace("[GUPM]", gupm)
-      .replace("[BAIRRO]", bairro)
+      .replace("[BAIRRO]", bairroDoFato) // Usar bairroDoFato aqui
       .replace("[MEIO DE ACIONAMENTO]", comunicante || "[ACIONAMENTO]")
       .replace("[NATUREZA]", displayNaturezaReal || "[NATUREZA PENDENTE]")
       .replace("[LOCAL]", localFato || "[LOCAL PENDENTE]")
@@ -302,7 +320,7 @@ const TCOForm = () => {
 
     updatedRelato = updatedRelato.toUpperCase();
     setRelatoPolicial(updatedRelato);
-  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate]); // Adicionado relatoPolicialTemplate
+  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate]);
 
   useEffect(() => {
     const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
@@ -342,13 +360,8 @@ const TCOForm = () => {
   };
 
   const handleRemoveVitima = (index: number) => {
-    // Não permitir remover a última vítima se o array deve ter pelo menos um item.
-    // Se for permitido ficar vazio, esta lógica está ok.
-    // Para manter sempre ao menos uma (a menos que seja a última e o usuário queira limpar),
-    // a lógica de PessoasEnvolvidasTab já controla o botão de remover para aparecer só se length > 1.
-    // Se o array tem 1 item e o botão não aparece, esta função só será chamada se length > 1.
     const newVitimas = vitimas.filter((_, i) => i !== index);
-    if (newVitimas.length === 0) { // Se todas as vítimas foram removidas, adiciona uma padrão
+    if (newVitimas.length === 0) { 
         setVitimas([{...initialPersonData}]);
     } else {
         setVitimas(newVitimas);
@@ -379,7 +392,6 @@ const TCOForm = () => {
     } else {
         setAutores(newAutores);
     }
-    // Atualiza o nome do autor principal se o autor removido era o primeiro
     if (index === 0 && newAutores.length > 0) setAutor(newAutores[0].nome);
     else if (newAutores.length === 0) setAutor("");
   };
@@ -425,7 +437,7 @@ const TCOForm = () => {
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
     } else if (field === 'dataNascimento') {
-      const birthDate = new Date(value + 'T00:00:00Z'); // Adiciona T00:00:00Z para tratar como UTC
+      const birthDate = new Date(value + 'T00:00:00Z'); 
       if (!isNaN(birthDate.getTime())) {
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
@@ -438,7 +450,7 @@ const TCOForm = () => {
     }
     newAutores[index] = { ...newAutores[index], [field]: processedValue };
     setAutores(newAutores);
-    if (index === 0 && field === 'nome') setAutor(processedValue); // Atualiza nome do autor principal
+    if (index === 0 && field === 'nome') setAutor(processedValue); 
   };
 
   const handleRelatoPolicialChange = (value: string) => {
@@ -475,7 +487,7 @@ const TCOForm = () => {
       const displayNaturezaReal = natureza === "Outros" ? customNatureza : natureza;
       const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc : indicios) : "";
       
-      const vitimasFiltradas = vitimas.filter(v => v.nome?.trim()); // Sempre filtra por nome
+      const vitimasFiltradas = vitimas.filter(v => v.nome?.trim()); 
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim());
 
       const tcoDataParaSalvar: any = {
@@ -492,10 +504,10 @@ const TCOForm = () => {
         dataTerminoRegistro: completionDate,
         horaTerminoRegistro: completionTime,
         localFato: localFato.trim(),
-        endereco: endereco.trim(),
+        endereco: endereco.trim(), // Endereço do FATO
         municipio,
         comunicante,
-        autores: autoresValidos, // Salva apenas autores com nome
+        autores: autoresValidos, 
         vitimas: vitimasFiltradas,
         testemunhas: testemunhasFiltradas,
         guarnicao: guarnicao.trim(),
@@ -517,18 +529,18 @@ const TCOForm = () => {
         endTime: completionNow.toISOString(),
         createdAt: new Date(),
         createdBy: JSON.parse(localStorage.getItem("user") || "{}").id,
-        lacre: "", // Presumo que este 'lacre' seja diferente de 'lacreNumero' ou será preenchido por outra lógica
-        objetosApreendidos: [] // Presumo que será preenchido por outra lógica
+        lacre: "", 
+        objetosApreendidos: [] 
       };
 
       if (vitimasFiltradas.length > 0) {
         tcoDataParaSalvar.relatoVitima = relatoVitima.trim();
-        if (representacao) { // Apenas adiciona representacao se houver um valor selecionado
+        if (representacao) { 
           tcoDataParaSalvar.representacao = formatRepresentacao(representacao);
         }
       } else {
-        tcoDataParaSalvar.relatoVitima = ""; // Garante que relatoVitima seja vazio se não houver vítimas
-        delete tcoDataParaSalvar.representacao; // Remove representacao se não houver vítimas
+        tcoDataParaSalvar.relatoVitima = ""; 
+        delete tcoDataParaSalvar.representacao; 
       }
 
       Object.keys(tcoDataParaSalvar).forEach(key => tcoDataParaSalvar[key] === undefined && delete tcoDataParaSalvar[key]);
@@ -566,7 +578,7 @@ const TCOForm = () => {
         <BasicInformationTab
           tcoNumber={tcoNumber} setTcoNumber={setTcoNumber}
           natureza={natureza} setNatureza={setNatureza}
-          autor={autor} setAutor={setAutor} // Passa o nome do autor principal
+          autor={autor} setAutor={setAutor} 
           penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
           customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
           startTime={startTime} isTimerRunning={isTimerRunning}
@@ -590,7 +602,7 @@ const TCOForm = () => {
           dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro}
           dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro}
           localFato={localFato} setLocalFato={setLocalFato}
-          endereco={endereco} setEndereco={setEndereco}
+          endereco={endereco} setEndereco={setEndereco} // Endereço DO FATO
           municipio={municipio}
           comunicante={comunicante} setComunicante={setComunicante}
           guarnicao={guarnicao} setGuarnicao={setGuarnicao}
@@ -603,7 +615,7 @@ const TCOForm = () => {
           vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
           testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
           autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
-          natureza={natureza} // Passando natureza para PessoasEnvolvidasTab
+          natureza={natureza} 
         />
         <GuarnicaoTab
           currentGuarnicaoList={componentesGuarnicao}
@@ -617,9 +629,6 @@ const TCOForm = () => {
           relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha}
           apreensoes={apreensoes} setApreensoes={setApreensoes}
           conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial}
-          // drugSeizure não é mais necessário para controlar o campo de representação aqui,
-          // mas pode ser útil para outros elementos em HistoricoTab.
-          // Se `representacao` deve ser sempre visível, ajuste em HistoricoTab.
           drugSeizure={natureza === "Porte de drogas para consumo"} 
           representacao={representacao} setRepresentacao={setRepresentacao}
           natureza={natureza}
