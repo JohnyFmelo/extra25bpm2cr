@@ -1,11 +1,9 @@
-
-// src/components/tco/PDF/PDFhistorico.js
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
     checkPageBreak, addSignatureWithNameAndRole
 } from './pdfUtils.js';
-import QRCode from 'qrcode'; // Importa a biblioteca para gerar QR codes
+import QRCode from 'qrcode';
 
 /**
  * Gera o conteúdo das seções 1 a 5 do TCO.
@@ -204,7 +202,17 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 yPos = checkPageBreak(doc, yPos, photoHeight + 5, data);
 
                 try {
-                    doc.addImage(photo, 'JPEG', xPos, yPos, photoWidth, photoHeight);
+                    // Verifica se a foto é um objeto File e converte para data URL
+                    let imageData = photo;
+                    if (photo instanceof File) {
+                        imageData = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(photo);
+                        });
+                    }
+                    doc.addImage(imageData, 'JPEG', xPos, yPos, photoWidth, photoHeight);
                     xPos += photoWidth + 5; // Espaço entre fotos
 
                     // Verifica se precisa quebrar a linha
@@ -235,7 +243,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
 
                 try {
-                    // Usando QRCode para gerar uma URL de dados para o QR code
                     const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
                     doc.addImage(qrCodeDataUrl, 'PNG', xPos, yPos, qrSize, qrSize);
                     
