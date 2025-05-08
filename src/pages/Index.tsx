@@ -19,6 +19,7 @@ import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/fire
 import { db } from "@/lib/firebase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
@@ -26,10 +27,8 @@ const Index = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showInformationDialog, setShowInformationDialog] = useState(false);
-  const {
-    toast
-  } = useToast();
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const { toast } = useToast();
+  const user = JSON.parse  const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
 
   // States for TCO management
@@ -92,6 +91,7 @@ const Index = () => {
       fetchUserTcos();
     }
   }, [activeTab, user.id]);
+
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
@@ -126,7 +126,9 @@ const Index = () => {
   const handleTCOClick = () => {
     setActiveTab("tco");
   };
-  return <div className="relative min-h-screen bg-[#E8F1F2] flex flex-col">
+
+  return (
+    <div className="relative min-h-screen bg-[#E8F1F2] flex flex-col">
       <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto flex flex-col flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8 flex flex-col flex-grow">
           <TabsList className="hidden">
@@ -147,11 +149,13 @@ const Index = () => {
               <IconCard icon={Clock} label="Horas" />
               <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
               <IconCard icon={Bell} label="Notificações" onClick={handleNotificationsClick} badge={unreadCount > 0 ? unreadCount : undefined} />
-              {user.userType === "admin" && <>
+              {user.userType === "admin" && (
+                <>
                   <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
                   <IconCard icon={MessageSquare} label="Recados" onClick={handleMessageClick} />
                   <IconCard icon={Scale} label="TCO" onClick={handleTCOClick} />
-                </>}
+                </>
+              )}
               <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
               <IconCard icon={Settings} label="Configurações" onClick={handleSettingsClick} />
               <IconCard icon={MapPinned} label="Viagens" onClick={handleTravelClick} />
@@ -161,15 +165,24 @@ const Index = () => {
           <TabsContent value="extra">
             <div className="relative">
               <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              {user.userType === "admin" && <div className="fixed bottom-6 right-6 z-10">
-                  <Button onClick={handleEditorClick} className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 flex items-center justify-center text-gray-50 bg-red-500 hover:bg-red-400">
+              {user.userType === "admin" && (
+                <div className="fixed bottom-6 right-6 z-10">
+                  <Button
+                    onClick={handleEditorClick}
+                    className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 flex items-center justify-center text-gray-50 bg-red-500 hover:bg-red-400"
+                  >
                     <Plus className="h-6 w-6" />
                   </Button>
-                </div>}
+                </div>
+              )}
               <TimeSlotsList />
             </div>
           </TabsContent>
@@ -177,22 +190,35 @@ const Index = () => {
           <TabsContent value="settings">
             <div className="relative">
               <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
               <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
                 <h2 className="text-2xl font-semibold mb-6">Configurações</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button onClick={() => setShowProfileDialog(true)} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                  <button
+                    onClick={() => setShowProfileDialog(true)}
+                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
                     <h3 className="font-medium">Alterar Cadastro</h3>
                     <p className="text-sm text-gray-600">Atualize suas informações pessoais</p>
                   </button>
-                  <button onClick={() => setShowPasswordDialog(true)} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                  <button
+                    onClick={() => setShowPasswordDialog(true)}
+                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
                     <h3 className="font-medium">Alterar Senha</h3>
                     <p className="text-sm text-gray-600">Modifique sua senha de acesso</p>
                   </button>
-                  <button onClick={() => setShowInformationDialog(true)} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                  <button
+                    onClick={() => setShowInformationDialog(true)}
+                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
                     <h3 className="font-medium">Informações</h3>
                     <p className="text-sm text-gray-600">Visualize a estrutura funcional do sistema</p>
                   </button>
@@ -204,18 +230,32 @@ const Index = () => {
           <TabsContent value="editor">
             <div className="relative">
               <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para aba extra">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para aba extra"
+                >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <WeeklyCalendar isLocked={isLocked} onLockChange={setIsLocked} currentDate={currentDate} onDateChange={setCurrentDate} showControls={true} />
+              <WeeklyCalendar
+                isLocked={isLocked}
+                onLockChange={setIsLocked}
+                currentDate={currentDate}
+                onDateChange={setCurrentDate}
+                showControls={true}
+              />
             </div>
           </TabsContent>
 
           <TabsContent value="users">
             <div className="relative">
               <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
@@ -228,7 +268,11 @@ const Index = () => {
           <TabsContent value="schedule">
             <div className="relative">
               <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
@@ -242,7 +286,11 @@ const Index = () => {
           <TabsContent value="messages">
             <div className="relative">
               <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
@@ -255,7 +303,11 @@ const Index = () => {
           <TabsContent value="notifications">
             <div className="relative">
               <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
@@ -268,7 +320,11 @@ const Index = () => {
           <TabsContent value="travel">
             <div className="relative">
               <div className="absolute right-0 -top-12 mb-4">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+                <button
+                  onClick={handleBackClick}
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  aria-label="Voltar para home"
+                >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
@@ -278,81 +334,148 @@ const Index = () => {
             </div>
           </TabsContent>
 
-          {/* Modified TCO tab with navigation bar */}
-            <TabsContent value="tco" className="flex flex-col flex-grow">
-              <div className="flex flex-col flex-grow">
-                <div className="relative">
-                  <div className="absolute right-0 -top-12 mb-4">
-                    <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
-                      <ArrowLeft className="h-6 w-6" />
-                    </button>
-                  </div>
-                  <Tabs value={tcoTab} onValueChange={setTcoTab} className="space-y-6 flex flex-col flex-grow">
-                    <TabsList className="bg-white rounded-xl shadow-lg p-2 grid grid-cols-2 gap-2 my-0 py-0">
-                      <TabsTrigger value="list" aria-label="Visualizar Meus TCOs" className="py-2 rounded-lg text-gray-700 data-[state=active]:bg-primary data-[state=active]:text-white px-[8px] mx-0">
-                        Meus TCO's
-                      </TabsTrigger>
-                      <TabsTrigger value="form" aria-label="Criar ou editar TCO" onClick={() => setSelectedTco(null)} className="px-4 rounded-lg text-gray-700 data-[state=active]:bg-primary data-[state=active]:text-white my-0 py-[6px]">
-                        Novo TCO
-                      </TabsTrigger>
-                    </TabsList>
-                    {/* Resto do conteúdo da aba TCO permanece igual */}
-                  </Tabs>
+          <TabsContent value="tco" className="flex flex-col flex-grow">
+            <div className="flex flex-col flex-grow">
+              <div className="relative">
+                <div className="absolute right-0 -top-12 mb-4">
+                  <button
+                    onClick={handleBackClick}
+                    className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                    aria-label="Voltar para home"
+                  >
+                    <ArrowLeft className="h-6 w-6" />
+                  </button>
                 </div>
-              </div>
-            </TabsContent>    
-                  <div className="flex items-center justify-between mb-4">
-                    
-                    
-                  </div>
-                  {isLoading ? <p className="text-center py-8">Carregando TCOs...</p> : tcoList.length === 0 ? <p className="text-center py-8 text-gray-500">Nenhum TCO encontrado</p> : <Table role="grid">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="bg-slate-400">Número</TableHead>
-                          <TableHead className="bg-slate-400">Data</TableHead>
-                          <TableHead className="bg-slate-400">Natureza</TableHead>
-                          <TableHead className="bg-slate-400">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {tcoList.map(tco => <TableRow key={tco.id} aria-selected={selectedTco?.id === tco.id} className={`cursor-pointer ${selectedTco?.id === tco.id ? 'bg-primary/10' : ''}`}>
-                            <TableCell className="font-medium">{tco.tcoNumber}</TableCell>
-                            <TableCell>
-                              {tco.createdAt ? format(new Date(tco.createdAt.seconds * 1000), 'dd/MM/yyyy') : '-'}
-                            </TableCell>
-                            <TableCell>{tco.natureza}</TableCell>
-                            <TableCell>
-                              
-                              <Button variant="ghost" size="sm" onClick={() => handleDeleteTco(tco.id)} aria-label={`Excluir TCO ${tco.tcoNumber}`}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>)}
-                      </TableBody>
-                    </Table>}
-                </TabsContent>
+                <Tabs
+                  value={tcoTab}
+                  onValueChange={setTcoTab}
+                  className="space-y-6 flex flex-col flex-grow"
+                >
+                  <TabsList className="bg-white rounded-xl shadow-lg p-2 grid grid-cols-2 gap-2 my-0 py-0">
+                    <TabsTrigger
+                      value="list"
+                      aria-label="Visualizar Meus TCOs"
+                      className="py-2 rounded-lg text-gray-700 data-[state=active]:bg-primary data-[state=active]:text-white px-[8px] mx-0"
+                    >
+                      Meus TCO's
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="form"
+                      aria-label="Criar ou editar TCO"
+                      onClick={() => setSelectedTco(null)}
+                      className="px-4 rounded-lg text-gray-700 data-[state=active]:bg-primary data-[state=active]:text-white my-0 py-[6px]"
+                    >
+                      Novo TCO
+                    </TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="form" className="bg-white rounded-xl shadow-lg p-4 flex-grow">
-                  <div className="flex items-center justify-between mb-4">
-                    
-                    
-                  </div>
-                  <TCOForm selectedTco={selectedTco} onClear={() => {
-                  setSelectedTco(null);
-                  setTcoTab("list");
-                }} />
-                </TabsContent>
-              </Tabs>
+                  <TabsContent
+                    value="list"
+                    className="bg-white rounded-xl shadow-lg p-4 flex-grow"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      {/* Espaço reservado para título ou ações adicionais, se necessário */}
+                    </div>
+                    {isLoading ? (
+                      <p className="text-center py-8">Carregando TCOs...</p>
+                    ) : tcoList.length === 0 ? (
+                      <p className="text-center py-8 text-gray-500">
+                        Nenhum TCO encontrado
+                      </p>
+                    ) : (
+                      <Table role="grid">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="bg-slate-400">Número</TableHead>
+                            <TableHead className="bg-slate-400">Data</TableHead>
+                            <TableHead className="bg-slate-400">Natureza</TableHead>
+                            <TableHead className="bg-slate-400">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {tcoList.map((tco) => (
+                            <TableRow
+                              key={tco.id}
+                              aria-selected={selectedTco?.id === tco.id}
+                              className={`cursor-pointer ${
+                                selectedTco?.id === tco.id ? "bg-primary/10" : ""
+                              }`}
+                            >
+                              <TableCell className="font-medium">{tco.tcoNumber}</TableCell>
+                              <TableCell>
+                                {tco.createdAt
+                                  ? format(
+                                      new Date(tco.createdAt.seconds * 1000),
+                                      "dd/MM/yyyy"
+                                    )
+                                  : "-"}
+                              </TableCell>
+                              <TableCell>{tco.natureza}</TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteTco(tco.id)}
+                                  aria-label={`Excluir TCO ${tco.tcoNumber}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent
+                    value="form"
+                    className="bg-white rounded-xl shadow-lg p-4 flex-grow"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      {/* Espaço reservado para título ou ações adicionais, se necessário */}
+                    </div>
+                    <TCOForm
+                      selectedTco={selectedTco}
+                      onClear={() => {
+                        setSelectedTco(null);
+                        setTcoTab("list");
+                      }}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
 
-        {showProfileDialog && <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={user} />}
-        
-        {showPasswordDialog && <PasswordChangeDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} userId={user.id} currentPassword={user.password} />}
+        {showProfileDialog && (
+          <ProfileUpdateDialog
+            open={showProfileDialog}
+            onOpenChange={setShowProfileDialog}
+            userData={user}
+          />
+        )}
 
-        {showInformationDialog && <InformationDialog open={showInformationDialog} onOpenChange={setShowInformationDialog} isAdmin={user.userType === "admin"} />}
+        {showPasswordDialog && (
+          <PasswordChangeDialog
+            open={showPasswordDialog}
+            onOpenChange={setShowPasswordDialog}
+            userId={user.id}
+            currentPassword={user.password}
+          />
+        )}
+
+        {showInformationDialog && (
+          <InformationDialog
+            open={showInformationDialog}
+            onOpenChange={setShowInformationDialog}
+            isAdmin={user.userType === "admin"}
+          />
+        )}
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
