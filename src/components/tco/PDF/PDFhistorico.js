@@ -4,13 +4,14 @@ import {
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
     checkPageBreak, addSignatureWithNameAndRole
 } from './pdfUtils.js';
+import QRCode from 'qrcode'; // Importa a biblioteca para gerar QR codes
 
 /**
  * Gera o conteúdo das seções 1 a 5 do TCO.
  * Assume que começa após uma chamada a `addNewPage`.
  * Retorna a posição Y final após adicionar todo o conteúdo.
  */
-export const generateHistoricoContent = (doc, currentY, data) => {
+export const generateHistoricoContent = async (doc, currentY, data) => {
     let yPos = currentY;
     const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
 
@@ -178,6 +179,89 @@ export const generateHistoricoContent = (doc, currentY, data) => {
     yPos = addWrappedText(doc, yPos, data.apreensaoDescricao || data.apreensoes || "Nenhum.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
     yPos += 2;
 
+    // --- SEÇÃO 4.3: FOTOS E/OU VÍDEOS ---
+    const hasPhotos = data.objetosApreendidos && data.objetosApreendidos.length > 0;
+    const hasVideos = data.videoLinks && data.videoLinks.length > 0;
+    let sectionTitle = "FOTOS E VÍDEOS";
+    if (hasPhotos && !hasVideos) {
+        sectionTitle = "FOTOS";
+    } else if (!hasPhotos && hasVideos) {
+        sectionTitle = "VÍDEOS";
+    }
+
+    if (hasPhotos || hasVideos) {
+        yPos = addSectionTitle(doc, yPos, sectionTitle, "4.3", 2, data);
+
+        // Adicionar Fotos
+        if (hasPhotos) {
+            const photoWidth = 50; // Largura de cada foto
+            const photoHeight = 50; // Altura de cada foto
+            let xPos = MARGIN_LEFT;
+
+            for (let i = 0; i < data.objetosApreendidos.length; i++) {
+                const photo = data.objetosApreendidos[i];
+                yPos = checkPageBreak(doc, yPos, photoHeight + 5, data);
+
+                try {
+                    doc.addImage(photo, 'JPEG', xPos, yPos, photoWidth, photoHeight);
+                    xPos += photoWidth + 5; // Espaço entre fotos
+
+                    // Verifica se precisa quebrar a linha
+                    if (xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += photoHeight + 5;
+                    }
+                } catch (error) {
+                    console.error(`Erro ao adicionar foto ${i + 1}:`, error);
+                    doc.text(`[Erro ao carregar foto ${i + 1}]`, xPos, yPos + 5);
+                    xPos += photoWidth + 5;
+                    if (xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += photoHeight + 5;
+                    }
+                }
+            }
+            yPos = xPos !== MARGIN_LEFT ? yPos + photoHeight + 5 : yPos; // Ajusta yPos após as fotos
+        }
+
+        // Adicionar QR Codes para os links de vídeos
+        if (hasVideos) {
+            const qrSize = 30; // Tamanho do QR code
+            let xPos = MARGIN_LEFT;
+
+            for (let i = 0; i < data.videoLinks.length; i++) {
+                const link = data.videoLinks[i];
+                yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
+
+                try {
+                    const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
+                    doc.addImage(qrCodeDataUrl, 'PNG', xPos, yPos, qrSize, qrSize);
+                    doc.setFontSize(8);
+                    doc.text(`Vídeo ${i + 1}`, xPos, yPos + qrSize + 5);
+                    xPos += qrSize + 10;
+
+                    if (xPos + qrSize > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += qrSize + 10;
+                    }
+                } catch (error) {
+                    console.error(`Erro ao gerar QR code para o vídeo ${i + 1}:`, error);
+                    doc.text(`[Erro ao gerar QR code para vídeo ${i + 1}]`, xPos, yPos + 5);
+                    xPos += qrSize + 10;
+                    if (xPos + qrSize > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += qrSize + 10;
+                    }
+                }
+            }
+            yPos = xPos !== MARGIN_LEFT ? yPos + qrSize + 10 : yPos;
+        }
+    } else {
+        yPos = addSectionTitle(doc, yPos, "FOTOS E VÍDEOS", "4.3", 2, data);
+        yPos = addWrappedText(doc, yPos, "Nenhuma foto ou vídeo anexado.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
+        yPos += 2;
+    }
+
     // --- SEÇÃO 5: IDENTIFICAÇÃO DA GUARNIÇÃO ---
     yPos = addSectionTitle(doc, yPos, "IDENTIFICAÇÃO DA GUARNIÇÃO", "5", 1, data);
     if (data.componentesGuarnicao && data.componentesGuarnicao.length > 0) {
@@ -189,15 +273,15 @@ export const generateHistoricoContent = (doc, currentY, data) => {
             yPos = addField(doc, yPos, "NOME COMPLETO", componente.nome, data);
             yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto, data);
             yPos = addField(doc, yPos, "RG PMMT", componente.rg, data);
-            yPos = checkPageBreak(doc, yPos, 5, data); // Ajustado de 12 para 5
-            const sigLineY = yPos; // Definido aqui para cada componente
+            yPos = checkPageBreak(doc, yPos, 5, data);
+            const sigLineY = yPos;
             doc.setFont("helvetica", "normal"); doc.setFontSize(12);
             doc.text("ASSINATURA:", MARGIN_LEFT, sigLineY);
-            const labelWidth = doc.getTextWidth("ASSINATURA:");
+            const labelWidth = doctrine.getTextWidth("ASSINATURA:");
             const lineStartX = MARGIN_LEFT + labelWidth + 2;
             const lineEndX = lineStartX + 80;
             doc.setLineWidth(0.3); doc.line(lineStartX, sigLineY, lineEndX, sigLineY);
-            yPos = sigLineY + 2; // Ajustado de 5 para 2
+            yPos = sigLineY + 2;
         });
     } else {
         yPos = addWrappedText(doc, yPos, "Dados da Guarnição não informados.", MARGIN_LEFT, 12, 'italic', MAX_LINE_WIDTH, 'left', data);
