@@ -22,8 +22,6 @@ interface HistoricoTabProps {
   representacao?: string;
   setRepresentacao?: (value: string) => void;
   natureza: string;
-  videoLinks?: string[];
-  setVideoLinks?: (value: string[]) => void;
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
@@ -43,12 +41,9 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   representacao = "",
   setRepresentacao,
   natureza,
-  videoLinks = [],
-  setVideoLinks,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<{ file: File; id: string }[]>([]);
-  const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
 
   useEffect(() => {
     return () => {
@@ -87,14 +82,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       const newFiles = prev.filter(fileObj => fileObj.id !== id);
       return newFiles;
     });
-  };
-
-  const handleVideoUrlsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const urls = e.target.value;
-    setVideoUrls(urls);
-    if (setVideoLinks) {
-      setVideoLinks(urls.split("\n").filter(url => url.trim() !== ""));
-    }
   };
 
   const truncateFileName = (name: string, maxLength: number = 15): string => {
@@ -240,19 +227,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
                 )}
               </div>
             </div>
-            
-            {setVideoLinks && (
-              <div>
-                <Label htmlFor="videoUrls">VÍDEOS (INSIRA URLs, UMA POR LINHA)</Label>
-                <Textarea
-                  id="videoUrls"
-                  placeholder="Insira as URLs dos vídeos, uma por linha"
-                  value={videoUrls}
-                  onChange={handleVideoUrlsChange}
-                  className="min-h-[100px] mt-2"
-                />
-              </div>
-            )}
           </div>
         </div>
         
