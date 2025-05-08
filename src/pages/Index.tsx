@@ -316,10 +316,7 @@ const Index = () => {
                     <TCOmeus
                       user={user}
                       toast={toast}
-                      setSelectedTco={(tco) => {
-                        setSelectedTco(tco);
-                        if (tco) setTcoTab("form");
-                      }}
+                      setSelectedTco={setSelectedTco}
                       selectedTco={selectedTco}
                     />
                   </TabsContent>
@@ -329,9 +326,7 @@ const Index = () => {
                     className="bg-white rounded-xl shadow-lg p-4 flex-grow"
                   >
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-lg font-semibold">
-                        {selectedTco ? `Editar TCO: ${selectedTco.tcoNumber}` : 'Novo TCO'}
-                      </h2>
+                      {/* Espaço reservado para título ou ações adicionais, se necessário */}
                     </div>
                     <TCOForm
                       selectedTco={selectedTco}

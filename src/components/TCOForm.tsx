@@ -1,312 +1,671 @@
-import React, { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+// --- START OF FILE TCOForm (8).tsx ---
+
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import GuarnicaoTab from "@/components/tco/GuarnicaoTab";
+import { FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db } from "@/lib/firebase";
-import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import BasicInformationTab from "./tco/BasicInformationTab";
+import GeneralInformationTab from "./tco/GeneralInformationTab";
+import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
+import GuarnicaoTab from "./tco/GuarnicaoTab";
+import HistoricoTab from "./tco/HistoricoTab";
+import DrugVerificationTab from "./tco/DrugVerificationTab";
+import { generatePDF } from "./tco/pdfGenerator";
 
-const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => void }) => {
-  const [formData, setFormData] = useState({
-    relatante: "",
-    rgRelatante: "",
-    enderecoRelatante: "",
-    telefoneRelatante: "",
-    emailRelatante: "",
-    local: "",
-    dataFato: null,
-    horaFato: "",
-    natureza: "",
-    outrosEnvolvidos: "",
-    historico: "",
-    providencias: "",
-    apreensaoDescrição: "",
-    tcoNumber: "",
-    createdBy: JSON.parse(localStorage.getItem("user") || "{}").id,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    autores: [],
-    vitimas: [],
-    testemunhas: [],
-    apreensoes: [],
-    drogaTipo: "",
-    drogaNomeComum: "",
-    drogaQuantidade: "",
-    encaminhamentos: "",
-    observacoes: "",
-    status: "Em Aberto",
-  });
+// ... (interfaces e funções de formatação permanecem as mesmas) ...
+interface ComponenteGuarnicao {
+  rg: string;
+  nome: string;
+  posto: string;
+}
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
+interface Pessoa {
+  nome: string;
+  sexo: string;
+  estadoCivil: string;
+  profissao: string;
+  endereco: string;
+  dataNascimento: string;
+  naturalidade: string;
+  filiacaoMae: string;
+  filiacaoPai: string;
+  rg: string;
+  cpf: string;
+  celular: string;
+  email: string;
+  laudoPericial: string;
+}
+
+const initialPersonData: Pessoa = {
+  nome: "", sexo: "", estadoCivil: "", profissao: "",
+  endereco: "", dataNascimento: "", naturalidade: "",
+  filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "",
+  celular: "", email: "", laudoPericial: "Não"
+};
+
+const formatRepresentacao = (representacao: string): string => {
+  if (representacao === "Representa") return "representar";
+  if (representacao === "Posteriormente") return "decidir_posteriormente";
+  return "";
+};
+
+const formatCPF = (cpf: string) => {
+  cpf = cpf.replace(/\D/g, '');
+  if (cpf.length <= 11) {
+    cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2');
+    cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2');
+    cpf = cpf.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  }
+  return cpf;
+};
+
+const formatPhone = (phone: string) => {
+  phone = phone.replace(/\D/g, '');
+  if (phone.length === 11) {
+    phone = phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  } else if (phone.length === 10) {
+    phone = phone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+  } else if (phone.length > 6) {
+    phone = phone.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+  } else if (phone.length > 2) {
+    phone = phone.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+  }
+  return phone;
+};
+
+const validateCPF = (cpf: string) => {
+  cpf = cpf.replace(/\D/g, '');
+  if (cpf.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(cpf)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) { sum += parseInt(cpf.charAt(i)) * (10 - i); }
+  let remainder = sum % 11;
+  let digit1 = remainder < 2 ? 0 : 11 - remainder;
+  if (digit1 !== parseInt(cpf.charAt(9))) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) { sum += parseInt(cpf.charAt(i)) * (11 - i); }
+  remainder = sum % 11;
+  let digit2 = remainder < 2 ? 0 : 11 - remainder;
+  return digit2 === parseInt(cpf.charAt(10));
+};
+
+const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
+  if (!componentes || componentes.length === 0) return "[GUPM PENDENTE]";
+  const nomesFormatados = componentes
+    .filter(c => c.nome && c.posto)
+    .map(c => `${c.posto} PM ${c.nome}`);
+  if (nomesFormatados.length === 0) return "[GUPM PENDENTE]";
+  if (nomesFormatados.length === 1) return nomesFormatados[0].toUpperCase();
+  if (nomesFormatados.length === 2) return `${nomesFormatados[0]} E ${nomesFormatados[1]}`.toUpperCase();
+  return `${nomesFormatados.slice(0, -1).join(", ")} E ${nomesFormatados[nomesFormatados.length - 1]}`.toUpperCase();
+};
+
+const formatarRelatoAutor = (autores: Pessoa[]): string => {
+  if (autores.length === 0 || !autores.some(a => a.nome.trim() !== "")) {
+    return "O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.";
+  }
+  const autoresValidos = autores.filter(a => a.nome.trim() !== "");
+  if (autoresValidos.length === 1) {
+    const sexo = autoresValidos[0].sexo.toLowerCase();
+    const pronome = sexo === "feminino" ? "A AUTORA" : "O AUTOR";
+    return `${pronome} DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.`;
+  }
+  const todosFemininos = autoresValidos.every(a => a.sexo.toLowerCase() === "feminino");
+  const pronomePlural = todosFemininos ? "AS AUTORAS" : "OS AUTORES";
+  return `${pronomePlural} DOS FATOS ABAIXO ASSINADOS, JÁ QUALIFICADOS NOS AUTOS, CIENTIFICADOS DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLARARAM QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.`;
+};
+
+const numberToText = (num: number): string => {
+  const numbers = [
+    "ZERO", "UMA", "DUAS", "TRÊS", "QUATRO",
+    "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"
+  ];
+  return num >= 0 && num <= 10 ? numbers[num] : num.toString();
+};
+
+
+const TCOForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [activeTab, setActiveTab] = useState("basic"); // activeTab de TCOForm, não para PessoasEnvolvidasTab
+
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+
+  const now = new Date();
+  const formattedDate = now.toISOString().split('T')[0];
+  const formattedTime = now.toTimeString().slice(0, 5);
+
+  const [tcoNumber, setTcoNumber] = useState("");
+  const [natureza, setNatureza] = useState("Vias de Fato");
+  const [customNatureza, setCustomNatureza] = useState("");
+  const [autor, setAutor] = useState(""); // Nome do autor principal para BasicInformationTab
+  const [representacao, setRepresentacao] = useState("");
+  const [tipificacao, setTipificacao] = useState("Art. 21 da Lei de Contravenções Penais");
+  const [penaDescricao, setPenaDescricao] = useState("");
+  const [dataFato, setDataFato] = useState(formattedDate);
+  const [horaFato, setHoraFato] = useState(formattedTime);
+  const [dataInicioRegistro, setDataInicioRegistro] = useState(formattedDate);
+  const [horaInicioRegistro, setHoraInicioRegistro] = useState(formattedTime);
+  const [dataTerminoRegistro, setDataTerminoRegistro] = useState(formattedDate);
+  const [horaTerminoRegistro, setHoraTerminoRegistro] = useState(formattedTime);
+  const [localFato, setLocalFato] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [municipio] = useState("Várzea Grande");
+  const [comunicante, setComunicante] = useState("CIOSP");
+  const [guarnicao, setGuarnicao] = useState("");
+  const [operacao, setOperacao] = useState("");
+  const [apreensoes, setApreensoes] = useState("");
+  const [lacreNumero, setLacreNumero] = useState("");
+  const [componentesGuarnicao, setComponentesGuarnicao] = useState<ComponenteGuarnicao[]>([]);
+  const [quantidade, setQuantidade] = useState("");
+  const [substancia, setSubstancia] = useState("");
+  const [cor, setCor] = useState("");
+  const [indicios, setIndicios] = useState("");
+  const [customMaterialDesc, setCustomMaterialDesc] = useState("");
+  const [isUnknownMaterial, setIsUnknownMaterial] = useState(false);
+  
+  const [autores, setAutores] = useState<Pessoa[]>([{ ...initialPersonData }]);
+  const [vitimas, setVitimas] = useState<Pessoa[]>([{ ...initialPersonData }]);
+  const [testemunhas, setTestemunhas] = useState<Pessoa[]>([{ ...initialPersonData }]);
+
+  const relatoPolicialTemplate = `POR VOLTA DAS [HORÁRIO] DO DIA [DATA], NESTA CIDADE DE VÁRZEA GRANDE-MT, A GUARNIÇÃO DA VIATURA [GUARNIÇÃO][OPERACAO_TEXT] COMPOSTA PELOS MILITARES [GUPM], DURANTE RONDAS NO BAIRRO [BAIRRO], FOI ACIONADA VIA [MEIO DE ACIONAMENTO] PARA ATENDER A UMA OCORRÊNCIA DE [NATUREZA] NO [LOCAL], ONDE [VERSÃO INICIAL]. CHEGANDO NO LOCAL, A EQUIPE [O QUE A PM DEPAROU]. A VERSÃO DAS PARTES FOI REGISTRADA EM CAMPO PRÓPRIO. [VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]. [DILIGÊNCIAS E APREENSÕES REALIZADAS]. DIANTE DISSO, [ENCAMINHAMENTO PARA REGISTRO DOS FATOS].`;
+  const [relatoPolicial, setRelatoPolicial] = useState(relatoPolicialTemplate);
+  const [relatoAutor, setRelatoAutor] = useState(formatarRelatoAutor(autores));
+  const [relatoVitima, setRelatoVitima] = useState("RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
+  const [relatoTestemunha, setRelatoTestemunha] = useState("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.");
+  const [conclusaoPolicial, setConclusaoPolicial] = useState("");
+  const [isRelatoPolicialManuallyEdited, setIsRelatoPolicialManuallyEdited] = useState(false);
 
   useEffect(() => {
-    if (selectedTco) {
-      // Convertendo os dados do Firebase para o formato esperado pelo formulário
-      const formattedTco = {
-        ...selectedTco,
-        dataFato: selectedTco.dataFato ? new Date(selectedTco.dataFato.seconds * 1000) : null,
-        createdAt: selectedTco.createdAt ? new Date(selectedTco.createdAt.seconds * 1000) : new Date(),
-        updatedAt: selectedTco.updatedAt ? new Date(selectedTco.updatedAt.seconds * 1000) : new Date(),
-      };
-      setFormData(formattedTco);
-    } else {
-      // Se não houver TCO selecionado, define o usuário logado como o criador
-      const userId = JSON.parse(localStorage.getItem("user") || "{}").id;
-      setFormData(prev => ({
-        ...prev,
-        createdBy: userId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }));
+    if (tcoNumber && !isTimerRunning) {
+      setStartTime(new Date());
+      setIsTimerRunning(true);
     }
-  }, [selectedTco]);
+  }, [tcoNumber, isTimerRunning]);
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = event.target;
-    setFormData({ ...formData, [name]: value });
+  useEffect(() => {
+    if (substancia === "Vegetal" && cor !== "Verde") {
+      setIsUnknownMaterial(true);
+      setIndicios("Material desconhecido");
+    } else if (substancia === "Artificial" && (cor !== "Amarelada" && cor !== "Branca")) {
+      setIsUnknownMaterial(true);
+      setIndicios("Material desconhecido");
+    } else {
+      setIsUnknownMaterial(false);
+      if (substancia === "Vegetal" && cor === "Verde") setIndicios("Maconha");
+      else if (substancia === "Artificial" && cor === "Amarelada") setIndicios("Pasta-Base");
+      else if (substancia === "Artificial" && cor === "Branca") setIndicios("Cocaína");
+      else setIndicios("");
+    }
+  }, [substancia, cor]);
+
+  useEffect(() => {
+    const isDrugCase = natureza === "Porte de drogas para consumo";
+
+    if (isDrugCase) {
+      if (indicios) {
+        const indicioFinal = isUnknownMaterial && customMaterialDesc ? customMaterialDesc : indicios;
+        if (indicioFinal) {
+          const quantidadeNum = parseInt(quantidade.match(/\d+/)?.[0] || "1", 10);
+          const quantidadeText = quantidadeNum <= 10 ? numberToText(quantidadeNum) : quantidadeNum.toString();
+          const plural = quantidadeNum > 1 ? "PORÇÕES" : "PORÇÃO";
+          const descriptiveText = isUnknownMaterial
+            ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${customMaterialDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.`
+            : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`;
+          if (!apreensoes || apreensoes.includes("[DESCRIÇÃO]") || apreensoes === relatoPolicialTemplate) {
+            setApreensoes(descriptiveText);
+          }
+        }
+      }
+      // Não limpar mais vítimas, relatoVitima ou representacao
+    } else {
+      setLacreNumero(""); // Limpar lacre se não for droga
+
+      // Garante que haja uma vítima se o array estiver vazio (ex: usuário removeu todas)
+      setVitimas(prevVitimas => {
+        if (prevVitimas.length === 0) {
+          return [{ ...initialPersonData }];
+        }
+        return prevVitimas;
+      });
+      
+      // Opcional: Resetar apreensoes se contiver texto de droga e a natureza mudou
+      if (apreensoes && (apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("SUBSTÂNCIA DE MATERIAL DESCONHECIDO"))) {
+         // setApreensoes(""); // Considere se quer limpar ou não
+      }
+    }
+  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes, relatoPolicialTemplate]);
+
+  useEffect(() => {
+    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
+    let tipificacaoAtual = "";
+    let penaAtual = "";
+
+    if (natureza === "Outros") {
+      tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
+      penaAtual = penaDescricao || "";
+    } else {
+      switch (natureza) {
+        case "Ameaça": tipificacaoAtual = "ART. 147 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
+        case "Vias de Fato": tipificacaoAtual = "ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS"; penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA"; break;
+        case "Lesão Corporal": tipificacaoAtual = "ART. 129 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO"; break;
+        case "Dano": tipificacaoAtual = "ART. 163 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
+        case "Injúria": tipificacaoAtual = "ART. 140 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
+        case "Difamação": tipificacaoAtual = "ART. 139 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO, E MULTA"; break;
+        case "Calúnia": tipificacaoAtual = "ART. 138 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 6 MESES A 2 ANOS, E MULTA"; break;
+        case "Perturbação do Sossego": tipificacaoAtual = "ART. 42 DA LEI DE CONTRAVENÇÕES PENAIS"; penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA"; break;
+        case "Porte de drogas para consumo": tipificacaoAtual = "ART. 28 DA LEI Nº 11.343/2006 (LEI DE DROGAS)"; penaAtual = "ADVERTÊNCIA SOBRE OS EFEITOS DAS DROGAS, PRESTAÇÃO DE SERVIÇOS À COMUNIDADE OU MEDIDA EDUCATIVA DE COMPARECIMENTO A PROGRAMA OU CURSO EDUCATIVO."; break;
+        default: tipificacaoAtual = "[TIPIFICAÇÃO NÃO MAPEADA]"; penaAtual = "";
+      }
+      setTipificacao(tipificacaoAtual);
+      setPenaDescricao(penaAtual);
+    }
+
+    const autoresValidos = autores.filter(a => a.nome.trim() !== "");
+    const autorTexto = autoresValidos.length === 0 ? "O(A) AUTOR(A)" :
+      autoresValidos.length === 1 ? (autoresValidos[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
+      autoresValidos.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
+    
+    const testemunhasValidas = testemunhas.filter(t => t.nome.trim() !== "");
+    const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : (testemunhasValidas.length === 1 ? "TESTEMUNHA" : "");
+
+    const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
+
+    setConclusaoPolicial(conclusaoBase);
+  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
+
+  useEffect(() => {
+    if (isRelatoPolicialManuallyEdited) return;
+
+    let updatedRelato = relatoPolicialTemplate;
+    const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
+    const gupm = formatarGuarnicao(componentesGuarnicao);
+    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "OUTROS" : natureza;
+    const operacaoText = operacao ? `, DURANTE A ${operacao},` : "";
+
+    updatedRelato = updatedRelato
+      .replace("[HORÁRIO]", horaFato || "[HORÁRIO]")
+      .replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : "[DATA]")
+      .replace("[GUARNIÇÃO]", guarnicao || "[GUARNIÇÃO PENDENTE]")
+      .replace("[OPERACAO_TEXT]", operacaoText)
+      .replace("[GUPM]", gupm)
+      .replace("[BAIRRO]", bairro)
+      .replace("[MEIO DE ACIONAMENTO]", comunicante || "[ACIONAMENTO]")
+      .replace("[NATUREZA]", displayNaturezaReal || "[NATUREZA PENDENTE]")
+      .replace("[LOCAL]", localFato || "[LOCAL PENDENTE]")
+      .replace("[VERSÃO INICIAL]", "[DETALHAR VERSÃO INICIAL]")
+      .replace("[O QUE A PM DEPAROU]", "[DETALHAR O QUE A PM DEPAROU]")
+      .replace("[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]", "[RESUMO DAS VERSÕES]")
+      .replace("[DILIGÊNCIAS E APREENSÕES REALIZADAS]", "[DESCREVER DILIGÊNCIAS/APREENSÕES]")
+      .replace("[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]", "[DETALHAR ENCAMINHAMENTO]");
+
+    updatedRelato = updatedRelato.toUpperCase();
+    setRelatoPolicial(updatedRelato);
+  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate]); // Adicionado relatoPolicialTemplate
+
+  useEffect(() => {
+    const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
+    setRelatoAutor(novoRelatoAutor);
+  }, [autores]);
+
+  useEffect(() => { // Atualiza o campo 'autor' em BasicInformationTab quando o nome do primeiro autor muda
+    if (autores.length > 0 && autores[0].nome !== autor) {
+      setAutor(autores[0].nome);
+    } else if (autores.length === 0 && autor !== "") {
+      setAutor(""); // Limpa se não houver autores
+    }
+  }, [autores, autor]);
+
+
+  const handleAddPolicialToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
+    const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
+    if (!alreadyExists) {
+      setComponentesGuarnicao(prevList => {
+        const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto)
+          ? [novoPolicial]
+          : [...prevList, novoPolicial];
+        return newList;
+      });
+      toast({ title: "Adicionado", description: `Policial ${novoPolicial.nome} adicionado à guarnição.` });
+    } else {
+      toast({ variant: "warning", title: "Duplicado", description: "Este policial já está na guarnição." });
+    }
+  }, [componentesGuarnicao, toast]);
+
+  const handleRemovePolicialFromList = useCallback((indexToRemove: number) => {
+    setComponentesGuarnicao(prevList => prevList.filter((_, index) => index !== indexToRemove));
+  }, []);
+
+  const handleAddVitima = () => { // Removida a restrição de natureza
+    setVitimas(prevVitimas => [...prevVitimas, { ...initialPersonData }]);
   };
 
-  const handleGuarnicaoChange = (guarnicao: any[]) => {
-    setFormData({ ...formData, guarnicao });
+  const handleRemoveVitima = (index: number) => {
+    const newVitimas = vitimas.filter((_, i) => i !== index);
+    if (newVitimas.length === 0) { 
+        setVitimas([{...initialPersonData}]);
+    } else {
+        setVitimas(newVitimas);
+    }
   };
 
-  const handleSave = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleAddTestemunha = () => {
+    setTestemunhas(prev => [...prev, { ...initialPersonData }]);
+  };
 
-    // Validações básicas
-    if (!formData.relatante || !formData.local || !formData.dataFato || !formData.horaFato) {
+  const handleRemoveTestemunha = (index: number) => {
+    const newTestemunhas = testemunhas.filter((_, i) => i !== index);
+    if (newTestemunhas.length === 0) {
+        setTestemunhas([{...initialPersonData}]);
+    } else {
+        setTestemunhas(newTestemunhas);
+    }
+  };
+
+  const handleAddAutor = () => {
+    setAutores(prev => [...prev, { ...initialPersonData }]);
+  };
+
+  const handleRemoveAutor = (index: number) => {
+    const newAutores = autores.filter((_, i) => i !== index);
+    if (newAutores.length === 0) {
+        setAutores([{...initialPersonData}]);
+    } else {
+        setAutores(newAutores);
+    }
+    if (index === 0 && newAutores.length > 0) setAutor(newAutores[0].nome);
+    else if (newAutores.length === 0) setAutor("");
+  };
+
+  const handleVitimaChange = (index: number, field: string, value: string) => {
+    const newVitimas = [...vitimas];
+    let processedValue = value;
+    if (field === 'cpf') {
+      processedValue = formatCPF(value);
+      if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
+        toast({ variant: "destructive", title: "CPF Inválido (Vítima)", description: "O CPF informado não é válido." });
+      }
+    } else if (field === 'celular') {
+      processedValue = formatPhone(value);
+    }
+    newVitimas[index] = { ...newVitimas[index], [field]: processedValue };
+    setVitimas(newVitimas);
+  };
+
+  const handleTestemunhaChange = (index: number, field: string, value: string) => {
+    const newTestemunhas = [...testemunhas];
+    let processedValue = value;
+    if (field === 'cpf') {
+      processedValue = formatCPF(value);
+      if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
+        toast({ variant: "destructive", title: "CPF Inválido (Testemunha)", description: "O CPF informado não é válido." });
+      }
+    } else if (field === 'celular') {
+      processedValue = formatPhone(value);
+    }
+    newTestemunhas[index] = { ...newTestemunhas[index], [field]: processedValue };
+    setTestemunhas(newTestemunhas);
+  };
+
+  const handleAutorDetalhadoChange = (index: number, field: string, value: string) => {
+    const newAutores = [...autores];
+    let processedValue = value;
+    if (field === 'cpf') {
+      processedValue = formatCPF(value);
+      if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
+        toast({ variant: "destructive", title: "CPF Inválido (Autor)", description: "O CPF informado não é válido." });
+      }
+    } else if (field === 'celular') {
+      processedValue = formatPhone(value);
+    } else if (field === 'dataNascimento') {
+      const birthDate = new Date(value + 'T00:00:00Z'); 
+      if (!isNaN(birthDate.getTime())) {
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+        if (age < 18) {
+          toast({ variant: "destructive", title: "Atenção: Autor Menor de Idade", description: "Avalie se cabe TCO." });
+        }
+      }
+    }
+    newAutores[index] = { ...newAutores[index], [field]: processedValue };
+    setAutores(newAutores);
+    if (index === 0 && field === 'nome') setAutor(processedValue); 
+  };
+
+  const handleRelatoPolicialChange = (value: string) => {
+    setRelatoPolicial(value);
+    setIsRelatoPolicialManuallyEdited(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const completionNow = new Date();
+    const completionDate = completionNow.toISOString().split('T')[0];
+    const completionTime = completionNow.toTimeString().slice(0, 5);
+    
+    const autoresValidos = autores.filter(a => a.nome?.trim());
+    if (!tcoNumber || natureza === "Selecione..." || (natureza === "Outros" && !customNatureza) || autoresValidos.length === 0 || componentesGuarnicao.length === 0) {
       toast({
         variant: "destructive",
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos obrigatórios.",
+        title: "Campos Essenciais Faltando",
+        description: "Verifique: Nº TCO, Natureza, pelo menos um Autor com nome e pelo menos um Componente da Guarnição."
       });
       return;
     }
 
-    setIsSaving(true);
+    if (natureza === "Porte de drogas para consumo" && (!quantidade || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc) || !lacreNumero)) {
+      toast({ variant: "destructive", title: "Dados da Droga Incompletos", description: "Preencha Quantidade, Substância, Cor, Descrição (se material desconhecido) e Número do Lacre." });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setIsTimerRunning(false);
+
     try {
-      const formattedData = {
-        ...formData,
-        dataFato: formData.dataFato ? new Date(formData.dataFato) : null,
-        updatedAt: new Date(),
+      const displayNaturezaReal = natureza === "Outros" ? customNatureza : natureza;
+      const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc : indicios) : "";
+      
+      const vitimasFiltradas = vitimas.filter(v => v.nome?.trim()); 
+      const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim());
+
+      // Obter informações do usuário atual para incluir a matrícula
+      const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
+      const userRegistration = userInfo.registration || "";
+
+      const tcoDataParaSalvar: any = {
+        tcoNumber: tcoNumber.trim(),
+        natureza: displayNaturezaReal,
+        originalNatureza: natureza,
+        customNatureza: customNatureza.trim(),
+        tipificacao: tipificacao.trim(),
+        penaDescricao: penaDescricao.trim(),
+        dataFato,
+        horaFato,
+        dataInicioRegistro,
+        horaInicioRegistro,
+        dataTerminoRegistro: completionDate,
+        horaTerminoRegistro: completionTime,
+        localFato: localFato.trim(),
+        endereco: endereco.trim(),
+        municipio,
+        comunicante,
+        autores: autoresValidos, 
+        vitimas: vitimasFiltradas,
+        testemunhas: testemunhasFiltradas,
+        guarnicao: guarnicao.trim(),
+        operacao: operacao.trim(),
+        componentesGuarnicao,
+        relatoPolicial: relatoPolicial.trim(),
+        relatoAutor: relatoAutor.trim(),
+        relatoTestemunha: relatoTestemunha.trim(),
+        apreensoes: apreensoes.trim(),
+        conclusaoPolicial: conclusaoPolicial.trim(),
+        lacreNumero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : "",
+        drogaQuantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : undefined,
+        drogaTipo: natureza === "Porte de drogas para consumo" ? substancia : undefined,
+        drogaCor: natureza === "Porte de drogas para consumo" ? cor : undefined,
+        drogaNomeComum: natureza === "Porte de drogas para consumo" ? indicioFinalDroga : undefined,
+        drogaCustomDesc: natureza === "Porte de drogas para consumo" && isUnknownMaterial ? customMaterialDesc.trim() : undefined,
+        drogaIsUnknown: natureza === "Porte de drogas para consumo" ? isUnknownMaterial : undefined,
+        startTime: startTime?.toISOString(),
+        endTime: completionNow.toISOString(),
+        createdAt: new Date(),
+        createdBy: userInfo.id,
+        userRegistration: userRegistration, // Adicionar matrícula do usuário
+        lacre: "", 
+        objetosApreendidos: [] 
       };
 
-      if (selectedTco) {
-        // Atualizar TCO existente
-        const tcoRef = doc(db, "tcos", selectedTco.id);
-        await updateDoc(tcoRef, formattedData);
-        toast({
-          title: "TCO Atualizado",
-          description: "O TCO foi atualizado com sucesso.",
-        });
+      if (vitimasFiltradas.length > 0) {
+        tcoDataParaSalvar.relatoVitima = relatoVitima.trim();
+        if (representacao) { 
+          tcoDataParaSalvar.representacao = formatRepresentacao(representacao);
+        }
       } else {
-        // Criar novo TCO
-        const tcoCollection = collection(db, "tcos");
-        const docRef = await addDoc(tcoCollection, formattedData);
-
-        // Atualizar o número do TCO com o ID gerado
-        const tcoNumber = `TCO-${docRef.id.substring(0, 6).toUpperCase()}`;
-        await updateDoc(docRef, { tcoNumber, id: docRef.id });
-
-        toast({
-          title: "TCO Criado",
-          description: "O TCO foi criado com sucesso.",
-        });
-        navigate(0);
+        tcoDataParaSalvar.relatoVitima = ""; 
+        delete tcoDataParaSalvar.representacao; 
       }
-      onClear();
-    } catch (error) {
-      console.error("Erro ao salvar TCO:", error);
+
+      Object.keys(tcoDataParaSalvar).forEach(key => tcoDataParaSalvar[key] === undefined && delete tcoDataParaSalvar[key]);
+
+      console.log("Dados a serem salvos/gerados:", tcoDataParaSalvar);
+
+      // Salva no Firestore primeiro para obter o ID
+      const docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
+      
+      // Adiciona o ID ao objeto de dados para que o gerador de PDF possa usar
+      tcoDataParaSalvar.id = docRef.id;
+      
+      toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
+      
+      // Gera o PDF e salva no Firebase Storage
+      await generatePDF(tcoDataParaSalvar);
+      
+      navigate("/?tab=tco");
+    } catch (error: any) {
+      console.error("Erro ao salvar ou gerar TCO:", error);
       toast({
         variant: "destructive",
-        title: "Erro ao salvar",
-        description: "Ocorreu um erro ao salvar o TCO. Tente novamente.",
+        title: "Erro",
+        description: `Ocorreu um erro: ${error.message || 'Erro desconhecido'}`
       });
     } finally {
-      setIsSaving(false);
+      setIsSubmitting(false);
+    }
+  };
+
+  const naturezaOptions = [
+    "Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria",
+    "Difamação", "Calúnia", "Perturbação do Sossego",
+    "Porte de drogas para consumo", "Outros"
+  ];
+
+  const condutorParaDisplay = componentesGuarnicao[0];
+
+  // NOVA FUNÇÃO PARA LIDAR COM onKeyDown NO FORMULÁRIO
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === 'Enter') {
+      const target = e.target as HTMLElement;
+      // Permite a submissão se o Enter for pressionado em um botão do tipo submit
+      if (target.tagName === 'BUTTON' && (target as HTMLButtonElement).type === 'submit') {
+        return; 
+      }
+      // Impede a submissão para inputs de texto, email, número, etc., e textareas
+      if (
+        (target.tagName === 'INPUT' &&
+          ['text', 'password', 'email', 'number', 'tel', 'url', 'search', 'date', 'time', 'datetime-local'].includes(
+            (target as HTMLInputElement).type
+          )) ||
+        target.tagName === 'TEXTAREA' // Impede Enter em textarea de submeter o form (Enter deve criar nova linha)
+      ) {
+        e.preventDefault();
+      }
+      // Para outros elementos como select, checkbox, radio, o comportamento padrão do Enter
+      // geralmente não é submeter o formulário, então não é necessário preventDefault aqui
+      // a menos que surjam problemas específicos.
     }
   };
 
   return (
-    <form onSubmit={handleSave} className="space-y-4">
-      <div>
-        <Label htmlFor="relatante">Relatante</Label>
-        <Input
-          type="text"
-          id="relatante"
-          name="relatante"
-          value={formData.relatante || ""}
-          onChange={handleChange}
+    <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
+      {/* ADICIONADO onKeyDown AO FORMULÁRIO */}
+      <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
+        <BasicInformationTab
+          tcoNumber={tcoNumber} setTcoNumber={setTcoNumber}
+          natureza={natureza} setNatureza={setNatureza}
+          autor={autor} setAutor={setAutor} 
+          penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
+          customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
+          startTime={startTime} isTimerRunning={isTimerRunning}
         />
-      </div>
-      <div>
-        <Label htmlFor="rgRelatante">RG do Relatante</Label>
-        <Input
-          type="text"
-          id="rgRelatante"
-          name="rgRelatante"
-          value={formData.rgRelatante || ""}
-          onChange={handleChange}
-        />
-      </div>
-      <div>
-        <Label htmlFor="enderecoRelatante">Endereço do Relatante</Label>
-        <Input
-          type="text"
-          id="enderecoRelatante"
-          name="enderecoRelatante"
-          value={formData.enderecoRelatante || ""}
-          onChange={handleChange}
-        />
-      </div>
-      <div>
-        <Label htmlFor="telefoneRelatante">Telefone do Relatante</Label>
-        <Input
-          type="text"
-          id="telefoneRelatante"
-          name="telefoneRelatante"
-          value={formData.telefoneRelatante || ""}
-          onChange={handleChange}
-        />
-      </div>
-      <div>
-        <Label htmlFor="emailRelatante">Email do Relatante</Label>
-        <Input
-          type="email"
-          id="emailRelatante"
-          name="emailRelatante"
-          value={formData.emailRelatante || ""}
-          onChange={handleChange}
-        />
-      </div>
-      <div>
-        <Label htmlFor="local">Local</Label>
-        <Input
-          type="text"
-          id="local"
-          name="local"
-          value={formData.local || ""}
-          onChange={handleChange}
-        />
-      </div>
-      <div>
-        <Label>Data e Hora do Fato</Label>
-        <div className="flex items-center space-x-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={
-                  "pl-3 text-left font-normal" +
-                  (date ? " text-foreground" : " text-muted-foreground")
-                }
-              >
-                {date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione a data</span>}
-                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                locale={ptBR}
-                selected={date}
-                onSelect={setDate}
-                defaultMonth={date}
-              />
-            </PopoverContent>
-          </Popover>
-          <Input
-            type="time"
-            id="horaFato"
-            name="horaFato"
-            value={formData.horaFato || ""}
-            onChange={handleChange}
+        {natureza === "Porte de drogas para consumo" && (
+          <DrugVerificationTab
+            quantidade={quantidade} setQuantidade={setQuantidade}
+            substancia={substancia} setSubstancia={setSubstancia}
+            cor={cor} setCor={setCor}
+            indicios={indicios}
+            customMaterialDesc={customMaterialDesc} setCustomMaterialDesc={setCustomMaterialDesc}
+            isUnknownMaterial={isUnknownMaterial}
+            lacreNumero={lacreNumero} setLacreNumero={setLacreNumero}
           />
+        )}
+        <GeneralInformationTab
+          natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao}
+          isCustomNatureza={natureza === "Outros"} customNatureza={customNatureza}
+          dataFato={dataFato} setDataFato={setDataFato}
+          horaFato={horaFato} setHoraFato={setHoraFato}
+          dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro}
+          dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro}
+          localFato={localFato} setLocalFato={setLocalFato}
+          endereco={endereco} setEndereco={setEndereco}
+          municipio={municipio}
+          comunicante={comunicante} setComunicante={setComunicante}
+          guarnicao={guarnicao} setGuarnicao={setGuarnicao}
+          operacao={operacao} setOperacao={setOperacao}
+          condutorNome={condutorParaDisplay?.nome || ""}
+          condutorPosto={condutorParaDisplay?.posto || ""}
+          condutorRg={condutorParaDisplay?.rg || ""}
+        />
+        <PessoasEnvolvidasTab
+          vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
+          testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
+          autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
+          natureza={natureza} 
+        />
+        <GuarnicaoTab
+          currentGuarnicaoList={componentesGuarnicao}
+          onAddPolicial={handleAddPolicialToList}
+          onRemovePolicial={handleRemovePolicialFromList}
+        />
+        <HistoricoTab
+          relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange}
+          relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor}
+          relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima}
+          relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha}
+          apreensoes={apreensoes} setApreensoes={setApreensoes}
+          conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial}
+          drugSeizure={natureza === "Porte de drogas para consumo"} 
+          representacao={representacao} setRepresentacao={setRepresentacao}
+          natureza={natureza}
+        />
+        <div className="flex justify-end mt-8">
+          <Button type="submit" disabled={isSubmitting} size="lg">
+            <FileText className="mr-2 h-5 w-5" />
+            {isSubmitting ? "Gerando e Salvando..." : "Finalizar e Gerar TCO"}
+          </Button>
         </div>
-      </div>
-      <div>
-        <Label htmlFor="natureza">Natureza</Label>
-        <Select onValueChange={(value) => setFormData({ ...formData, natureza: value })}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione a natureza" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Ameaça">Ameaça</SelectItem>
-            <SelectItem value="Lesão Corporal">Lesão Corporal</SelectItem>
-            <SelectItem value="Vias de Fato">Vias de Fato</SelectItem>
-            <SelectItem value="Injúria">Injúria</SelectItem>
-            <SelectItem value="Dano">Dano</SelectItem>
-            <SelectItem value="Furto">Furto</SelectItem>
-            <SelectItem value="Roubo">Roubo</SelectItem>
-            <SelectItem value="Estelionato">Estelionato</SelectItem>
-            <SelectItem value="Apropriação Indébita">Apropriação Indébita</SelectItem>
-            <SelectItem value="Receptação">Receptação</SelectItem>
-            <SelectItem value="Porte de drogas para consumo">Porte de drogas para consumo</SelectItem>
-            <SelectItem value="Outros">Outros</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <Label htmlFor="outrosEnvolvidos">Outros Envolvidos</Label>
-        <Input
-          type="text"
-          id="outrosEnvolvidos"
-          name="outrosEnvolvidos"
-          value={formData.outrosEnvolvidos || ""}
-          onChange={handleChange}
-        />
-      </div>
-      <div>
-        <Label htmlFor="historico">Histórico</Label>
-        <Textarea
-          id="historico"
-          name="historico"
-          value={formData.historico || ""}
-          onChange={handleChange}
-        />
-      </div>
-      <div>
-        <Label htmlFor="providencias">Providências</Label>
-        <Textarea
-          id="providencias"
-          name="providencias"
-          value={formData.providencias || ""}
-          onChange={handleChange}
-        />
-      </div>
-      <div>
-        <Label htmlFor="apreensaoDescrição">Apreensão (Descrição)</Label>
-        <Textarea
-          id="apreensaoDescrição"
-          name="apreensaoDescrição"
-          value={formData.apreensaoDescrição || ""}
-          onChange={handleChange}
-        />
-      </div>
-      <GuarnicaoTab onChange={handleGuarnicaoChange} />
-      <div>
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? "Salvando..." : "Salvar"}
-        </Button>
-        <Button type="button" variant="secondary" onClick={onClear}>
-          Cancelar
-        </Button>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 };
 
 export default TCOForm;
+// --- END OF FILE TCOForm (8).tsx ---

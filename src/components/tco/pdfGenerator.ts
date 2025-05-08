@@ -93,7 +93,7 @@ export const generatePDF = async (inputData: any) => {
     addTermoEncerramentoRemessa(doc, data);
 
     // --- Finalização: Adiciona Números de Página e Salva ---
-    const pageCount = (doc as any).internal.getNumberOfPages();
+    const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFont("helvetica", "normal"); doc.setFontSize(8);
@@ -131,12 +131,8 @@ async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, 
         // Obter uma referência ao storage
         const storage = getStorage();
         
-        // Incluir matrícula do usuário no caminho do arquivo, se disponível
-        const registration = data.registration || data.matricula || '';
-        const registrationPath = registration ? `/${registration}` : '';
-        
-        // Criar caminho para o arquivo no storage com o ID do TCO e matrícula (se disponível)
-        const filePath = `tcos/${data.createdBy}${registrationPath}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
+        // Criar caminho para o arquivo no storage com o ID do TCO
+        const filePath = `tcos/${data.createdBy}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
         const fileRef = ref(storage, filePath);
         
         // Upload do arquivo
