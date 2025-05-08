@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -18,10 +19,6 @@ interface BasicInformationTabProps {
   setCustomNatureza: (value: string) => void;
   startTime: Date | null;
   isTimerRunning: boolean;
-  juizadoDate: string;
-  setJuizadoDate: (value: string) => void;
-  juizadoTime: string;
-  setJuizadoTime: (value: string) => void;
 }
 
 const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
@@ -36,11 +33,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   customNatureza,
   setCustomNatureza,
   startTime,
-  isTimerRunning,
-  juizadoDate,
-  setJuizadoDate,
-  juizadoTime,
-  setJuizadoTime
+  isTimerRunning
 }) => {
   return <Card>
       <CardHeader>
@@ -91,30 +84,6 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
               <Label>Pena da Tipificação</Label>
               <Input readOnly value={penaDescricao} className="bg-gray-100" />
             </div>}
-
-          <div>
-            <Label>Apresentação no Juizado Criminal VG</Label>
-            <div className="space-y-2 mt-2">
-              <div>
-                <Label htmlFor="juizadoDate">Data *</Label>
-                <Input 
-                  id="juizadoDate" 
-                  type="date" 
-                  value={juizadoDate} 
-                  onChange={e => setJuizadoDate(e.target.value)} 
-                />
-              </div>
-              <div>
-                <Label htmlFor="juizadoTime">Horário *</Label>
-                <Input 
-                  id="juizadoTime" 
-                  type="time" 
-                  value={juizadoTime} 
-                  onChange={e => setJuizadoTime(e.target.value)} 
-                />
-              </div>
-            </div>
-          </div>
         </div>
       </CardContent>
       <CardFooter className="flex justify-between">
