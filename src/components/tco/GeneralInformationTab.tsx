@@ -31,10 +31,6 @@ interface GeneralInformationTabProps {
   setGuarnicao: (value: string) => void;
   operacao: string;
   setOperacao: (value: string) => void;
-  juizadoEspecialData: string;
-  setJuizadoEspecialData: (value: string) => void;
-  juizadoEspecialHora: string;
-  setJuizadoEspecialHora: (value: string) => void;
 }
 const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   natureza,
@@ -63,11 +59,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   guarnicao,
   setGuarnicao,
   operacao,
-  setOperacao,
-  juizadoEspecialData,
-  setJuizadoEspecialData,
-  juizadoEspecialHora,
-  setJuizadoEspecialHora,
+  setOperacao
 }) => {
   const displayNatureza = isCustomNatureza ? customNatureza || "Outros" : natureza;
 
@@ -91,30 +83,6 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
         <div>
           <Label htmlFor="tipificacaoLegal">TIPIFICAÇÃO LEGAL</Label>
           {isCustomNatureza ? <Input id="tipificacaoLegal" placeholder="Informe a tipificação legal" value={tipificacao} onChange={e => setTipificacao(e.target.value)} /> : <Input id="tipificacaoLegal" readOnly value={tipificacao} />}
-        </div>
-
-        {/* Nova seção para Apresentação em Juizado Especial VG */}
-        <div>
-          <h3 className="text-md font-semibold text-gray-700 mb-2 mt-3">Apresentação em Juizado Especial VG</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="juizadoData">DATA</Label>
-              <Input 
-                id="juizadoData" 
-                type="date" 
-                value={juizadoEspecialData} 
-                onChange={e => setJuizadoEspecialData(e.target.value)} 
-              />
-            </div>
-            <div>
-              <Label htmlFor="juizadoHora">HORA</Label>
-              <Input 
-                id="juizadoHora" 
-                type="time" 
-                value={juizadoEspecialHora} 
-                onChange={e => setJuizadoEspecialHora(e.target.value)} />
-            </div>
-          </div>
         </div>
         
         <div className="grid grid-cols-2 gap-4">
