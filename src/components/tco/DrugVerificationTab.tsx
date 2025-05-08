@@ -1,9 +1,10 @@
 import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+
 interface DrugVerificationTabProps {
   quantidade: string;
   setQuantidade: (value: string) => void;
@@ -16,9 +17,10 @@ interface DrugVerificationTabProps {
   customMaterialDesc: string;
   setCustomMaterialDesc: (value: string) => void;
   isUnknownMaterial: boolean;
-  lacreNumero: string; // Added prop
-  setLacreNumero: (value: string) => void; // Added prop
+  lacreNumero: string;
+  setLacreNumero: (value: string) => void;
 }
+
 const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   quantidade,
   setQuantidade,
@@ -33,16 +35,21 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   lacreNumero,
   setLacreNumero
 }) => {
-  return <Card>
+  return (
+    <Card>
       <CardHeader className="my-0 py-[8px]">
         <CardTitle className="py-[10px]">Constatação Preliminar de Droga</CardTitle>
-        
       </CardHeader>
       <CardContent>
         <div className="space-y-4 my-0 px-0 mx-0 py-0">
           <div>
             <Label htmlFor="quantidade">Porção (quantidade) *</Label>
-            <Input id="quantidade" placeholder="Informe a quantidade (ex: 1 porção)" value={quantidade} onChange={e => setQuantidade(e.target.value)} />
+            <Input
+              id="quantidade"
+              placeholder="Informe a quantidade (ex: 1 porção)"
+              value={quantidade}
+              onChange={e => setQuantidade(e.target.value)}
+            />
           </div>
 
           <div>
@@ -77,18 +84,33 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
             <Input id="indicios" value={indicios} readOnly className="bg-gray-100" />
           </div>
 
-          {isUnknownMaterial && <div>
+          {isUnknownMaterial && substancia !== "" && cor !== "" && (
+            <div>
               <Label htmlFor="customMaterialDesc">Descrição do Material *</Label>
-              <Textarea id="customMaterialDesc" placeholder="Descreva o tipo de material encontrado" value={customMaterialDesc} onChange={e => setCustomMaterialDesc(e.target.value)} className="min-h-[100px]" />
-            </div>}
+              <Textarea
+                id="customMaterialDesc"
+                placeholder="Descreva o tipo de material encontrado"
+                value={customMaterialDesc}
+                onChange={e => setCustomMaterialDesc(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          )}
 
           <div>
             <Label htmlFor="lacreNumero">Número do Lacre *</Label>
-            <Input id="lacreNumero" placeholder="Informe o número do lacre (ex: 00000000)" value={lacreNumero} onChange={e => setLacreNumero(e.target.value)} maxLength={8} // Assuming an 8-digit lacre number based on PDFTermoApreensao.js
-          />
+            <Input
+              id="lacreNumero"
+              placeholder="Informe o número do lacre (ex: 00000000)"
+              value={lacreNumero}
+              onChange={e => setLacreNumero(e.target.value)}
+              maxLength={8}
+            />
           </div>
         </div>
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
+
 export default DrugVerificationTab;
