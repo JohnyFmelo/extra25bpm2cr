@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
 import BasicInformationTab from "./tco/BasicInformationTab";
 import GeneralInformationTab from "./tco/GeneralInformationTab";
@@ -124,7 +125,7 @@ const numberToText = (num: number): string => {
   return num >= 0 && num <= 10 ? numbers[num] : num.toString();
 };
 
-const TCOForm = () => {
+const TCOForm = ({ selectedTco, onClear }: { selectedTco?: any; onClear?: () => void }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -164,9 +165,10 @@ const TCOForm = () => {
   const [indicios, setIndicios] = useState("");
   const [customMaterialDesc, setCustomMaterialDesc] = useState("");
   const [isUnknownMaterial, setIsUnknownMaterial] = useState(false);
-  const [videoLinks, setVideoLinks] = useState<string[]>([]); // Novo estado para links de vídeos
-  const [newVideoLink, setNewVideoLink] = useState(""); // Estado temporário para o input de link
-  
+  const [videoLinks, setVideoLinks] = useState<string[]>([]);
+  const [newVideoLink, setNewVideoLink] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]); // New state for uploaded image URLs
+
   const [autores, setAutores] = useState<Pessoa[]>([{ ...initialPersonData }]);
   const [vitimas, setVitimas] = useState<Pessoa[]>([{ ...initialPersonData }]);
   const [testemunhas, setTestemunhas] = useState<Pessoa[]>([{ ...initialPersonData }]);
@@ -229,6 +231,7 @@ const TCOForm = () => {
         return prevVitimas;
       });
       if (apreensoes && (apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("SUBSTÂNCIA DE MATERIAL DESCONHECIDO"))) {
+        setApreensoes("");
       }
     }
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes, relatoPolicialTemplate]);
@@ -452,6 +455,23 @@ const TCOForm = () => {
     toast({ title: "Link Removido", description: "Link de vídeo removido com sucesso." });
   };
 
+  const uploadImagesToFirebase = async (files: { file: File; id: string }[], tcoId: string) => {
+    const uploadedUrls: string[] = [];
+    for (const { file } of files) {
+      const filePath = `tcos/${JSON.parse(localStorage.getItem("user") || "{}").id}/${tcoId}/${file.name}`;
+      const fileRef = ref(storage, filePath);
+      try {
+        const uploadResult = await uploadBytes(fileRef, file);
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+        uploadedUrls.push(downloadURL);
+      } catch (error) {
+        console.error(`Erro ao fazer upload da imagem ${file.name}:`, error);
+        toast({ variant: "destructive", title: "Erro no Upload", description: `Falha ao fazer upload da imagem ${file.name}.` });
+      }
+    }
+    return uploadedUrls;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -528,8 +548,8 @@ const TCOForm = () => {
         createdBy: userInfo.id,
         userRegistration: userRegistration,
         lacre: "",
-        objetosApreendidos: [],
-        videoLinks: videoLinks // Adiciona os links de vídeos ao objeto de dados
+        objetosApreendidos: imageUrls, // Updated to include uploaded image URLs
+        videoLinks: videoLinks
       };
 
       if (vitimasFiltradas.length > 0) {
@@ -549,12 +569,18 @@ const TCOForm = () => {
       const docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
       
       tcoDataParaSalvar.id = docRef.id;
-      
+
+      // Upload images to Firebase and update imageUrls
+      const uploadedImageUrls = await uploadImagesToFirebase(selectedTco?.files || [], docRef.id);
+      setImageUrls(uploadedImageUrls);
+      tcoDataParaSalvar.objetosApreendidos = uploadedImageUrls;
+
       toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
       
       await generatePDF(tcoDataParaSalvar);
       
       navigate("/?tab=tco");
+      onClear?.();
     } catch (error: any) {
       console.error("Erro ao salvar ou gerar TCO:", error);
       toast({
@@ -653,6 +679,8 @@ const TCOForm = () => {
           drugSeizure={natureza === "Porte de drogas para consumo"}
           representacao={representacao} setRepresentacao={setRepresentacao}
           natureza={natureza}
+          videoLinks={videoLinks}
+          setVideoLinks={setVideoLinks}
         />
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Anexar Links de Vídeos</h2>
