@@ -111,8 +111,16 @@ export const generatePDF = async (inputData: any) => {
 
     try {
         // Gera o PDF e salva localmente
-        doc.save(fileName);
-        console.log(`PDF Gerado: ${fileName}`);
+        const pdfBlob = doc.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        
+        // Create a temporary link element to trigger download
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = fileName;
+        link.click();
+        
+        console.log(`PDF Gerado localmente: ${fileName}`);
         
         // Salva o PDF no Firebase Storage
         await savePDFToFirebase(doc, data, tcoNumParaNome, dateStr);

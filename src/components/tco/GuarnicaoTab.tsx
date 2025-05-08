@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 
 // --- Funções Auxiliares ---
 const somenteNumeros = (value: string | null | undefined): string => {
@@ -130,14 +131,22 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
     console.log("[GuarnicaoTab] Iniciando busca por RGPM:", rgpmToSearch);
 
     if (rgpmToSearch.length !== 6) {
-      toast({ variant: "destructive", title: "RGPM Inválido", description: "O RGPM da busca deve conter exatamente 6 dígitos." });
+      toast({
+        variant: "destructive",
+        title: "RGPM Inválido",
+        description: "O RGPM da busca deve conter exatamente 6 dígitos."
+      });
       return;
     }
 
     const alreadyExists = currentGuarnicaoList.some(comp => comp.rg === rgpmToSearch);
     if (alreadyExists) {
       console.log("[GuarnicaoTab] RGPM já existe na lista (prop):", rgpmToSearch);
-      toast({ variant: "warning", title: "Duplicado", description: "Este policial já está na guarnição." });
+      toast({
+        variant: "destructive",
+        title: "Duplicado",
+        description: "Este policial já está na guarnição."
+      });
       setSearchRgpm("");
       return;
     }
@@ -155,7 +164,11 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       console.log("[GuarnicaoTab] Telefone retornado do Supabase:", data?.telefone);
 
       if (error && error.code === 'PGRST116') {
-        toast({ variant: "warning", title: "Não Encontrado", description: `Nenhum policial encontrado com o RGPM ${rgpmToSearch}. Considere cadastrá-lo.` });
+        toast({
+          variant: "destructive",
+          title: "Não Encontrado",
+          description: `Nenhum policial encontrado com o RGPM ${rgpmToSearch}. Considere cadastrá-lo.`
+        });
       } else if (error) {
         throw error;
       } else if (data) {
@@ -177,7 +190,11 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       }
     } catch (error: any) {
       console.error("[GuarnicaoTab] Erro na busca:", error);
-      toast({ variant: "destructive", title: "Erro na Busca", description: `Falha ao buscar dados: ${error.message || 'Erro desconhecido'}` });
+      toast({
+        variant: "destructive",
+        title: "Erro na Busca",
+        description: `Falha ao buscar dados: ${error.message || 'Erro desconhecido'}`
+      });
     } finally {
       setIsSearching(false);
       console.log("[GuarnicaoTab] Busca finalizada.");
@@ -188,7 +205,10 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
     const itemToRemove = currentGuarnicaoList[index];
     console.log("[GuarnicaoTab] Chamando onRemovePolicial para índice:", index, itemToRemove);
     onRemovePolicial(index);
-    toast({ title: "Removido", description: `Componente ${itemToRemove?.nome || ''} removido da guarnição.` });
+    toast({
+      title: "Removido",
+      description: `Componente ${itemToRemove?.nome || ''} removido da guarnição.`
+    });
   };
 
   const openRegisterDialog = () => setIsRegisterDialogOpen(true);
@@ -213,25 +233,41 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
     const camposObrigatorios: (keyof PoliceOfficerFormData)[] = ['rgpm', 'nome', 'graduacao', 'pai', 'mae', 'naturalidade', 'cpf', 'telefone'];
     const camposFaltando = camposObrigatorios.filter(key => !newOfficerFormData[key]?.trim());
     if (camposFaltando.length > 0) {
-      toast({ variant: "destructive", title: "Campos Obrigatórios", description: `Preencha: ${camposFaltando.join(', ')}` });
+      toast({
+        variant: "destructive",
+        title: "Campos Obrigatórios",
+        description: `Preencha: ${camposFaltando.join(', ')}`
+      });
       return;
     }
 
     const rgpmNumeros = somenteNumeros(rgpm);
     if (rgpmNumeros.length !== 6) {
-      toast({ variant: "destructive", title: "RGPM Inválido", description: "O RGPM deve ter 6 dígitos." });
+      toast({
+        variant: "destructive",
+        title: "RGPM Inválido",
+        description: "O RGPM deve ter 6 dígitos."
+      });
       return;
     }
 
     const cpfNumeros = somenteNumeros(cpf);
     if (cpfNumeros.length !== 11 || !validateCPF(cpf)) {
-      toast({ variant: "destructive", title: "CPF Inválido", description: "Verifique o CPF." });
+      toast({
+        variant: "destructive",
+        title: "CPF Inválido",
+        description: "Verifique o CPF."
+      });
       return;
     }
 
     const telefoneNumeros = somenteNumeros(telefone);
     if (telefoneNumeros.length !== 10 && telefoneNumeros.length !== 11) {
-      toast({ variant: "destructive", title: "Telefone Inválido", description: "Formato DDD + 8 ou 9 dígitos." });
+      toast({
+        variant: "destructive",
+        title: "Telefone Inválido",
+        description: "Formato DDD + 8 ou 9 dígitos."
+      });
       return;
     }
 
@@ -255,11 +291,18 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
         throw error;
       }
 
-      toast({ title: "Sucesso", description: "Policial cadastrado/atualizado no banco de dados." });
+      toast({
+        title: "Sucesso",
+        description: "Policial cadastrado/atualizado no banco de dados."
+      });
       closeRegisterDialog();
     } catch (error: any) {
       console.error("[GuarnicaoTab] Erro ao salvar policial no BD:", error);
-      toast({ variant: "destructive", title: "Erro ao Salvar no BD", description: `Falha: ${error.message || 'Erro desconhecido'}` });
+      toast({
+        variant: "destructive",
+        title: "Erro ao Salvar no BD",
+        description: `Falha: ${error.message || 'Erro desconhecido'}`
+      });
     }
   };
 
@@ -356,7 +399,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-3 px-[5px]">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="dlg-rgpm">RGPM (6 dígitos) * <Info className="inline h-3 w-3 text-muted-foreground ml-1" title="Usado para buscar e identificar o policial. Não pode ser alterado após cadastro inicial (a menos que haja erro)." /></Label>
+                <Label htmlFor="dlg-rgpm">RGPM (6 dígitos) * <Info className="inline h-3 w-3 text-muted-foreground ml-1" aria-label="Informação sobre RGPM" /></Label>
                 <Input id="dlg-rgpm" value={newOfficerFormData.rgpm} onChange={e => handleRegisterInputChange("rgpm", e.target.value)} placeholder="000000" required inputMode="numeric" maxLength={6} />
               </div>
               <div>

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2, FileText, Download, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface TCOmeusProps {
   user: { id: string; registration?: string };
@@ -142,6 +142,14 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     <div className="bg-white rounded-xl shadow-lg p-4 flex-grow">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Meus TCOs</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchUserTcos}
+          disabled={isLoading}
+        >
+          {isLoading ? "Carregando..." : "Atualizar"}
+        </Button>
       </div>
       {isLoading ? (
         <p className="text-center py-8">Carregando TCOs...</p>

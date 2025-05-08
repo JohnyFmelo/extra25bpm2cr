@@ -1,3 +1,4 @@
+
 import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Scale, Plus } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -328,13 +329,7 @@ const Index = () => {
                     <div className="flex items-center justify-between mb-4">
                       {/* Espaço reservado para título ou ações adicionais, se necessário */}
                     </div>
-                    <TCOForm
-                      selectedTco={selectedTco}
-                      onClear={() => {
-                        setSelectedTco(null);
-                        setTcoTab("list");
-                      }}
-                    />
+                    <TCOForm />
                   </TabsContent>
                 </Tabs>
               </div>
