@@ -190,7 +190,6 @@ export const generateHistoricoContent = (doc, currentY, data) => {
             yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto, data);
             yPos = addField(doc, yPos, "RG PMMT", componente.rg, data);
             yPos = checkPageBreak(doc, yPos, 12, data);
-            const sigLineY = yPos + 2;
             doc.setFont("helvetica", "normal"); doc.setFontSize(12);
             doc.text("ASSINATURA:", MARGIN_LEFT, sigLineY);
             const labelWidth = doc.getTextWidth("ASSINATURA:");
