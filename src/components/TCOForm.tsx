@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from "react"; // Adicionado useRef
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Adicionado import
 import { useNavigate } from "react-router-dom";
 import BasicInformationTab from "./tco/BasicInformationTab";
 import GeneralInformationTab from "./tco/GeneralInformationTab";
@@ -264,10 +265,10 @@ const TCOForm = () => {
       setPenaDescricao(penaAtual);
     }
 
-    const autoresValidos = autores.filter(a => a.nome.trim() !== "");
-    const autorTexto = autoresValidos.length === 0 ? "O(A) AUTOR(A)" :
-      autoresValidos.length === 1 ? (autoresValidos[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
-      autoresValidos.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
+    const autoresValid0s = autores.filter(a => a.nome.trim() !== "");
+    const autorTexto = autoresValid0s.length === 0 ? "O(A) AUTOR(A)" :
+      autoresValid0s.length === 1 ? (autoresValid0s[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
+      autoresValid0s.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
     
     const testemunhasValidas = testemunhas.filter(t => t.nome.trim() !== "");
     const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : (testemunhasValidas.length === 1 ? "TESTEMUNHA" : "");
@@ -426,7 +427,7 @@ const TCOForm = () => {
         let age = today.getFullYear() - birthDate.getFullYear();
         const m = today.getMonth() - birthDate.getMonth();
         if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-        if (age < 18) {
+        if (age < 18 TDPForm (17).tsx") {
           toast({ variant: "destructive", title: "Atenção: Autor Menor de Idade", description: "Avalie se cabe TCO." });
         }
       }
@@ -489,7 +490,6 @@ const TCOForm = () => {
     toast({ title: "Imagem Removida", description: "Imagem removida da lista de anexos." });
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -526,11 +526,19 @@ const TCOForm = () => {
       const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
       const userRegistration = userInfo.registration || "";
 
-      // TODO: Implementar upload de imageFiles para Firebase Storage
-      // Por agora, imageFiles (objetos File) não serão salvos diretamente no Firestore.
-      // Salve as URLs retornadas pelo Storage no campo 'imageUrls' (ou similar) do tcoDataParaSalvar.
-      console.log("Arquivos de imagem selecionados (não serão enviados ao DB nesta etapa):", imageFiles.map(f => f.name));
-      const imageUrls: string[] = []; // Placeholder para URLs de imagens após upload
+      // Upload de imagens para Firebase Storage
+      const storage = getStorage();
+      const imageUrls: string[] = [];
+      if (imageFiles.length > 0) {
+        for (const [index, file] of imageFiles.entries()) {
+          const filePath = `tcos/${userInfo.id}/${tcoNumber}/images/${Date.now()}_${index}_${file.name}`;
+          const fileRef = ref(storage, filePath);
+          await uploadBytes(fileRef, file);
+          const downloadUrl = await getDownloadURL(fileRef);
+          imageUrls.push(downloadUrl);
+          console.log(`Imagem ${file.name} enviada para Firebase Storage: ${downloadUrl}`);
+        }
+      }
 
       const tcoDataParaSalvar: any = {
         tcoNumber: tcoNumber.trim(),
@@ -573,7 +581,7 @@ const TCOForm = () => {
         createdBy: userInfo.id,
         userRegistration: userRegistration,
         videoLinks: videoLinks,
-        imageUrls: imageUrls, // Adicionado campo para URLs de imagens
+        imageUrls: imageUrls, // Inclui URLs das imagens
         // Campos legados ou não usados no formulário atual (remover se não necessários):
         // lacre: "", 
         // objetosApreendidos: [],
@@ -599,7 +607,7 @@ const TCOForm = () => {
       
       toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
       
-      // Passar tcoDataParaSalvar (que inclui imageUrls, mesmo que vazias por agora) para o PDF
+      // Passar tcoDataParaSalvar (que inclui imageUrls) para o PDF
       await generatePDF(tcoDataParaSalvar); 
       
       navigate("/?tab=tco");
@@ -758,7 +766,7 @@ const TCOForm = () => {
                         </Button>
                       </li>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
               {imageFiles.length === 0 && (
