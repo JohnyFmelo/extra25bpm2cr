@@ -1,4 +1,3 @@
-
 // --- START OF FILE TCOForm (8).tsx ---
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -6,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, updateDoc, doc as firestoreDoc } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import BasicInformationTab from "./tco/BasicInformationTab";
 import GeneralInformationTab from "./tco/GeneralInformationTab";
@@ -183,8 +181,6 @@ const TCOForm = () => {
   const [conclusaoPolicial, setConclusaoPolicial] = useState("");
   const [isRelatoPolicialManuallyEdited, setIsRelatoPolicialManuallyEdited] = useState(false);
 
-  const storage = getStorage();
-
   useEffect(() => {
     if (tcoNumber && !isTimerRunning) {
       setStartTime(new Date());
@@ -337,7 +333,7 @@ const TCOForm = () => {
       });
       toast({ title: "Adicionado", description: `Policial ${novoPolicial.nome} adicionado à guarnição.` });
     } else {
-      toast({ variant: "destructive", title: "Duplicado", description: "Este policial já está na guarnição." });
+      toast({ variant: "warning", title: "Duplicado", description: "Este policial já está na guarnição." });
     }
   }, [componentesGuarnicao, toast]);
 
@@ -448,33 +444,6 @@ const TCOForm = () => {
     setIsRelatoPolicialManuallyEdited(true);
   };
 
-  // Nova função para fazer upload do PDF para o Firebase Storage
-  const uploadPdfToFirebase = async (pdfBlob: Blob, fileName: string, tcoId: string) => {
-    try {
-      // Referência para o local onde o arquivo será salvo no Storage
-      const storageRef = ref(storage, `tcos/${fileName}`);
-      
-      // Upload do arquivo para o Firebase Storage
-      const snapshot = await uploadBytes(storageRef, pdfBlob);
-      
-      // Obter a URL de download
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      
-      // Atualizar o documento TCO com a URL do PDF
-      await updateDoc(firestoreDoc(db, "tcos", tcoId), {
-        pdfUrl: downloadURL,
-        pdfFilename: fileName
-      });
-      
-      console.log("PDF uploaded successfully to Firebase Storage:", downloadURL);
-      
-      return downloadURL;
-    } catch (error) {
-      console.error("Error uploading PDF to Firebase Storage:", error);
-      throw error;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -564,28 +533,9 @@ const TCOForm = () => {
 
       console.log("Dados a serem salvos/gerados:", tcoDataParaSalvar);
 
-      // Salvando o TCO no Firestore
-      const docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
-      
-      // Gerando o PDF
-      const pdfResult = generatePDF(tcoDataParaSalvar);
-      
-      // Verificando se o PDF foi gerado com sucesso
-      if (pdfResult && pdfResult.blob) {
-        // Fazendo upload do PDF para o Firebase Storage
-        await uploadPdfToFirebase(pdfResult.blob, pdfResult.fileName, docRef.id);
-        toast({ 
-          title: "TCO Registrado", 
-          description: "TCO registrado e PDF salvo com sucesso!" 
-        });
-      } else {
-        toast({ 
-          title: "TCO Registrado", 
-          description: "TCO registrado, mas houve um problema ao salvar o PDF." 
-        });
-      }
-      
-      // Navegar de volta para a lista de TCOs
+      await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
+      toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
+      generatePDF(tcoDataParaSalvar);
       navigate("/?tab=tco");
 
     } catch (error: any) {
