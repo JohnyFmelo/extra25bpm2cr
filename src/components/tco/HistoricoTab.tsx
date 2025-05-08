@@ -103,7 +103,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   const isDrugCase = natureza === "Porte de drogas para consumo";
   return <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
-        <h3 className="text-2xl font-semibold flex items-center">HISTÓRICO</h3>
+        <h3 className="text-2xl font-semibold flex items-center">Histórico</h3>
       </div>
       <div className="p-6 space-y-6">
         <div>
