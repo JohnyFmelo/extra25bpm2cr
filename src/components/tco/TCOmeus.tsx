@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { collection, query, where, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -6,12 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Eye, Trash2, Download } from "lucide-react";
 import { format } from "date-fns";
-import { UseToastReturn } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface TCOmeusProps {
   user: { id: string };
-  toast: UseToastReturn["toast"];
+  toast: ReturnType<typeof useToast>["toast"];
   setSelectedTco: (tco: any) => void;
   selectedTco: any;
 }

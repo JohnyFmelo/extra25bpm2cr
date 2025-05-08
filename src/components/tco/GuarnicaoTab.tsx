@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -116,6 +115,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({ currentGuarnicaoList, onAdd
     const rgAlreadyExists = currentGuarnicaoList.some(p => p.rg === novoPolicial.rg);
     if (rgAlreadyExists) {
       toast({
+        variant: "destructive",
         title: "RG já adicionado",
         description: "Este policial já está na guarnição."
       });
