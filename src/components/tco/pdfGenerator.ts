@@ -50,7 +50,7 @@ export const generatePDF = async (inputData: any) => {
     yPosition = addNewPage(doc, data);
 
     // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
-    yPosition = generateHistoricoContent(doc, yPosition, data);
+    yPosition = await generateHistoricoContent(doc, yPosition, data);
 
     // --- ADIÇÃO DOS TERMOS ---
     if (data.autores && data.autores.length > 0) {
@@ -93,7 +93,7 @@ export const generatePDF = async (inputData: any) => {
     addTermoEncerramentoRemessa(doc, data);
 
     // --- Finalização: Adiciona Números de Página e Salva ---
-    const pageCount = doc.internal.getNumberOfPages();
+    const pageCount = doc.internal.pages.length - 1;
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFont("helvetica", "normal"); doc.setFontSize(8);
@@ -111,7 +111,15 @@ export const generatePDF = async (inputData: any) => {
 
     try {
         // Gera o PDF e salva localmente
-        doc.save(fileName);
+        const pdfOutput = doc.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfOutput);
+        
+        // Cria um link para download e simula o clique
+        const downloadLink = document.createElement('a');
+        downloadLink.href = pdfUrl;
+        downloadLink.download = fileName;
+        downloadLink.click();
+        
         console.log(`PDF Gerado: ${fileName}`);
         
         // Salva o PDF no Firebase Storage

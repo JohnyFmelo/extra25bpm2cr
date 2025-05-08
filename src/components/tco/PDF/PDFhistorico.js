@@ -1,3 +1,4 @@
+
 // src/components/tco/PDF/PDFhistorico.js
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
@@ -234,8 +235,10 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
 
                 try {
+                    // Usando QRCode para gerar uma URL de dados para o QR code
                     const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
                     doc.addImage(qrCodeDataUrl, 'PNG', xPos, yPos, qrSize, qrSize);
+                    
                     doc.setFontSize(8);
                     doc.text(`Vídeo ${i + 1}`, xPos, yPos + qrSize + 5);
                     xPos += qrSize + 10;
@@ -277,7 +280,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             const sigLineY = yPos;
             doc.setFont("helvetica", "normal"); doc.setFontSize(12);
             doc.text("ASSINATURA:", MARGIN_LEFT, sigLineY);
-            const labelWidth = doctrine.getTextWidth("ASSINATURA:");
+            const labelWidth = doc.getTextWidth("ASSINATURA:");
             const lineStartX = MARGIN_LEFT + labelWidth + 2;
             const lineEndX = lineStartX + 80;
             doc.setLineWidth(0.3); doc.line(lineStartX, sigLineY, lineEndX, sigLineY);
