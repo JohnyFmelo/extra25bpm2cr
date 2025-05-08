@@ -1,3 +1,5 @@
+// --- START OF FILE TCOForm (8).tsx ---
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
@@ -13,6 +15,7 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
 
+// ... (interfaces e funções de formatação permanecem as mesmas) ...
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
@@ -122,6 +125,7 @@ const numberToText = (num: number): string => {
   ];
   return num >= 0 && num <= 10 ? numbers[num] : num.toString();
 };
+
 
 const TCOForm = () => {
   const { toast } = useToast();
@@ -342,13 +346,8 @@ const TCOForm = () => {
   };
 
   const handleRemoveVitima = (index: number) => {
-    // Não permitir remover a última vítima se o array deve ter pelo menos um item.
-    // Se for permitido ficar vazio, esta lógica está ok.
-    // Para manter sempre ao menos uma (a menos que seja a última e o usuário queira limpar),
-    // a lógica de PessoasEnvolvidasTab já controla o botão de remover para aparecer só se length > 1.
-    // Se o array tem 1 item e o botão não aparece, esta função só será chamada se length > 1.
     const newVitimas = vitimas.filter((_, i) => i !== index);
-    if (newVitimas.length === 0) { // Se todas as vítimas foram removidas, adiciona uma padrão
+    if (newVitimas.length === 0) { 
         setVitimas([{...initialPersonData}]);
     } else {
         setVitimas(newVitimas);
@@ -379,7 +378,6 @@ const TCOForm = () => {
     } else {
         setAutores(newAutores);
     }
-    // Atualiza o nome do autor principal se o autor removido era o primeiro
     if (index === 0 && newAutores.length > 0) setAutor(newAutores[0].nome);
     else if (newAutores.length === 0) setAutor("");
   };
@@ -425,7 +423,7 @@ const TCOForm = () => {
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
     } else if (field === 'dataNascimento') {
-      const birthDate = new Date(value + 'T00:00:00Z'); // Adiciona T00:00:00Z para tratar como UTC
+      const birthDate = new Date(value + 'T00:00:00Z'); 
       if (!isNaN(birthDate.getTime())) {
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
@@ -438,7 +436,7 @@ const TCOForm = () => {
     }
     newAutores[index] = { ...newAutores[index], [field]: processedValue };
     setAutores(newAutores);
-    if (index === 0 && field === 'nome') setAutor(processedValue); // Atualiza nome do autor principal
+    if (index === 0 && field === 'nome') setAutor(processedValue); 
   };
 
   const handleRelatoPolicialChange = (value: string) => {
@@ -475,7 +473,7 @@ const TCOForm = () => {
       const displayNaturezaReal = natureza === "Outros" ? customNatureza : natureza;
       const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc : indicios) : "";
       
-      const vitimasFiltradas = vitimas.filter(v => v.nome?.trim()); // Sempre filtra por nome
+      const vitimasFiltradas = vitimas.filter(v => v.nome?.trim()); 
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim());
 
       const tcoDataParaSalvar: any = {
@@ -495,7 +493,7 @@ const TCOForm = () => {
         endereco: endereco.trim(),
         municipio,
         comunicante,
-        autores: autoresValidos, // Salva apenas autores com nome
+        autores: autoresValidos, 
         vitimas: vitimasFiltradas,
         testemunhas: testemunhasFiltradas,
         guarnicao: guarnicao.trim(),
@@ -517,18 +515,18 @@ const TCOForm = () => {
         endTime: completionNow.toISOString(),
         createdAt: new Date(),
         createdBy: JSON.parse(localStorage.getItem("user") || "{}").id,
-        lacre: "", // Presumo que este 'lacre' seja diferente de 'lacreNumero' ou será preenchido por outra lógica
-        objetosApreendidos: [] // Presumo que será preenchido por outra lógica
+        lacre: "", 
+        objetosApreendidos: [] 
       };
 
       if (vitimasFiltradas.length > 0) {
         tcoDataParaSalvar.relatoVitima = relatoVitima.trim();
-        if (representacao) { // Apenas adiciona representacao se houver um valor selecionado
+        if (representacao) { 
           tcoDataParaSalvar.representacao = formatRepresentacao(representacao);
         }
       } else {
-        tcoDataParaSalvar.relatoVitima = ""; // Garante que relatoVitima seja vazio se não houver vítimas
-        delete tcoDataParaSalvar.representacao; // Remove representacao se não houver vítimas
+        tcoDataParaSalvar.relatoVitima = ""; 
+        delete tcoDataParaSalvar.representacao; 
       }
 
       Object.keys(tcoDataParaSalvar).forEach(key => tcoDataParaSalvar[key] === undefined && delete tcoDataParaSalvar[key]);
@@ -560,13 +558,38 @@ const TCOForm = () => {
 
   const condutorParaDisplay = componentesGuarnicao[0];
 
+  // NOVA FUNÇÃO PARA LIDAR COM onKeyDown NO FORMULÁRIO
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === 'Enter') {
+      const target = e.target as HTMLElement;
+      // Permite a submissão se o Enter for pressionado em um botão do tipo submit
+      if (target.tagName === 'BUTTON' && (target as HTMLButtonElement).type === 'submit') {
+        return; 
+      }
+      // Impede a submissão para inputs de texto, email, número, etc., e textareas
+      if (
+        (target.tagName === 'INPUT' &&
+          ['text', 'password', 'email', 'number', 'tel', 'url', 'search', 'date', 'time', 'datetime-local'].includes(
+            (target as HTMLInputElement).type
+          )) ||
+        target.tagName === 'TEXTAREA' // Impede Enter em textarea de submeter o form (Enter deve criar nova linha)
+      ) {
+        e.preventDefault();
+      }
+      // Para outros elementos como select, checkbox, radio, o comportamento padrão do Enter
+      // geralmente não é submeter o formulário, então não é necessário preventDefault aqui
+      // a menos que surjam problemas específicos.
+    }
+  };
+
   return (
     <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-6">
+      {/* ADICIONADO onKeyDown AO FORMULÁRIO */}
+      <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
         <BasicInformationTab
           tcoNumber={tcoNumber} setTcoNumber={setTcoNumber}
           natureza={natureza} setNatureza={setNatureza}
-          autor={autor} setAutor={setAutor} // Passa o nome do autor principal
+          autor={autor} setAutor={setAutor} 
           penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
           customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
           startTime={startTime} isTimerRunning={isTimerRunning}
@@ -603,7 +626,7 @@ const TCOForm = () => {
           vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
           testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
           autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
-          natureza={natureza} // Passando natureza para PessoasEnvolvidasTab
+          natureza={natureza} 
         />
         <GuarnicaoTab
           currentGuarnicaoList={componentesGuarnicao}
@@ -617,9 +640,6 @@ const TCOForm = () => {
           relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha}
           apreensoes={apreensoes} setApreensoes={setApreensoes}
           conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial}
-          // drugSeizure não é mais necessário para controlar o campo de representação aqui,
-          // mas pode ser útil para outros elementos em HistoricoTab.
-          // Se `representacao` deve ser sempre visível, ajuste em HistoricoTab.
           drugSeizure={natureza === "Porte de drogas para consumo"} 
           representacao={representacao} setRepresentacao={setRepresentacao}
           natureza={natureza}
@@ -636,3 +656,4 @@ const TCOForm = () => {
 };
 
 export default TCOForm;
+// --- END OF FILE TCOForm (8).tsx ---
