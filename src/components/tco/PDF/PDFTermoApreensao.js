@@ -48,7 +48,6 @@ export function addTermoApreensao(doc, data) {
     if (!isDroga) {
         yPos = addFieldWrapper(doc, yPos, "LACRE", lacreNumero, data);
     }
-    yPos = addFieldWrapper(doc, yPos, "NÚMERO DO LACRE", lacreNumero, data);
     yPos = addFieldWrapper(doc, yPos, "DATA/HORA", dataHoraApreensao, data);
     yPos = addFieldWrapper(doc, yPos, "LOCAL", "25º BPM", data);
     yPos = addFieldWrapper(doc, yPos, "NOME DO POLICIAL MILITAR", condutor?.nome, data);
