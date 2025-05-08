@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react"; // Adicionado ImageIcon, VideoIcon, Plus, X
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
@@ -164,8 +164,8 @@ const TCOForm = () => {
   const [indicios, setIndicios] = useState("");
   const [customMaterialDesc, setCustomMaterialDesc] = useState("");
   const [isUnknownMaterial, setIsUnknownMaterial] = useState(false);
-  const [videoLinks, setVideoLinks] = useState<string[]>([]); // Novo estado para links de vídeos
-  const [newVideoLink, setNewVideoLink] = useState(""); // Estado temporário para o input de link
+  const [videoLinks, setVideoLinks] = useState<string[]>([]);
+  const [newVideoLink, setNewVideoLink] = useState("");
   
   const [autores, setAutores] = useState<Pessoa[]>([{ ...initialPersonData }]);
   const [vitimas, setVitimas] = useState<Pessoa[]>([{ ...initialPersonData }]);
@@ -229,6 +229,7 @@ const TCOForm = () => {
         return prevVitimas;
       });
       if (apreensoes && (apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("SUBSTÂNCIA DE MATERIAL DESCONHECIDO"))) {
+        // Manter apreensões se já foi customizada, ou resetar se for o template de droga e a natureza mudou
       }
     }
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes, relatoPolicialTemplate]);
@@ -298,7 +299,7 @@ const TCOForm = () => {
 
     updatedRelato = updatedRelato.toUpperCase();
     setRelatoPolicial(updatedRelato);
-  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate]);
+  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited]);
 
   useEffect(() => {
     const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
@@ -437,11 +438,16 @@ const TCOForm = () => {
 
   const handleAddVideoLink = () => {
     if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
+      // Basic URL validation (starts with http or https)
+      if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
+          toast({ variant: "warning", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
+          return;
+      }
       setVideoLinks(prev => [...prev, newVideoLink.trim()]);
       setNewVideoLink("");
       toast({ title: "Link Adicionado", description: "Link de vídeo adicionado com sucesso." });
     } else if (!newVideoLink.trim()) {
-      toast({ variant: "warning", title: "Link Vazio", description: "Por favor, insira um link válido." });
+      toast({ variant: "warning", title: "Link Vazio", description: "Por favor, insira um link." });
     } else {
       toast({ variant: "warning", title: "Link Duplicado", description: "Este link já foi adicionado." });
     }
@@ -527,9 +533,9 @@ const TCOForm = () => {
         createdAt: new Date(),
         createdBy: userInfo.id,
         userRegistration: userRegistration,
-        lacre: "",
-        objetosApreendidos: [],
-        videoLinks: videoLinks // Adiciona os links de vídeos ao objeto de dados
+        lacre: "", // Este campo parece ser legado ou duplicado, considerar remoção se lacreNumero for o principal
+        objetosApreendidos: [], // Este campo parece não estar sendo usado no formulário, pode ser inicializado ou removido
+        videoLinks: videoLinks
       };
 
       if (vitimasFiltradas.length > 0) {
@@ -588,14 +594,17 @@ const TCOForm = () => {
           )) ||
         target.tagName === 'TEXTAREA'
       ) {
-        e.preventDefault();
+         // Allow Enter key in Textarea for new lines, but prevent form submission
+        if (target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+        }
       }
     }
   };
 
   return (
     <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
-      <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
+      <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-8"> {/* Aumentado space-y para acomodar novas seções */}
         <BasicInformationTab
           tcoNumber={tcoNumber} setTcoNumber={setTcoNumber}
           natureza={natureza} setNatureza={setNatureza}
@@ -654,30 +663,95 @@ const TCOForm = () => {
           representacao={representacao} setRepresentacao={setRepresentacao}
           natureza={natureza}
         />
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Anexar Links de Vídeos</h2>
-          <div className="flex space-x-2">
-            <input
-              type="url"
-              value={newVideoLink}
-              onChange={(e) => setNewVideoLink(e.target.value)}
-              placeholder="Insira o link do vídeo"
-              className="flex-1 p-2 border rounded-md"
-            />
-            <Button type="button" onClick={handleAddVideoLink}>Adicionar Link</Button>
+
+        {/* NOVA SEÇÃO DE ANEXOS */}
+        <div className="space-y-4 pt-4 border-t border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-800 uppercase">
+            {/* Checkbox visual pode ser adicionado aqui se necessário com um ícone ou componente de Checkbox */}
+            ANEXOS
+          </h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Card de Fotos */}
+            <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center text-center space-y-3 hover:border-blue-500 transition-colors">
+              <ImageIcon className="w-12 h-12 text-blue-600" />
+              <h3 className="text-lg font-medium text-gray-700">Fotos</h3>
+              <p className="text-sm text-gray-500 px-4">
+                Selecione ou arraste arquivos de imagem para anexar.
+              </p>
+              <Button 
+                type="button" 
+                onClick={() => toast({ title: "Funcionalidade Pendente", description: "Anexar fotos ainda não implementado."})}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                Anexar Fotos
+              </Button>
+            </div>
+
+            {/* Card de Vídeos */}
+            <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-3 hover:border-blue-500 transition-colors">
+              <div className="flex flex-col items-center text-center">
+                <VideoIcon className="w-12 h-12 text-blue-600" />
+                <h3 className="text-lg font-medium text-gray-700 mt-1">Vídeos</h3>
+                <p className="text-sm text-gray-500">Adicione links para vídeos online.</p>
+              </div>
+              
+              <div className="flex w-full space-x-2 items-center pt-1">
+                <input
+                  type="url"
+                  value={newVideoLink}
+                  onChange={(e) => setNewVideoLink(e.target.value)}
+                  placeholder="Cole o link do vídeo aqui (YouTube, Vimeo, etc.)"
+                  className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+                <Button 
+                  type="button" 
+                  onClick={handleAddVideoLink} 
+                  className="bg-blue-600 hover:bg-blue-700 text-white" 
+                  size="icon"
+                  aria-label="Adicionar link de vídeo"
+                >
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </div>
+
+              {videoLinks.length > 0 && (
+                <div className="w-full pt-2">
+                  <ul className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    {videoLinks.map((link, index) => (
+                      <li key={index} className="flex justify-between items-center p-1.5 bg-gray-100 border border-gray-200 rounded-md text-sm group">
+                        <a 
+                          href={link} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-blue-600 hover:underline truncate mr-2 flex-1" 
+                          title={link}
+                        >
+                          {link}
+                        </a>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleRemoveVideoLink(index)} 
+                          className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7"
+                          aria-label="Remover link"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+               {videoLinks.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p>
+               )}
+            </div>
           </div>
-          {videoLinks.length > 0 && (
-            <ul className="space-y-2">
-              {videoLinks.map((link, index) => (
-                <li key={index} className="flex justify-between items-center p-2 bg-gray-100 rounded-md">
-                  <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 truncate">{link}</a>
-                  <Button variant="destructive" size="sm" onClick={() => handleRemoveVideoLink(index)}>Remover</Button>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
-        <div className="flex justify-end mt-8">
+        {/* FIM DA NOVA SEÇÃO DE ANEXOS */}
+
+        <div className="flex justify-end mt-10"> {/* Aumentado mt para espaçamento */}
           <Button type="submit" disabled={isSubmitting} size="lg">
             <FileText className="mr-2 h-5 w-5" />
             {isSubmitting ? "Gerando e Salvando..." : "Finalizar e Gerar TCO"}
