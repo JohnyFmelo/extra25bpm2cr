@@ -4,7 +4,7 @@ import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucid
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Adicionado import
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
 import BasicInformationTab from "./tco/BasicInformationTab";
 import GeneralInformationTab from "./tco/GeneralInformationTab";
@@ -14,7 +14,6 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
 
-// ... (interfaces e funções de formatação permanecem as mesmas) ...
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
@@ -165,13 +164,13 @@ const TCOForm = () => {
   const [indicios, setIndicios] = useState("");
   const [customMaterialDesc, setCustomMaterialDesc] = useState("");
   const [isUnknownMaterial, setIsUnknownMaterial] = useState(false);
-  
-  // Estados para anexos
+  const [juizadoDate, setJuizadoDate] = useState("");
+  const [juizadoTime, setJuizadoTime] = useState("");
+
   const [videoLinks, setVideoLinks] = useState<string[]>([]);
   const [newVideoLink, setNewVideoLink] = useState("");
-  const [imageFiles, setImageFiles] = useState<File[]>([]); // Novo estado para arquivos de imagem
-  const imageInputRef = useRef<HTMLInputElement>(null); // Ref para o input de imagem
-
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const [autores, setAutores] = useState<Pessoa[]>([{ ...initialPersonData }]);
   const [vitimas, setVitimas] = useState<Pessoa[]>([{ ...initialPersonData }]);
@@ -227,16 +226,12 @@ const TCOForm = () => {
         }
       }
     } else {
-      // Não resetar lacreNumero aqui, pois pode ser usado em outras naturezas ou ser preenchido manualmente.
-      // setLacreNumero(""); 
       setVitimas(prevVitimas => {
         if (prevVitimas.length === 0) {
           return [{ ...initialPersonData }];
         }
         return prevVitimas;
       });
-      // Considerar como tratar apreensoes se a natureza mudar de "Porte de drogas" para outra.
-      // Por ora, se foi manualmente editada, mantém. Se for o template de droga, pode ser necessário limpar.
     }
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes, relatoPolicialTemplate]);
 
@@ -421,13 +416,14 @@ const TCOForm = () => {
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
     } else if (field === 'dataNascimento') {
+      processedValue = value;
       const birthDate = new Date(value + 'T00:00:00Z');
       if (!isNaN(birthDate.getTime())) {
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
         const m = today.getMonth() - birthDate.getMonth();
         if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-        if (age < 18 TDPForm (17).tsx") {
+        if (age < 18) {
           toast({ variant: "destructive", title: "Atenção: Autor Menor de Idade", description: "Avalie se cabe TCO." });
         }
       }
@@ -442,12 +438,11 @@ const TCOForm = () => {
     setIsRelatoPolicialManuallyEdited(true);
   };
 
-  // Funções para anexos de vídeo
   const handleAddVideoLink = () => {
     if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
       if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
-          toast({ variant: "warning", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
-          return;
+        toast({ variant: "warning", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
+        return;
       }
       setVideoLinks(prev => [...prev, newVideoLink.trim()]);
       setNewVideoLink("");
@@ -464,7 +459,6 @@ const TCOForm = () => {
     toast({ title: "Link Removido", description: "Link de vídeo removido com sucesso." });
   };
 
-  // Funções para anexos de imagem
   const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const newFiles = Array.from(event.target.files);
@@ -478,7 +472,6 @@ const TCOForm = () => {
       } else if (newFiles.length > 0) {
         toast({ variant: "warning", title: "Imagens Duplicadas", description: "Algumas ou todas as imagens selecionadas já foram adicionadas." });
       }
-      // Resetar o valor do input para permitir selecionar o mesmo arquivo novamente após removê-lo
       if (imageInputRef.current) {
         imageInputRef.current.value = "";
       }
@@ -493,7 +486,6 @@ const TCOForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validações essenciais
     const completionNow = new Date();
     const completionDate = completionNow.toISOString().split('T')[0];
     const completionTime = completionNow.toTimeString().slice(0, 5);
@@ -526,7 +518,6 @@ const TCOForm = () => {
       const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
       const userRegistration = userInfo.registration || "";
 
-      // Upload de imagens para Firebase Storage
       const storage = getStorage();
       const imageUrls: string[] = [];
       if (imageFiles.length > 0) {
@@ -581,10 +572,9 @@ const TCOForm = () => {
         createdBy: userInfo.id,
         userRegistration: userRegistration,
         videoLinks: videoLinks,
-        imageUrls: imageUrls, // Inclui URLs das imagens
-        // Campos legados ou não usados no formulário atual (remover se não necessários):
-        // lacre: "", 
-        // objetosApreendidos: [],
+        imageUrls: imageUrls,
+        juizadoDate: juizadoDate.trim(),
+        juizadoTime: juizadoTime.trim(),
       };
 
       if (vitimasFiltradas.length > 0) {
@@ -603,12 +593,11 @@ const TCOForm = () => {
 
       const docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
       
-      tcoDataParaSalvar.id = docRef.id; // Adicionar ID do documento para uso no PDF
+      tcoDataParaSalvar.id = docRef.id;
       
       toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
       
-      // Passar tcoDataParaSalvar (que inclui imageUrls) para o PDF
-      await generatePDF(tcoDataParaSalvar); 
+      await generatePDF(tcoDataParaSalvar);
       
       navigate("/?tab=tco");
     } catch (error: any) {
@@ -644,7 +633,7 @@ const TCOForm = () => {
           )) ||
         target.tagName === 'TEXTAREA'
       ) {
-        if (target.tagName !== 'TEXTAREA') { // Permite Enter em Textarea
+        if (target.tagName !== 'TEXTAREA') {
           e.preventDefault();
         }
       }
@@ -661,6 +650,8 @@ const TCOForm = () => {
           penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
           customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
           startTime={startTime} isTimerRunning={isTimerRunning}
+          juizadoDate={juizadoDate} setJuizadoDate={setJuizadoDate}
+          juizadoTime={juizadoTime} setJuizadoTime={setJuizadoTime}
         />
         {natureza === "Porte de drogas para consumo" && (
           <DrugVerificationTab
@@ -713,21 +704,19 @@ const TCOForm = () => {
           natureza={natureza}
         />
 
-        {/* SEÇÃO DE ANEXOS ATUALIZADA */}
         <div className="space-y-4 pt-4 border-t border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800 uppercase">
             ANEXOS
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Card de Fotos */}
             <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-3 hover:border-blue-500 transition-colors">
-                <div className="flex flex-col items-center text-center">
-                    <ImageIcon className="w-12 h-12 text-blue-600" />
-                    <h3 className="text-lg font-medium text-gray-700 mt-1">Fotos</h3>
-                    <p className="text-sm text-gray-500 px-4">
-                        Selecione ou arraste arquivos de imagem para anexar.
-                    </p>
-                </div>
+              <div className="flex flex-col items-center text-center">
+                <ImageIcon className="w-12 h-12 text-blue-600" />
+                <h3 className="text-lg font-medium text-gray-700 mt-1">Fotos</h3>
+                <p className="text-sm text-gray-500 px-4">
+                  Selecione ou arraste arquivos de imagem para anexar.
+                </p>
+              </div>
               
               <input
                 type="file"
@@ -766,15 +755,14 @@ const TCOForm = () => {
                         </Button>
                       </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               )}
               {imageFiles.length === 0 && (
-                  <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p>
-               )}
+                <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p>
+              )}
             </div>
 
-            {/* Card de Vídeos */}
             <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-3 hover:border-blue-500 transition-colors">
               <div className="flex flex-col items-center text-center">
                 <VideoIcon className="w-12 h-12 text-blue-600" />
@@ -829,13 +817,12 @@ const TCOForm = () => {
                   </ul>
                 </div>
               )}
-               {videoLinks.length === 0 && (
-                  <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p>
-               )}
+              {videoLinks.length === 0 && (
+                <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p>
+              )}
             </div>
           </div>
         </div>
-        {/* FIM DA SEÇÃO DE ANEXOS */}
 
         <div className="flex justify-end mt-10">
           <Button type="submit" disabled={isSubmitting} size="lg">
