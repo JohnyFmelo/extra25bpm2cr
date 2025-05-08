@@ -10,18 +10,18 @@ interface BasicInformationTabProps {
   setTcoNumber: (value: string) => void;
   natureza: string;
   setNatureza: (value: string) => void;
-  autor: string; // Mantido, embora não usado diretamente neste tab para input, pode ser útil para outros fins
-  setAutor: (value: string) => void; // Mantido
+  autor: string;
+  setAutor: (value: string) => void;
   penaDescricao: string;
   naturezaOptions: string[];
   customNatureza: string;
   setCustomNatureza: (value: string) => void;
   startTime: Date | null;
   isTimerRunning: boolean;
-  juizadoEspecialData: string; // Adicionado
-  setJuizadoEspecialData: (value: string) => void; // Adicionado
-  juizadoEspecialHora: string; // Adicionado
-  setJuizadoEspecialHora: (value: string) => void; // Adicionado
+  juizadoEspecialData: string;
+  setJuizadoEspecialData: (value: string) => void;
+  juizadoEspecialHora: string;
+  setJuizadoEspecialHora: (value: string) => void;
 }
 
 const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
@@ -29,18 +29,18 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   setTcoNumber,
   natureza,
   setNatureza,
-  // autor, // Removido dos parâmetros se não usado, mas mantido na interface por precaução
-  // setAutor, // Removido dos parâmetros se não usado, mas mantido na interface por precaução
+  // autor, // Props mantidas na interface, mas não usadas diretamente aqui
+  // setAutor,
   penaDescricao,
   naturezaOptions,
   customNatureza,
   setCustomNatureza,
   startTime,
   isTimerRunning,
-  juizadoEspecialData, // Adicionado
-  setJuizadoEspecialData, // Adicionado
-  juizadoEspecialHora, // Adicionado
-  setJuizadoEspecialHora, // Adicionado
+  juizadoEspecialData,
+  setJuizadoEspecialData,
+  juizadoEspecialHora,
+  setJuizadoEspecialHora,
 }) => {
   return (
     <Card>
@@ -56,12 +56,15 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-4"> {/* Container principal para todos os campos, com espaçamento vertical */}
+          
+          {/* Número do TCO */}
           <div>
             <Label htmlFor="tcoNumber">Número do TCO *</Label>
             <Input id="tcoNumber" placeholder="Informe o número do TCO" value={tcoNumber} onChange={e => setTcoNumber(e.target.value)} />
           </div>
           
+          {/* Natureza */}
           <div>
             <Label htmlFor="natureza">Natureza *</Label>
             <Select value={natureza} onValueChange={setNatureza}>
@@ -78,6 +81,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
             </Select>
           </div>
 
+          {/* Natureza Personalizada */}
           {natureza === "Outros" && (
             <div>
               <Label htmlFor="customNatureza">Especifique a Natureza *</Label>
@@ -90,6 +94,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
             </div>
           )}
 
+          {/* Pena da Tipificação */}
           {penaDescricao && (
             <div>
               <Label>Pena da Tipificação</Label>
@@ -97,11 +102,14 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
             </div>
           )}
 
-          {/* Nova seção para Apresentação em Juizado Especial VG */}
-          <div className="pt-2"> {/* Adicionado um pouco de espaço no topo */}
-            <Label className="text-md font-semibold text-gray-700">Apresentação em Juizado Especial VG</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
-              <div>
+          {/* Apresentação em Juizado Especial VG */}
+          {/* Este bloco <div> é um item no fluxo de space-y-4 do pai */}
+          <div className="space-y-2"> {/* Cria um sub-grupo para o rótulo "Apresentação..." e seus campos, com um espaçamento interno menor */}
+            <Label>Apresentação em Juizado Especial VG</Label> {/* Rótulo principal da seção */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4"> {/* Grid para os campos Data e Hora */}
+              
+              {/* Campo Data */}
+              <div className="space-y-1"> {/* Agrupa o rótulo "Data" com seu input */}
                 <Label htmlFor="juizadoData">Data</Label>
                 <Input 
                   id="juizadoData" 
@@ -110,7 +118,9 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
                   onChange={e => setJuizadoEspecialData(e.target.value)} 
                 />
               </div>
-              <div>
+              
+              {/* Campo Hora */}
+              <div className="space-y-1"> {/* Agrupa o rótulo "Hora" com seu input */}
                 <Label htmlFor="juizadoHora">Hora</Label>
                 <Input 
                   id="juizadoHora" 
