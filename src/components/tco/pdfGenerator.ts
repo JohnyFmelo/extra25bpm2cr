@@ -1,3 +1,4 @@
+
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -22,7 +23,7 @@ export const generatePDF = (inputData: any) => {
     if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
         console.error("Input data missing or invalid. Cannot generate PDF.");
         alert("Erro: Dados inválidos para gerar o PDF.");
-        return;
+        return null;
     }
 
     // Cria a instância do jsPDF
@@ -106,10 +107,18 @@ export const generatePDF = (inputData: any) => {
     const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
 
     try {
+        // Salvar o PDF localmente e retornar o blob
         doc.save(fileName);
         console.log(`PDF Gerado: ${fileName}`);
+        
+        // Retorna um objeto com o arquivo PDF como blob e o nome do arquivo
+        return {
+            blob: doc.output('blob'),
+            fileName: fileName
+        };
     } catch (error) {
         console.error("Erro ao salvar o PDF:", error);
         alert("Ocorreu um erro ao tentar salvar o PDF.");
+        return null;
     }
 };
