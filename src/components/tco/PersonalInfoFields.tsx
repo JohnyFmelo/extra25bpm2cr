@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react"; // Adicionado useCallback
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,7 +12,6 @@ interface PersonalInfoFieldsProps {
     sexo: string;
     estadoCivil: string;
     profissao: string;
-    // endereco: string; // Original: RUA, NÚMERO/QUADRA/LOTE, BAIRRO
     dataNascimento: string;
     naturalidade: string;
     filiacaoMae: string;
@@ -21,22 +20,21 @@ interface PersonalInfoFieldsProps {
     cpf: string;
     celular: string;
     email: string;
-    laudoPericial: string; // Novo campo: "Sim" ou "Não"
-
-    // Campos de endereço atualizados/novos
+    laudoPericial: string;
     cep: string;
-    endereco: string; // Armazenará Logradouro, Bairro
+    endereco: string;
     numero: string;
     complemento: string;
-    cidade: string; // Armazenará a cidade do CEP
-    uf: string;     // Armazenará o UF do CEP
+    cidade: string;
+    uf: string;
   };
-  onChangeHandler: (index: number | null, field: string, value: string) => void;
+  onChangeHandler: (index: number, field: string, value: string) => void; // index agora é number, não number | null
   prefix?: string;
-  index: number;
+  index: number; // index é sempre um número aqui
   isAuthor?: boolean;
-  isVictim?: boolean; // Novo prop para Vítimas
+  isVictim?: boolean;
 }
+
 const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
   data,
   onChangeHandler,
@@ -52,7 +50,8 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
   const [cepApiError, setCepApiError] = useState<string | null>(null);
   const [cepCityNotification, setCepCityNotification] = useState<string | null>(null);
 
-  // Format CPF: 000.000.000-00
+  // console.log(`[${prefix}${index}] Renderizando com data:`, data); // Log para cada render
+
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 3) return numbers;
@@ -61,7 +60,6 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
     return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
   };
 
-  // Format phone: (00) 00000-0000
   const formatPhone = (value: string) => {
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 2) return `(${numbers}`;
@@ -69,80 +67,82 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
   };
 
-  // Format CEP input: 00000-000
   const formatCEPInput = (value: string) => {
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 5) return numbers;
     return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
   };
 
-  // Validate CPF
   const validateCPF = (cpf: string) => {
     const stripped = cpf.replace(/\D/g, '');
     if (stripped.length !== 11) {
-      setCpfError('CPF deve conter 11 dígitos');
-      return;
+      setCpfError('CPF deve conter 11 dígitos'); return;
     }
-
-    // Check for repeated digits (simple validation)
     if (/^(\d)\1+$/.test(stripped)) {
-      setCpfError('CPF inválido');
-      return;
+      setCpfError('CPF inválido'); return;
     }
     setCpfError(null);
   };
 
-  // Validate phone number
   const validatePhone = (phone: string) => {
     const stripped = phone.replace(/\D/g, '');
     if (stripped.length !== 11) {
-      setPhoneError('Celular deve conter 11 dígitos (com DDD)');
-      return;
+      setPhoneError('Celular deve conter 11 dígitos (com DDD)'); return;
     }
     setPhoneError(null);
   };
 
-  // Calculate age from birthdate
   useEffect(() => {
     if (data.dataNascimento && isAuthor) {
-      const birthDate = new Date(data.dataNascimento);
+      const birthDate = new Date(data.dataNascimento); // Considerar fuso horário se data é string YYYY-MM-DD
       const today = new Date();
       let years = today.getFullYear() - birthDate.getFullYear();
       const months = today.getMonth() - birthDate.getMonth();
       const days = today.getDate() - birthDate.getDate();
-      if (months < 0 || months === 0 && days < 0) {
+      if (months < 0 || (months === 0 && days < 0)) {
         years--;
       }
       if (years < 18) {
-        // Calculate exact age in years, months and days
         let ageMonths = months < 0 ? 12 + months : months;
         let ageDays = days < 0 ? new Date(today.getFullYear(), today.getMonth(), 0).getDate() + days : days;
-        if (days < 0) {
-          ageMonths--;
-          if (ageMonths < 0) ageMonths = 11;
+        if (days < 0 && months !== 0) { // Ajuste se o dia for negativo e não for o mesmo mês
+          ageMonths = (ageMonths - 1 + 12) % 12;
+        } else if (days <0 && months === 0) { // Se for mesmo mês e dia negativo, subtrai um mês
+             ageMonths = 11;
         }
+
         setAgeWarning(`ATENÇÃO: O Autor é menor de idade (${years} anos, ${ageMonths} meses e ${ageDays} dias). Avalie corretamente se cabe TCO contra esse suspeito.`);
       } else {
         setAgeWarning(null);
       }
+    } else {
+       setAgeWarning(null); // Limpa o aviso se não for autor ou não tiver data
     }
   }, [data.dataNascimento, isAuthor]);
 
-  const handleCepInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedCep = formatCEPInput(e.target.value);
-    onChangeHandler(index !== undefined ? index : null, 'cep', formattedCep);
+  const handleCepInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    // console.log(`[${prefix}${index}] CEP Input raw: "${rawValue}"`);
+    const formattedCep = formatCEPInput(rawValue);
+    // console.log(`[${prefix}${index}] CEP Input formatted: "${formattedCep}"`);
+
+    onChangeHandler(index, 'cep', formattedCep);
+    
     setCepApiError(null);
     setCepCityNotification(null);
-    // Clear address fields if CEP is being re-typed and is not yet complete or was shortened
-    if (e.target.value.length < data.cep.length || e.target.value.replace(/\D/g, '').length < 8) {
-        onChangeHandler(index !== undefined ? index : null, 'endereco', '');
-        onChangeHandler(index !== undefined ? index : null, 'cidade', '');
-        onChangeHandler(index !== undefined ? index : null, 'uf', '');
-    }
-  };
 
-  const handleCepSearch = async () => {
+    const cepDigits = formattedCep.replace(/\D/g, '');
+    if (cepDigits.length < 8 || rawValue === '') {
+      // console.log(`[${prefix}${index}] Limpando campos de endereço pois CEP incompleto/vazio.`);
+      onChangeHandler(index, 'endereco', '');
+      onChangeHandler(index, 'cidade', '');
+      onChangeHandler(index, 'uf', '');
+    }
+  }, [onChangeHandler, index, prefix]);
+
+  const handleCepSearch = useCallback(async () => {
     const cepToSearch = data.cep.replace(/\D/g, '');
+    // console.log(`[${prefix}${index}] Buscando CEP: "${cepToSearch}" (original: "${data.cep}")`);
     if (cepToSearch.length !== 8) {
       setCepApiError("CEP deve conter 8 dígitos.");
       return;
@@ -151,64 +151,60 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
     setCepLoading(true);
     setCepApiError(null);
     setCepCityNotification(null);
-    // Clear previous address info before new search
-    onChangeHandler(index !== undefined ? index : null, 'endereco', '');
-    onChangeHandler(index !== undefined ? index : null, 'cidade', '');
-    onChangeHandler(index !== undefined ? index : null, 'uf', '');
-    // onChangeHandler(index !== undefined ? index : null, 'numero', ''); // User might want to keep numero
-    // onChangeHandler(index !== undefined ? index : null, 'complemento', ''); // User might want to keep complemento
+    onChangeHandler(index, 'endereco', ''); // Limpa antes da busca
+    onChangeHandler(index, 'cidade', '');
+    onChangeHandler(index, 'uf', '');
 
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cepToSearch}/json/`);
       if (!response.ok) {
+        // console.error(`[${prefix}${index}] Erro HTTP API CEP: ${response.status}`);
         throw new Error("Serviço de CEP indisponível. Tente novamente.");
       }
       const apiData = await response.json();
+      // console.log(`[${prefix}${index}] API CEP Response:`, apiData);
 
       if (apiData.erro) {
         setCepApiError("CEP não encontrado ou inválido.");
       } else {
         const newEndereco = `${apiData.logradouro || ''}${apiData.logradouro && apiData.bairro ? ', ' : ''}${apiData.bairro || ''}`;
-        onChangeHandler(index !== undefined ? index : null, 'endereco', newEndereco.trim());
-        onChangeHandler(index !== undefined ? index : null, 'cidade', apiData.localidade || '');
-        onChangeHandler(index !== undefined ? index : null, 'uf', apiData.uf || '');
+        // console.log(`[${prefix}${index}] Preenchendo endereço: "${newEndereco.trim()}", Cidade: "${apiData.localidade || ''}", UF: "${apiData.uf || ''}"`);
+        onChangeHandler(index, 'endereco', newEndereco.trim());
+        onChangeHandler(index, 'cidade', apiData.localidade || '');
+        onChangeHandler(index, 'uf', apiData.uf || '');
 
         if (apiData.localidade && apiData.localidade.toUpperCase() !== "VÁRZEA GRANDE") {
           setCepCityNotification(`Atenção: O CEP ${data.cep} é de ${apiData.localidade} - ${apiData.uf}.`);
         }
       }
     } catch (error) {
+      // console.error(`[${prefix}${index}] Erro ao buscar CEP:`, error);
       setCepApiError(error instanceof Error ? error.message : "Erro ao buscar CEP.");
     } finally {
       setCepLoading(false);
     }
-  };
+  }, [data.cep, onChangeHandler, index, prefix]);
+  
+  // Para o campo CEP, usar data.cep diretamente no value. A formatação acontece no onChange.
+  // O `maxLength` no input já ajuda a restringir o tamanho.
 
   return <div className="space-y-4">
       {isAuthor && ageWarning && <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Atenção</AlertTitle>
-          <AlertDescription>
-            {ageWarning}
-          </AlertDescription>
+          <AlertDescription>{ageWarning}</AlertDescription>
         </Alert>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}nome_${index}`}>Nome completo *</Label>
-          <Input id={`${prefix}nome_${index}`} value={data.nome} onChange={e => onChangeHandler(index !== undefined ? index : null, 'nome', e.target.value)} />
+          <Input id={`${prefix}nome_${index}`} value={data.nome} onChange={e => onChangeHandler(index, 'nome', e.target.value)} />
         </div>
-        
         <div>
           <Label htmlFor={`${prefix}sexo_${index}`}>Sexo</Label>
-          <Select value={data.sexo || ""} onValueChange={value => onChangeHandler(index !== undefined ? index : null, 'sexo', value)}>
-            <SelectTrigger id={`${prefix}sexo_${index}`}>
-              <SelectValue placeholder="Selecione o sexo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="MASCULINO">Masculino</SelectItem>
-              <SelectItem value="FEMININO">Feminino</SelectItem>
-            </SelectContent>
+          <Select value={data.sexo || ""} onValueChange={value => onChangeHandler(index, 'sexo', value)}>
+            <SelectTrigger id={`${prefix}sexo_${index}`}><SelectValue placeholder="Selecione o sexo" /></SelectTrigger>
+            <SelectContent><SelectItem value="MASCULINO">Masculino</SelectItem><SelectItem value="FEMININO">Feminino</SelectItem></SelectContent>
           </Select>
         </div>
       </div>
@@ -216,133 +212,80 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}estadoCivil_${index}`}>Estado Civil</Label>
-          <Select value={data.estadoCivil || ""} onValueChange={value => onChangeHandler(index !== undefined ? index : null, 'estadoCivil', value)}>
-            <SelectTrigger id={`${prefix}estadoCivil_${index}`}>
-              <SelectValue placeholder="Selecione o estado civil" />
-            </SelectTrigger>
+          <Select value={data.estadoCivil || ""} onValueChange={value => onChangeHandler(index, 'estadoCivil', value)}>
+            <SelectTrigger id={`${prefix}estadoCivil_${index}`}><SelectValue placeholder="Selecione o estado civil" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="SOLTEIRO">Solteiro</SelectItem>
-              <SelectItem value="UNIÃO ESTÁVEL">União Estável</SelectItem>
-              <SelectItem value="CASADO">Casado</SelectItem>
-              <SelectItem value="DIVORCIADO">Divorciado</SelectItem>
+              <SelectItem value="SOLTEIRO">Solteiro</SelectItem><SelectItem value="UNIÃO ESTÁVEL">União Estável</SelectItem>
+              <SelectItem value="CASADO">Casado</SelectItem><SelectItem value="DIVORCIADO">Divorciado</SelectItem>
               <SelectItem value="VIÚVO">Viúvo</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        
         <div>
           <Label htmlFor={`${prefix}profissao_${index}`}>Profissão</Label>
-          <Input id={`${prefix}profissao_${index}`} value={data.profissao} onChange={e => onChangeHandler(index !== undefined ? index : null, 'profissao', e.target.value)} />
+          <Input id={`${prefix}profissao_${index}`} value={data.profissao} onChange={e => onChangeHandler(index, 'profissao', e.target.value)} />
         </div>
       </div>
 
-      {/* Seção de Endereço com CEP */}
-      <div className="space-y-2 border-t pt-4 mt-4"> {/* Adicionado mt-4 para separar visualmente */}
-        <Label className="text-base font-semibold">Endereço da Pessoa</Label> {/* Título da seção */}
+      <div className="space-y-2 border-t pt-4 mt-4">
+        <Label className="text-base font-semibold">Endereço da Pessoa</Label>
         <div className="flex items-end gap-2">
           <div className="flex-grow">
             <Label htmlFor={`${prefix}cep_${index}`}>CEP</Label>
             <Input
               id={`${prefix}cep_${index}`}
               placeholder="00000-000"
-              value={data.cep}
-              onChange={handleCepInputChange}
-              maxLength={9} // "00000-000"
+              value={data.cep} // O valor vem diretamente do estado pai
+              onChange={handleCepInputChange} // Formata e atualiza o estado pai
+              maxLength={9}
             />
           </div>
-          <Button 
-            type="button" 
-            onClick={handleCepSearch} 
-            disabled={cepLoading || data.cep.replace(/\D/g, '').length !== 8} 
-            variant="outline" 
-            size="icon" 
-            className="mb-px" // Alinha com a base do input
-          >
+          <Button type="button" onClick={handleCepSearch} disabled={cepLoading || data.cep.replace(/\D/g, '').length !== 8} variant="outline" size="icon" className="mb-px">
             {cepLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           </Button>
         </div>
         {cepApiError && <p className="text-xs text-red-500 mt-1">{cepApiError}</p>}
-        {cepCityNotification && (
-          <Alert variant="warning" className="mt-2">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Atenção</AlertTitle>
-            <AlertDescription>{cepCityNotification}</AlertDescription>
-          </Alert>
-        )}
+        {cepCityNotification && <Alert variant="warning" className="mt-2"><AlertCircle className="h-4 w-4" /><AlertTitle>Atenção</AlertTitle><AlertDescription>{cepCityNotification}</AlertDescription></Alert>}
       </div>
 
       <div>
         <Label htmlFor={`${prefix}endereco_${index}`}>Logradouro, Bairro</Label>
-        <Input
-          id={`${prefix}endereco_${index}`}
-          placeholder="Ex: Rua das Palmeiras, Centro (Preenchido pelo CEP)"
-          value={data.endereco}
-          onChange={e => onChangeHandler(index !== undefined ? index : null, 'endereco', e.target.value)}
-          // Considerar readOnly={!!data.cidade && !cepApiError} se o preenchimento for estritamente via CEP
-        />
+        <Input id={`${prefix}endereco_${index}`} placeholder="Ex: Rua das Palmeiras, Centro" value={data.endereco} onChange={e => onChangeHandler(index, 'endereco', e.target.value)} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}numero_${index}`}>Número *</Label>
-          <Input id={`${prefix}numero_${index}`} placeholder="Ex: 123 ou S/N" value={data.numero} onChange={e => onChangeHandler(index !== undefined ? index : null, 'numero', e.target.value)} />
+          <Input id={`${prefix}numero_${index}`} placeholder="Ex: 123 ou S/N" value={data.numero} onChange={e => onChangeHandler(index, 'numero', e.target.value)} />
         </div>
         <div>
           <Label htmlFor={`${prefix}complemento_${index}`}>Complemento</Label>
-          <Input id={`${prefix}complemento_${index}`} placeholder="Apto, Bloco, Casa (Opcional)" value={data.complemento} onChange={e => onChangeHandler(index !== undefined ? index : null, 'complemento', e.target.value)} />
+          <Input id={`${prefix}complemento_${index}`} placeholder="Apto, Bloco, Casa (Opcional)" value={data.complemento} onChange={e => onChangeHandler(index, 'complemento', e.target.value)} />
         </div>
       </div>
 
-      {(data.cidade || data.uf) && ( // Mostra cidade/UF se preenchido pelo CEP
+      {(data.cidade || data.uf) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <Label>Cidade (Conforme CEP)</Label>
-                <Input value={data.cidade} readOnly disabled className="bg-gray-100 dark:bg-gray-800"/>
-            </div>
-            <div>
-                <Label>UF (Conforme CEP)</Label>
-                <Input value={data.uf} readOnly disabled className="bg-gray-100 dark:bg-gray-800"/>
-            </div>
+            <div><Label>Cidade (Conforme CEP)</Label><Input value={data.cidade} readOnly disabled className="bg-gray-100 dark:bg-gray-800"/></div>
+            <div><Label>UF (Conforme CEP)</Label><Input value={data.uf} readOnly disabled className="bg-gray-100 dark:bg-gray-800"/></div>
         </div>
       )}
-      {/* Fim da Seção de Endereço com CEP */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor={`${prefix}dataNascimento_${index}`}>Data de Nascimento</Label>
-          <Input id={`${prefix}dataNascimento_${index}`} type="date" value={data.dataNascimento} onChange={e => onChangeHandler(index !== undefined ? index : null, 'dataNascimento', e.target.value)} />
-        </div>
-        
-        <div>
-          <Label htmlFor={`${prefix}naturalidade_${index}`}>Naturalidade</Label>
-          <Input id={`${prefix}naturalidade_${index}`} placeholder="MUNICÍPIO" value={data.naturalidade} onChange={e => onChangeHandler(index !== undefined ? index : null, 'naturalidade', e.target.value)} />
-        </div>
+        <div><Label htmlFor={`${prefix}dataNascimento_${index}`}>Data de Nascimento</Label><Input id={`${prefix}dataNascimento_${index}`} type="date" value={data.dataNascimento} onChange={e => onChangeHandler(index, 'dataNascimento', e.target.value)} /></div>
+        <div><Label htmlFor={`${prefix}naturalidade_${index}`}>Naturalidade</Label><Input id={`${prefix}naturalidade_${index}`} placeholder="MUNICÍPIO" value={data.naturalidade} onChange={e => onChangeHandler(index, 'naturalidade', e.target.value)} /></div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor={`${prefix}filiacaoMae_${index}`}>Filiação - Mãe</Label>
-          <Input id={`${prefix}filiacaoMae_${index}`} placeholder="NOME COMPLETO" value={data.filiacaoMae} onChange={e => onChangeHandler(index !== undefined ? index : null, 'filiacaoMae', e.target.value)} />
-        </div>
-        
-        <div>
-          <Label htmlFor={`${prefix}filiacaoPai_${index}`}>Filiação - Pai</Label>
-          <Input id={`${prefix}filiacaoPai_${index}`} placeholder="NOME COMPLETO" value={data.filiacaoPai} onChange={e => onChangeHandler(index !== undefined ? index : null, 'filiacaoPai', e.target.value)} />
-        </div>
+        <div><Label htmlFor={`${prefix}filiacaoMae_${index}`}>Filiação - Mãe</Label><Input id={`${prefix}filiacaoMae_${index}`} placeholder="NOME COMPLETO" value={data.filiacaoMae} onChange={e => onChangeHandler(index, 'filiacaoMae', e.target.value)} /></div>
+        <div><Label htmlFor={`${prefix}filiacaoPai_${index}`}>Filiação - Pai</Label><Input id={`${prefix}filiacaoPai_${index}`} placeholder="NOME COMPLETO" value={data.filiacaoPai} onChange={e => onChangeHandler(index, 'filiacaoPai', e.target.value)} /></div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor={`${prefix}rg_${index}`}>RG ou Documento</Label>
-          <Input id={`${prefix}rg_${index}`} placeholder="RG 00000000 UF" value={data.rg} onChange={e => onChangeHandler(index !== undefined ? index : null, 'rg', e.target.value)} />
-        </div>
-        
+        <div><Label htmlFor={`${prefix}rg_${index}`}>RG ou Documento</Label><Input id={`${prefix}rg_${index}`} placeholder="RG 00000000 UF" value={data.rg} onChange={e => onChangeHandler(index, 'rg', e.target.value)} /></div>
         <div>
           <Label htmlFor={`${prefix}cpf_${index}`}>CPF</Label>
-          <Input id={`${prefix}cpf_${index}`} placeholder="000.000.000-00" value={data.cpf} onChange={e => {
-          const formatted = formatCPF(e.target.value);
-          onChangeHandler(index !== undefined ? index : null, 'cpf', formatted);
-        }} onBlur={() => validateCPF(data.cpf)} />
+          <Input id={`${prefix}cpf_${index}`} placeholder="000.000.000-00" value={data.cpf} onChange={e => onChangeHandler(index, 'cpf', formatCPF(e.target.value))} onBlur={() => validateCPF(data.cpf)} />
           {cpfError && <p className="text-red-500 text-xs mt-1">{cpfError}</p>}
         </div>
       </div>
@@ -350,30 +293,18 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}celular_${index}`}>Celular</Label>
-          <Input id={`${prefix}celular_${index}`} placeholder="(65) 90000-0000" value={data.celular} onChange={e => {
-          const formatted = formatPhone(e.target.value);
-          onChangeHandler(index !== undefined ? index : null, 'celular', formatted);
-        }} onBlur={() => validatePhone(data.celular)} />
+          <Input id={`${prefix}celular_${index}`} placeholder="(65) 90000-0000" value={data.celular} onChange={e => onChangeHandler(index, 'celular', formatPhone(e.target.value))} onBlur={() => validatePhone(data.celular)} />
           {phoneError && <p className="text-red-500 text-xs mt-1">{phoneError}</p>}
         </div>
-        
-        <div>
-          <Label htmlFor={`${prefix}email_${index}`}>E-mail</Label>
-          <Input id={`${prefix}email_${index}`} type="email" placeholder="contato@exemplo.com" value={data.email} onChange={e => onChangeHandler(index !== undefined ? index : null, 'email', e.target.value)} />
-        </div>
+        <div><Label htmlFor={`${prefix}email_${index}`}>E-mail</Label><Input id={`${prefix}email_${index}`} type="email" placeholder="contato@exemplo.com" value={data.email} onChange={e => onChangeHandler(index, 'email', e.target.value)} /></div>
       </div>
 
       {(isAuthor || isVictim) && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor={`${prefix}laudoPericial_${index}`}>Solicitar Corpo de Delito?</Label>
-            <Select value={data.laudoPericial || "Não"} onValueChange={value => onChangeHandler(index !== undefined ? index : null, 'laudoPericial', value)}>
-              <SelectTrigger id={`${prefix}laudoPericial_${index}`}>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Não">Não</SelectItem>
-                <SelectItem value="Sim">Sim</SelectItem>
-              </SelectContent>
+            <Select value={data.laudoPericial || "Não"} onValueChange={value => onChangeHandler(index, 'laudoPericial', value)}>
+              <SelectTrigger id={`${prefix}laudoPericial_${index}`}><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent><SelectItem value="Não">Não</SelectItem><SelectItem value="Sim">Sim</SelectItem></SelectContent>
             </Select>
           </div>
         </div>}
