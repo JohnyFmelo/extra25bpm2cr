@@ -165,6 +165,10 @@ const TCOForm = () => {
   const [customMaterialDesc, setCustomMaterialDesc] = useState("");
   const [isUnknownMaterial, setIsUnknownMaterial] = useState(false);
   
+  // Novos estados para Apresentação em Juizado Especial
+  const [juizadoEspecialData, setJuizadoEspecialData] = useState("");
+  const [juizadoEspecialHora, setJuizadoEspecialHora] = useState("");
+
   // Estados para anexos
   const [videoLinks, setVideoLinks] = useState<string[]>([]);
   const [newVideoLink, setNewVideoLink] = useState("");
@@ -574,6 +578,8 @@ const TCOForm = () => {
         userRegistration: userRegistration,
         videoLinks: videoLinks,
         imageUrls: imageUrls, // Adicionado campo para URLs de imagens
+        juizadoEspecialData: juizadoEspecialData.trim(),
+        juizadoEspecialHora: juizadoEspecialHora.trim(),
         // Campos legados ou não usados no formulário atual (remover se não necessários):
         // lacre: "", 
         // objetosApreendidos: [],
@@ -681,6 +687,10 @@ const TCOForm = () => {
           condutorNome={condutorParaDisplay?.nome || ""}
           condutorPosto={condutorParaDisplay?.posto || ""}
           condutorRg={condutorParaDisplay?.rg || ""}
+          juizadoEspecialData={juizadoEspecialData}
+          setJuizadoEspecialData={setJuizadoEspecialData}
+          juizadoEspecialHora={juizadoEspecialHora}
+          setJuizadoEspecialHora={setJuizadoEspecialHora}
         />
         <PessoasEnvolvidasTab
           vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
