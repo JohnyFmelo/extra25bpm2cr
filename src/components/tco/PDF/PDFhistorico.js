@@ -60,11 +60,11 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 2;
     }
 
-    // Seção 2.2: Vítima(s)
+    // Seção 2.2: Vítima(s) - Ajusta singular/plural
     const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome) : [];
     const vitimaTitle = vitimasValidas.length === 1 ? "VÍTIMA" : "VÍTIMAS";
     yPos = addSectionTitle(doc, yPos, vitimaTitle, "2.2", 2, data);
-    if (vitimasValidas.length > 0 && data.natureza !== "Porte de drogas para consumo") {
+    if (vitimasValidas.length > 0) {
         vitimasValidas.forEach((vitima, index) => {
             if (index > 0) {
                 yPos += 3; yPos = checkPageBreak(doc, yPos, 5, data);
@@ -91,7 +91,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 2;
     }
 
-    // Seção 2.3: Testemunha(s)
+    // Seção 2.3: Testemunha(s) - Ajusta singular/plural
     const testemunhasValidas = data.testemunhas ? data.testemunhas.filter(t => t?.nome) : [];
     const testemunhaTitle = testemunhasValidas.length === 1 ? "TESTEMUNHA" : "TESTEMUNHAS";
     yPos = addSectionTitle(doc, yPos, testemunhaTitle, "2.3", 2, data);
@@ -123,167 +123,178 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     }
 
     // --- SEÇÃO 3: HISTÓRICO ---
+    const primeiroAutor = data.autores?.[0];
+    const primeiraVitima = vitimasValidas.length > 0 ? vitimasValidas[0] : null;
+    const primeiraTestemunha = testemunhasValidas.length > 0 ? testemunhasValidas[0] : null;
+
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
+    yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", "3.1", 2, data);
+    yPos = addWrappedText(doc, yPos, data.relatoPolicial, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos += 2;
 
-    // Seção 3.1: Relato Policial
-    yPos = addSectionTitle(doc, yPos, "RELATO POLICIAL", "3.1", 2, data);
-    if (data.relatoPolicial) {
-        yPos = addWrappedText(doc, yPos, data.relatoPolicial, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        yPos += 5;
-        yPos = checkPageBreak(doc, yPos, 20, data);
-        const policial = data.componentesGuarnicao && data.componentesGuarnicao[0] ?
-            `${data.componentesGuarnicao[0].posto} PM ${data.componentesGuarnicao[0].nome}` : "Policial Responsável";
-        yPos = addSignatureWithNameAndRole(doc, yPos, policial, "Condutor", data);
+    yPos = addSectionTitle(doc, yPos, "RELATO DO AUTOR DO FATO", "3.2", 2, data);
+    yPos = addWrappedText(doc, yPos, data.relatoAutor, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    if (primeiroAutor) {
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor?.nome, "AUTOR DO FATO", data);
     } else {
-        yPos = addWrappedText(doc, yPos, "Nenhum relato policial informado.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
-        yPos += 2;
+        yPos += 10;
     }
 
-    // Seção 3.2: Relato do(s) Autor(es)
-    yPos = addSectionTitle(doc, yPos, autorTitle, "3.2", 2, data);
-    if (data.relatoAutor) {
-        yPos = addWrappedText(doc, yPos, data.relatoAutor, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        yPos += 5;
-        yPos = checkPageBreak(doc, yPos, 20, data);
-        autoresValidos.forEach((autor) => {
-            yPos = addSignatureWithNameAndRole(doc, yPos, autor.nome, "Autor", data);
-            yPos += 5; yPos = checkPageBreak(doc, yPos, 20, data);
-        });
+    yPos = addSectionTitle(doc, yPos, "RELATO DA VÍTIMA", "3.3", 2, data);
+    const relatoVitimaText = primeiraVitima ? (data.relatoVitima || "Relato não fornecido pela vítima.") : "Nenhuma vítima identificada para fornecer relato.";
+    yPos = addWrappedText(doc, yPos, relatoVitimaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    if (primeiraVitima) {
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiraVitima?.nome, "VÍTIMA", data);
     } else {
-        yPos = addWrappedText(doc, yPos, "Nenhum relato do autor informado.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
-        yPos += 2;
+        yPos += 10;
     }
 
-    // Seção 3.3: Relato da(s) Vítima(s)
-    if (data.natureza !== "Porte de drogas para consumo") {
-        yPos = addSectionTitle(doc, yPos, vitimaTitle, "3.3", 2, data);
-        if (data.relatoVitima) {
-            yPos = addWrappedText(doc, yPos, data.relatoVitima, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-            yPos += 2;
-            if (data.representacao) {
-                const repText = data.representacao === "representar" ?
-                    "A vítima manifestou desejo de representar contra o(s) autor(es)." :
-                    "A vítima optou por decidir sobre a representação posteriormente (prazo de 6 meses).";
-                yPos = addWrappedText(doc, yPos, repText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-            }
-            yPos += 5;
-            yPos = checkPageBreak(doc, yPos, 20, data);
-            vitimasValidas.forEach((vitima) => {
-                yPos = addSignatureWithNameAndRole(doc, yPos, vitima.nome, "Vítima", data);
-                yPos += 5; yPos = checkPageBreak(doc, yPos, 20, data);
-            });
-        } else {
-            yPos = addWrappedText(doc, yPos, "Nenhum relato da vítima informado.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
-            yPos += 2;
-        }
+    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", "3.4", 2, data);
+    let relatoTestText = "Nenhuma testemunha identificada.";
+    if (primeiraTestemunha) {
+        relatoTestText = data.relatoTestemunha || "Relato não fornecido pela testemunha.";
     }
-
-    // Seção 3.4: Relato da(s) Testemunha(s)
-    yPos = addSectionTitle(doc, yPos, testemunhaTitle, "3.4", 2, data);
-    if (data.relatoTestemunha) {
-        yPos = addWrappedText(doc, yPos, data.relatoTestemunha, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        yPos += 5;
-        yPos = checkPageBreak(doc, yPos, 20, data);
-        testemunhasValidas.forEach((testemunha) => {
-            yPos = addSignatureWithNameAndRole(doc, yPos, testemunha.nome, "Testemunha", data);
-            yPos += 5; yPos = checkPageBreak(doc, yPos, 20, data);
-        });
+    yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    if (primeiraTestemunha) {
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiraTestemunha?.nome, "TESTEMUNHA", data);
     } else {
-        yPos = addWrappedText(doc, yPos, "Nenhum relato de testemunha informado.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
-        yPos += 2;
+        yPos += 10;
     }
 
-    // --- SEÇÃO 4: APREENSÕES ---
-    yPos = addSectionTitle(doc, yPos, "APREENSÕES", "4", 1, data);
+    yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", "3.5", 2, data);
+    yPos = addWrappedText(doc, yPos, data.conclusaoPolicial, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos += 2;
 
-    // Seção 4.1: Descrição das Apreensões
-    yPos = addSectionTitle(doc, yPos, "DESCRIÇÃO DAS APREENSÕES", "4.1", 2, data);
-    if (data.apreensoes) {
-        yPos = addWrappedText(doc, yPos, data.apreensoes, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        yPos += 2;
-    } else {
-        yPos = addWrappedText(doc, yPos, "Nenhum objeto ou documento apreendido.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
-        yPos += 2;
+    // --- SEÇÃO 4: PROVIDÊNCIAS E ANEXOS ---
+    yPos = addSectionTitle(doc, yPos, "PROVIDÊNCIAS", "4", 1, data);
+    yPos = addWrappedText(doc, yPos, data.providencias || "Não informado.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos += 2;
+
+    yPos = addSectionTitle(doc, yPos, "DOCUMENTOS ANEXOS", "4.1", 2, data);
+    yPos = addWrappedText(doc, yPos, data.documentosAnexos || "Nenhum.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
+    yPos += 2;
+
+    yPos = addSectionTitle(doc, yPos, "DESCRIÇÃO DOS OBJETOS/DOCUMENTOS APREENDIDOS", "4.2", 2, data);
+    yPos = addWrappedText(doc, yPos, data.apreensaoDescricao || data.apreensoes || "Nenhum.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
+    yPos += 2;
+
+    // --- SEÇÃO 4.3: FOTOS E/OU VÍDEOS ---
+    const hasPhotos = data.objetosApreendidos && data.objetosApreendidos.length > 0;
+    const hasVideos = data.videoLinks && data.videoLinks.length > 0;
+    let sectionTitle = "FOTOS E VÍDEOS";
+    if (hasPhotos && !hasVideos) {
+        sectionTitle = "FOTOS";
+    } else if (!hasPhotos && hasVideos) {
+        sectionTitle = "VÍDEOS";
     }
 
-    // Seção 4.2: Dados da Droga (se aplicável)
-    if (data.natureza === "Porte de drogas para consumo") {
-        yPos = addSectionTitle(doc, yPos, "DADOS DA DROGA APREENDIDA", "4.2", 2, data);
-        yPos = addField(doc, yPos, "QUANTIDADE", data.drogaQuantidade, data);
-        yPos = addField(doc, yPos, "TIPO", data.drogaTipo, data);
-        yPos = addField(doc, yPos, "COR", data.drogaCor, data);
-        yPos = addField(doc, yPos, "NOME COMUM", data.drogaNomeComum, data);
-        if (data.drogaIsUnknown && data.drogaCustomDesc) {
-            yPos = addField(doc, yPos, "DESCRIÇÃO DO MATERIAL DESCONHECIDO", data.drogaCustomDesc, data);
-        }
-        yPos = addField(doc, yPos, "NÚMERO DO LACRE", data.lacreNumero, data);
-    }
+    if (hasPhotos || hasVideos) {
+        yPos = addSectionTitle(doc, yPos, sectionTitle, "4.3", 2, data);
 
-    // Seção 4.3: Fotos e Vídeos
-    yPos = addSectionTitle(doc, yPos, "FOTOS E VÍDEOS", "4.3", 2, data);
-    const objetosApreendidos = Array.isArray(data.objetosApreendidos) ? data.objetosApreendidos : [];
-    const videoLinks = Array.isArray(data.videoLinks) ? data.videoLinks : [];
+        // Adicionar Fotos
+        if (hasPhotos) {
+            const photoWidth = 50; // Largura de cada foto
+            const photoHeight = 50; // Altura de cada foto
+            let xPos = MARGIN_LEFT;
 
-    if (objetosApreendidos.length > 0 || videoLinks.length > 0) {
-        if (objetosApreendidos.length > 0) {
-            yPos = addWrappedText(doc, yPos, "Fotos anexadas disponíveis via links:", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
-            yPos += 2;
-            objetosApreendidos.forEach((url, index) => {
-                yPos = checkPageBreak(doc, yPos, 15, data);
+            for (let i = 0; i < data.objetosApreendidos.length; i++) {
+                const photo = data.objetosApreendidos[i];
+                yPos = checkPageBreak(doc, yPos, photoHeight + 5, data);
+
                 try {
-                    // Validate URL
-                    new URL(url);
-                    yPos = addWrappedText(doc, yPos, `Foto ${index + 1}: ${url}`, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
-                    yPos += 2;
-                } catch (error) {
-                    console.warn(`URL inválida para foto ${index + 1}: ${url}`);
-                    yPos = addWrappedText(doc, yPos, `Foto ${index + 1}: [URL inválida]`, MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
-                    yPos += 2;
-                }
-            });
-        }
+                    // Verifica se a foto é um objeto File e converte para data URL
+                    let imageData = photo;
+                    if (photo instanceof File) {
+                        imageData = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(photo);
+                        });
+                    }
+                    doc.addImage(imageData, 'JPEG', xPos, yPos, photoWidth, photoHeight);
+                    xPos += photoWidth + 5; // Espaço entre fotos
 
-        if (videoLinks.length > 0) {
-            yPos += 2;
-            yPos = addWrappedText(doc, yPos, "Vídeos anexados (QR Codes):", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
-            yPos += 2;
-            for (let index = 0; index < videoLinks.length; index++) {
-                const link = videoLinks[index];
-                yPos = checkPageBreak(doc, yPos, 40, data); // Reserve espaço para QR code
-                try {
-                    // Validate URL
-                    new URL(link);
-                    // Gera QR Code como Data URL
-                    const qrCodeDataUrl = await QRCode.toDataURL(link, { width: 100, margin: 1 });
-                    // Adiciona QR Code ao PDF
-                    doc.addImage(qrCodeDataUrl, 'PNG', MARGIN_LEFT, yPos, 30, 30);
-                    // Adiciona texto ao lado do QR Code
-                    doc.setFontSize(10); doc.setFont("helvetica", "normal");
-                    doc.text(`Vídeo ${index + 1}: ${link}`, MARGIN_LEFT + 35, yPos + 5, { maxWidth: MAX_LINE_WIDTH - 35 });
-                    yPos += 35;
+                    // Verifica se precisa quebrar a linha
+                    if (xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += photoHeight + 5;
+                    }
                 } catch (error) {
-                    console.warn(`Erro ao gerar QR Code para vídeo ${index + 1}: ${link}`, error);
-                    yPos = addWrappedText(doc, yPos, `Vídeo ${index + 1}: [URL inválida]`, MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
-                    yPos += 2;
+                    console.error(`Erro ao adicionar foto ${i + 1}:`, error);
+                    doc.text(`[Erro ao carregar foto ${i + 1}]`, xPos, yPos + 5);
+                    xPos += photoWidth + 5;
+                    if (xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += photoHeight + 5;
+                    }
                 }
             }
+            yPos = xPos !== MARGIN_LEFT ? yPos + photoHeight + 5 : yPos; // Ajusta yPos após as fotos
+        }
+
+        // Adicionar QR Codes para os links de vídeos
+        if (hasVideos) {
+            const qrSize = 30; // Tamanho do QR code
+            let xPos = MARGIN_LEFT;
+
+            for (let i = 0; i < data.videoLinks.length; i++) {
+                const link = data.videoLinks[i];
+                yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
+
+                try {
+                    const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
+                    doc.addImage(qrCodeDataUrl, 'PNG', xPos, yPos, qrSize, qrSize);
+                    
+                    doc.setFontSize(8);
+                    doc.text(`Vídeo ${i + 1}`, xPos, yPos + qrSize + 5);
+                    xPos += qrSize + 10;
+
+                    if (xPos + qrSize > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += qrSize + 10;
+                    }
+                } catch (error) {
+                    console.error(`Erro ao gerar QR code para o vídeo ${i + 1}:`, error);
+                    doc.text(`[Erro ao gerar QR code para vídeo ${i + 1}]`, xPos, yPos + 5);
+                    xPos += qrSize + 10;
+                    if (xPos + qrSize > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += qrSize + 10;
+                    }
+                }
+            }
+            yPos = xPos !== MARGIN_LEFT ? yPos + qrSize + 10 : yPos;
         }
     } else {
+        yPos = addSectionTitle(doc, yPos, "FOTOS E VÍDEOS", "4.3", 2, data);
         yPos = addWrappedText(doc, yPos, "Nenhuma foto ou vídeo anexado.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
         yPos += 2;
     }
 
-    // --- SEÇÃO 5: CONCLUSÃO POLICIAL ---
-    yPos = addSectionTitle(doc, yPos, "CONCLUSÃO POLICIAL", "5", 1, data);
-    if (data.conclusaoPolicial) {
-        yPos = addWrappedText(doc, yPos, data.conclusaoPolicial, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        yPos += 5;
-        yPos = checkPageBreak(doc, yPos, 20, data);
-        const policial = data.componentesGuarnicao && data.componentesGuarnicao[0] ?
-            `${data.componentesGuarnicao[0].posto} PM ${data.componentesGuarnicao[0].nome}` : "Policial Responsável";
-        yPos = addSignatureWithNameAndRole(doc, yPos, policial, "Condutor", data);
+    // --- SEÇÃO 5: IDENTIFICAÇÃO DA GUARNIÇÃO ---
+    yPos = addSectionTitle(doc, yPos, "IDENTIFICAÇÃO DA GUARNIÇÃO", "5", 1, data);
+    if (data.componentesGuarnicao && data.componentesGuarnicao.length > 0) {
+        data.componentesGuarnicao.forEach((componente, index) => {
+            if (index > 0) {
+                yPos += 5;
+                yPos = checkPageBreak(doc, yPos, 5 + 50, data);
+            }
+            yPos = addField(doc, yPos, "NOME COMPLETO", componente.nome, data);
+            yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto, data);
+            yPos = addField(doc, yPos, "RG PMMT", componente.rg, data);
+            yPos = checkPageBreak(doc, yPos, 5, data);
+            const sigLineY = yPos;
+            doc.setFont("helvetica", "normal"); doc.setFontSize(12);
+            doc.text("ASSINATURA:", MARGIN_LEFT, sigLineY);
+            const labelWidth = doc.getTextWidth("ASSINATURA:");
+            const lineStartX = MARGIN_LEFT + labelWidth + 2;
+            const lineEndX = lineStartX + 80;
+            doc.setLineWidth(0.3); doc.line(lineStartX, sigLineY, lineEndX, sigLineY);
+            yPos = sigLineY + 2;
+        });
     } else {
-        yPos = addWrappedText(doc, yPos, "Nenhuma conclusão policial informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
+        yPos = addWrappedText(doc, yPos, "Dados da Guarnição não informados.", MARGIN_LEFT, 12, 'italic', MAX_LINE_WIDTH, 'left', data);
         yPos += 2;
     }
 
