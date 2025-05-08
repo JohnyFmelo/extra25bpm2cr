@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, updateDoc } from "firebase/firestore";
+import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import BasicInformationTab from "./tco/BasicInformationTab";
 import GeneralInformationTab from "./tco/GeneralInformationTab";
@@ -127,10 +127,11 @@ const numberToText = (num: number): string => {
 };
 
 
-const TCOForm = ({ selectedTco, onClear }) => {
+const TCOForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [activeTab, setActiveTab] = useState("basic"); // activeTab de TCOForm, não para PessoasEnvolvidasTab
 
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -461,11 +462,7 @@ const TCOForm = ({ selectedTco, onClear }) => {
     }
 
     if (natureza === "Porte de drogas para consumo" && (!quantidade || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc) || !lacreNumero)) {
-      toast({ 
-        variant: "destructive", 
-        title: "Dados da Droga Incompletos", 
-        description: "Preencha Quantidade, Substância, Cor, Descrição (se material desconhecido) e Número do Lacre." 
-      });
+      toast({ variant: "destructive", title: "Dados da Droga Incompletos", description: "Preencha Quantidade, Substância, Cor, Descrição (se material desconhecido) e Número do Lacre." });
       return;
     }
 
@@ -522,7 +519,7 @@ const TCOForm = ({ selectedTco, onClear }) => {
         objetosApreendidos: [] 
       };
 
-      if (vitimasFiltradas.length > 0 && natureza !== "Porte de drogas para consumo") {
+      if (vitimasFiltradas.length > 0) {
         tcoDataParaSalvar.relatoVitima = relatoVitima.trim();
         if (representacao) { 
           tcoDataParaSalvar.representacao = formatRepresentacao(representacao);
@@ -536,26 +533,9 @@ const TCOForm = ({ selectedTco, onClear }) => {
 
       console.log("Dados a serem salvos/gerados:", tcoDataParaSalvar);
 
-      // Salvar no Firestore primeiro para obter o ID do documento
-      const docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
-      
-      // Atualizar o objeto com o ID do documento
-      tcoDataParaSalvar.id = docRef.id;
-      
-      // Gerar o PDF e fazer upload para o Storage
-      const pdfUrl = await generatePDF(tcoDataParaSalvar);
-      
-      // Se tiver URL do PDF, atualizar o documento no Firestore com ela
-      if (pdfUrl) {
-        await updateDoc(docRef, {
-          pdfUrl: pdfUrl
-        });
-      }
-      
-      toast({ title: "TCO Registrado", description: "Registrado com sucesso e PDF gerado!" });
-      
-      // Limpar o formulário e voltar para a lista
-      if (onClear) onClear();
+      await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
+      toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
+      generatePDF(tcoDataParaSalvar);
       navigate("/?tab=tco");
 
     } catch (error: any) {
