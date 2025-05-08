@@ -1,4 +1,3 @@
-
 import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Scale, Plus } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -317,7 +316,10 @@ const Index = () => {
                     <TCOmeus
                       user={user}
                       toast={toast}
-                      setSelectedTco={setSelectedTco}
+                      setSelectedTco={(tco) => {
+                        setSelectedTco(tco);
+                        if (tco) setTcoTab("form");
+                      }}
                       selectedTco={selectedTco}
                     />
                   </TabsContent>
@@ -327,9 +329,17 @@ const Index = () => {
                     className="bg-white rounded-xl shadow-lg p-4 flex-grow"
                   >
                     <div className="flex items-center justify-between mb-4">
-                      {/* Espaço reservado para título ou ações adicionais, se necessário */}
+                      <h2 className="text-lg font-semibold">
+                        {selectedTco ? `Editar TCO: ${selectedTco.tcoNumber}` : 'Novo TCO'}
+                      </h2>
                     </div>
-                    <TCOForm />
+                    <TCOForm
+                      selectedTco={selectedTco}
+                      onClear={() => {
+                        setSelectedTco(null);
+                        setTcoTab("list");
+                      }}
+                    />
                   </TabsContent>
                 </Tabs>
               </div>

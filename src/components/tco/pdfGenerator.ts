@@ -93,7 +93,7 @@ export const generatePDF = async (inputData: any) => {
     addTermoEncerramentoRemessa(doc, data);
 
     // --- Finalização: Adiciona Números de Página e Salva ---
-    const pageCount = doc.internal.getNumberOfPages();
+    const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFont("helvetica", "normal"); doc.setFontSize(8);
@@ -111,16 +111,8 @@ export const generatePDF = async (inputData: any) => {
 
     try {
         // Gera o PDF e salva localmente
-        const pdfBlob = doc.output('blob');
-        const pdfUrl = URL.createObjectURL(pdfBlob);
-        
-        // Create a temporary link element to trigger download
-        const link = document.createElement('a');
-        link.href = pdfUrl;
-        link.download = fileName;
-        link.click();
-        
-        console.log(`PDF Gerado localmente: ${fileName}`);
+        doc.save(fileName);
+        console.log(`PDF Gerado: ${fileName}`);
         
         // Salva o PDF no Firebase Storage
         await savePDFToFirebase(doc, data, tcoNumParaNome, dateStr);
@@ -139,8 +131,12 @@ async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, 
         // Obter uma referência ao storage
         const storage = getStorage();
         
-        // Criar caminho para o arquivo no storage com o ID do TCO
-        const filePath = `tcos/${data.createdBy}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
+        // Incluir matrícula do usuário no caminho do arquivo, se disponível
+        const registration = data.registration || data.matricula || '';
+        const registrationPath = registration ? `/${registration}` : '';
+        
+        // Criar caminho para o arquivo no storage com o ID do TCO e matrícula (se disponível)
+        const filePath = `tcos/${data.createdBy}${registrationPath}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
         const fileRef = ref(storage, filePath);
         
         // Upload do arquivo
