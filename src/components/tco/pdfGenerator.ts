@@ -1,4 +1,7 @@
+
 import jsPDF from "jspdf";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
@@ -18,7 +21,7 @@ import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
 
 // --- Função Principal de Geração ---
-export const generatePDF = (inputData: any) => {
+export const generatePDF = async (inputData: any) => {
     if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
         console.error("Input data missing or invalid. Cannot generate PDF.");
         alert("Erro: Dados inválidos para gerar o PDF.");
@@ -89,7 +92,7 @@ export const generatePDF = (inputData: any) => {
     addTermoEncerramentoRemessa(doc, data);
 
     // --- Finalização: Adiciona Números de Página e Salva ---
-    const pageCount = doc.internal.getNumberOfPages();
+    const pageCount = doc.internal.pages.length - 1;
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFont("helvetica", "normal"); doc.setFontSize(8);
@@ -106,10 +109,23 @@ export const generatePDF = (inputData: any) => {
     const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
 
     try {
+        // Salvar localmente para download
         doc.save(fileName);
-        console.log(`PDF Gerado: ${fileName}`);
+        console.log(`PDF baixado: ${fileName}`);
+        
+        // Salvar no Firebase Storage também
+        const fileBlob = doc.output('blob');
+        const fileRef = ref(storage, `tcos/${data.id}/${fileName}`);
+        
+        // Upload para o Firebase Storage
+        await uploadBytes(fileRef, fileBlob);
+        const downloadURL = await getDownloadURL(fileRef);
+        
+        // Retornar a URL do arquivo para atualização no banco de dados
+        return downloadURL;
     } catch (error) {
-        console.error("Erro ao salvar o PDF:", error);
-        alert("Ocorreu um erro ao tentar salvar o PDF.");
+        console.error("Erro ao salvar ou fazer upload do PDF:", error);
+        alert("Ocorreu um erro ao tentar salvar ou fazer upload do PDF.");
+        return null;
     }
 };

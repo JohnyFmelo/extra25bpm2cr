@@ -14,6 +14,7 @@ import {
   QuerySnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { getStorage } from 'firebase/storage';
 import { TimeSlot } from '@/types/user';
 
 const firebaseConfig = {
@@ -29,6 +30,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const storage = getStorage(app);
 
 // Helper function to safely clone Firestore data
 const safeClone = (data: DocumentData): Record<string, any> => {
