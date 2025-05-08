@@ -1,3 +1,5 @@
+// --- START OF FILE TCOForm (8).tsx ---
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
@@ -13,11 +15,11 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
 
+// ... (interfaces e funções de formatação permanecem as mesmas) ...
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
   posto: string;
-  matricula: string;
 }
 
 interface Pessoa {
@@ -124,6 +126,7 @@ const numberToText = (num: number): string => {
   return num >= 0 && num <= 10 ? numbers[num] : num.toString();
 };
 
+
 const TCOForm = ({ selectedTco, onClear }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -139,7 +142,7 @@ const TCOForm = ({ selectedTco, onClear }) => {
   const [tcoNumber, setTcoNumber] = useState("");
   const [natureza, setNatureza] = useState("Vias de Fato");
   const [customNatureza, setCustomNatureza] = useState("");
-  const [autor, setAutor] = useState("");
+  const [autor, setAutor] = useState(""); // Nome do autor principal para BasicInformationTab
   const [representacao, setRepresentacao] = useState("");
   const [tipificacao, setTipificacao] = useState("Art. 21 da Lei de Contravenções Penais");
   const [penaDescricao, setPenaDescricao] = useState("");
@@ -218,14 +221,22 @@ const TCOForm = ({ selectedTco, onClear }) => {
           }
         }
       }
+      // Não limpar mais vítimas, relatoVitima ou representacao
     } else {
-      setLacreNumero("");
+      setLacreNumero(""); // Limpar lacre se não for droga
+
+      // Garante que haja uma vítima se o array estiver vazio (ex: usuário removeu todas)
       setVitimas(prevVitimas => {
         if (prevVitimas.length === 0) {
           return [{ ...initialPersonData }];
         }
         return prevVitimas;
       });
+      
+      // Opcional: Resetar apreensoes se contiver texto de droga e a natureza mudou
+      if (apreensoes && (apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("SUBSTÂNCIA DE MATERIAL DESCONHECIDO"))) {
+         // setApreensoes(""); // Considere se quer limpar ou não
+      }
     }
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes, relatoPolicialTemplate]);
 
@@ -294,37 +305,34 @@ const TCOForm = ({ selectedTco, onClear }) => {
 
     updatedRelato = updatedRelato.toUpperCase();
     setRelatoPolicial(updatedRelato);
-  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate]);
+  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate]); // Adicionado relatoPolicialTemplate
 
   useEffect(() => {
     const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
     setRelatoAutor(novoRelatoAutor);
   }, [autores]);
 
-  useEffect(() => {
+  useEffect(() => { // Atualiza o campo 'autor' em BasicInformationTab quando o nome do primeiro autor muda
     if (autores.length > 0 && autores[0].nome !== autor) {
       setAutor(autores[0].nome);
     } else if (autores.length === 0 && autor !== "") {
-      setAutor("");
+      setAutor(""); // Limpa se não houver autores
     }
   }, [autores, autor]);
 
+
   const handleAddPolicialToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
-    const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg || comp.matricula === novoPolicial.matricula);
+    const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
     if (!alreadyExists) {
       setComponentesGuarnicao(prevList => {
-        const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto && !prevList[0].matricula)
+        const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto)
           ? [novoPolicial]
           : [...prevList, novoPolicial];
         return newList;
       });
       toast({ title: "Adicionado", description: `Policial ${novoPolicial.nome} adicionado à guarnição.` });
     } else {
-      toast({ 
-        variant: "destructive", 
-        title: "Duplicado", 
-        description: "Este policial já está na guarnição (RG ou matrícula duplicado)." 
-      });
+      toast({ variant: "warning", title: "Duplicado", description: "Este policial já está na guarnição." });
     }
   }, [componentesGuarnicao, toast]);
 
@@ -332,16 +340,16 @@ const TCOForm = ({ selectedTco, onClear }) => {
     setComponentesGuarnicao(prevList => prevList.filter((_, index) => index !== indexToRemove));
   }, []);
 
-  const handleAddVitima = () => {
+  const handleAddVitima = () => { // Removida a restrição de natureza
     setVitimas(prevVitimas => [...prevVitimas, { ...initialPersonData }]);
   };
 
   const handleRemoveVitima = (index: number) => {
     const newVitimas = vitimas.filter((_, i) => i !== index);
-    if (newVitimas.length === 0) {
-      setVitimas([{ ...initialPersonData }]);
+    if (newVitimas.length === 0) { 
+        setVitimas([{...initialPersonData}]);
     } else {
-      setVitimas(newVitimas);
+        setVitimas(newVitimas);
     }
   };
 
@@ -352,9 +360,9 @@ const TCOForm = ({ selectedTco, onClear }) => {
   const handleRemoveTestemunha = (index: number) => {
     const newTestemunhas = testemunhas.filter((_, i) => i !== index);
     if (newTestemunhas.length === 0) {
-      setTestemunhas([{ ...initialPersonData }]);
+        setTestemunhas([{...initialPersonData}]);
     } else {
-      setTestemunhas(newTestemunhas);
+        setTestemunhas(newTestemunhas);
     }
   };
 
@@ -365,9 +373,9 @@ const TCOForm = ({ selectedTco, onClear }) => {
   const handleRemoveAutor = (index: number) => {
     const newAutores = autores.filter((_, i) => i !== index);
     if (newAutores.length === 0) {
-      setAutores([{ ...initialPersonData }]);
+        setAutores([{...initialPersonData}]);
     } else {
-      setAutores(newAutores);
+        setAutores(newAutores);
     }
     if (index === 0 && newAutores.length > 0) setAutor(newAutores[0].nome);
     else if (newAutores.length === 0) setAutor("");
@@ -414,7 +422,7 @@ const TCOForm = ({ selectedTco, onClear }) => {
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
     } else if (field === 'dataNascimento') {
-      const birthDate = new Date(value + 'T00:00:00Z');
+      const birthDate = new Date(value + 'T00:00:00Z'); 
       if (!isNaN(birthDate.getTime())) {
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
@@ -427,7 +435,7 @@ const TCOForm = ({ selectedTco, onClear }) => {
     }
     newAutores[index] = { ...newAutores[index], [field]: processedValue };
     setAutores(newAutores);
-    if (index === 0 && field === 'nome') setAutor(processedValue);
+    if (index === 0 && field === 'nome') setAutor(processedValue); 
   };
 
   const handleRelatoPolicialChange = (value: string) => {
@@ -441,7 +449,7 @@ const TCOForm = ({ selectedTco, onClear }) => {
     const completionNow = new Date();
     const completionDate = completionNow.toISOString().split('T')[0];
     const completionTime = completionNow.toTimeString().slice(0, 5);
-
+    
     const autoresValidos = autores.filter(a => a.nome?.trim());
     if (!tcoNumber || natureza === "Selecione..." || (natureza === "Outros" && !customNatureza) || autoresValidos.length === 0 || componentesGuarnicao.length === 0) {
       toast({
@@ -453,10 +461,10 @@ const TCOForm = ({ selectedTco, onClear }) => {
     }
 
     if (natureza === "Porte de drogas para consumo" && (!quantidade || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc) || !lacreNumero)) {
-      toast({
-        variant: "destructive",
-        title: "Dados da Droga Incompletos",
-        description: "Preencha Quantidade, Substância, Cor, Descrição (se material desconhecido) e Número do Lacre."
+      toast({ 
+        variant: "destructive", 
+        title: "Dados da Droga Incompletos", 
+        description: "Preencha Quantidade, Substância, Cor, Descrição (se material desconhecido) e Número do Lacre." 
       });
       return;
     }
@@ -468,7 +476,7 @@ const TCOForm = ({ selectedTco, onClear }) => {
       const displayNaturezaReal = natureza === "Outros" ? customNatureza : natureza;
       const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc : indicios) : "";
       
-      const vitimasFiltradas = vitimas.filter(v => v.nome?.trim());
+      const vitimasFiltradas = vitimas.filter(v => v.nome?.trim()); 
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim());
 
       const tcoDataParaSalvar: any = {
@@ -488,7 +496,7 @@ const TCOForm = ({ selectedTco, onClear }) => {
         endereco: endereco.trim(),
         municipio,
         comunicante,
-        autores: autoresValidos,
+        autores: autoresValidos, 
         vitimas: vitimasFiltradas,
         testemunhas: testemunhasFiltradas,
         guarnicao: guarnicao.trim(),
@@ -510,38 +518,43 @@ const TCOForm = ({ selectedTco, onClear }) => {
         endTime: completionNow.toISOString(),
         createdAt: new Date(),
         createdBy: JSON.parse(localStorage.getItem("user") || "{}").id,
-        lacre: "",
-        objetosApreendidos: []
+        lacre: "", 
+        objetosApreendidos: [] 
       };
 
       if (vitimasFiltradas.length > 0 && natureza !== "Porte de drogas para consumo") {
         tcoDataParaSalvar.relatoVitima = relatoVitima.trim();
-        if (representacao) {
+        if (representacao) { 
           tcoDataParaSalvar.representacao = formatRepresentacao(representacao);
         }
       } else {
-        tcoDataParaSalvar.relatoVitima = "";
-        delete tcoDataParaSalvar.representacao;
+        tcoDataParaSalvar.relatoVitima = ""; 
+        delete tcoDataParaSalvar.representacao; 
       }
 
       Object.keys(tcoDataParaSalvar).forEach(key => tcoDataParaSalvar[key] === undefined && delete tcoDataParaSalvar[key]);
 
       console.log("Dados a serem salvos/gerados:", tcoDataParaSalvar);
 
+      // Salvar no Firestore primeiro para obter o ID do documento
       const docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
       
+      // Atualizar o objeto com o ID do documento
       tcoDataParaSalvar.id = docRef.id;
       
+      // Gerar o PDF e fazer upload para o Storage
       const pdfUrl = await generatePDF(tcoDataParaSalvar);
       
+      // Se tiver URL do PDF, atualizar o documento no Firestore com ela
       if (pdfUrl) {
         await updateDoc(docRef, {
           pdfUrl: pdfUrl
         });
       }
       
-      toast({ title: "TCO Registrado", description: "Registrado com sucesso e PDF salvo no Firebase!" });
+      toast({ title: "TCO Registrado", description: "Registrado com sucesso e PDF gerado!" });
       
+      // Limpar o formulário e voltar para a lista
       if (onClear) onClear();
       navigate("/?tab=tco");
 
@@ -565,31 +578,38 @@ const TCOForm = ({ selectedTco, onClear }) => {
 
   const condutorParaDisplay = componentesGuarnicao[0];
 
+  // NOVA FUNÇÃO PARA LIDAR COM onKeyDown NO FORMULÁRIO
   const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
     if (e.key === 'Enter') {
       const target = e.target as HTMLElement;
+      // Permite a submissão se o Enter for pressionado em um botão do tipo submit
       if (target.tagName === 'BUTTON' && (target as HTMLButtonElement).type === 'submit') {
-        return;
+        return; 
       }
+      // Impede a submissão para inputs de texto, email, número, etc., e textareas
       if (
         (target.tagName === 'INPUT' &&
           ['text', 'password', 'email', 'number', 'tel', 'url', 'search', 'date', 'time', 'datetime-local'].includes(
             (target as HTMLInputElement).type
           )) ||
-        target.tagName === 'TEXTAREA'
+        target.tagName === 'TEXTAREA' // Impede Enter em textarea de submeter o form (Enter deve criar nova linha)
       ) {
         e.preventDefault();
       }
+      // Para outros elementos como select, checkbox, radio, o comportamento padrão do Enter
+      // geralmente não é submeter o formulário, então não é necessário preventDefault aqui
+      // a menos que surjam problemas específicos.
     }
   };
 
   return (
     <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
+      {/* ADICIONADO onKeyDown AO FORMULÁRIO */}
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
         <BasicInformationTab
           tcoNumber={tcoNumber} setTcoNumber={setTcoNumber}
           natureza={natureza} setNatureza={setNatureza}
-          autor={autor} setAutor={setAutor}
+          autor={autor} setAutor={setAutor} 
           penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
           customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
           startTime={startTime} isTimerRunning={isTimerRunning}
@@ -626,7 +646,7 @@ const TCOForm = ({ selectedTco, onClear }) => {
           vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
           testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
           autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
-          natureza={natureza}
+          natureza={natureza} 
         />
         <GuarnicaoTab
           currentGuarnicaoList={componentesGuarnicao}
@@ -640,7 +660,7 @@ const TCOForm = ({ selectedTco, onClear }) => {
           relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha}
           apreensoes={apreensoes} setApreensoes={setApreensoes}
           conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial}
-          drugSeizure={natureza === "Porte de drogas para consumo"}
+          drugSeizure={natureza === "Porte de drogas para consumo"} 
           representacao={representacao} setRepresentacao={setRepresentacao}
           natureza={natureza}
         />
@@ -656,3 +676,4 @@ const TCOForm = ({ selectedTco, onClear }) => {
 };
 
 export default TCOForm;
+// --- END OF FILE TCOForm (8).tsx ---
