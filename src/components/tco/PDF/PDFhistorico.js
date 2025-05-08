@@ -189,14 +189,15 @@ export const generateHistoricoContent = (doc, currentY, data) => {
             yPos = addField(doc, yPos, "NOME COMPLETO", componente.nome, data);
             yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto, data);
             yPos = addField(doc, yPos, "RG PMMT", componente.rg, data);
-            yPos = checkPageBreak(doc, yPos, 12, data);
+            yPos = checkPageBreak(doc, yPos, 5, data); // Ajustado de 12 para 5
+            const sigLineY = yPos; // Definido aqui para cada componente
             doc.setFont("helvetica", "normal"); doc.setFontSize(12);
             doc.text("ASSINATURA:", MARGIN_LEFT, sigLineY);
             const labelWidth = doc.getTextWidth("ASSINATURA:");
             const lineStartX = MARGIN_LEFT + labelWidth + 2;
             const lineEndX = lineStartX + 80;
             doc.setLineWidth(0.3); doc.line(lineStartX, sigLineY, lineEndX, sigLineY);
-            yPos = sigLineY + 5;
+            yPos = sigLineY + 2; // Ajustado de 5 para 2
         });
     } else {
         yPos = addWrappedText(doc, yPos, "Dados da Guarnição não informados.", MARGIN_LEFT, 12, 'italic', MAX_LINE_WIDTH, 'left', data);
