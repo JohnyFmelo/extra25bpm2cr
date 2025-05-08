@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateDoc, doc } from "firebase/firestore";
