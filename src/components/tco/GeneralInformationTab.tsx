@@ -1,9 +1,6 @@
-
-import React, { useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import React from "react";
+import { InputField } from "@/components/ui/input-field"; // Assuming InputField is here
+import { FieldsetContainer } from "@/components/ui/fieldset-container"; // Assuming FieldsetContainer is here
 
 interface GeneralInformationTabProps {
   natureza: string;
@@ -26,161 +23,154 @@ interface GeneralInformationTabProps {
   municipio: string;
   comunicante: string;
   setComunicante: (value: string) => void;
-  condutorNome: string;
-  condutorPosto: string;
-  condutorRg: string;
   guarnicao: string;
   setGuarnicao: (value: string) => void;
   operacao: string;
   setOperacao: (value: string) => void;
+  condutorNome: string; // Display only
+  condutorPosto: string; // Display only
+  condutorRg: string; // Display only
+
+  // Added props for Juizado Special Presentation
+  juizadoDate: string;
+  setJuizadoDate: (value: string) => void;
+  juizadoTime: string;
+  setJuizadoTime: (value: string) => void;
 }
 
 const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   natureza,
-  tipificacao,
-  setTipificacao,
-  isCustomNatureza,
-  customNatureza,
-  dataFato,
-  setDataFato,
-  horaFato,
-  setHoraFato,
-  dataInicioRegistro,
-  horaInicioRegistro,
-  dataTerminoRegistro,
-  horaTerminoRegistro,
-  localFato,
-  setLocalFato,
-  endereco,
-  setEndereco,
+  tipificacao, setTipificacao,
+  isCustomNatureza, customNatureza,
+  dataFato, setDataFato,
+  horaFato, setHoraFato,
+  dataInicioRegistro, horaInicioRegistro,
+  dataTerminoRegistro, horaTerminoRegistro,
+  localFato, setLocalFato,
+  endereco, setEndereco,
   municipio,
-  comunicante,
-  setComunicante,
-  condutorNome,
-  condutorPosto,
-  condutorRg,
-  guarnicao,
-  setGuarnicao,
-  operacao,
-  setOperacao
+  comunicante, setComunicante,
+  guarnicao, setGuarnicao,
+  operacao, setOperacao,
+  // condutorNome, condutorPosto, condutorRg, // These props are available if needed for display
+  // Destructure new props
+  juizadoDate, setJuizadoDate,
+  juizadoTime, setJuizadoTime,
 }) => {
-  const displayNatureza = isCustomNatureza ? customNatureza || "Outros" : natureza;
-  
-  // Set default time to current time if empty
-  useEffect(() => {
-    if (!horaFato) {
-      const now = new Date();
-      setHoraFato(now.toTimeString().slice(0, 5));
-    }
-  }, [horaFato, setHoraFato]);
-  
-  return <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          DADOS GERAIS E IDENTIFICADORES DA OCORRÊNCIA
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+
+  const displayNaturezaReal = isCustomNatureza ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
+
+  return (
+    <FieldsetContainer title="INFORMAÇÕES GERAIS DA OCORRÊNCIA">
+      <div className="space-y-6"> {/* Main layout for sections within this tab */}
+
+        {/* Section for Natureza, Tipificação, and Juizado Presentation */}
         <div>
-          <Label htmlFor="naturezaOcorrencia">NATUREZA DA OCORRÊNCIA</Label>
-          {isCustomNatureza ? (
-            <Input 
-              id="naturezaOcorrencia" 
-              placeholder="Informe a natureza da ocorrência" 
-              value={customNatureza} 
-            />
-          ) : (
-            <Input id="naturezaOcorrencia" readOnly value={displayNatureza} />
-          )}
-        </div>
-        
-        <div>
-          <Label htmlFor="tipificacaoLegal">TIPIFICAÇÃO LEGAL</Label>
-          {isCustomNatureza ? (
-            <Input 
-              id="tipificacaoLegal" 
-              placeholder="Informe a tipificação legal" 
-              value={tipificacao} 
-              onChange={e => setTipificacao(e.target.value)}
-            />
-          ) : (
-            <Input id="tipificacaoLegal" readOnly value={tipificacao} />
-          )}
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="dataFato">DATA DO FATO</Label>
-            <Input id="dataFato" type="date" value={dataFato} onChange={e => setDataFato(e.target.value)} />
+          <h3 className="text-md font-semibold text-gray-700 mb-3 pb-1 border-b">Dados da Infração e Encaminhamento Judicial</h3>
+          <div className="grid md:grid-cols-2 gap-x-4 gap-y-4"> {/* Inner grid for this section's fields */}
+            
+            {/* Natureza Display */}
+            <div className="md:col-span-2">
+              <InputField
+                label="Natureza da Ocorrência (Conforme Selecionado)"
+                id="displayNaturezaGenInfoTab"
+                value={displayNaturezaReal}
+                readOnly
+                disabled 
+                tooltip="Natureza da ocorrência conforme selecionado na aba 'Informações Básicas'."
+              />
+            </div>
+
+            {/* Tipificação */}
+            <div className="md:col-span-2">
+              <InputField
+                label="Tipificação Legal (Infração Penal)"
+                id="tipificacaoGenInfoTab"
+                value={tipificacao}
+                onChange={(e) => setTipificacao(e.target.value)}
+                disabled={!isCustomNatureza}
+                readOnly={!isCustomNatureza} // Usually true if not custom, for better UX
+                required={isCustomNatureza}
+                tooltip="Artigo de lei infringido. Preenchido automaticamente com base na Natureza. Editável apenas se a natureza for 'Outros'."
+              />
+            </div>
+            
+            {/* Juizado Section (Added as per request) */}
+            <div className="md:col-span-2 mt-2 pt-3 border-t border-gray-200">
+              <p className="text-sm font-medium text-gray-600 mb-2">Apresentação em Juizado Especial VG</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
+                <InputField
+                  label="Data da Apresentação"
+                  id="juizadoDateGenInfoTab" // Unique ID for this tab context
+                  type="date"
+                  value={juizadoDate}
+                  onChange={(e) => setJuizadoDate(e.target.value)}
+                  tooltip="Data para comparecimento da parte ao Juizado Especial Criminal de Várzea Grande."
+                />
+                <InputField
+                  label="Hora da Apresentação"
+                  id="juizadoTimeGenInfoTab" // Unique ID for this tab context
+                  type="time"
+                  value={juizadoTime}
+                  onChange={(e) => setJuizadoTime(e.target.value)}
+                  tooltip="Hora para comparecimento da parte ao Juizado Especial Criminal de Várzea Grande."
+                />
+              </div>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="horaFato">HORA DO FATO</Label>
-            <Input id="horaFato" type="time" value={horaFato} onChange={e => setHoraFato(e.target.value)} />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="dataInicioRegistro">DATA DE INÍCIO DO REGISTRO</Label>
-            <Input id="dataInicioRegistro" type="date" readOnly value={dataInicioRegistro} />
-          </div>
-          <div>
-            <Label htmlFor="horaInicioRegistro">HORA DE INÍCIO</Label>
-            <Input id="horaInicioRegistro" type="time" readOnly value={horaInicioRegistro} />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="dataTerminoRegistro">DATA DE TÉRMINO DO REGISTRO</Label>
-            <Input id="dataTerminoRegistro" type="date" readOnly value={dataTerminoRegistro} />
-          </div>
-          <div>
-            <Label htmlFor="horaTerminoRegistro">HORA DE TÉRMINO</Label>
-            <Input id="horaTerminoRegistro" type="time" readOnly value={horaTerminoRegistro} />
-          </div>
-        </div>
-        
-        <div>
-          <Label htmlFor="localFato">LOCAL DO FATO</Label>
-          <Input id="localFato" placeholder="RESIDENCIA, VIA PÚBLICA, PRAÇA..." value={localFato} onChange={e => setLocalFato(e.target.value)} />
-        </div>
-        
-        <div>
-          <Label htmlFor="endereco">ENDEREÇO</Label>
-          <Input id="endereco" placeholder="RUA, NÚMERO/QUADRA/LOTE, BAIRRO, COORDENADAS" value={endereco} onChange={e => setEndereco(e.target.value)} />
-        </div>
-        
-        <div>
-          <Label htmlFor="municipio">MUNICÍPIO</Label>
-          <Input id="municipio" readOnly value={municipio} />
-        </div>
-        
-        <div>
-          <Label htmlFor="comunicante">COMUNICANTE</Label>
-          <Select value={comunicante} onValueChange={setComunicante}>
-            <SelectTrigger id="comunicante">
-              <SelectValue placeholder="Selecione o comunicante" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="CIOSP">CIOSP</SelectItem>
-              <SelectItem value="Adjunto">Adjunto</SelectItem>
-              <SelectItem value="Patrulhamento">Patrulhamento</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div>
-          <Label htmlFor="guarnicao">GUARNIÇÃO</Label>
-          <Input id="guarnicao" placeholder="Ex: Viatura Duster ABC-1234" value={guarnicao} onChange={e => setGuarnicao(e.target.value)} />
         </div>
 
+        {/* Section: Data, Hora e Local do Fato */}
         <div>
-          <Label htmlFor="operacao">OPERAÇÃO</Label>
-          <Input id="operacao" placeholder="Ex: Operação Asfixia IV" value={operacao} onChange={e => setOperacao(e.target.value)} />
+          <h3 className="text-md font-semibold text-gray-700 mb-3 pb-1 border-b">Data, Hora e Local do Fato</h3>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-4">
+            <InputField label="Data do Fato" id="dataFatoGenInfoTab" type="date" value={dataFato} onChange={(e) => setDataFato(e.target.value)} required />
+            <InputField label="Hora do Fato" id="horaFatoGenInfoTab" type="time" value={horaFato} onChange={(e) => setHoraFato(e.target.value)} required />
+            <InputField label="Município do Fato" id="municipioGenInfoTab" value={municipio} readOnly disabled />
+            <InputField label="Comunicante Inicial" id="comunicanteGenInfoTab" value={comunicante} onChange={(e) => setComunicante(e.target.value)} />
+          </div>
+          <div className="grid md:grid-cols-1 gap-4 mt-4"> {/* Local and Endereço might need more space */}
+            <InputField label="Local do Fato (Ex: Av. Filinto Müller, em frente ao Posto Shell)" id="localFatoGenInfoTab" value={localFato} onChange={(e) => setLocalFato(e.target.value)} required placeholder="Ex: Praça Central, Escola Estadual..." />
+            <InputField label="Endereço Completo (Ex: Rua das Palmeiras, Nº 123, Bairro Jardim Primavera)" id="enderecoGenInfoTab" value={endereco} onChange={(e) => setEndereco(e.target.value)} required placeholder="Ex: Rua A, Qd. B, Lt. C, Bairro..." />
+          </div>
         </div>
-      </CardContent>
-    </Card>;
+        
+        {/* Section: Datas de Registro do TCO (Display Only in this tab context) */}
+        <div>
+            <h3 className="text-md font-semibold text-gray-700 mb-3 pb-1 border-b">Período de Registro do TCO</h3>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-4">
+                <InputField label="Data Início Registro" id="dataInicioRegistroGenInfoTab" value={dataInicioRegistro} readOnly disabled />
+                <InputField label="Hora Início Registro" id="horaInicioRegistroGenInfoTab" value={horaInicioRegistro} readOnly disabled />
+                <InputField label="Data Término Registro" id="dataTerminoRegistroGenInfoTab" value={dataTerminoRegistro} readOnly disabled />
+                <InputField label="Hora Término Registro" id="horaTerminoRegistroGenInfoTab" value={horaTerminoRegistro} readOnly disabled />
+            </div>
+        </div>
+
+        {/* Section: Viatura e Operação Policial */}
+        <div>
+          <h3 className="text-md font-semibold text-gray-700 mb-3 pb-1 border-b">Viatura e Operação Policial</h3>
+          <div className="grid md:grid-cols-2 gap-x-4 gap-y-4">
+            <InputField
+              label="Viatura (Prefixo)"
+              id="guarnicaoGenInfoTab"
+              value={guarnicao}
+              onChange={(e) => setGuarnicao(e.target.value)}
+              placeholder="Ex: QB-4501 / 99-1234"
+              tooltip="Prefixo da viatura principal que atendeu a ocorrência."
+            />
+            <InputField
+              label="Operação Policial (Se Houver)"
+              id="operacaoGenInfoTab"
+              value={operacao}
+              onChange={(e) => setOperacao(e.target.value)}
+              placeholder="Ex: Operação Tolerância Zero"
+              tooltip="Nome da operação policial em curso durante a ocorrência, se aplicável."
+            />
+          </div>
+        </div>
+      </div>
+    </FieldsetContainer>
+  );
 };
 
 export default GeneralInformationTab;
