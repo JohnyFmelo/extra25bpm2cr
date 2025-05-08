@@ -1,10 +1,8 @@
-
 import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 interface GeneralInformationTabProps {
   natureza: string;
   tipificacao: string;
@@ -34,7 +32,6 @@ interface GeneralInformationTabProps {
   operacao: string;
   setOperacao: (value: string) => void;
 }
-
 const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   natureza,
   tipificacao,
@@ -65,7 +62,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   setOperacao
 }) => {
   const displayNatureza = isCustomNatureza ? customNatureza || "Outros" : natureza;
-  
+
   // Set default time to current time if empty
   useEffect(() => {
     if (!horaFato) {
@@ -73,39 +70,19 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
       setHoraFato(now.toTimeString().slice(0, 5));
     }
   }, [horaFato, setHoraFato]);
-  
   return <Card>
       <CardHeader>
-        <CardTitle className="flex items-center">
-          DADOS GERAIS E IDENTIFICADORES DA OCORRÊNCIA
-        </CardTitle>
+        <CardTitle className="flex items-center">Dados da Ocorrência</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
           <Label htmlFor="naturezaOcorrencia">NATUREZA DA OCORRÊNCIA</Label>
-          {isCustomNatureza ? (
-            <Input 
-              id="naturezaOcorrencia" 
-              placeholder="Informe a natureza da ocorrência" 
-              value={customNatureza} 
-            />
-          ) : (
-            <Input id="naturezaOcorrencia" readOnly value={displayNatureza} />
-          )}
+          {isCustomNatureza ? <Input id="naturezaOcorrencia" placeholder="Informe a natureza da ocorrência" value={customNatureza} /> : <Input id="naturezaOcorrencia" readOnly value={displayNatureza} />}
         </div>
         
         <div>
           <Label htmlFor="tipificacaoLegal">TIPIFICAÇÃO LEGAL</Label>
-          {isCustomNatureza ? (
-            <Input 
-              id="tipificacaoLegal" 
-              placeholder="Informe a tipificação legal" 
-              value={tipificacao} 
-              onChange={e => setTipificacao(e.target.value)}
-            />
-          ) : (
-            <Input id="tipificacaoLegal" readOnly value={tipificacao} />
-          )}
+          {isCustomNatureza ? <Input id="tipificacaoLegal" placeholder="Informe a tipificação legal" value={tipificacao} onChange={e => setTipificacao(e.target.value)} /> : <Input id="tipificacaoLegal" readOnly value={tipificacao} />}
         </div>
         
         <div className="grid grid-cols-2 gap-4">
@@ -182,5 +159,4 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
       </CardContent>
     </Card>;
 };
-
 export default GeneralInformationTab;
