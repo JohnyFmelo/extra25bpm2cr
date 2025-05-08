@@ -179,7 +179,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos += 2;
 
     // --- SEÇÃO 4.3: FOTOS E/OU VÍDEOS ---
-    const hasPhotos = data.objetosApreendidos && data.objetosApreendidos.length > 0;
+    const hasPhotos = data.imageUrls && data.imageUrls.length > 0;
     const hasVideos = data.videoLinks && data.videoLinks.length > 0;
     let sectionTitle = "FOTOS E VÍDEOS";
     if (hasPhotos && !hasVideos) {
@@ -197,21 +197,20 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             const photoHeight = 50; // Altura de cada foto
             let xPos = MARGIN_LEFT;
 
-            for (let i = 0; i < data.objetosApreendidos.length; i++) {
-                const photo = data.objetosApreendidos[i];
+            for (let i = 0; i < data.imageUrls.length; i++) {
+                const photoUrl = data.imageUrls[i];
                 yPos = checkPageBreak(doc, yPos, photoHeight + 5, data);
 
                 try {
-                    // Verifica se a foto é um objeto File e converte para data URL
-                    let imageData = photo;
-                    if (photo instanceof File) {
-                        imageData = await new Promise((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onload = () => resolve(reader.result);
-                            reader.onerror = reject;
-                            reader.readAsDataURL(photo);
-                        });
-                    }
+                    // Carrega a imagem a partir da URL
+                    const response = await fetch(photoUrl);
+                    const blob = await response.blob();
+                    const imageData = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
                     doc.addImage(imageData, 'JPEG', xPos, yPos, photoWidth, photoHeight);
                     xPos += photoWidth + 5; // Espaço entre fotos
 
@@ -287,16 +286,3 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             const sigLineY = yPos;
             doc.setFont("helvetica", "normal"); doc.setFontSize(12);
             doc.text("ASSINATURA:", MARGIN_LEFT, sigLineY);
-            const labelWidth = doc.getTextWidth("ASSINATURA:");
-            const lineStartX = MARGIN_LEFT + labelWidth + 2;
-            const lineEndX = lineStartX + 80;
-            doc.setLineWidth(0.3); doc.line(lineStartX, sigLineY, lineEndX, sigLineY);
-            yPos = sigLineY + 2;
-        });
-    } else {
-        yPos = addWrappedText(doc, yPos, "Dados da Guarnição não informados.", MARGIN_LEFT, 12, 'italic', MAX_LINE_WIDTH, 'left', data);
-        yPos += 2;
-    }
-
-    return yPos;
-};
