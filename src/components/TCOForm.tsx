@@ -1,3 +1,5 @@
+// --- START OF FILE TCOForm (13).tsx ---
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
@@ -11,6 +13,7 @@ import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
 import GuarnicaoTab from "./tco/GuarnicaoTab";
 import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
+import AnexosTab from "./tco/AnexosTab"; // <<< ADICIONE ESTA IMPORTAÇÃO
 import { generatePDF } from "./tco/pdfGenerator";
 
 // ... (interfaces e funções de formatação permanecem as mesmas) ...
@@ -164,8 +167,8 @@ const TCOForm = () => {
   const [indicios, setIndicios] = useState("");
   const [customMaterialDesc, setCustomMaterialDesc] = useState("");
   const [isUnknownMaterial, setIsUnknownMaterial] = useState(false);
-  const [videoLinks, setVideoLinks] = useState<string[]>([]); // Novo estado para links de vídeos
-  const [newVideoLink, setNewVideoLink] = useState(""); // Estado temporário para o input de link
+  const [videoLinks, setVideoLinks] = useState<string[]>([]);
+  const [newVideoLink, setNewVideoLink] = useState(""); 
   
   const [autores, setAutores] = useState<Pessoa[]>([{ ...initialPersonData }]);
   const [vitimas, setVitimas] = useState<Pessoa[]>([{ ...initialPersonData }]);
@@ -229,6 +232,7 @@ const TCOForm = () => {
         return prevVitimas;
       });
       if (apreensoes && (apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("SUBSTÂNCIA DE MATERIAL DESCONHECIDO"))) {
+        // Não limpa se já tiver sido editado manualmente e não for mais caso de droga
       }
     }
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes, relatoPolicialTemplate]);
@@ -298,7 +302,8 @@ const TCOForm = () => {
 
     updatedRelato = updatedRelato.toUpperCase();
     setRelatoPolicial(updatedRelato);
-  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate]);
+  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited]);
+
 
   useEffect(() => {
     const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
@@ -436,12 +441,23 @@ const TCOForm = () => {
   };
 
   const handleAddVideoLink = () => {
-    if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
-      setVideoLinks(prev => [...prev, newVideoLink.trim()]);
+    const trimmedLink = newVideoLink.trim();
+    if (!trimmedLink) {
+      toast({ variant: "warning", title: "Link Vazio", description: "Por favor, insira um link válido." });
+      return;
+    }
+    // Basic URL validation (can be improved)
+    try {
+      new URL(trimmedLink);
+    } catch (_) {
+      toast({ variant: "warning", title: "Link Inválido", description: "O formato do link não é válido." });
+      return;
+    }
+
+    if (!videoLinks.includes(trimmedLink)) {
+      setVideoLinks(prev => [...prev, trimmedLink]);
       setNewVideoLink("");
       toast({ title: "Link Adicionado", description: "Link de vídeo adicionado com sucesso." });
-    } else if (!newVideoLink.trim()) {
-      toast({ variant: "warning", title: "Link Vazio", description: "Por favor, insira um link válido." });
     } else {
       toast({ variant: "warning", title: "Link Duplicado", description: "Este link já foi adicionado." });
     }
@@ -588,6 +604,13 @@ const TCOForm = () => {
           )) ||
         target.tagName === 'TEXTAREA'
       ) {
+        // Não previne o default se for o input de adicionar link ou outro botão que não seja submit
+        if (target.id === 'newVideoLinkInput' || (target.tagName === 'BUTTON' && (target as HTMLButtonElement).type !== 'submit')) {
+            // Deixe o Enter funcionar para estes casos específicos se desejado, 
+            // ou adicione lógica para que o Enter no input acione o botão de adicionar link.
+            // Por ora, vamos manter o comportamento de não prevenir para botões e o input de link.
+            return;
+        }
         e.preventDefault();
       }
     }
@@ -599,7 +622,7 @@ const TCOForm = () => {
         <BasicInformationTab
           tcoNumber={tcoNumber} setTcoNumber={setTcoNumber}
           natureza={natureza} setNatureza={setNatureza}
-          autor={autor} setAutor={setAutor}
+          autor={autor} setAutor={setAutor} // Manter para o campo autor simplificado, se ainda usado
           penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
           customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
           startTime={startTime} isTimerRunning={isTimerRunning}
@@ -654,29 +677,19 @@ const TCOForm = () => {
           representacao={representacao} setRepresentacao={setRepresentacao}
           natureza={natureza}
         />
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Anexar Links de Vídeos</h2>
-          <div className="flex space-x-2">
-            <input
-              type="url"
-              value={newVideoLink}
-              onChange={(e) => setNewVideoLink(e.target.value)}
-              placeholder="Insira o link do vídeo"
-              className="flex-1 p-2 border rounded-md"
-            />
-            <Button type="button" onClick={handleAddVideoLink}>Adicionar Link</Button>
-          </div>
-          {videoLinks.length > 0 && (
-            <ul className="space-y-2">
-              {videoLinks.map((link, index) => (
-                <li key={index} className="flex justify-between items-center p-2 bg-gray-100 rounded-md">
-                  <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 truncate">{link}</a>
-                  <Button variant="destructive" size="sm" onClick={() => handleRemoveVideoLink(index)}>Remover</Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        
+        {/* Remova a seção antiga de links de vídeo daqui */}
+        {/* <div className="space-y-4"> ... </div> */}
+
+        {/* Adicione a nova aba de Anexos aqui */}
+        <AnexosTab
+          videoLinks={videoLinks}
+          newVideoLink={newVideoLink}
+          setNewVideoLink={setNewVideoLink}
+          onAddVideoLink={handleAddVideoLink}
+          onRemoveVideoLink={handleRemoveVideoLink}
+        />
+        
         <div className="flex justify-end mt-8">
           <Button type="submit" disabled={isSubmitting} size="lg">
             <FileText className="mr-2 h-5 w-5" />
@@ -689,3 +702,5 @@ const TCOForm = () => {
 };
 
 export default TCOForm;
+
+// --- END OF FILE TCOForm (13).tsx ---
