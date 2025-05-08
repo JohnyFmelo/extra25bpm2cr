@@ -131,8 +131,7 @@ const TCOForm = () => {
   const formattedTime = now.toTimeString().slice(0, 5);
 
   const [tcoNumber, setTcoNumber] = useState("");
-  const [natureza, setNatureza вечерняя одежда для женщин
-    setNatureza("Vias de Fato");
+  const [natureza, setNatureza] = useState("Vias de Fato");
   const [customNatureza, setCustomNatureza] = useState("");
   const [autor, setAutor] = useState("");
   const [representacao, setRepresentacao] = useState("");
