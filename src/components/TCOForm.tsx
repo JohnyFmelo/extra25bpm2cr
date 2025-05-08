@@ -177,7 +177,7 @@ const TCOForm = () => {
   const [relatoPolicial, setRelatoPolicial] = useState(relatoPolicialTemplate);
   const [relatoAutor, setRelatoAutor] = useState(formatarRelatoAutor(autores));
   const [relatoVitima, setRelatoVitima] = useState("RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
-  const [relatoTestemunha, setRelatoTestemunha] = useState("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
+  const [relatoTestemunha, setRelatoTestemunha] = useState("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.");
   const [conclusaoPolicial, setConclusaoPolicial] = useState("");
   const [isRelatoPolicialManuallyEdited, setIsRelatoPolicialManuallyEdited] = useState(false);
 
@@ -476,6 +476,10 @@ const TCOForm = () => {
       const vitimasFiltradas = vitimas.filter(v => v.nome?.trim()); 
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim());
 
+      // Obter informações do usuário atual para incluir a matrícula
+      const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
+      const userRegistration = userInfo.registration || "";
+
       const tcoDataParaSalvar: any = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
@@ -514,7 +518,8 @@ const TCOForm = () => {
         startTime: startTime?.toISOString(),
         endTime: completionNow.toISOString(),
         createdAt: new Date(),
-        createdBy: JSON.parse(localStorage.getItem("user") || "{}").id,
+        createdBy: userInfo.id,
+        userRegistration: userRegistration, // Adicionar matrícula do usuário
         lacre: "", 
         objetosApreendidos: [] 
       };
@@ -533,11 +538,18 @@ const TCOForm = () => {
 
       console.log("Dados a serem salvos/gerados:", tcoDataParaSalvar);
 
-      await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
+      // Salva no Firestore primeiro para obter o ID
+      const docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
+      
+      // Adiciona o ID ao objeto de dados para que o gerador de PDF possa usar
+      tcoDataParaSalvar.id = docRef.id;
+      
       toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
-      generatePDF(tcoDataParaSalvar);
+      
+      // Gera o PDF e salva no Firebase Storage
+      await generatePDF(tcoDataParaSalvar);
+      
       navigate("/?tab=tco");
-
     } catch (error: any) {
       console.error("Erro ao salvar ou gerar TCO:", error);
       toast({

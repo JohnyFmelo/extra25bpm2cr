@@ -1,4 +1,8 @@
+
 import jsPDF from "jspdf";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { updateDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
@@ -18,7 +22,7 @@ import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
 
 // --- Função Principal de Geração ---
-export const generatePDF = (inputData: any) => {
+export const generatePDF = async (inputData: any) => {
     if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
         console.error("Input data missing or invalid. Cannot generate PDF.");
         alert("Erro: Dados inválidos para gerar o PDF.");
@@ -100,16 +104,62 @@ export const generatePDF = (inputData: any) => {
         }
     }
 
-    // --- Salvamento ---
+    // --- Salvamento Local ---
     const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
     const dateStr = new Date().toISOString().slice(0, 10);
     const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
 
     try {
+        // Gera o PDF e salva localmente
         doc.save(fileName);
         console.log(`PDF Gerado: ${fileName}`);
+        
+        // Salva o PDF no Firebase Storage
+        await savePDFToFirebase(doc, data, tcoNumParaNome, dateStr);
     } catch (error) {
         console.error("Erro ao salvar o PDF:", error);
         alert("Ocorreu um erro ao tentar salvar o PDF.");
     }
 };
+
+// Função para salvar o PDF no Firebase Storage
+async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, dateStr: string) {
+    try {
+        // Obter o output do PDF como array buffer
+        const pdfBlob = doc.output('blob');
+        
+        // Obter uma referência ao storage
+        const storage = getStorage();
+        
+        // Criar caminho para o arquivo no storage com o ID do TCO
+        const filePath = `tcos/${data.createdBy}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
+        const fileRef = ref(storage, filePath);
+        
+        // Upload do arquivo
+        console.log(`Enviando arquivo para Firebase Storage: ${filePath}`);
+        const uploadResult = await uploadBytes(fileRef, pdfBlob);
+        console.log('Upload concluído:', uploadResult);
+        
+        // Obter o URL de download
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+        console.log('URL do arquivo:', downloadURL);
+        
+        // Atualizar o documento no Firestore com a URL do PDF
+        if (data.id) {
+            const tcoRef = doc(db, "tcos", data.id);
+            await updateDoc(tcoRef, {
+                pdfUrl: downloadURL,
+                pdfPath: filePath,
+                updatedAt: new Date()
+            });
+            console.log(`Documento TCO ${data.id} atualizado com URL do PDF`);
+        } else {
+            console.warn("ID do TCO não encontrado, não foi possível atualizar o documento no Firestore");
+        }
+        
+        return downloadURL;
+    } catch (error) {
+        console.error("Erro ao salvar PDF no Firebase:", error);
+        throw error;
+    }
+}
