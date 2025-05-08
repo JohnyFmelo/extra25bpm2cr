@@ -139,7 +139,7 @@ const TCOForm = () => {
   const [tcoNumber, setTcoNumber] = useState("");
   const [natureza, setNatureza] = useState("Vias de Fato");
   const [customNatureza, setCustomNatureza] = useState("");
-  const [autor, setAutor] = useState("");
+  const [autor, setAutor] = useState(""); // This state represents the primary author's name for display or logic
   const [representacao, setRepresentacao] = useState("");
   const [tipificacao, setTipificacao] = useState("Art. 21 da Lei de Contravenções Penais");
   const [penaDescricao, setPenaDescricao] = useState("");
@@ -260,10 +260,10 @@ const TCOForm = () => {
       setPenaDescricao(penaAtual);
     }
 
-    const autoresValid0s = autores.filter(a => a.nome.trim() !== "");
-    const autorTexto = autoresValid0s.length === 0 ? "O(A) AUTOR(A)" :
-      autoresValid0s.length === 1 ? (autoresValid0s[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
-      autoresValid0s.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
+    const autoresValidos = autores.filter(a => a.nome.trim() !== "");
+    const autorTexto = autoresValidos.length === 0 ? "O(A) AUTOR(A)" :
+      autoresValidos.length === 1 ? (autoresValidos[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
+      autoresValidos.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
     
     const testemunhasValidas = testemunhas.filter(t => t.nome.trim() !== "");
     const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : (testemunhasValidas.length === 1 ? "TESTEMUNHA" : "");
@@ -308,6 +308,7 @@ const TCOForm = () => {
   }, [autores]);
 
   useEffect(() => {
+    // Update the 'autor' state (primary author for display/logic) when 'autores' list changes
     if (autores.length > 0 && autores[0].nome !== autor) {
       setAutor(autores[0].nome);
     } else if (autores.length === 0 && autor !== "") {
@@ -371,8 +372,7 @@ const TCOForm = () => {
     } else {
       setAutores(newAutores);
     }
-    if (index === 0 && newAutores.length > 0) setAutor(newAutores[0].nome);
-    else if (newAutores.length === 0) setAutor("");
+    // No need to call setAutor here, the useEffect [autores, autor] handles it.
   };
 
   const handleVitimaChange = (index: number, field: string, value: string) => {
@@ -417,7 +417,7 @@ const TCOForm = () => {
       processedValue = formatPhone(value);
     } else if (field === 'dataNascimento') {
       processedValue = value;
-      const birthDate = new Date(value + 'T00:00:00Z');
+      const birthDate = new Date(value + 'T00:00:00Z'); // Ensure correct UTC parsing
       if (!isNaN(birthDate.getTime())) {
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
@@ -430,7 +430,7 @@ const TCOForm = () => {
     }
     newAutores[index] = { ...newAutores[index], [field]: processedValue };
     setAutores(newAutores);
-    if (index === 0 && field === 'nome') setAutor(processedValue);
+    // No need to call setAutor here for 'nome', the useEffect [autores, autor] handles it.
   };
 
   const handleRelatoPolicialChange = (value: string) => {
@@ -646,7 +646,7 @@ const TCOForm = () => {
         <BasicInformationTab
           tcoNumber={tcoNumber} setTcoNumber={setTcoNumber}
           natureza={natureza} setNatureza={setNatureza}
-          autor={autor} setAutor={setAutor}
+          // autor={autor} // autor is managed internally in TCOForm, not set by BasicInformationTab
           penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
           customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
           startTime={startTime} isTimerRunning={isTimerRunning}
