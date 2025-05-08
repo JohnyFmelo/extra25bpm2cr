@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Trash2, FileText, Download, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface TCOmeusProps {
   user: { id: string; registration?: string };
-  toast: ReturnType<typeof useToast>["toast"];
+  toast: ReturnType<typeof useToast>;
   setSelectedTco: (tco: any) => void;
   selectedTco: any;
 }
@@ -38,6 +38,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
           ...doc.data()
         });
       });
+      console.log("TCOs carregados:", tcos);
       setTcoList(tcos);
     } catch (error) {
       console.error("Error fetching TCOs:", error);
@@ -73,18 +74,23 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
 
   // Function to view PDF
   const handleViewPdf = async (tco: any) => {
+    console.log("Visualizando TCO:", tco);
     try {
       if (tco.pdfUrl) {
+        console.log("URL do PDF encontrada:", tco.pdfUrl);
         setSelectedPdfUrl(tco.pdfUrl);
         setIsPdfDialogOpen(true);
       } else if (tco.pdfPath) {
         // Se tiver apenas o caminho do PDF no Storage, mas não a URL
+        console.log("Buscando PDF pelo caminho:", tco.pdfPath);
         const storage = getStorage();
         const pdfRef = ref(storage, tco.pdfPath);
         const url = await getDownloadURL(pdfRef);
+        console.log("URL do PDF obtida:", url);
         setSelectedPdfUrl(url);
         setIsPdfDialogOpen(true);
       } else {
+        console.warn("PDF não encontrado para o TCO:", tco.id);
         toast({
           variant: "destructive",
           title: "PDF não encontrado",
@@ -103,20 +109,24 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
 
   // Function to download PDF
   const handleDownloadPdf = async (tco: any) => {
+    console.log("Baixando TCO:", tco);
     try {
       let url = tco.pdfUrl;
       
       if (!url && tco.pdfPath) {
         // Se tiver apenas o caminho do PDF no Storage, mas não a URL
+        console.log("Buscando PDF pelo caminho para download:", tco.pdfPath);
         const storage = getStorage();
         const pdfRef = ref(storage, tco.pdfPath);
         url = await getDownloadURL(pdfRef);
+        console.log("URL para download:", url);
       }
       
       if (url) {
         // Abre o URL em uma nova aba para download
         window.open(url, '_blank');
       } else {
+        console.warn("PDF não encontrado para download:", tco.id);
         toast({
           variant: "destructive",
           title: "PDF não encontrado",
@@ -133,8 +143,9 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     }
   };
 
-  // Fetch TCOs when component mounts
+  // Fetch TCOs when component mounts or when user.id changes
   useEffect(() => {
+    console.log("Componente TCOmeus montado, buscando TCOs para o usuário:", user.id);
     fetchUserTcos();
   }, [user.id]);
 
@@ -142,6 +153,12 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     <div className="bg-white rounded-xl shadow-lg p-4 flex-grow">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Meus TCOs</h2>
+        <Button 
+          size="sm" 
+          onClick={fetchUserTcos}
+        >
+          Atualizar
+        </Button>
       </div>
       {isLoading ? (
         <p className="text-center py-8">Carregando TCOs...</p>
@@ -171,7 +188,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
                     ? format(new Date(tco.createdAt.seconds * 1000), "dd/MM/yyyy")
                     : "-"}
                 </TableCell>
-                <TableCell>{tco.natureza}</TableCell>
+                <TableCell>{tco.natureza || "-"}</TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">
                     <Button
