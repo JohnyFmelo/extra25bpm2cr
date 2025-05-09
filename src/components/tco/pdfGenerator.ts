@@ -1,6 +1,6 @@
 
 import jsPDF from "jspdf";
-import { supabase } from "@/integrations/supabase/client";
+import supabase from "@/lib/supabaseClient";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
@@ -163,23 +163,16 @@ async function savePDFToSupabase(pdfBlob: Blob, data: any, tcoNumParaNome: strin
                 .from('tcos')
                 .update({
                     pdf_url: downloadURL,
-                    pdf_path: filePath,
-                    updated_at: new Date()
+                    updated_at: new Date().toISOString()
                 })
                 .eq('id', data.id);
                 
             if (updateError) {
-                console.error("Erro ao atualizar documento no Supabase:", updateError);
-            } else {
-                console.log(`Documento TCO ${data.id} atualizado com URL do PDF`);
+                console.error('Erro ao atualizar URL do PDF no registro:', updateError);
             }
-        } else {
-            console.warn("ID do TCO não encontrado, não foi possível atualizar o documento no Supabase");
         }
-        
-        return downloadURL;
     } catch (error) {
-        console.error("Erro ao salvar PDF no Supabase:", error);
+        console.error('Erro ao salvar PDF no Supabase:', error);
         throw error;
     }
 }
