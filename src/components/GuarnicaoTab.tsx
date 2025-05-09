@@ -1,3 +1,4 @@
+
 // src/components/tco/GuarnicaoTab.tsx
 import React, { useState, useEffect } from "react";
 import {
@@ -21,7 +22,7 @@ interface GuarnicaoTabProps {
   setOperacao: (operacao: string) => void;
   componentes: { id: string; nome: string }[];
   setComponentes: (componentes: { id: string; nome: string }[]) => void;
-	onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 const GuarnicaoTab = ({
@@ -31,7 +32,7 @@ const GuarnicaoTab = ({
   setOperacao,
   componentes,
   setComponentes,
-	onKeyDown
+  onKeyDown
 }: GuarnicaoTabProps) => {
   const [newComponente, setNewComponente] = useState("");
   const [selectedComponente, setSelectedComponente] = useState("");
@@ -69,10 +70,31 @@ const GuarnicaoTab = ({
 
   const handleComponenteSelect = (value: string) => {
     setSelectedComponente(value);
-		// Capture onKeyDown event for the select component
-		if (onKeyDown) {
-			onKeyDown({ key: "Tab" } as any);
-		}
+    // Capture onKeyDown event for the select component
+    if (onKeyDown) {
+      onKeyDown({ key: "Tab" } as any);
+    }
+  };
+
+  // Custom wrapper for Select to handle onKeyDown
+  const CustomSelect = ({ children, value, onChange }: { 
+    children: React.ReactNode; 
+    value: string;
+    onChange: (value: string) => void;
+  }) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (onKeyDown) {
+        onKeyDown(e as any);
+      }
+    };
+
+    return (
+      <div onKeyDown={handleKeyDown}>
+        <Select value={value} onValueChange={onChange}>
+          {children}
+        </Select>
+      </div>
+    );
   };
 
   return (
@@ -86,7 +108,7 @@ const GuarnicaoTab = ({
           id="guarnicao"
           value={guarnicao}
           onChange={handleGuarnicaoChange}
-					onKeyDown={onKeyDown}
+          onKeyDown={onKeyDown}
           className="mt-1"
         />
       </div>
@@ -99,7 +121,7 @@ const GuarnicaoTab = ({
           id="operacao"
           value={operacao}
           onChange={handleOperacaoChange}
-					onKeyDown={onKeyDown}
+          onKeyDown={onKeyDown}
           className="mt-1"
         />
       </div>
@@ -113,7 +135,7 @@ const GuarnicaoTab = ({
             id="newComponente"
             value={newComponente}
             onChange={handleNewComponenteChange}
-						onKeyDown={onKeyDown}
+            onKeyDown={onKeyDown}
             placeholder="Novo Componente"
             className="flex-grow"
           />
