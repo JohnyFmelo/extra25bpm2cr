@@ -1,430 +1,355 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, Users, UserPlus, Info, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Search, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 
-// --- Funções Auxiliares ---
-const somenteNumeros = (value: string | null | undefined): string => {
-  return value?.replace(/\D/g, '') || '';
-};
-const formatarCPF = (value: string): string => {
-  const numeros = somenteNumeros(value);
-  let cpfFormatado = numeros.slice(0, 11);
-  cpfFormatado = cpfFormatado.replace(/^(\d{3})(\d)/, '$1.$2');
-  cpfFormatado = cpfFormatado.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
-  cpfFormatado = cpfFormatado.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
-  return cpfFormatado;
-};
-const formatarCelular = (value: string): string => {
-  const numeros = somenteNumeros(value);
-  let foneFormatado = numeros.slice(0, 11);
-  if (foneFormatado.length === 11) {
-    foneFormatado = foneFormatado.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-  } else if (foneFormatado.length === 10) {
-    foneFormatado = foneFormatado.replace(/^(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-  } else if (foneFormatado.length > 6) {
-    foneFormatado = foneFormatado.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
-  } else if (foneFormatado.length > 2) {
-    foneFormatado = foneFormatado.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
-  }
-  return foneFormatado;
-};
-const validateCPF = (cpf: string) => {
-  cpf = somenteNumeros(cpf);
-  if (cpf.length !== 11) return false;
-  if (/^(\d)\1{10}$/.test(cpf)) return false;
-  let sum = 0;
-  for (let i = 0; i < 9; i++) {
-    sum += parseInt(cpf.charAt(i)) * (10 - i);
-  }
-  let remainder = sum % 11;
-  let digit1 = remainder < 2 ? 0 : 11 - remainder;
-  if (digit1 !== parseInt(cpf.charAt(9))) return false;
-  sum = 0;
-  for (let i = 0; i < 10; i++) {
-    sum += parseInt(cpf.charAt(i)) * (11 - i);
-  }
-  remainder = sum % 11;
-  let digit2 = remainder < 2 ? 0 : 11 - remainder;
-  return digit2 === parseInt(cpf.charAt(10));
-};
-
-// --- Interfaces ---
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
   posto: string;
-  pai?: string;
-  mae?: string;
-  naturalidade?: string;
-  cpf?: string;
-  telefone?: string;
 }
-interface PoliceOfficerSearchResult {
-  nome: string | null;
-  graduacao: string | null;
-  pai: string | null;
-  mae: string | null;
-  naturalidade: string | null;
-  cpf: string | null;
-  telefone: string | null;
-}
-interface PoliceOfficerFormData {
-  rgpm: string;
-  nome: string;
-  graduacao: string;
-  pai: string;
-  mae: string;
-  naturalidade: string;
-  cpf: string;
-  telefone: string;
-}
-const initialOfficerFormData: PoliceOfficerFormData = {
-  rgpm: "",
-  nome: "",
-  graduacao: "",
-  pai: "",
-  mae: "",
-  naturalidade: "",
-  cpf: "",
-  telefone: ""
-};
-const graduacoes = ["SD PM", "CB PM", "3º SGT PM", "2º SGT PM", "1º SGT PM", "SUB TEN PM", "ASPIRANTE PM", "2º TEN PM", "1º TEN PM", "CAP PM", "MAJ PM", "TEN CEL PM", "CEL PM"];
+
 interface GuarnicaoTabProps {
   currentGuarnicaoList: ComponenteGuarnicao[];
   onAddPolicial: (policial: ComponenteGuarnicao) => void;
   onRemovePolicial: (index: number) => void;
 }
 
-// --- Componente GuarnicaoTab ---
+type PolicialEncontrado = {
+  rgpm: string;
+  nome: string;
+  graduacao: string;
+};
+
+const campos = [
+  { placeholder: "RG PM", width: "100px", id: "rgpm", showLabel: false },
+  { placeholder: "Nome", width: "auto", id: "nome", showLabel: false },
+  { placeholder: "Graduação", width: "110px", id: "graduacao", showLabel: false }
+];
+
 const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
   currentGuarnicaoList,
   onAddPolicial,
   onRemovePolicial
 }) => {
-  const {
-    toast
-  } = useToast();
-  const [searchRgpm, setSearchRgpm] = useState<string>("");
-  const [isSearching, setIsSearching] = useState<boolean>(false);
-  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState<boolean>(false);
-  const [newOfficerFormData, setNewOfficerFormData] = useState<PoliceOfficerFormData>(initialOfficerFormData);
+  const { toast } = useToast();
+  const [consultaRg, setConsultaRg] = useState("");
+  const [rgPM, setRgPM] = useState("");
+  const [nome, setNome] = useState("");
+  const [posto, setPosto] = useState("");
+  const [isConsulting, setIsConsulting] = useState(false);
+  const [policialEncontrado, setPolicialEncontrado] = useState<PolicialEncontrado | null>(null);
+  const [isCadastroVisible, setIsCadastroVisible] = useState(false);
+  const rgInputRef = useRef<HTMLInputElement>(null);
+  
   useEffect(() => {
-    console.log("[GuarnicaoTab] Prop 'currentGuarnicaoList' recebida:", currentGuarnicaoList);
-  }, [currentGuarnicaoList]);
-  const handleSearchRgpmChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = event.target.value;
-    const numeros = somenteNumeros(rawValue).slice(0, 6);
-    setSearchRgpm(numeros);
+    // Foca no campo de consulta RG quando o componente monta
+    if (rgInputRef.current) {
+      rgInputRef.current.focus();
+    }
+  }, []);
+
+  useEffect(() => {
+    const updateFields = () => {
+      if (policialEncontrado) {
+        setRgPM(policialEncontrado.rgpm);
+        setNome(policialEncontrado.nome);
+        setPosto(policialEncontrado.graduacao);
+      }
+    };
+
+    updateFields();
+  }, [policialEncontrado]);
+
+  const resetFields = () => {
+    setConsultaRg("");
+    setRgPM("");
+    setNome("");
+    setPosto("");
+    setPolicialEncontrado(null);
   };
-  const handleSearchAndAdd = useCallback(async () => {
-    const rgpmToSearch = searchRgpm;
-    console.log("[GuarnicaoTab] Iniciando busca por RGPM:", rgpmToSearch);
-    if (rgpmToSearch.length !== 6) {
+
+  const handleAddPolicialToGuarnicao = () => {
+    if (!rgPM || !nome || !posto) {
       toast({
         variant: "destructive",
-        title: "RGPM Inválido",
-        description: "O RGPM da busca deve conter exatamente 6 dígitos."
+        title: "Campos Incompletos",
+        description: "Preencha todos os campos necessários."
       });
       return;
     }
-    const alreadyExists = currentGuarnicaoList.some(comp => comp.rg === rgpmToSearch);
-    if (alreadyExists) {
-      console.log("[GuarnicaoTab] RGPM já existe na lista (prop):", rgpmToSearch);
+
+    // Verifica se o RG já está na lista
+    const existingPolicial = currentGuarnicaoList.find(
+      (comp) => comp.rg === rgPM && comp.rg !== ""
+    );
+
+    if (existingPolicial) {
       toast({
-        variant: "warning",
-        title: "Duplicado",
+        variant: "destructive",
+        title: "Policial Duplicado",
         description: "Este policial já está na guarnição."
       });
-      setSearchRgpm("");
       return;
     }
-    setIsSearching(true);
-    console.log("[GuarnicaoTab] Buscando no Supabase...");
-    try {
-      const {
-        data,
-        error
-      } = await supabase.from("police_officers").select("nome, graduacao, pai, mae, naturalidade, cpf, telefone").eq("rgpm", rgpmToSearch).single();
-      console.log("[GuarnicaoTab] Resposta Supabase:", {
-        data,
-        error
-      });
-      console.log("[GuarnicaoTab] Telefone retornado do Supabase:", data?.telefone);
-      if (error && error.code === 'PGRST116') {
-        toast({
-          variant: "warning",
-          title: "Não Encontrado",
-          description: `Nenhum policial encontrado com o RGPM ${rgpmToSearch}. Considere cadastrá-lo.`
-        });
-      } else if (error) {
-        throw error;
-      } else if (data) {
-        const officerData = data as PoliceOfficerSearchResult;
-        const newComponente: ComponenteGuarnicao = {
-          rg: rgpmToSearch,
-          nome: officerData.nome?.toUpperCase() || "NOME NÃO INFORMADO",
-          posto: officerData.graduacao || "POSTO NÃO INFORMADO",
-          pai: officerData.pai?.toUpperCase() || "NÃO INFORMADO",
-          mae: officerData.mae?.toUpperCase() || "NÃO INFORMADO",
-          naturalidade: officerData.naturalidade?.toUpperCase() || "NÃO INFORMADO",
-          cpf: officerData.cpf ? formatarCPF(officerData.cpf) : "NÃO INFORMADO",
-          telefone: officerData.telefone ? formatarCelular(officerData.telefone) : "NÃO INFORMADO"
-        };
-        console.log("[GuarnicaoTab] Componente criado com telefone:", newComponente.telefone);
-        console.log("[GuarnicaoTab] Policial encontrado. Chamando onAddPolicial:", newComponente);
-        onAddPolicial(newComponente);
-        setSearchRgpm("");
-      }
-    } catch (error: any) {
-      console.error("[GuarnicaoTab] Erro na busca:", error);
+
+    onAddPolicial({
+      rg: rgPM,
+      nome,
+      posto
+    });
+
+    resetFields();
+    
+    // Foca novamente no campo de consulta RG
+    if (rgInputRef.current) {
+      rgInputRef.current.focus();
+    }
+  };
+
+  const consultarPolicialPorRG = async (rg: string) => {
+    if (!rg || rg.trim() === "") {
       toast({
         variant: "destructive",
-        title: "Erro na Busca",
-        description: `Falha ao buscar dados: ${error.message || 'Erro desconhecido'}`
+        title: "RG não informado",
+        description: "Digite um RG PM para consultar"
+      });
+      return;
+    }
+
+    setIsConsulting(true);
+
+    try {
+      // Consulta no Supabase
+      const { data, error } = await supabase
+        .from('police_officers')
+        .select('*')
+        .eq('rgpm', rg)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          toast({
+            variant: "destructive",
+            title: "Policial não encontrado",
+            description: "Nenhum policial encontrado com este RG."
+          });
+          setIsCadastroVisible(true);
+        } else {
+          throw error;
+        }
+        setPolicialEncontrado(null);
+      } else if (data) {
+        setPolicialEncontrado(data);
+        setIsCadastroVisible(false);
+        toast({
+          title: "Policial Encontrado",
+          description: `Dados de ${data.nome} carregados.`
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao consultar policial:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro na consulta",
+        description: "Ocorreu um erro ao consultar o policial."
       });
     } finally {
-      setIsSearching(false);
-      console.log("[GuarnicaoTab] Busca finalizada.");
+      setIsConsulting(false);
     }
-  }, [searchRgpm, currentGuarnicaoList, toast, onAddPolicial]);
-  const handleRemove = (index: number) => {
-    const itemToRemove = currentGuarnicaoList[index];
-    console.log("[GuarnicaoTab] Chamando onRemovePolicial para índice:", index, itemToRemove);
-    onRemovePolicial(index);
-    toast({
-      title: "Removido",
-      description: `Componente ${itemToRemove?.nome || ''} removido da guarnição.`
-    });
   };
-  const openRegisterDialog = () => setIsRegisterDialogOpen(true);
-  const closeRegisterDialog = () => {
-    setIsRegisterDialogOpen(false);
-    setNewOfficerFormData(initialOfficerFormData);
-  };
-  const handleRegisterInputChange = (field: keyof PoliceOfficerFormData, value: string) => {
-    let processedValue = value;
-    if (field === 'cpf') {
-      processedValue = formatarCPF(value);
-    } else if (field === 'telefone') {
-      processedValue = formatarCelular(value);
-    } else if (field === 'rgpm') {
-      processedValue = somenteNumeros(value).slice(0, 6);
-    } else if (['nome', 'pai', 'mae', 'naturalidade'].includes(field)) {
-      processedValue = value.toUpperCase();
-    }
-    setNewOfficerFormData(prev => ({
-      ...prev,
-      [field]: processedValue
-    }));
-  };
-  const handleSaveNewOfficer = async () => {
-    console.log("[GuarnicaoTab] Tentando salvar novo policial no BD:", newOfficerFormData);
-    const {
-      rgpm,
-      nome,
-      graduacao,
-      pai,
-      mae,
-      naturalidade,
-      cpf,
-      telefone
-    } = newOfficerFormData;
-    const camposObrigatorios: (keyof PoliceOfficerFormData)[] = ['rgpm', 'nome', 'graduacao', 'pai', 'mae', 'naturalidade', 'cpf', 'telefone'];
-    const camposFaltando = camposObrigatorios.filter(key => !newOfficerFormData[key]?.trim());
-    if (camposFaltando.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Campos Obrigatórios",
-        description: `Preencha: ${camposFaltando.join(', ')}`
-      });
-      return;
-    }
-    const rgpmNumeros = somenteNumeros(rgpm);
-    if (rgpmNumeros.length !== 6) {
-      toast({
-        variant: "destructive",
-        title: "RGPM Inválido",
-        description: "O RGPM deve ter 6 dígitos."
-      });
-      return;
-    }
-    const cpfNumeros = somenteNumeros(cpf);
-    if (cpfNumeros.length !== 11 || !validateCPF(cpf)) {
-      toast({
-        variant: "destructive",
-        title: "CPF Inválido",
-        description: "Verifique o CPF."
-      });
-      return;
-    }
-    const telefoneNumeros = somenteNumeros(telefone);
-    if (telefoneNumeros.length !== 10 && telefoneNumeros.length !== 11) {
-      toast({
-        variant: "destructive",
-        title: "Telefone Inválido",
-        description: "Formato DDD + 8 ou 9 dígitos."
-      });
-      return;
-    }
-    try {
-      const dataToSave = {
-        rgpm: rgpmNumeros,
-        nome: nome.toUpperCase(),
-        graduacao: graduacao,
-        pai: pai.toUpperCase(),
-        mae: mae.toUpperCase(),
-        naturalidade: naturalidade.toUpperCase(),
-        cpf: cpfNumeros,
-        telefone: telefoneNumeros
-      };
-      console.log("[GuarnicaoTab] Dados a serem salvos/atualizados no BD com telefone:", dataToSave.telefone);
-      const {
-        error
-      } = await supabase.from("police_officers").upsert(dataToSave, {
-        onConflict: "rgpm"
-      });
-      if (error) {
-        throw error;
+
+  const postoOptions = [
+    "Soldado",
+    "Cabo",
+    "3º Sargento",
+    "2º Sargento",
+    "1º Sargento",
+    "Subtenente",
+    "Aspirante",
+    "2º Tenente",
+    "1º Tenente",
+    "Capitão",
+    "Major",
+    "Tenente-Coronel",
+    "Coronel"
+  ];
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      
+      if ((e.target as HTMLElement).id === 'consultaRg') {
+        consultarPolicialPorRG(consultaRg);
+      } else if ((e.target as HTMLElement).id === 'rgpm' || (e.target as HTMLElement).id === 'nome' || (e.target as HTMLElement).id === 'posto') {
+        handleAddPolicialToGuarnicao();
       }
-      toast({
-        title: "Sucesso",
-        description: "Policial cadastrado/atualizado no banco de dados."
-      });
-      closeRegisterDialog();
-    } catch (error: any) {
-      console.error("[GuarnicaoTab] Erro ao salvar policial no BD:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao Salvar no BD",
-        description: `Falha: ${error.message || 'Erro desconhecido'}`
-      });
     }
   };
-  const isSaveDisabled = useCallback((): boolean => {
-    const {
-      rgpm,
-      nome,
-      graduacao,
-      pai,
-      mae,
-      naturalidade,
-      cpf,
-      telefone
-    } = newOfficerFormData;
-    if (!rgpm || !nome || !graduacao || !pai || !mae || !naturalidade || !cpf || !telefone) return true;
-    if (somenteNumeros(rgpm).length !== 6) return true;
-    if (somenteNumeros(cpf).length !== 11 || !validateCPF(cpf)) return true;
-    const telNums = somenteNumeros(telefone);
-    if (telNums.length !== 10 && telNums.length !== 11) return true;
-    return false;
-  }, [newOfficerFormData]);
-  return <Card>
+
+  // Cores dos postos para melhor visualização
+  const getPostoColor = (posto: string) => {
+    if (posto.includes("Soldado") || posto.includes("Cabo")) return "bg-green-100";
+    if (posto.includes("Sargento") || posto.includes("Subtenente")) return "bg-blue-100";
+    if (posto.includes("Tenente") || posto.includes("Aspirante")) return "bg-yellow-100";
+    if (posto.includes("Capitão")) return "bg-orange-100";
+    if (posto.includes("Major") || posto.includes("Coronel")) return "bg-red-100";
+    return "";
+  };
+
+  return (
+    <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="flex items-center">
-              <Users className="mr-2 h-5 w-5" /> GUARNIÇÃO
-            </CardTitle>
-            <CardDescription>Adicione os componentes buscando por RGPM</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={openRegisterDialog}>
-            <UserPlus className="h-4 w-4 mr-2" /> Cadastrar/Atualizar Policial
-          </Button>
-        </div>
+        <CardTitle>Guarnição</CardTitle>
+        <CardDescription>
+          Adicione os policiais que compõem a guarnição
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex gap-2 items-center">
-            <Input id="rgpmSearchInput" type="text" inputMode="numeric" placeholder="Buscar por RGPM (6 dígitos)" value={searchRgpm} onChange={handleSearchRgpmChange} disabled={isSearching} className="flex-grow" maxLength={6} onKeyDown={e => {
-            if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
-          }} />
-            <Button onClick={handleSearchAndAdd} disabled={isSearching || searchRgpm.length !== 6}>
-              {isSearching ? "Buscando..." : <><Search className="h-4 w-4 mr-1" /> Adicionar</>}
+      <CardContent className="space-y-6">
+        {/* Seção de Consulta de Policial */}
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1 flex-1 min-w-[200px]">
+              <Label htmlFor="consultaRg">RG PM para Consulta</Label>
+              <div className="flex">
+                <Input
+                  id="consultaRg"
+                  ref={rgInputRef}
+                  placeholder="Digite o RG PM"
+                  value={consultaRg}
+                  onChange={(e) => setConsultaRg(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="ml-2"
+                  onClick={() => consultarPolicialPorRG(consultaRg)}
+                  disabled={isConsulting}
+                >
+                  <Search className="h-4 w-4 mr-1" aria-label="Consultar" />
+                  {isConsulting ? "Consultando..." : "Consultar"}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Seção de Dados do Policial */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 border rounded-md">
+            <div>
+              <Label htmlFor="rgpm">RG PM *</Label>
+              <Input
+                id="rgpm"
+                placeholder="RG PM"
+                value={rgPM}
+                onChange={(e) => setRgPM(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+            </div>
+            <div>
+              <Label htmlFor="nome">Nome *</Label>
+              <Input
+                id="nome"
+                placeholder="Nome completo"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+            </div>
+            <div>
+              <Label htmlFor="posto">Posto/Graduação *</Label>
+              <Select
+                value={posto}
+                onValueChange={setPosto}
+                onKeyDown={handleKeyDown}
+              >
+                <SelectTrigger id="posto">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {postoOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="flex justify-end mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={resetFields}
+              className="mr-2"
+              size="sm"
+            >
+              <X size={16} className="mr-1" />
+              Limpar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAddPolicialToGuarnicao}
+              size="sm"
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Check size={16} className="mr-1" />
+              Adicionar à Guarnição
             </Button>
           </div>
         </div>
-        <div className="space-y-2">
-          <Label>Componentes da Guarnição Atual</Label>
-          {currentGuarnicaoList.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4 border rounded-md border-dashed">
-              Nenhum componente adicionado. Use a busca acima.
-            </p> : <div className="border rounded-md overflow-hidden">
-              {currentGuarnicaoList.map((componente, index) => <div key={`${componente.rg}-${index}`} className={`flex items-center justify-between p-3 ${index > 0 ? "border-t" : ""} ${index === 0 ? "bg-blue-50" : "bg-background"}`}>
-                  <div className="flex flex-col flex-grow mr-2 truncate">
-                    <span className="text-sm font-medium truncate" title={`${componente.posto} ${componente.nome} (RGPM: ${componente.rg})`}>
-                      {index === 0 && <span className="font-bold text-blue-800">(Condutor) </span>}
-                      <span>{componente.posto || "Sem Posto"}</span>{' '}
-                      <span>{componente.nome || "Sem Nome"}</span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">RGPM: {componente.rg || "Não informado"}</span>
-                  </div>
-                  <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0" onClick={() => handleRemove(index)} aria-label={`Remover ${componente.nome}`}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>)}
-            </div>}
+
+        {/* Lista de Componentes da Guarnição */}
+        <div className="border rounded-md p-4 mt-6">
+          <h3 className="text-lg font-semibold mb-2">Componentes da Guarnição</h3>
+          
+          {currentGuarnicaoList.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">RG PM</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead className="w-[150px]">Posto/Graduação</TableHead>
+                  <TableHead className="w-[80px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {currentGuarnicaoList.map((componente, index) => (
+                  <TableRow key={index} className={getPostoColor(componente.posto)}>
+                    <TableCell>{componente.rg}</TableCell>
+                    <TableCell>{componente.nome}</TableCell>
+                    <TableCell>{componente.posto}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onRemovePolicial(index)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <X className="h-4 w-4" aria-label="Remover" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="text-gray-500 text-center py-4">
+              Nenhum policial adicionado à guarnição
+            </p>
+          )}
         </div>
       </CardContent>
-      <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle>Cadastrar ou Atualizar Policial</DialogTitle>
-            
-          </DialogHeader>
-          <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-3 px-[5px] py-0 my-0">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dlg-rgpm">RGPM (6 dígitos) * <Info className="inline h-3 w-3 text-muted-foreground ml-1" title="Usado para buscar e identificar o policial. Não pode ser alterado após cadastro inicial (a menos que haja erro)." /></Label>
-                <Input id="dlg-rgpm" value={newOfficerFormData.rgpm} onChange={e => handleRegisterInputChange("rgpm", e.target.value)} placeholder="000000" required inputMode="numeric" maxLength={6} />
-              </div>
-              <div>
-                <Label htmlFor="dlg-graduacao">Graduação *</Label>
-                <select id="dlg-graduacao" value={newOfficerFormData.graduacao} onChange={e => handleRegisterInputChange("graduacao", e.target.value)} required className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-                  <option value="">Selecione...</option>
-                  {graduacoes.map(grad => <option key={grad} value={grad}>{grad}</option>)}
-                </select>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="dlg-nome">Nome Completo *</Label>
-              <Input id="dlg-nome" value={newOfficerFormData.nome} onChange={e => handleRegisterInputChange("nome", e.target.value)} placeholder="Nome completo" required />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dlg-cpf">CPF *</Label>
-                <Input id="dlg-cpf" value={newOfficerFormData.cpf} onChange={e => handleRegisterInputChange("cpf", e.target.value)} placeholder="000.000.000-00" required inputMode="numeric" maxLength={14} />
-              </div>
-              <div>
-                <Label htmlFor="dlg-telefone">Telefone (com DDD) *</Label>
-                <Input id="dlg-telefone" value={newOfficerFormData.telefone} onChange={e => handleRegisterInputChange("telefone", e.target.value)} placeholder="(00) 00000-0000" required inputMode="tel" maxLength={15} />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="dlg-naturalidade">Naturalidade (Cidade/UF) *</Label>
-              <Input id="dlg-naturalidade" value={newOfficerFormData.naturalidade} onChange={e => handleRegisterInputChange("naturalidade", e.target.value)} placeholder="Ex: Cuiabá/MT" required />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dlg-pai">Nome do Pai *</Label>
-                <Input id="dlg-pai" value={newOfficerFormData.pai} onChange={e => handleRegisterInputChange("pai", e.target.value)} required placeholder="Nome completo do pai" />
-              </div>
-              <div>
-                <Label htmlFor="dlg-mae">Nome da Mãe *</Label>
-                <Input id="dlg-mae" value={newOfficerFormData.mae} onChange={e => handleRegisterInputChange("mae", e.target.value)} required placeholder="Nome completo da mãe" />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeRegisterDialog}> Cancelar </Button>
-            <Button onClick={handleSaveNewOfficer} disabled={isSaveDisabled()}> Salvar no Banco </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>;
+    </Card>
+  );
 };
+
 export default GuarnicaoTab;
