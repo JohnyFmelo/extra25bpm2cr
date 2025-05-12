@@ -1,9 +1,53 @@
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
-    checkPageBreak, addSignatureWithNameAndRole
+    checkPageBreak, addSignatureWithNameAndRole, addNewPage
 } from './pdfUtils.js';
 import QRCode from 'qrcode';
+
+// Função auxiliar para adicionar imagens (copiada ou importada)
+const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight) => {
+    const maxImageWidth = pageWidth - MARGIN_RIGHT * 2; // Largura máxima da imagem
+    const maxImageHeight = 100; // Altura máxima por imagem (ajustável)
+    const marginBetweenImages = 10; // Espaço entre imagens
+    let currentY = yPosition;
+
+    for (const image of images) {
+        try {
+            // Extrai o formato da imagem a partir do início da string base64
+            const formatMatch = image.data.match(/^data:image\/(jpeg|png);base64,/);
+            const format = formatMatch ? formatMatch[1].toUpperCase() : 'JPEG'; // Default para JPEG
+
+            // Remove o prefixo "data:image/..." para obter apenas os dados base64
+            const base64Data = image.data.replace(/^data:image\/[a-z]+;base64,/, '');
+
+            // Verifica se a posição atual ultrapassa o limite da página
+            if (currentY + maxImageHeight + 10 > pageHeight) {
+                currentY = addNewPage(doc, {});
+                currentY = 10; // Reseta a posição Y (ajuste conforme MARGIN_TOP)
+            }
+
+            // Adiciona a imagem ao PDF
+            doc.addImage(base64Data, format, MARGIN_RIGHT, currentY, maxImageWidth, 0); // Altura 0 para manter proporção
+
+            // Obtém as dimensões reais da imagem adicionada
+            const imgProps = doc.getImageProperties(base64Data);
+            const imgHeight = (imgProps.height * maxImageWidth) / imgProps.width; // Calcula altura proporcional
+
+            // Atualiza a posição Y
+            currentY += imgHeight + marginBetweenImages;
+
+            // Adiciona o nome do arquivo como legenda
+            doc.setFontSize(8);
+            doc.text(`Imagem: ${image.name}`, MARGIN_RIGHT, currentY);
+            currentY += 5; // Espaço após a legenda
+        } catch (error) {
+            console.error(`Erro ao adicionar imagem ${image.name}:`, error);
+        }
+    }
+
+    return currentY; // Retorna a nova posição Y
+};
 
 /**
  * Gera o conteúdo das seções 1 a 5 do TCO.
@@ -12,7 +56,7 @@ import QRCode from 'qrcode';
  */
 export const generateHistoricoContent = async (doc, currentY, data) => {
     let yPos = currentY;
-    const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
+    const { PAGE_WIDTH, MAX_LINE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
 
     // --- SEÇÃO 1: DADOS GERAIS ---
     yPos = addSectionTitle(doc, yPos, "DADOS GERAIS E IDENTIFICADORES DA OCORRÊNCIA", "1", 1, data);
@@ -30,7 +74,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addSectionTitle(doc, yPos, "ENVOLVIDOS", "2", 1, data);
 
     // Seção 2.1: Autor(es) - Ajusta singular/plural
-    const autoresValidos = data.autores ? data.autores.filter(a => a?.nome) : [];
+    const autoresValidsoftware = data.autores ? data.autores.filter(a => a?.nome) : [];
     const autorTitle = autoresValidos.length === 1 ? "AUTOR DO FATO" : "AUTORES DO FATO";
     yPos = addSectionTitle(doc, yPos, autorTitle, "2.1", 2, data);
     if (autoresValidos.length > 0) {
@@ -181,17 +225,22 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     // --- SEÇÃO 4.3: FOTOS E/OU VÍDEOS ---
     const hasPhotos = data.objetosApreendidos && data.objetosApreendidos.length > 0;
     const hasVideos = data.videoLinks && data.videoLinks.length > 0;
+    const hasImages = data.imageBase64 && data.imageBase64.length > 0;
     let sectionTitle = "FOTOS E VÍDEOS";
-    if (hasPhotos && !hasVideos) {
+    if (hasPhotos && !hasVideos && !hasImages) {
         sectionTitle = "FOTOS";
-    } else if (!hasPhotos && hasVideos) {
+    } else if (!hasPhotos && hasVideos && !hasImages) {
         sectionTitle = "VÍDEOS";
+    } else if (!hasPhotos && !hasVideos && hasImages) {
+        sectionTitle = "IMAGENS ADICIONAIS";
+    } else if (hasImages && (hasPhotos || hasVideos)) {
+        sectionTitle = "FOTOS, VÍDEOS E IMAGENS ADICIONAIS";
     }
 
-    if (hasPhotos || hasVideos) {
+    if (hasPhotos || hasVideos || hasImages) {
         yPos = addSectionTitle(doc, yPos, sectionTitle, "4.3", 2, data);
 
-        // Adicionar Fotos
+        // Adicionar Fotos (data.objetosApreendidos)
         if (hasPhotos) {
             const photoWidth = 50; // Largura de cada foto
             const photoHeight = 50; // Altura de cada foto
@@ -202,7 +251,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 yPos = checkPageBreak(doc, yPos, photoHeight + 5, data);
 
                 try {
-                    // Verifica se a foto é um objeto File e converte para data URL
                     let imageData = photo;
                     if (photo instanceof File) {
                         imageData = await new Promise((resolve, reject) => {
@@ -215,7 +263,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                     doc.addImage(imageData, 'JPEG', xPos, yPos, photoWidth, photoHeight);
                     xPos += photoWidth + 5; // Espaço entre fotos
 
-                    // Verifica se precisa quebrar a linha
                     if (xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
                         xPos = MARGIN_LEFT;
                         yPos += photoHeight + 5;
@@ -266,9 +313,15 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             }
             yPos = xPos !== MARGIN_LEFT ? yPos + qrSize + 10 : yPos;
         }
+
+        // Adicionar Imagens de data.imageBase64
+        if (hasImages) {
+            yPos = checkPageBreak(doc, yPos, 100, data); // Reserva espaço para imagens
+            yPos = addImagesToPDF(doc, yPos, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT);
+        }
     } else {
         yPos = addSectionTitle(doc, yPos, "FOTOS E VÍDEOS", "4.3", 2, data);
-        yPos = addWrappedText(doc, yPos, "Nenhuma foto ou vídeo anexado.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
+        yPos = addWrappedText(doc, yPos, "Nenhuma foto, vídeo ou imagem adicional anexada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
         yPos += 2;
     }
 
