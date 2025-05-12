@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import QRCode from "qrcode";
+import QRCode from "qrcode"; // Para geração do QR code
 import {
     MARGIN_TOP,
     MARGIN_RIGHT,
@@ -8,12 +8,6 @@ import {
     addNewPage,
     addStandardFooterContent,
 } from "./pdfUtils.js";
-
-// Interface para tipagem das imagens
-interface ImageData {
-    name: string;
-    data: string;
-}
 
 // Função auxiliar para gerar QR code como URL de imagem
 const generateQRCode = async (text: string): Promise<string> => {
@@ -29,10 +23,10 @@ const generateQRCode = async (text: string): Promise<string> => {
 const addImagesToPDF = (
     doc: jsPDF,
     yPosition: number,
-    images: ImageData[],
+    images: { name: string; data: string }[],
     pageWidth: number,
     pageHeight: number
-): number => {
+) => {
     const maxImageWidth = pageWidth - MARGIN_RIGHT * 2; // Largura máxima da imagem
     const maxImageHeight = 100; // Altura máxima por imagem
     const marginBetweenImages = 10; // Espaço entre imagens
@@ -121,7 +115,7 @@ export const generateHistoricoContent = async (
     if (data.relatoVitima && data.vitimas?.length > 0) {
         currentY += LINE_HEIGHT / 2;
         const relatoVitima = data.relatoVitima || "Nenhum relato da vítima registrado.";
-        const relatoVitimaLines = doc.splitTextToSize(
+        const relato VitimaLines = doc.splitTextToSize(
             relatoVitima,
             PAGE_WIDTH - MARGIN_RIGHT * 2
         );
@@ -177,7 +171,7 @@ export const generateHistoricoContent = async (
             );
             currentY += 30; // Espaço após o QR code
         } catch (error) {
-            console.error("Erro ao gerar QR code para apreensões:", error);
+            console.error("Erro ao gerar QR code para apre ficarensões:", error);
         }
     }
 
@@ -188,7 +182,13 @@ export const generateHistoricoContent = async (
             currentY = addNewPage(doc, data);
             currentY = MARGIN_TOP;
         }
-        currentY = addImagesToPDF(doc, currentY, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT);
+        currentY = addImagesToPDF(
+            doc,
+            currentY,
+            data.imageBase64,
+            PAGE_WIDTH,
+            PAGE_HEIGHT
+        );
     }
 
     currentY += LINE_HEIGHT;
