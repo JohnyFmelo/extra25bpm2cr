@@ -517,6 +517,12 @@ const TCOForm = () => {
     setIsTimerRunning(false);
 
     try {
+      // Verificar autenticação
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Usuário não autenticado. Faça login para continuar.");
+      }
+
       const displayNaturezaReal = natureza === "Outros" ? customNatureza : natureza;
       const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc : indicios) : "";
       
@@ -580,7 +586,7 @@ const TCOForm = () => {
         startTime: startTime?.toISOString(),
         endTime: completionNow.toISOString(),
         createdAt: new Date(),
-        createdBy: userInfo.id,
+        createdBy: user.id, // Usar ID do usuário autenticado
         userRegistration: userRegistration,
         videoLinks: videoLinks,
         imageBase64: imageBase64Array,
@@ -604,6 +610,7 @@ const TCOForm = () => {
 
       // Gerar o PDF e obter o conteúdo como Blob
       const pdfBlob = await generatePDF(tcoDataParaSalvar);
+      console.log("PDF gerado com sucesso, tamanho:", pdfBlob.size);
 
       // Fazer upload do PDF para o Supabase Storage
       const pdfPath = `tcos/${tcoNumber}/${tcoNumber}.pdf`;
@@ -615,22 +622,26 @@ const TCOForm = () => {
         });
 
       if (uploadError) {
+        console.error("Erro no upload do PDF:", uploadError);
         throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
       }
+      console.log("PDF enviado para o Supabase Storage:", pdfPath);
 
       // Salvar metadados no Supabase
       const tcoMetadata = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
         policiais: componentesGuarnicao.map(p => ({
           nome: p.nome,
           rg: p.rg,
           posto: p.posto
         })),
         pdfPath,
-        createdBy: userInfo.id,
+        createdBy: user.id,
       };
+
+      console.log("Metadados a serem salvos:", tcoMetadata);
 
       const { data, error } = await supabase
         .from('tco_pdfs')
@@ -639,12 +650,14 @@ const TCOForm = () => {
         .single();
 
       if (error) {
+        console.error("Erro ao salvar metadados:", error);
         throw new Error(`Erro ao salvar metadados do TCO: ${error.message}`);
       }
+      console.log("Metadados salvos com sucesso, ID:", data.id);
 
       tcoDataParaSalvar.id = data.id;
 
-      toast({ title: "TCO Registrado", description: "PDF salvo com sucesso no Supabase!" });
+      toast({ title: "TCO Registrado", description: "PDF e metadados salvos com sucesso no Supabase!" });
 
       navigate("/?tab=tco");
     } catch (error: any) {
