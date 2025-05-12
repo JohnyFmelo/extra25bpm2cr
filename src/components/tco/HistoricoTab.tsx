@@ -1,97 +1,157 @@
-import { addNewPage } from './pdfUtils.js';
-
-export const generateHistoricoContent = async (doc, yPosition, data) => {
-    const { PAGE_HEIGHT, MARGIN_BOTTOM } = getPageConstants(doc);
-
-    // Seção de histórico
-    doc.setFont(" plantes", "bold");
-    doc.setFontSize(12);
-    doc.text("HISTÓRICO", 20, yPosition);
-    yPosition += 10;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(data.relatoPolicial || "Sem relato policial.", 20, yPosition);
-    yPosition += 20;
-
-    // Seção de vídeos (como links ou QR codes, mantendo comportamento existente)
-    if (data.videoLinks && data.videoLinks.length > 0) {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.text("ANEXOS - VÍDEOS", 20, yPosition);
-        yPosition += 10;
-
-        data.videoLinks.forEach((link, index) => {
-            if (yPosition + 20 > PAGE_HEIGHT - MARGIN_BOTTOM) {
-                yPosition = addNewPage(doc, data);
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(12);
-                doc.text("ANEXOS - VÍDEOS (CONTINUAÇÃO)", 20, yPosition);
-                yPosition += 10;
-            }
-
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            doc.text(`Vídeo ${index + 1}: ${link}`, 20, yPosition);
-            yPosition += 10;
-        });
-    }
-
-    // Seção de imagens
-    if (data.imageBase64 && data.imageBase64.length > 0) {
-        console.log("Processando imagens para inclusão no PDF:", data.imageBase64);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.text("ANEXOS - IMAGENS", 20, yPosition);
-        yPosition += 10;
-
-        for (const image of data.imageBase64) {
-            try {
-                // Verificar se há espaço suficiente na página (60mm para imagem + margem)
-                if (yPosition + 60 > PAGE_HEIGHT - MARGIN_BOTTOM) {
-                    yPosition = addNewPage(doc, data);
-                    doc.setFont("helvetica", "bold");
-                    doc.setFontSize(12);
-                    doc.text("ANEXOS - IMAGENS (CONTINUAÇÃO)", 20, yPosition);
-                    yPosition += 10;
-                }
-
-                // Adicionar nome da imagem
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(10);
-                doc.text(`Imagem: ${image.name}`, 20, yPosition);
-                yPosition += 5;
-
-                // Determinar formato da imagem com base na extensão do arquivo
-                const extension = image.name.split('.').pop()?.toLowerCase();
-                const format = extension === 'png' ? 'PNG' : 'JPEG';
-
-                // Adicionar a imagem ao PDF
-                doc.addImage(image.data, format, 20, yPosition, 80, 50);
-                console.log(`Imagem ${image.name} adicionada ao PDF.`);
-                yPosition += 60; // Espaço após a imagem
-            } catch (error) {
-                console.error(`Erro ao adicionar imagem ${image.name}:`, error);
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(10);
-                doc.text(`[Erro: Não foi possível carregar a imagem ${image.name}]`, 20, yPosition);
-                yPosition += 10;
-            }
-        }
-    } else {
-        console.log("Nenhuma imagem fornecida para inclusão no PDF.");
-    }
-
-    return yPosition;
-};
-
-// Função fictícia para simular getPageConstants
-function getPageConstants(doc) {
-    return {
-        PAGE_WIDTH: 210,
-        PAGE_HEIGHT: 297,
-        MARGIN_TOP: 20,
-        MARGIN_BOTTOM: 20,
-        MARGIN_RIGHT: 20
-    };
+import React, { useRef, useState, useEffect } from "react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { X } from "lucide-react";
+interface HistoricoTabProps {
+  relatoPolicial: string;
+  setRelatoPolicial: (value: string) => void;
+  relatoAutor: string;
+  setRelatoAutor: (value: string) => void;
+  relatoVitima: string;
+  setRelatoVitima: (value: string) => void;
+  relatoTestemunha: string;
+  setRelatoTestemunha: (value: string) => void;
+  apreensoes: string;
+  setApreensoes: (value: string) => void;
+  conclusaoPolicial: string;
+  setConclusaoPolicial: (value: string) => void;
+  drugSeizure?: boolean;
+  representacao?: string;
+  setRepresentacao?: (value: string) => void;
+  natureza: string;
+  videoLinks?: string[];
+  setVideoLinks?: (value: string[]) => void;
 }
+const HistoricoTab: React.FC<HistoricoTabProps> = ({
+  relatoPolicial,
+  setRelatoPolicial,
+  relatoAutor,
+  setRelatoAutor,
+  relatoVitima,
+  setRelatoVitima,
+  relatoTestemunha,
+  setRelatoTestemunha,
+  apreensoes,
+  setApreensoes,
+  conclusaoPolicial,
+  setConclusaoPolicial,
+  drugSeizure = false,
+  representacao = "",
+  setRepresentacao,
+  natureza,
+  videoLinks = [],
+  setVideoLinks
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFiles, setSelectedFiles] = useState<{
+    file: File;
+    id: string;
+  }[]>([]);
+  const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
+  useEffect(() => {
+    return () => {
+      selectedFiles.forEach(({
+        file
+      }) => {
+        URL.revokeObjectURL(URL.createObjectURL(file));
+      });
+    };
+  }, [selectedFiles]);
+  const handleFileUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const validFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+      if (validFiles.length === 0) {
+        console.warn("Nenhum arquivo de imagem válido selecionado.");
+        return;
+      }
+      const newFiles = validFiles.map(file => ({
+        file,
+        id: `${file.name}-${Date.now()}-${Math.random()}`
+      }));
+      setSelectedFiles(prev => [...prev, ...newFiles]);
+      const fileNames = newFiles.map(({
+        file
+      }) => file.name).join(', ');
+      console.log(`Selected files: ${fileNames}`);
+    }
+  };
+  const handleRemoveFile = (id: string) => {
+    setSelectedFiles(prev => {
+      const newFiles = prev.filter(fileObj => fileObj.id !== id);
+      return newFiles;
+    });
+  };
+  const handleVideoUrlsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const urls = e.target.value;
+    setVideoUrls(urls);
+    if (setVideoLinks) {
+      setVideoLinks(urls.split("\n").filter(url => url.trim() !== ""));
+    }
+  };
+  const truncateFileName = (name: string, maxLength: number = 15): string => {
+    if (name.length <= maxLength) return name;
+    return name.slice(0, maxLength - 3) + "...";
+  };
+  const isDrugCase = natureza === "Porte de drogas para consumo";
+  return <div className="border rounded-lg shadow-sm bg-white">
+      <div className="p-6">
+        <h3 className="text-2xl font-semibold flex items-center">Histórico</h3>
+      </div>
+      <div className="p-6 space-y-6">
+        <div>
+          <Label htmlFor="relatoPolicial">RELATÓRIO POLICIAL</Label>
+          <Textarea id="relatoPolicial" placeholder="Descreva o relato policial" value={relatoPolicial} onChange={e => setRelatoPolicial(e.target.value)} className="min-h-[150px]" />
+        </div>
+        
+        <div>
+          <Label htmlFor="relatoAutor">RELATO DO AUTOR</Label>
+          <Textarea id="relatoAutor" placeholder="Descreva o relato do autor" value={relatoAutor} onChange={e => setRelatoAutor(e.target.value)} className="min-h-[150px]" />
+        </div>
+        
+        {!isDrugCase && <div>
+            <Label htmlFor="relatoVitima">RELATO DA VÍTIMA</Label>
+            <Textarea id="relatoVitima" placeholder="Descreva o relato da vítima" value={relatoVitima} onChange={e => setRelatoVitima(e.target.value)} className="min-h-[150px]" />
+            
+            {setRepresentacao && <div className="mt-4 p-4 border rounded-md">
+                <Label className="font-bold mb-2 block">Representação da Vítima</Label>
+                <RadioGroup value={representacao} onValueChange={setRepresentacao}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Representa" id="representa" />
+                    <Label htmlFor="representa">Vítima deseja representar</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Posteriormente" id="posteriormente" />
+                    <Label htmlFor="posteriormente">Representação posterior (6 meses)</Label>
+                  </div>
+                </RadioGroup>
+              </div>}
+          </div>}
+        
+        <div>
+          <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
+          <Textarea id="relatoTestemunha" placeholder="Descreva o relato da testemunha" value={relatoTestemunha} onChange={e => setRelatoTestemunha(e.target.value)} className="min-h-[150px]" />
+        </div>
+        
+        <div>
+          <Label htmlFor="apreensoes">OBJETOS/DOCUMENTOS APREENDIDOS</Label>
+          <Textarea id="apreensoes" placeholder="Descreva os objetos ou documentos apreendidos, se houver" value={apreensoes} onChange={e => setApreensoes(e.target.value)} className="min-h-[100px]" />
+        </div>
+        
+        
+        
+        <div>
+          <Label htmlFor="conclusaoPolicial">CONCLUSÃO POLICIAL</Label>
+          <Textarea id="conclusaoPolicial" placeholder="Descreva a conclusão policial" value={conclusaoPolicial} onChange={e => setConclusaoPolicial(e.target.value)} className="min-h-[150px]" />
+        </div>
+      </div>
+    </div>;
+};
+export default HistoricoTab;
