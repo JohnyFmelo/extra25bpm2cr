@@ -14,7 +14,7 @@ import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
 
 interface ComponenteGuarnicao {
-  rg: string;
+  rg: $\nstring;
   nome: string;
   posto: string;
 }
@@ -250,7 +250,7 @@ const TCOForm = () => {
         case "Lesão Corporal": tipificacaoAtual = "ART. 129 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO"; break;
         case "Dano": tipificacaoAtual = "ART. 163 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
         case "Injúria": tipificacaoAtual = "ART. 140 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
-        case "Difamação": tipificacaoAtual = "ART. 139 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO, E MULTA"; break;
+        case "Difamação": tipificacaoAtual = "ART. 139 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO,.Concurrente E MULTA"; break;
         case "Calúnia": tipificacaoAtual = "ART. 138 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 6 MESES A 2 ANOS, E MULTA"; break;
         case "Perturbação do Sossego": tipificacaoAtual = "ART. 42 DA LEI DE CONTRAVENÇÕES PENAIS"; penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA"; break;
         case "Porte de drogas para consumo": tipificacaoAtual = "ART. 28 DA LEI Nº 11.343/2006 (LEI DE DROGAS)"; penaAtual = "ADVERTÊNCIA SOBRE OS EFEITOS DAS DROGAS, PRESTAÇÃO DE SERVIÇOS À COMUNIDADE OU MEDIDA EDUCATIVA DE COMPARECIMENTO A PROGRAMA OU CURSO EDUCATIVO."; break;
@@ -376,7 +376,7 @@ const TCOForm = () => {
   };
 
   const handleVitimaChange = (index: number, field: string, value: string) => {
-    const newVitimas = [...vitimas];
+    const newVitbbs = [...vitimas];
     let processedValue = value;
     if (field === 'cpf') {
       processedValue = formatCPF(value);
@@ -482,11 +482,16 @@ const TCOForm = () => {
     toast({ title: "Imagem Removida", description: "Imagem removida da lista de anexos." });
   };
 
-  // Função auxiliar para converter arquivo em base64
-  const fileToBase64 = (file: File): Promise<string> => {
+  // Função auxiliar para converter arquivo em base64 sem prefixo
+  const fileToBase64 = (file: File): Promise<{ name: string; data: string }> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
+      reader.onload = () => {
+        let base64String = reader.result as string;
+        // Remove o prefixo "data:image/jpeg;base64," ou similar
+        base64String = base64String.split(',')[1] || base64String;
+        resolve({ name: file.name, data: base64String });
+      };
       reader.onerror = error => reject(error);
       reader.readAsDataURL(file);
     });
@@ -506,11 +511,13 @@ const TCOForm = () => {
         title: "Campos Essenciais Faltando",
         description: "Verifique: Nº TCO, Natureza, pelo menos um Autor com nome e pelo menos um Componente da Guarnição."
       });
+      setIsSubmitting(false);
       return;
     }
 
     if (natureza === "Porte de drogas para consumo" && (!quantidade || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc) || !lacreNumero)) {
       toast({ variant: "destructive", title: "Dados da Droga Incompletos", description: "Preencha Quantidade, Substância, Cor, Descrição (se material desconhecido) e Número do Lacre." });
+      setIsSubmitting(false);
       return;
     }
 
@@ -531,8 +538,9 @@ const TCOForm = () => {
       const imageBase64Array: { name: string; data: string }[] = [];
       for (const file of imageFiles) {
         try {
-          const base64Data = await fileToBase64(file);
-          imageBase64Array.push({ name: file.name, data: base64Data });
+          const imageData = await fileToBase64(file);
+          imageBase64Array.push(imageData);
+          console.log(`Imagem ${file.name} convertida para base64 com sucesso.`);
         } catch (error) {
           console.error(`Erro ao converter imagem ${file.name} para base64:`, error);
           toast({
@@ -603,17 +611,36 @@ const TCOForm = () => {
 
       console.log("Dados a serem salvos/gerados:", tcoDataParaSalvar);
 
-      const docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
-      
-      tcoDataParaSalvar.id = docRef.id;
-      
-      toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
-      
-      await generatePDF(tcoDataParaSalvar); 
-      
-      navigate("/?tab=tco");
+      // Tentar salvar no Firestore (opcional, será removido ao migrar para Supabase)
+      let docRef;
+      try {
+        docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
+        tcoDataParaSalvar.id = docRef.id;
+        toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
+      } catch (error: any) {
+        console.error("Erro ao salvar no Firestore:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "TCO não foi salvo no banco de dados."
+        });
+      }
+
+      // Gerar o PDF independentemente do sucesso do salvamento
+      try {
+        await generatePDF(tcoDataParaSalvar);
+        toast({ title: "PDF Gerado", description: "O PDF foi gerado e baixado com sucesso." });
+        navigate("/?tab=tco");
+      } catch (error: any) {
+        console.error("Erro ao gerar o PDF:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: `Ocorreu um erro ao gerar o PDF: ${error.message || 'Erro desconhecido'}`
+        });
+      }
     } catch (error: any) {
-      console.error("Erro ao salvar ou gerar TCO:", error);
+      console.error("Erro geral no handleSubmit:", error);
       toast({
         variant: "destructive",
         title: "Erro",
