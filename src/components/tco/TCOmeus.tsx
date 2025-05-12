@@ -1,8 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
-import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Trash2, FileText, Download, Eye } from "lucide-react";
@@ -23,24 +20,37 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
 
-  // Function to fetch user's TCOs
+  // Function to fetch user's TCOs from Supabase
   const fetchUserTcos = async () => {
-    if (!user.id) return;
+    if (!user.id) {
+      console.warn("User ID is missing. Cannot fetch TCOs.");
+      return;
+    }
     setIsLoading(true);
     try {
-      const tcoRef = collection(db, "tcos");
-      const q = query(tcoRef, where("createdBy", "==", user.id));
-      const querySnapshot = await getDocs(q);
-      const tcos: any[] = [];
-      querySnapshot.forEach(doc => {
-        tcos.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
+      const { data, error } = await supabase
+        .from('tcos')
+        .select('*')
+        .eq('created_by', user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Mapear os dados para o formato esperado pelo componente
+      const tcos = data.map(tco => ({
+        id: tco.id,
+        tcoNumber: tco.tco_number,
+        createdAt: tco.created_at ? { seconds: new Date(tco.created_at).getTime() / 1000 } : null,
+        natureza: tco.natureza,
+        pdfUrl: tco.pdf_url,
+        pdfPath: tco.pdf_path, // Caso exista um campo pdf_path
+      }));
+
       setTcoList(tcos);
+      console.log("TCOs fetched from Supabase:", tcos);
     } catch (error) {
-      console.error("Error fetching TCOs:", error);
+      console.error("Error fetching TCOs from Supabase:", error);
       toast({
         variant: "destructive",
         title: "Erro",
@@ -54,7 +64,15 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   // Function to delete a TCO
   const handleDeleteTco = async (tcoId: string) => {
     try {
-      await deleteDoc(doc(db, "tcos", tcoId));
+      const { error } = await supabase
+        .from('tcos')
+        .delete()
+        .eq('id', tcoId);
+
+      if (error) {
+        throw error;
+      }
+
       setTcoList(tcoList.filter(tco => tco.id !== tcoId));
       if (selectedTco?.id === tcoId) setSelectedTco(null);
       toast({
@@ -78,12 +96,16 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         setSelectedPdfUrl(tco.pdfUrl);
         setIsPdfDialogOpen(true);
       } else if (tco.pdfPath) {
-        // Se tiver apenas o caminho do PDF no Storage, mas não a URL
-        const storage = getStorage();
-        const pdfRef = ref(storage, tco.pdfPath);
-        const url = await getDownloadURL(pdfRef);
-        setSelectedPdfUrl(url);
-        setIsPdfDialogOpen(true);
+        // Se tiver apenas o caminho do PDF no Storage
+        const { data: publicUrlData } = supabase.storage
+          .from('tco-pdfs')
+          .getPublicUrl(tco.pdfPath);
+        if (publicUrlData?.publicUrl) {
+          setSelectedPdfUrl(publicUrlData.publicUrl);
+          setIsPdfDialogOpen(true);
+        } else {
+          throw new Error("Unable to get public URL for PDF.");
+        }
       } else {
         toast({
           variant: "destructive",
@@ -105,16 +127,15 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   const handleDownloadPdf = async (tco: any) => {
     try {
       let url = tco.pdfUrl;
-      
+
       if (!url && tco.pdfPath) {
-        // Se tiver apenas o caminho do PDF no Storage, mas não a URL
-        const storage = getStorage();
-        const pdfRef = ref(storage, tco.pdfPath);
-        url = await getDownloadURL(pdfRef);
+        const { data: publicUrlData } = supabase.storage
+          .from('tco-pdfs')
+          .getPublicUrl(tco.pdfPath);
+        url = publicUrlData?.publicUrl;
       }
-      
+
       if (url) {
-        // Abre o URL em uma nova aba para download
         window.open(url, '_blank');
       } else {
         toast({
