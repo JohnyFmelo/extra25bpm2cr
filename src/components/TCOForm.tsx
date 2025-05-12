@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react"; // Adicionado useRef
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,6 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
 
-// ... (interfaces e funções de formatação permanecem as mesmas) ...
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
@@ -165,16 +164,13 @@ const TCOForm = () => {
   const [customMaterialDesc, setCustomMaterialDesc] = useState("");
   const [isUnknownMaterial, setIsUnknownMaterial] = useState(false);
   
-  // Novos estados para Apresentação em Juizado Especial
   const [juizadoEspecialData, setJuizadoEspecialData] = useState("");
   const [juizadoEspecialHora, setJuizadoEspecialHora] = useState("");
 
-  // Estados para anexos
   const [videoLinks, setVideoLinks] = useState<string[]>([]);
   const [newVideoLink, setNewVideoLink] = useState("");
-  const [imageFiles, setImageFiles] = useState<File[]>([]); // Novo estado para arquivos de imagem
-  const imageInputRef = useRef<HTMLInputElement>(null); // Ref para o input de imagem
-
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const [autores, setAutores] = useState<Pessoa[]>([{ ...initialPersonData }]);
   const [vitimas, setVitimas] = useState<Pessoa[]>([{ ...initialPersonData }]);
@@ -230,16 +226,12 @@ const TCOForm = () => {
         }
       }
     } else {
-      // Não resetar lacreNumero aqui, pois pode ser usado em outras naturezas ou ser preenchido manualmente.
-      // setLacreNumero(""); 
       setVitimas(prevVitimas => {
         if (prevVitimas.length === 0) {
           return [{ ...initialPersonData }];
         }
         return prevVitimas;
       });
-      // Considerar como tratar apreensoes se a natureza mudar de "Porte de drogas" para outra.
-      // Por ora, se foi manualmente editada, mantém. Se for o template de droga, pode ser necessário limpar.
     }
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes, relatoPolicialTemplate]);
 
@@ -445,7 +437,6 @@ const TCOForm = () => {
     setIsRelatoPolicialManuallyEdited(true);
   };
 
-  // Funções para anexos de vídeo
   const handleAddVideoLink = () => {
     if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
       if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
@@ -467,7 +458,6 @@ const TCOForm = () => {
     toast({ title: "Link Removido", description: "Link de vídeo removido com sucesso." });
   };
 
-  // Funções para anexos de imagem
   const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const newFiles = Array.from(event.target.files);
@@ -481,7 +471,6 @@ const TCOForm = () => {
       } else if (newFiles.length > 0) {
         toast({ variant: "warning", title: "Imagens Duplicadas", description: "Algumas ou todas as imagens selecionadas já foram adicionadas." });
       }
-      // Resetar o valor do input para permitir selecionar o mesmo arquivo novamente após removê-lo
       if (imageInputRef.current) {
         imageInputRef.current.value = "";
       }
@@ -493,11 +482,19 @@ const TCOForm = () => {
     toast({ title: "Imagem Removida", description: "Imagem removida da lista de anexos." });
   };
 
+  // Função auxiliar para converter arquivo em base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validações essenciais
     const completionNow = new Date();
     const completionDate = completionNow.toISOString().split('T')[0];
     const completionTime = completionNow.toTimeString().slice(0, 5);
@@ -530,11 +527,21 @@ const TCOForm = () => {
       const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
       const userRegistration = userInfo.registration || "";
 
-      // TODO: Implementar upload de imageFiles para Firebase Storage
-      // Por agora, imageFiles (objetos File) não serão salvos diretamente no Firestore.
-      // Salve as URLs retornadas pelo Storage no campo 'imageUrls' (ou similar) do tcoDataParaSalvar.
-      console.log("Arquivos de imagem selecionados (não serão enviados ao DB nesta etapa):", imageFiles.map(f => f.name));
-      const imageUrls: string[] = []; // Placeholder para URLs de imagens após upload
+      // Converter imagens para base64
+      const imageBase64Array: { name: string; data: string }[] = [];
+      for (const file of imageFiles) {
+        try {
+          const base64Data = await fileToBase64(file);
+          imageBase64Array.push({ name: file.name, data: base64Data });
+        } catch (error) {
+          console.error(`Erro ao converter imagem ${file.name} para base64:`, error);
+          toast({
+            variant: "destructive",
+            title: "Erro ao Processar Imagem",
+            description: `Não foi possível processar a imagem ${file.name}.`
+          });
+        }
+      }
 
       const tcoDataParaSalvar: any = {
         tcoNumber: tcoNumber.trim(),
@@ -577,12 +584,9 @@ const TCOForm = () => {
         createdBy: userInfo.id,
         userRegistration: userRegistration,
         videoLinks: videoLinks,
-        imageUrls: imageUrls, // Adicionado campo para URLs de imagens
+        imageBase64: imageBase64Array, // Array de objetos com nome e dados base64
         juizadoEspecialData: juizadoEspecialData.trim(),
         juizadoEspecialHora: juizadoEspecialHora.trim(),
-        // Campos legados ou não usados no formulário atual (remover se não necessários):
-        // lacre: "", 
-        // objetosApreendidos: [],
       };
 
       if (vitimasFiltradas.length > 0) {
@@ -601,11 +605,10 @@ const TCOForm = () => {
 
       const docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
       
-      tcoDataParaSalvar.id = docRef.id; // Adicionar ID do documento para uso no PDF
+      tcoDataParaSalvar.id = docRef.id;
       
       toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
       
-      // Passar tcoDataParaSalvar (que inclui imageUrls, mesmo que vazias por agora) para o PDF
       await generatePDF(tcoDataParaSalvar); 
       
       navigate("/?tab=tco");
@@ -642,7 +645,7 @@ const TCOForm = () => {
           )) ||
         target.tagName === 'TEXTAREA'
       ) {
-        if (target.tagName !== 'TEXTAREA') { // Permite Enter em Textarea
+        if (target.tagName !== 'TEXTAREA') {
           e.preventDefault();
         }
       }
@@ -714,14 +717,11 @@ const TCOForm = () => {
           representacao={representacao} setRepresentacao={setRepresentacao}
           natureza={natureza}
         />
-
-        {/* SEÇÃO DE ANEXOS ATUALIZADA */}
         <div className="space-y-4 pt-4 border-t border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800 uppercase">
             ANEXOS
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Card de Fotos */}
             <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-3 hover:border-blue-500 transition-colors">
                 <div className="flex flex-col items-center text-center">
                     <ImageIcon className="w-12 h-12 text-blue-600" />
@@ -730,7 +730,6 @@ const TCOForm = () => {
                         Selecione ou arraste arquivos de imagem para anexar.
                     </p>
                 </div>
-              
               <input
                 type="file"
                 multiple
@@ -748,7 +747,6 @@ const TCOForm = () => {
                 <Plus className="mr-2 h-5 w-5" />
                 Anexar Fotos
               </Button>
-
               {imageFiles.length > 0 && (
                 <div className="w-full pt-2">
                   <ul className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
@@ -775,15 +773,12 @@ const TCOForm = () => {
                   <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p>
                )}
             </div>
-
-            {/* Card de Vídeos */}
             <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-3 hover:border-blue-500 transition-colors">
               <div className="flex flex-col items-center text-center">
                 <VideoIcon className="w-12 h-12 text-blue-600" />
                 <h3 className="text-lg font-medium text-gray-700 mt-1">Vídeos</h3>
                 <p className="text-sm text-gray-500">Adicione links para vídeos online.</p>
               </div>
-              
               <div className="flex w-full space-x-2 items-center pt-1">
                 <input
                   type="url"
@@ -802,7 +797,6 @@ const TCOForm = () => {
                   <Plus className="h-5 w-5" />
                 </Button>
               </div>
-
               {videoLinks.length > 0 && (
                 <div className="w-full pt-2">
                   <ul className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
@@ -837,8 +831,6 @@ const TCOForm = () => {
             </div>
           </div>
         </div>
-        {/* FIM DA SEÇÃO DE ANEXOS */}
-
         <div className="flex justify-end mt-10">
           <Button type="submit" disabled={isSubmitting} size="lg">
             <FileText className="mr-2 h-5 w-5" />
