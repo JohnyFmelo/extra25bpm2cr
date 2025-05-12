@@ -1,3 +1,4 @@
+
 import { initializeApp } from 'firebase/app';
 import { 
   getStorage, 
@@ -44,4 +45,14 @@ export const dataOperations = {
     }
     return timeSlots;
   },
+  delete: async (id: string) => {
+    const timeSlots = await dataOperations.fetch();
+    const filteredSlots = timeSlots.filter((slot: any) => slot.id !== id);
+    localStorage.setItem('timeSlots', JSON.stringify(filteredSlots));
+    return filteredSlots;
+  },
+  clear: async () => {
+    localStorage.removeItem('timeSlots');
+    return [];
+  }
 };

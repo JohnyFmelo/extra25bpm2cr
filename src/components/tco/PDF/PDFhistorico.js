@@ -188,87 +188,96 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         sectionTitle = "VÍDEOS";
     }
 
-    if (hasPhotos || hasVideos) {
-        yPos = addSectionTitle(doc, yPos, sectionTitle, "4.3", 2, data);
+    yPos = addSectionTitle(doc, yPos, sectionTitle, "4.3", 2, data);
 
-        // Adicionar Fotos
-        if (hasPhotos) {
-            const photoWidth = 50; // Largura de cada foto
-            const photoHeight = 50; // Altura de cada foto
-            let xPos = MARGIN_LEFT;
+    // Adicionar Fotos
+    if (hasPhotos) {
+        const photoWidth = 50; // Largura de cada foto
+        const photoHeight = 50; // Altura de cada foto
+        let xPos = MARGIN_LEFT;
+        let photosInRow = 0;
 
-            for (let i = 0; i < data.objetosApreendidos.length; i++) {
-                const photo = data.objetosApreendidos[i];
-                yPos = checkPageBreak(doc, yPos, photoHeight + 5, data);
+        console.log(`Adicionando ${data.objetosApreendidos.length} fotos ao PDF`);
 
-                try {
-                    // Verifica se a foto é um objeto File e converte para data URL
-                    let imageData = photo;
-                    if (photo instanceof File) {
-                        imageData = await new Promise((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onload = () => resolve(reader.result);
-                            reader.onerror = reject;
-                            reader.readAsDataURL(photo);
-                        });
-                    }
-                    doc.addImage(imageData, 'JPEG', xPos, yPos, photoWidth, photoHeight);
-                    xPos += photoWidth + 5; // Espaço entre fotos
+        for (let i = 0; i < data.objetosApreendidos.length; i++) {
+            const photo = data.objetosApreendidos[i];
+            yPos = checkPageBreak(doc, yPos, photoHeight + 5, data);
 
-                    // Verifica se precisa quebrar a linha
-                    if (xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
-                        xPos = MARGIN_LEFT;
-                        yPos += photoHeight + 5;
-                    }
-                } catch (error) {
-                    console.error(`Erro ao adicionar foto ${i + 1}:`, error);
-                    doc.text(`[Erro ao carregar foto ${i + 1}]`, xPos, yPos + 5);
-                    xPos += photoWidth + 5;
-                    if (xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
-                        xPos = MARGIN_LEFT;
-                        yPos += photoHeight + 5;
-                    }
+            try {
+                // Adiciona imagem ao PDF
+                doc.addImage(photo, 'JPEG', xPos, yPos, photoWidth, photoHeight);
+                photosInRow++;
+                xPos += photoWidth + 5; // Espaço entre fotos
+
+                // Verifica se precisa quebrar a linha
+                if (photosInRow >= 3 || xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
+                    xPos = MARGIN_LEFT;
+                    yPos += photoHeight + 5;
+                    photosInRow = 0;
+                }
+            } catch (error) {
+                console.error(`Erro ao adicionar foto ${i + 1}:`, error);
+                doc.text(`[Erro ao carregar foto ${i + 1}]`, xPos, yPos + 5);
+                xPos += photoWidth + 5;
+                if (xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
+                    xPos = MARGIN_LEFT;
+                    yPos += 10;
                 }
             }
-            yPos = xPos !== MARGIN_LEFT ? yPos + photoHeight + 5 : yPos; // Ajusta yPos após as fotos
         }
-
-        // Adicionar QR Codes para os links de vídeos
-        if (hasVideos) {
-            const qrSize = 30; // Tamanho do QR code
-            let xPos = MARGIN_LEFT;
-
-            for (let i = 0; i < data.videoLinks.length; i++) {
-                const link = data.videoLinks[i];
-                yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
-
-                try {
-                    const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
-                    doc.addImage(qrCodeDataUrl, 'PNG', xPos, yPos, qrSize, qrSize);
-                    
-                    doc.setFontSize(8);
-                    doc.text(`Vídeo ${i + 1}`, xPos, yPos + qrSize + 5);
-                    xPos += qrSize + 10;
-
-                    if (xPos + qrSize > PAGE_WIDTH - MARGIN_RIGHT) {
-                        xPos = MARGIN_LEFT;
-                        yPos += qrSize + 10;
-                    }
-                } catch (error) {
-                    console.error(`Erro ao gerar QR code para o vídeo ${i + 1}:`, error);
-                    doc.text(`[Erro ao gerar QR code para vídeo ${i + 1}]`, xPos, yPos + 5);
-                    xPos += qrSize + 10;
-                    if (xPos + qrSize > PAGE_WIDTH - MARGIN_RIGHT) {
-                        xPos = MARGIN_LEFT;
-                        yPos += qrSize + 10;
-                    }
-                }
-            }
-            yPos = xPos !== MARGIN_LEFT ? yPos + qrSize + 10 : yPos;
+        
+        // Ajusta yPos após as fotos se não estiver no início de uma linha
+        if (photosInRow > 0) {
+            yPos += photoHeight + 5;
         }
     } else {
-        yPos = addSectionTitle(doc, yPos, "FOTOS E VÍDEOS", "4.3", 2, data);
-        yPos = addWrappedText(doc, yPos, "Nenhuma foto ou vídeo anexado.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
+        yPos = addWrappedText(doc, yPos, "Nenhuma foto anexada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
+        yPos += 2;
+    }
+
+    // Adicionar QR Codes para os links de vídeos
+    if (hasVideos) {
+        const qrSize = 30; // Tamanho do QR code
+        let xPos = MARGIN_LEFT;
+        let qrCodesInRow = 0;
+
+        yPos += 5; // Espaço adicional antes dos QR codes
+
+        for (let i = 0; i < data.videoLinks.length; i++) {
+            const link = data.videoLinks[i];
+            yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
+
+            try {
+                const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
+                doc.addImage(qrCodeDataUrl, 'PNG', xPos, yPos, qrSize, qrSize);
+                
+                doc.setFontSize(8);
+                doc.text(`Vídeo ${i + 1}`, xPos, yPos + qrSize + 5);
+                qrCodesInRow++;
+                xPos += qrSize + 10;
+
+                if (qrCodesInRow >= 4 || xPos + qrSize > PAGE_WIDTH - MARGIN_RIGHT) {
+                    xPos = MARGIN_LEFT;
+                    yPos += qrSize + 10;
+                    qrCodesInRow = 0;
+                }
+            } catch (error) {
+                console.error(`Erro ao gerar QR code para o vídeo ${i + 1}:`, error);
+                doc.text(`[Erro ao gerar QR code para vídeo ${i + 1}]`, xPos, yPos + 5);
+                xPos += qrSize + 10;
+                if (xPos + qrSize > PAGE_WIDTH - MARGIN_RIGHT) {
+                    xPos = MARGIN_LEFT;
+                    yPos += qrSize + 10;
+                }
+            }
+        }
+        
+        // Ajusta yPos após os QR codes se não estiver no início de uma linha
+        if (qrCodesInRow > 0) {
+            yPos += qrSize + 10;
+        }
+    } else if (!hasPhotos) {
+        yPos = addWrappedText(doc, yPos, "Nenhum vídeo anexado.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
         yPos += 2;
     }
 

@@ -87,6 +87,27 @@ export const generatePDF = async (inputData: any) => {
     const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
     let yPosition;
 
+    // Prepara os dados de imagem para o PDF
+    if (data.selectedFiles && Array.isArray(data.selectedFiles) && data.selectedFiles.length > 0) {
+        // Converte os arquivos de imagem para Data URLs para incluir no PDF
+        try {
+            const imageDataUrls = await Promise.all(
+                data.selectedFiles.map(fileObj => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(fileObj.file);
+                    });
+                })
+            );
+            data.objetosApreendidos = imageDataUrls;
+            console.log(`Convertidas ${imageDataUrls.length} imagens para inclusão no PDF`);
+        } catch (error) {
+            console.error("Erro ao converter imagens para o PDF:", error);
+        }
+    }
+
     // --- PÁGINA 1: AUTUAÇÃO ---
     yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
 
@@ -178,7 +199,7 @@ export const generatePDF = async (inputData: any) => {
     }
 };
 
-// Função para salvar o PDF no Supabase e atualizar registro no Supabase
+// Função para salvar o PDF no Supabase e atualizar registro
 async function savePDFAndUpdateRecord(pdfBlob: Blob, data: any) {
     try {
         // Upload do PDF para o Supabase Storage
