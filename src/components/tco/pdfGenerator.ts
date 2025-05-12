@@ -1,6 +1,5 @@
 
 import jsPDF from "jspdf";
-import { uploadPDFToFirebase } from "@/lib/firebase";
 import { supabase } from "@/integrations/supabase/client";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -19,6 +18,52 @@ import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
+
+/**
+ * Upload PDF to Supabase Storage
+ * @param pdfBlob PDF file blob
+ * @param createdBy User ID of creator
+ * @param tcoId TCO ID or number
+ * @returns Object with download URL and file path
+ */
+const uploadPDFToSupabase = async (pdfBlob: Blob, createdBy: string, tcoId: string): Promise<{url: string, path: string}> => {
+  try {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const filePath = `tcos/${createdBy}/${tcoId}_${dateStr}.pdf`;
+    
+    console.log(`Enviando arquivo para Supabase Storage: ${filePath}`);
+    
+    // Upload the file to Supabase storage
+    const { data, error } = await supabase
+      .storage
+      .from('pdfs')
+      .upload(filePath, pdfBlob, {
+        contentType: 'application/pdf',
+        upsert: true
+      });
+    
+    if (error) throw error;
+    
+    console.log('Upload concluído:', data);
+    
+    // Get public URL for the file
+    const { data: urlData } = supabase
+      .storage
+      .from('pdfs')
+      .getPublicUrl(filePath);
+    
+    const downloadURL = urlData.publicUrl;
+    console.log('URL do arquivo:', downloadURL);
+    
+    return {
+      url: downloadURL,
+      path: filePath
+    };
+  } catch (error) {
+    console.error("Erro ao fazer upload do PDF no Supabase:", error);
+    throw error;
+  }
+};
 
 // --- Função Principal de Geração ---
 export const generatePDF = async (inputData: any) => {
@@ -103,7 +148,7 @@ export const generatePDF = async (inputData: any) => {
         }
     }
 
-    // --- Salvamento Local e Firebase ---
+    // --- Salvamento Local e Supabase ---
     const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
     const dateStr = new Date().toISOString().slice(0, 10);
     const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
@@ -121,7 +166,7 @@ export const generatePDF = async (inputData: any) => {
         
         console.log(`PDF Gerado: ${fileName}`);
         
-        // Salva apenas o PDF no Firebase e registra a referência no Supabase
+        // Salva o PDF no Supabase e registra as informações
         if (data.id && data.createdBy) {
             await savePDFAndUpdateRecord(pdfOutput, data);
         } else {
@@ -133,17 +178,17 @@ export const generatePDF = async (inputData: any) => {
     }
 };
 
-// Função para salvar o PDF no Firebase e atualizar registro no Supabase
+// Função para salvar o PDF no Supabase e atualizar registro no Supabase
 async function savePDFAndUpdateRecord(pdfBlob: Blob, data: any) {
     try {
-        // Upload do PDF para o Firebase Storage
-        const { url: downloadURL, path: filePath } = await uploadPDFToFirebase(
+        // Upload do PDF para o Supabase Storage
+        const { url: downloadURL, path: filePath } = await uploadPDFToSupabase(
             pdfBlob,
             data.createdBy,
             data.id || data.tcoNumber
         );
         
-        // Extrai apenas as informações dos policiais para salvar no Supabase
+        // Extrai as informações dos policiais para salvar no Supabase
         const policiais = data.componentesGuarnicao ? data.componentesGuarnicao.map((policial: any) => ({
             nome: policial.nome,
             posto: policial.posto,
@@ -157,6 +202,8 @@ async function savePDFAndUpdateRecord(pdfBlob: Blob, data: any) {
                 pdfUrl: downloadURL,
                 pdfPath: filePath,
                 policiais: policiais,
+                natureza: data.natureza,
+                tcoNumber: data.tcoNumber,
                 updatedAt: new Date().toISOString()
             })
             .eq('id', data.id);

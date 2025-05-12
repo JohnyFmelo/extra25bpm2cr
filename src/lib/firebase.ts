@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { 
   getStorage, 
@@ -7,6 +6,7 @@ import {
   getDownloadURL 
 } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -21,33 +21,27 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const storage = getStorage(app);
 export const auth = getAuth(app);
+export const db = getFirestore(app);
 
-/**
- * Upload PDF to Firebase Storage
- * @param pdfBlob PDF file blob
- * @param createdBy User ID of creator
- * @param tcoId TCO ID or number
- * @returns Object with download URL and file path
- */
-export const uploadPDFToFirebase = async (pdfBlob: Blob, createdBy: string, tcoId: string): Promise<{url: string, path: string}> => {
-  try {
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const filePath = `tcos/${createdBy}/${tcoId}_${dateStr}.pdf`;
-    const fileRef = storageRef(storage, filePath);
-    
-    console.log(`Enviando arquivo para Firebase Storage: ${filePath}`);
-    const uploadResult = await uploadBytes(fileRef, pdfBlob);
-    console.log('Upload concluído:', uploadResult);
-    
-    const downloadURL = await getDownloadURL(uploadResult.ref);
-    console.log('URL do arquivo:', downloadURL);
-    
-    return {
-      url: downloadURL,
-      path: filePath
-    };
-  } catch (error) {
-    console.error("Erro ao fazer upload do PDF no Firebase:", error);
-    throw error;
-  }
+// Time slot operations for WeeklyCalendar component
+export const dataOperations = {
+  fetch: async () => {
+    const timeSlots = localStorage.getItem('timeSlots');
+    return timeSlots ? JSON.parse(timeSlots) : [];
+  },
+  insert: async (slot: any) => {
+    const timeSlots = await dataOperations.fetch();
+    timeSlots.push(slot);
+    localStorage.setItem('timeSlots', JSON.stringify(timeSlots));
+    return timeSlots;
+  },
+  update: async (slot: any) => {
+    const timeSlots = await dataOperations.fetch();
+    const index = timeSlots.findIndex((s: any) => s.id === slot.id);
+    if (index !== -1) {
+      timeSlots[index] = slot;
+      localStorage.setItem('timeSlots', JSON.stringify(timeSlots));
+    }
+    return timeSlots;
+  },
 };

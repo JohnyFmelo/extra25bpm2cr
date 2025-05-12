@@ -7,8 +7,6 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { storage } from "@/lib/firebase";
 
 interface TCOmeusProps {
   user: { id: string; registration?: string };
@@ -52,6 +50,26 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   // Function to delete a TCO from Supabase
   const handleDeleteTco = async (tcoId: string) => {
     try {
+      // First, get the TCO data to find the PDF path
+      const { data: tcoData, error: fetchError } = await supabase
+        .from('tcos')
+        .select('pdfPath')
+        .eq('id', tcoId)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
+      // If there's a PDF, delete it from Supabase storage
+      if (tcoData?.pdfPath) {
+        const { error: storageError } = await supabase
+          .storage
+          .from('pdfs')
+          .remove([tcoData.pdfPath]);
+          
+        if (storageError) console.error("Error deleting PDF file:", storageError);
+      }
+      
+      // Delete the TCO record
       const { error } = await supabase
         .from('tcos')
         .delete()
@@ -82,12 +100,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
       if (tco.pdfUrl) {
         setSelectedPdfUrl(tco.pdfUrl);
         setIsPdfDialogOpen(true);
-      } else if (tco.pdfPath) {
-        // Se tiver apenas o caminho do PDF no Storage, mas não a URL
-        const pdfRef = ref(storage, tco.pdfPath);
-        const url = await getDownloadURL(pdfRef);
-        setSelectedPdfUrl(url);
-        setIsPdfDialogOpen(true);
       } else {
         toast({
           variant: "destructive",
@@ -108,17 +120,9 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   // Function to download PDF
   const handleDownloadPdf = async (tco: any) => {
     try {
-      let url = tco.pdfUrl;
-      
-      if (!url && tco.pdfPath) {
-        // Se tiver apenas o caminho do PDF no Storage, mas não a URL
-        const pdfRef = ref(storage, tco.pdfPath);
-        url = await getDownloadURL(pdfRef);
-      }
-      
-      if (url) {
+      if (tco.pdfUrl) {
         // Abre o URL em uma nova aba para download
-        window.open(url, '_blank');
+        window.open(tco.pdfUrl, '_blank');
       } else {
         toast({
           variant: "destructive",
@@ -157,6 +161,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
               <TableHead className="bg-slate-400">Número</TableHead>
               <TableHead className="bg-slate-400">Data</TableHead>
               <TableHead className="bg-slate-400">Natureza</TableHead>
+              <TableHead className="bg-slate-400">Policiais</TableHead>
               <TableHead className="bg-slate-400">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -175,6 +180,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
                     : "-"}
                 </TableCell>
                 <TableCell>{tco.natureza}</TableCell>
+                <TableCell>
+                  {tco.policiais && tco.policiais.length > 0 ? (
+                    <span>{tco.policiais[0].nome} {tco.policiais.length > 1 ? `+${tco.policiais.length - 1}` : ''}</span>
+                  ) : "-"}
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">
                     <Button
