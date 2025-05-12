@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
-import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import BasicInformationTab from "./tco/BasicInformationTab";
 import GeneralInformationTab from "./tco/GeneralInformationTab";
@@ -12,6 +10,7 @@ import GuarnicaoTab from "./tco/GuarnicaoTab";
 import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
+import supabase from "@/lib/supabaseClient";
 
 interface ComponenteGuarnicao {
   rg: string;
@@ -584,7 +583,7 @@ const TCOForm = () => {
         createdBy: userInfo.id,
         userRegistration: userRegistration,
         videoLinks: videoLinks,
-        imageBase64: imageBase64Array, // Array de objetos com nome e dados base64
+        imageBase64: imageBase64Array,
         juizadoEspecialData: juizadoEspecialData.trim(),
         juizadoEspecialHora: juizadoEspecialHora.trim(),
       };
@@ -601,16 +600,52 @@ const TCOForm = () => {
 
       Object.keys(tcoDataParaSalvar).forEach(key => tcoDataParaSalvar[key] === undefined && delete tcoDataParaSalvar[key]);
 
-      console.log("Dados a serem salvos/gerados:", tcoDataParaSalvar);
+      console.log("Dados para gerar PDF:", tcoDataParaSalvar);
 
-      const docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
-      
-      tcoDataParaSalvar.id = docRef.id;
-      
-      toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
-      
-      await generatePDF(tcoDataParaSalvar); 
-      
+      // Gerar o PDF e obter o conteúdo como Blob
+      const pdfBlob = await generatePDF(tcoDataParaSalvar);
+
+      // Fazer upload do PDF para o Supabase Storage
+      const pdfPath = `tcos/${tcoNumber}/${tcoNumber}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from('tco-pdfs')
+        .upload(pdfPath, pdfBlob, {
+          contentType: 'application/pdf',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
+      }
+
+      // Salvar metadados no Supabase
+      const tcoMetadata = {
+        tcoNumber: tcoNumber.trim(),
+        natureza: displayNaturezaReal,
+        createdAt: new Date(),
+        policiais: componentesGuarnicao.map(p => ({
+          nome: p.nome,
+          rg: p.rg,
+          posto: p.posto
+        })),
+        pdfPath,
+        createdBy: userInfo.id,
+      };
+
+      const { data, error } = await supabase
+        .from('tco_pdfs')
+        .insert([tcoMetadata])
+        .select('id')
+        .single();
+
+      if (error) {
+        throw new Error(`Erro ao salvar metadados do TCO: ${error.message}`);
+      }
+
+      tcoDataParaSalvar.id = data.id;
+
+      toast({ title: "TCO Registrado", description: "PDF salvo com sucesso no Supabase!" });
+
       navigate("/?tab=tco");
     } catch (error: any) {
       console.error("Erro ao salvar ou gerar TCO:", error);
