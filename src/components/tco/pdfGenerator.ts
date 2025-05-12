@@ -1,433 +1,369 @@
-import { jsPDF } from 'jspdf';
-import QRCode from 'qrcode';
-import 'jspdf-autotable';
+import jsPDF from "jspdf";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { updateDoc, doc as firestoreDoc } from "firebase/firestore"; // Renomeado 'doc' para 'firestoreDoc' para evitar conflito com jsPDF.doc
+import { db } from "@/lib/firebase";
+import QRCode from 'qrcode'; // Importa a biblioteca QRCode
 
-interface ComponenteGuarnicao {
-  rg: string;
-  nome: string;
-  posto: string;
+// Importa funções auxiliares e de página da subpasta PDF
+import {
+    MARGIN_TOP, MARGIN_BOTTOM, MARGIN_RIGHT, getPageConstants,
+    addNewPage,
+    addStandardFooterContent
+} from './PDF/pdfUtils.js'; // Assumindo MARGIN_LEFT é igual a MARGIN_RIGHT ou definido aqui.
+
+// Supondo que MARGIN_LEFT não está em pdfUtils, definimos um aqui.
+const MARGIN_LEFT = MARGIN_RIGHT; // Ou defina um valor explícito, ex: 15
+
+// Importa geradores de conteúdo da subpasta PDF
+import { generateAutuacaoPage } from './PDF/PDFautuacao.js';
+import { generateHistoricoContent } from './PDF/PDFhistorico.js';
+import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
+import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
+import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
+import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
+import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
+import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
+
+
+// Função auxiliar para adicionar imagens ao PDF - Modificada para aceitar marginLeft
+const addImagesToPDF = (
+    doc: jsPDF, 
+    yPosition: number, 
+    images: { name: string; data: string }[], // data é base64 string
+    pageWidth: number, 
+    pageHeight: number,
+    marginLeft: number, // Novo parâmetro
+    marginRight: number // Para cálculo da largura máxima
+ ): number => {
+    const maxImageWidth = pageWidth - marginLeft - marginRight; 
+    const maxImageHeight = 100; 
+    const marginBetweenImages = 10; 
+    let currentY = yPosition;
+
+    for (const image of images) {
+        try {
+            const formatMatch = image.data.match(/^data:image\/(jpeg|png|gif|webp);base64,/);
+            const format = formatMatch ? formatMatch[1].toUpperCase() : 'JPEG'; 
+            const base64Data = image.data.replace(/^data:image\/[a-z]+;base64,/, '');
+
+            // Provisoriamente, forçar JPEG se não for PNG, pois jsPDF tem melhor suporte para JPEG/PNG
+            const finalFormat = (format === 'PNG' || format === 'JPEG') ? format : 'JPEG';
+
+            const img = new Image();
+            img.src = image.data;
+            
+            // Adicionar imagem somente após o carregamento para obter dimensões corretas e evitar erros
+            // Esta é uma operação assíncrona, o que complica o fluxo síncrono do jsPDF.
+            // A abordagem atual do jsPDF.addImage com base64 deve calcular as dimensões.
+            // Vamos manter a abordagem original, mas com a correção de `finalFormat`.
+
+            const imgProps = doc.getImageProperties(base64Data); // Obtém propriedades da imagem base64
+            let imgWidth = imgProps.width;
+            let imgHeight = imgProps.height;
+
+            // Redimensiona se exceder a largura máxima, mantendo a proporção
+            if (imgWidth > maxImageWidth) {
+                const ratio = maxImageWidth / imgWidth;
+                imgWidth = maxImageWidth;
+                imgHeight = imgHeight * ratio;
+            }
+            // Redimensiona se exceder a altura máxima, mantendo a proporção (opcional, dependendo do design)
+            if (imgHeight > maxImageHeight) {
+                 const ratio = maxImageHeight / imgHeight;
+                 imgHeight = maxImageHeight;
+                 imgWidth = imgWidth * ratio;
+            }
+            
+            if (currentY + imgHeight + MARGIN_BOTTOM > pageHeight) {
+                addNewPage(doc, {}); // Passar 'data' se necessário para cabeçalho/rodapé da nova página
+                currentY = MARGIN_TOP; 
+            }
+            
+            doc.addImage(base64Data, finalFormat, marginLeft, currentY, imgWidth, imgHeight); 
+            currentY += imgHeight + marginBetweenImages / 2;
+
+            doc.setFontSize(8);
+            doc.text(`Foto: ${image.name}`, marginLeft, currentY);
+            currentY += 5 + marginBetweenImages / 2; 
+        } catch (error) {
+            console.error(`Erro ao adicionar imagem ${image.name}:`, error);
+            // Se uma imagem falhar, adiciona uma mensagem de erro no PDF para depuração
+            if (currentY + 10 > pageHeight - MARGIN_BOTTOM) {
+                addNewPage(doc, {});
+                currentY = MARGIN_TOP;
+            }
+            doc.setTextColor(255,0,0);
+            doc.text(`Erro ao processar imagem: ${image.name}`, marginLeft, currentY);
+            doc.setTextColor(0,0,0);
+            currentY += 10;
+        }
+    }
+    return currentY; 
+};
+
+
+// Função para adicionar a seção de Mídia da Ocorrência (Vídeos e Fotos)
+async function addOcorrenciaMidiaSection(
+    doc: jsPDF,
+    yPos: number,
+    data: any,
+    pageWidth: number,
+    pageHeight: number
+): Promise<number> {
+    let currentY = yPos;
+    const videos = data.videoLinks || [];
+    // inputData.occurrencePhotos deve ser: { name: string, data: string (base64) }[]
+    const photos = data.occurrencePhotos || []; 
+
+    const hasVideos = videos.length > 0;
+    const hasPhotos = photos.length > 0;
+
+    if (!hasVideos && !hasPhotos) {
+        return currentY; // Nada a adicionar
+    }
+
+    // Verifica espaço para título da seção
+    if (currentY + 20 > pageHeight - MARGIN_BOTTOM) { 
+        addNewPage(doc, data);
+        currentY = MARGIN_TOP;
+    }
+
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+
+    let sectionTitle = "4.3 ";
+    if (hasVideos && hasPhotos) {
+        sectionTitle += "VÍDEOS E FOTOS DA OCORRÊNCIA";
+    } else if (hasVideos) {
+        // Conforme pedido: "Quando for Juntado apenas Vídeos, o nome do Subtitulo será 4.3 VÍDEOS FOTOS DA OCORRÊNCIA"
+        sectionTitle += "VÍDEOS FOTOS DA OCORRÊNCIA"; 
+    } else if (hasPhotos) {
+        sectionTitle += "FOTOS DA OCORRÊNCIA";
+    }
+    doc.text(sectionTitle, MARGIN_LEFT, currentY);
+    currentY += 7; // Espaço após o título
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+
+
+    if (hasVideos) {
+        const qrCodeSize = 40; // Tamanho do QR code em mm
+        const text lineHeight = 5;
+        if (currentY + qrCodeSize + text lineHeight > pageHeight - MARGIN_BOTTOM) { 
+             addNewPage(doc, data);
+             currentY = MARGIN_TOP;
+        }
+        
+        doc.setFont("helvetica", "bold");
+        doc.text("QR CODE DOS VÍDEOS:", MARGIN_LEFT, currentY);
+        currentY += text lineHeight;
+        doc.setFont("helvetica", "normal");
+
+
+        const videoLinksString = videos.join('\n');
+        try {
+            const qrCodeImageBase64 = await QRCode.toDataURL(videoLinksString, { 
+                errorCorrectionLevel: 'M', 
+                width: 200, // pixels, jsPDF vai escalar para mm
+                margin: 1 
+            });
+            
+            doc.addImage(qrCodeImageBase64, 'PNG', MARGIN_LEFT, currentY, qrCodeSize, qrCodeSize);
+            currentY += qrCodeSize + 5; 
+
+        } catch (err) {
+            console.error('Falha ao gerar QR Code para vídeos:', err);
+            if (currentY + 10 > pageHeight - MARGIN_BOTTOM) { 
+                addNewPage(doc, data);
+                currentY = MARGIN_TOP;
+            }
+            doc.setTextColor(255, 0, 0); 
+            doc.text("Erro ao gerar QR Code para os links de vídeo.", MARGIN_LEFT, currentY);
+            doc.setTextColor(0, 0, 0); 
+            currentY += 10;
+        }
+    }
+    
+    currentY += 5; // Espaço extra antes das fotos, se houver vídeos.
+
+    if (hasPhotos) {
+         if (currentY + 20 > pageHeight - MARGIN_BOTTOM && photos.length > 0) { // Espaço mínimo para uma foto
+            addNewPage(doc, data);
+            currentY = MARGIN_TOP;
+        }
+        doc.setFont("helvetica", "bold");
+        doc.text("FOTOS DA OCORRÊNCIA:", MARGIN_LEFT, currentY);
+        currentY += 7;
+        doc.setFont("helvetica", "normal");
+
+        currentY = addImagesToPDF(doc, currentY, photos, pageWidth, pageHeight, MARGIN_LEFT, MARGIN_RIGHT);
+    }
+
+    return currentY + 5; // Espaço após a seção de mídia
 }
 
-interface Pessoa {
-  nome: string;
-  sexo: string;
-  estadoCivil: string;
-  profissao: string;
-  endereco: string;
-  dataNascimento: string;
-  naturalidade: string;
-  filiacaoMae: string;
-  filiacaoPai: string;
-  rg: string;
-  cpf: string;
-  celular: string;
-  email: string;
-  laudoPericial: string;
-}
 
-interface TCOData {
-  id: string;
-  tco_number: string;
-  natureza: string;
-  original_natureza: string;
-  custom_natureza: string;
-  tipificacao: string;
-  pena_descricao: string;
-  data_fato: string;
-  hora_fato: string;
-  data_inicio_registro: string;
-  hora_inicio_registro: string;
-  data_termino_registro: string;
-  hora_termino_registro: string;
-  local_fato: string;
-  endereco: string;
-  municipio: string;
-  comunicante: string;
-  guarnicao: string;
-  operacao: string;
-  relato_policial: string;
-  relato_autor: string;
-  relato_vitima: string;
-  relato_testemunha: string;
-  apreensoes: string;
-  conclusao_policial: string;
-  lacre_numero: string;
-  droga_quantidade?: string;
-  droga_tipo?: string;
-  droga_cor?: string;
-  droga_nome_comum?: string;
-  droga_custom_desc?: string;
-  droga_is_unknown?: boolean;
-  start_time: string;
-  end_time: string;
-  created_at: Date;
-  video_links: string[];
-  image_urls: string[];
-  juizado_especial_data: string;
-  juizado_especial_hora: string;
-  representacao?: string;
-  autores: Pessoa[];
-  vitimas: Pessoa[];
-  testemunhas: Pessoa[];
-  policiais: ComponenteGuarnicao[];
-}
-
-const formatDateTime = (dateStr: string, timeStr: string) => {
-  const date = new Date(dateStr + 'T00:00:00Z');
-  const formattedDate = date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-  return `${formattedDate}, ÀS ${timeStr}`;
-};
-
-const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr + 'T00:00:00Z');
-  return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-};
-
-const formatTime = (timeStr: string) => {
-  return timeStr ? timeStr.slice(0, 5) : '';
-};
-
-const addHeader = (doc: jsPDF, title: string, pageNumber: number) => {
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('POLÍCIA MILITAR DO ESTADO DE MATO GROSSO', 105, 15, { align: 'center' });
-  doc.text('COMANDO REGIONAL - CR II', 105, 22, { align: 'center' });
-  doc.text('BATALHÃO/UNIDADE', 105, 29, { align: 'center' });
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('TERMO CIRCUNSTANCIADO DE OCORRÊNCIA', 105, 36, { align: 'center' });
-  doc.setFontSize(8);
-  doc.text(`Nº ${title}`, 195, 10, { align: 'right' });
-  doc.text(`Página ${pageNumber}`, 195, 15, { align: 'right' });
-  doc.line(15, 40, 195, 40);
-};
-
-const addFooter = (doc: jsPDF) => {
-  doc.setFontSize(8);
-  doc.text('Sistema TCO - PMMT', 15, 287);
-  doc.text('Página gerada em: ' + new Date().toLocaleString('pt-BR'), 165, 287);
-  doc.line(15, 282, 195, 282);
-};
-
-const addSectionTitle = (doc: jsPDF, title: string, y: number) => {
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(title, 15, y);
-  doc.setDrawColor(0);
-  doc.line(15, y + 2, 195, y + 2);
-  return y + 8;
-};
-
-const addTextBlock = (doc: jsPDF, text: string, x: number, y: number, maxWidth: number) => {
-  const lines = doc.splitTextToSize(text, maxWidth);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(lines, x, y);
-  return y + (lines.length * 5);
-};
-
-const addImageBlock = async (doc: jsPDF, imageUrls: string[], x: number, y: number, maxWidth: number) => {
-  let currentY = y;
-  const imageWidth = 60;
-  const imageHeight = 60;
-  const padding = 5;
-
-  for (let i = 0; i < imageUrls.length; i++) {
-    try {
-      const imgData = await fetchImageAsBase64(imageUrls[i]);
-      if (currentY + imageHeight > 270) {
-        doc.addPage();
-        currentY = 50;
-        addHeader(doc, doc.getProperties().title || 'TCO', doc.getNumberOfPages());
-        addFooter(doc);
-      }
-      doc.addImage(imgData, 'JPEG', x + (i % 3) * (imageWidth + padding), currentY, imageWidth, imageHeight);
-      if ((i + 1) % 3 === 0) {
-        currentY += imageHeight + padding;
-      }
-    } catch (error) {
-      console.error('Erro ao carregar imagem:', error);
-    }
-  }
-  if (imageUrls.length % 3 !== 0) {
-    currentY += imageHeight + padding;
-  }
-  return currentY;
-};
-
-const addQRCodeBlock = async (doc: jsPDF, videoLinks: string[], x: number, y: number, maxWidth: number) => {
-  let currentY = y;
-  const qrSize = 40;
-  const padding = 5;
-
-  // Adiciona logs para depuração
-  console.log('Gerando QR Codes para os seguintes links de vídeo:', videoLinks);
-
-  if (!videoLinks || videoLinks.length === 0) {
-    console.log('Nenhum link de vídeo encontrado para gerar QR Codes.');
-    return currentY;
-  }
-
-  for (let i = 0; i < videoLinks.length; i++) {
-    const link = videoLinks[i];
-    if (!link || typeof link !== 'string' || !link.trim()) {
-      console.warn(`Link de vídeo inválido no índice ${i}:`, link);
-      continue;
+// --- Função Principal de Geração ---
+export const generatePDF = async (inputData: any) => {
+    if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
+        console.error("Input data missing or invalid. Cannot generate PDF.");
+        alert("Erro: Dados inválidos para gerar o PDF.");
+        return;
     }
 
-    try {
-      console.log(`Gerando QR Code para o link ${i + 1}: ${link}`);
-      const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
-      if (currentY + qrSize + 10 > 270) {
-        doc.addPage();
-        currentY = 50;
-        addHeader(doc, doc.getProperties().title || 'TCO', doc.getNumberOfPages());
-        addFooter(doc);
-      }
-      doc.addImage(qrCodeDataUrl, 'PNG', x + (i % 4) * (qrSize + padding), currentY, qrSize, qrSize);
-      doc.setFontSize(8);
-      doc.text(`Vídeo ${i + 1}`, x + (i % 4) * (qrSize + padding) + qrSize / 2, currentY + qrSize + 5, { align: 'center' });
-      console.log(`QR Code para o vídeo ${i + 1} adicionado na posição Y: ${currentY}`);
-      if ((i + 1) % 4 === 0) {
-        currentY += qrSize + padding + 10;
-      }
-    } catch (error) {
-      console.error(`Erro ao gerar QR Code para o vídeo ${i + 1} (${link}):`, error);
-    }
-  }
-  if (videoLinks.length % 4 !== 0 && videoLinks.length > 0) {
-    currentY += qrSize + padding + 10;
-  }
-  return currentY;
-};
-
-const fetchImageAsBase64 = async (url: string): Promise<string> => {
-  const response = await fetch(url);
-  const blob = await response.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
-
-export const generatePDF = async (data: TCOData) => {
-  const doc = new jsPDF();
-  doc.setProperties({ title: data.tco_number });
-  let y = 50;
-
-  addHeader(doc, data.tco_number, 1);
-  addFooter(doc);
-
-  // 1. AUTUAÇÃO
-  y = addSectionTitle(doc, '1. AUTUAÇÃO', y);
-  const autuacaoText = `TERMO CIRCUNSTANCIADO DE OCORRÊNCIA Nº ${data.tco_number}, LAVRADO NA DATA DE ${formatDateTime(data.data_inicio_registro, data.hora_inicio_registro)}, NA CIDADE DE ${data.municipio}, CUJO FATO OCORREU EM ${formatDateTime(data.data_fato, data.hora_fato)}, NO ENDEREÇO ${data.endereco}, COMUNICADO VIA ${data.comunicante}, REFERENTE À OCORRÊNCIA DE ${data.natureza.toUpperCase()}, TIPIFICADA COMO ${data.tipificacao}, COM PENA DESCRITA COMO ${data.pena_descricao}.`;
-  y = addTextBlock(doc, autuacaoText, 15, y, 180);
-
-  // 2. AUTORES
-  y = addSectionTitle(doc, '2. AUTORES', y);
-  data.autores.forEach((autor, index) => {
-    const autorText = `AUTOR ${index + 1}: ${autor.nome || 'NÃO INFORMADO'}, SEXO: ${autor.sexo || 'NÃO INFORMADO'}, ESTADO CIVIL: ${autor.estadoCivil || 'NÃO INFORMADO'}, PROFISSÃO: ${autor.profissao || 'NÃO INFORMADO'}, ENDEREÇO: ${autor.endereco || 'NÃO INFORMADO'}, DATA DE NASCIMENTO: ${autor.dataNascimento ? formatDate(autor.dataNascimento) : 'NÃO INFORMADO'}, NATURALIDADE: ${autor.naturalidade || 'NÃO INFORMADO'}, FILIAÇÃO MÃE: ${autor.filiacaoMae || 'NÃO INFORMADO'}, FILIAÇÃO PAI: ${autor.filiacaoPai || 'NÃO INFORMADO'}, RG: ${autor.rg || 'NÃO INFORMADO'}, CPF: ${autor.cpf || 'NÃO INFORMADO'}, CELULAR: ${autor.celular || 'NÃO INFORMADO'}, EMAIL: ${autor.email || 'NÃO INFORMADO'}, LAUDO PERICIAL: ${autor.laudoPericial || 'NÃO INFORMADO'}.`;
-    y = addTextBlock(doc, autorText, 15, y, 180);
-    if (y > 250) {
-      doc.addPage();
-      y = 50;
-      addHeader(doc, data.tco_number, doc.getNumberOfPages());
-      addFooter(doc);
-    }
-  });
-
-  // 3. VÍTIMAS
-  y = addSectionTitle(doc, '3. VÍTIMAS', y);
-  if (data.vitimas.length === 0) {
-    y = addTextBlock(doc, 'NENHUMA VÍTIMA REGISTRADA.', 15, y, 180);
-  } else {
-    data.vitimas.forEach((vitima, index) => {
-      const vitimaText = `VÍTIMA ${index + 1}: ${vitima.nome || 'NÃO INFORMADO'}, SEXO: ${vitima.sexo || 'NÃO INFORMADO'}, ESTADO CIVIL: ${vitima.estadoCivil || 'NÃO INFORMADO'}, PROFISSÃO: ${vitima.profissao || 'NÃO INFORMADO'}, ENDEREÇO: ${vitima.endereco || 'NÃO INFORMADO'}, DATA DE NASCIMENTO: ${vitima.dataNascimento ? formatDate(vitima.dataNascimento) : 'NÃO INFORMADO'}, NATURALIDADE: ${vitima.naturalidade || 'NÃO INFORMADO'}, FILIAÇÃO MÃE: ${vitima.filiacaoMae || 'NÃO INFORMADO'}, FILIAÇÃO PAI: ${vitima.filiacaoPai || 'NÃO INFORMADO'}, RG: ${vitima.rg || 'NÃO INFORMADO'}, CPF: ${vitima.cpf || 'NÃO INFORMADO'}, CELULAR: ${vitima.celular || 'NÃO INFORMADO'}, EMAIL: ${vitima.email || 'NÃO INFORMADO'}, LAUDO PERICIAL: ${vitima.laudoPericial || 'NÃO INFORMADO'}.`;
-      y = addTextBlock(doc, vitimaText, 15, y, 180);
-      if (y > 250) {
-        doc.addPage();
-        y = 50;
-        addHeader(doc, data.tco_number, doc.getNumberOfPages());
-        addFooter(doc);
-      }
+    const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
     });
-  }
 
-  // 4. HISTÓRICO
-  y = addSectionTitle(doc, '4. HISTÓRICO', y);
+    const data = { ...inputData };
+    const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
+    let yPosition;
 
-  // 4.1 RELATO POLICIAL
-  y = addSectionTitle(doc, '4.1 RELATO POLICIAL', y);
-  y = addTextBlock(doc, data.relato_policial, 15, y, 180);
-  if (y > 250) {
-    doc.addPage();
-    y = 50;
-    addHeader(doc, data.tco_number, doc.getNumberOfPages());
-    addFooter(doc);
-  }
+    // --- PÁGINA 1: AUTUAÇÃO ---
+    yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
 
-  // 4.2 DEPOIMENTOS
-  y = addSectionTitle(doc, '4.2 DEPOIMENTOS', y);
-
-  // 4.2.1 AUTOR
-  y = addTextBlock(doc, '4.2.1 AUTOR', 15, y, 180);
-  y = addTextBlock(doc, data.relato_autor, 20, y, 175);
-  if (y > 250) {
-    doc.addPage();
-    y = 50;
-    addHeader(doc, data.tco_number, doc.getNumberOfPages());
-    addFooter(doc);
-  }
-
-  // 4.2.2 VÍTIMA
-  y = addTextBlock(doc, '4.2.2 VÍTIMA', 15, y, 180);
-  y = addTextBlock(doc, data.relato_vitima || 'NENHUM RELATO DE VÍTIMA REGISTRADO.', 20, y, 175);
-  if (y > 250) {
-    doc.addPage();
-    y = 50;
-    addHeader(doc, data.tco_number, doc.getNumberOfPages());
-    addFooter(doc);
-  }
-
-  // 4.2.3 TESTEMUNHA
-  y = addTextBlock(doc, '4.2.3 TESTEMUNHA', 15, y, 180);
-  if (data.testemunhas.length === 0) {
-    y = addTextBlock(doc, 'NENHUMA TESTEMUNHA REGISTRADA.', 20, y, 175);
-  } else {
-    y = addTextBlock(doc, data.relato_testemunha, 20, y, 175);
-  }
-  if (y > 250) {
-    doc.addPage();
-    y = 50;
-    addHeader(doc, data.tco_number, doc.getNumberOfPages());
-    addFooter(doc);
-  }
-
-  // 4.3 FOTOS E VÍDEOS
-  y = addSectionTitle(doc, '4.3 FOTOS E VÍDEOS', y);
-  if (data.image_urls.length === 0 && data.video_links.length === 0) {
-    y = addTextBlock(doc, 'NENHUMA FOTO OU VÍDEO ANEXADO.', 15, y, 180);
-  } else {
-    // Adicionar Fotos
-    if (data.image_urls.length > 0) {
-      y = addTextBlock(doc, 'FOTOS:', 15, y, 180);
-      y = await addImageBlock(doc, data.image_urls, 15, y, 180);
-      if (y > 250) {
-        doc.addPage();
-        y = 50;
-        addHeader(doc, data.tco_number, doc.getNumberOfPages());
-        addFooter(doc);
-      }
+    // Se 'data.imageBase64' for um QR Code principal do TCO ou algo similar, ele é adicionado aqui.
+    // Este NÃO é o QR Code dos vídeos da ocorrência nem as fotos da ocorrência.
+    if (data.imageBase64 && Array.isArray(data.imageBase64) && data.imageBase64.length > 0) {
+        // Assume que data.imageBase64 é [{name: string, data: string}]
+        yPosition = addImagesToPDF(doc, yPosition + 10, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT, MARGIN_LEFT, MARGIN_RIGHT);
     }
 
-    // Adicionar QR Codes dos Vídeos
-    if (data.video_links.length > 0) {
-      y = addTextBlock(doc, 'VÍDEOS (ESCANEIE O QR CODE PARA ACESSAR):', 15, y, 180);
-      y = await addQRCodeBlock(doc, data.video_links, 15, y, 180);
-      if (y > 250) {
-        doc.addPage();
-        y = 50;
-        addHeader(doc, data.tco_number, doc.getNumberOfPages());
-        addFooter(doc);
-      }
+    // --- RESTANTE DO TCO (PÁGINAS 2+) ---
+    addNewPage(doc, data); // Inicia sempre em uma nova página após a Autuação
+    yPosition = MARGIN_TOP;
+
+
+    // --- SEÇÕES DO HISTÓRICO (relatos, etc.) ---
+    yPosition = await generateHistoricoContent(doc, yPosition, data, PAGE_WIDTH, PAGE_HEIGHT); // Assumindo que esta função também pode precisar de page constants.
+
+
+    // --- SEÇÃO 4.3: VÍDEOS E FOTOS DA OCORRÊNCIA ---
+    // Esta seção será adicionada após o conteúdo principal do histórico gerado por generateHistoricoContent.
+    yPosition = await addOcorrenciaMidiaSection(doc, yPosition, data, PAGE_WIDTH, PAGE_HEIGHT);
+
+
+    // --- ADIÇÃO DOS TERMOS ---
+    // O 'yPosition' dos termos deve ser resetado para MARGIN_TOP em suas respectivas novas páginas.
+    // As funções de termo (addTermoCompromisso, etc.) devem lidar com a criação de novas páginas internamente.
+
+    if (data.autores && data.autores.length > 0) {
+        addTermoCompromisso(doc, data);
+    } else {
+        console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
     }
-  }
 
-  // 5. IDENTIFICAÇÃO DA GUARNIÇÃO
-  y = addSectionTitle(doc, '5. IDENTIFICAÇÃO DA GUARNIÇÃO', y);
-  if (!data.policiais || data.policiais.length === 0) {
-    y = addTextBlock(doc, 'NENHUM POLICIAL REGISTRADO NA GUARNIÇÃO.', 15, y, 180);
-  } else {
-    const guarnicaoText = `GUARNIÇÃO: ${data.guarnicao || 'NÃO INFORMADO'}\n` +
-      data.policiais
-        .map((policial, index) => `POLICIAL ${index + 1}: ${policial.posto || 'NÃO INFORMADO'} PM ${policial.nome || 'NÃO INFORMADO'}, RG: ${policial.rg || 'NÃO INFORMADO'}`)
-        .join('\n');
-    y = addTextBlock(doc, guarnicaoText, 15, y, 180);
-  }
-  if (y > 250) {
-    doc.addPage();
-    y = 50;
-    addHeader(doc, data.tco_number, doc.getNumberOfPages());
-    addFooter(doc);
-  }
+    if (data.natureza !== "Porte de drogas para consumo") {
+        addTermoManifestacao(doc, data);
+    } else {
+        console.log("Caso de droga detectado, pulando Termo de Manifestação da Vítima.");
+    }
 
-  // 6. APREENSÕES
-  y = addSectionTitle(doc, '6. APREENSÕES', y);
-  y = addTextBlock(doc, data.apreensoes || 'NENHUMA APREENSÃO REGISTRADA.', 15, y, 180);
-  if (y > 250) {
-    doc.addPage();
-    y = 50;
-    addHeader(doc, data.tco_number, doc.getNumberOfPages());
-    addFooter(doc);
-  }
+    if (data.apreensaoDescrição || data.apreensoes) { // 'apreensoes' é o texto da textarea
+        addTermoApreensao(doc, data);
+    }
 
-  // 7. TESTEMUNHAS
-  y = addSectionTitle(doc, '7. TESTEMUNHAS', y);
-  if (data.testemunhas.length === 0) {
-    y = addTextBlock(doc, 'NENHUMA TESTEMUNHA REGISTRADA.', 15, y, 180);
-  } else {
-    data.testemunhas.forEach((testemunha, index) => {
-      const testemunhaText = `TESTEMUNHA ${index + 1}: ${testemunha.nome || 'NÃO INFORMADO'}, SEXO: ${testemunha.sexo || 'NÃO INFORMADO'}, ESTADO CIVIL: ${testemunha.estadoCivil || 'NÃO INFORMADO'}, PROFISSÃO: ${testemunha.profissao || 'NÃO INFORMADO'}, ENDEREÇO: ${testemunha.endereco || 'NÃO INFORMADO'}, DATA DE NASCIMENTO: ${testemunha.dataNascimento ? formatDate(testemunha.dataNascimento) : 'NÃO INFORMADO'}, NATURALIDADE: ${testemunha.naturalidade || 'NÃO INFORMADO'}, FILIAÇÃO MÃE: ${testemunha.filiacaoMae || 'NÃO INFORMADO'}, FILIAÇÃO PAI: ${testemunha.filiacaoPai || 'NÃO INFORMADO'}, RG: ${testemunha.rg || 'NÃO INFORMADO'}, CPF: ${testemunha.cpf || 'NÃO INFORMADO'}, CELULAR: ${testemunha.celular || 'NÃO INFORMADO'}, EMAIL: ${testemunha.email || 'NÃO INFORMADO'}.`;
-      y = addTextBlock(doc, testemunhaText, 15, y, 180);
-      if (y > 250) {
-        doc.addPage();
-        y = 50;
-        addHeader(doc, data.tco_number, doc.getNumberOfPages());
-        addFooter(doc);
-      }
-    });
-  }
+    if (data.drogaTipo || data.drogaNomeComum) {
+        addTermoConstatacaoDroga(doc, data);
+    }
 
-  // 8. CONCLUSÃO
-  y = addSectionTitle(doc, '8. CONCLUSÃO', y);
-  y = addTextBlock(doc, data.conclusao_policial, 15, y, 180);
-  if (y > 250) {
-    doc.addPage();
-    y = 50;
-    addHeader(doc, data.tco_number, doc.getNumberOfPages());
-    addFooter(doc);
-  }
+    const pessoasComLaudo = [
+        ...(data.autores || []).filter((a: any) => a.laudoPericial === "Sim").map((a: any) => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
+        ...(data.vitimas || []).filter((v: any) => v.laudoPericial === "Sim").map((v: any) => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
+    ].filter((p: any) => p.nome && p.nome.trim());
 
-  // 9. AUDIÊNCIA NO JUIZADO ESPECIAL
-  y = addSectionTitle(doc, '9. AUDIÊNCIA NO JUIZADO ESPECIAL', y);
-  const audienciaText = data.juizado_especial_data && data.juizado_especial_hora
-    ? `DATA: ${formatDateTime(data.juizado_especial_data, data.juizado_especial_hora)}`
-    : 'NENHUMA AUDIÊNCIA AGENDADA.';
-  y = addTextBlock(doc, audienciaText, 15, y, 180);
+    if (pessoasComLaudo.length > 0) {
+        pessoasComLaudo.forEach((pessoa: any) => {
+            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
+            addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
+        });
+    } else {
+        console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
+    }
 
-  // 10. REPRESENTAÇÃO (se aplicável)
-  if (data.representacao) {
-    y = addSectionTitle(doc, '10. REPRESENTAÇÃO', y);
-    const representacaoText = `A VÍTIMA OPTA POR ${data.representacao.toUpperCase()}.`;
-    y = addTextBlock(doc, representacaoText, 15, y, 180);
-  }
+    addTermoEncerramentoRemessa(doc, data);
 
-  const pdfOutput = doc.output('blob');
-  const pdfFile = new File([pdfOutput], `${data.tco_number}.pdf`, { type: 'application/pdf' });
-  const filePath = `tco-pdfs/${data.id}/${data.tco_number}.pdf`;
+    // --- Finalização: Adiciona Números de Página e Salva ---
+    const pageCount = (doc.internal as any).pages.length -1; // ou doc.getNumberOfPages(); jsPDF typings vary
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 10, { align: "right" }); // Ajuste para estar abaixo da linha do rodapé padrão
 
-  const { error: uploadError } = await supabase.storage
-    .from('tco-pdfs')
-    .upload(filePath, pdfFile, { upsert: true });
+        // Rodapé padrão para páginas após a primeira (que é a de Autuação)
+        // if (i > 1) { // O rodapé da primeira página (autuação) é diferente
+        //    addStandardFooterContent(doc); // A lógica de quando adicionar footer pode ser mais complexa.
+        // }
+        // A lógica original já adicionava footer para i > 1
+         if (i > 1 && typeof addStandardFooterContent === 'function') { // Adicionar verificação se a função existe
+            addStandardFooterContent(doc);
+        }
+    }
 
-  if (uploadError) {
-    console.error('Erro ao fazer upload do PDF:', uploadError);
-    throw new Error('Falha ao fazer upload do PDF');
-  }
+    const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
 
-  const { data: publicUrlData } = supabase.storage
-    .from('tco-pdfs')
-    .getPublicUrl(filePath);
+    try {
+        const pdfOutput = doc.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfOutput);
 
-  const { error: updateError } = await supabase
-    .from('tcos')
-    .update({ pdf_url: publicUrlData.publicUrl })
-    .eq('id', data.id);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = pdfUrl;
+        downloadLink.download = fileName;
+        document.body.appendChild(downloadLink); // Necessário para Firefox
+        downloadLink.click();
+        document.body.removeChild(downloadLink); // Limpar
+        URL.revokeObjectURL(pdfUrl); // Limpar object URL
 
-  if (updateError) {
-    console.error('Erro ao atualizar URL do PDF:', updateError);
-    throw new Error('Falha ao atualizar URL do PDF');
-  }
+        console.log(`PDF Gerado: ${fileName}`);
+
+        await savePDFToFirebase(doc, data, tcoNumParaNome, dateStr);
+    } catch (error) {
+        console.error("Erro ao salvar o PDF:", error);
+        alert("Ocorreu um erro ao tentar salvar o PDF.");
+    }
 };
+
+
+async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, dateStr: string) {
+    try {
+        const pdfBlob = doc.output('blob');
+        const storage = getStorage();
+        
+        // Usa data.id (UUID gerado no frontend) se disponível, senão tcoNumber
+        const documentIdForPath = data.id || tcoNumParaNome;
+        if (!documentIdForPath || documentIdForPath === 'SEM_NUMERO') {
+            console.warn("ID do TCO ou Número do TCO não disponível para o caminho do Firebase Storage. Usando um placeholder.");
+            // Considerar gerar um ID temporário ou tratar este caso mais robustamente
+        }
+        const filePath = `tcos/${data.createdBy || 'unknown_user'}/${documentIdForPath}_${dateStr}.pdf`;
+        const fileRef = ref(storage, filePath);
+
+        console.log(`Enviando arquivo para Firebase Storage: ${filePath}`);
+        const uploadResult = await uploadBytes(fileRef, pdfBlob);
+        console.log('Upload concluído:', uploadResult);
+
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+        console.log('URL do arquivo:', downloadURL);
+
+        if (data.id) { // Atualiza Firestore apenas se data.id (ID do documento Firestore) existir
+            const tcoDocRef = firestoreDoc(db, "tcos", data.id);
+            await updateDoc(tcoDocRef, {
+                pdfUrl: downloadURL,
+                pdfPath: filePath, // Caminho no Storage
+                updatedAt: new Date()
+            });
+            console.log(`Documento TCO ${data.id} atualizado com URL do PDF.`);
+        } else {
+            console.warn("data.id não fornecido, não foi possível atualizar o documento no Firestore com a URL do PDF.");
+        }
+    } catch (error) {
+        console.error("Erro ao salvar PDF no Firebase:", error);
+        // Não re-lançar o erro aqui permite que o download local ainda funcione se o Firebase falhar
+        alert("PDF gerado localmente, mas falha ao salvar no Firebase Storage. Verifique o console para detalhes.");
+    }
+}
