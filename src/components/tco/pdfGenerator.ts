@@ -1,7 +1,4 @@
 import jsPDF from "jspdf";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { updateDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
@@ -24,8 +21,7 @@ import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.j
 export const generatePDF = async (inputData: any) => {
     if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
         console.error("Input data missing or invalid. Cannot generate PDF.");
-        alert("Erro: Dados inválidos para gerar o PDF.");
-        return;
+        throw new Error("Dados inválidos para gerar o PDF.");
     }
 
     // Cria a instância do jsPDF
@@ -37,6 +33,9 @@ export const generatePDF = async (inputData: any) => {
 
     // Clona os dados para evitar mutações inesperadas no objeto original
     const data = { ...inputData };
+
+    // Log para depuração
+    console.log("Iniciando geração do PDF com dados:", data);
 
     // Pega as constantes da página
     const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
@@ -74,11 +73,10 @@ export const generatePDF = async (inputData: any) => {
     }
 
     // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
-    // Verifica se algum autor ou vítima tem laudoPericial: "Sim"
     const pessoasComLaudo = [
         ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
         ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-    ].filter(p => p.nome && p.nome.trim()); // Filtra nomes válidos
+    ].filter(p => p.nome && p.nome.trim());
 
     if (pessoasComLaudo.length > 0) {
         pessoasComLaudo.forEach(pessoa => {
@@ -119,54 +117,12 @@ export const generatePDF = async (inputData: any) => {
         downloadLink.download = fileName;
         downloadLink.click();
         
-        console.log(`PDF Gerado: ${fileName}`);
+        console.log(`PDF Gerado e baixado: ${fileName}`);
         
-        // Salva o PDF no Firebase Storage
-        await savePDFToFirebase(doc, data, tcoNumParaNome, dateStr);
+        // TODO: Implementar salvamento no Supabase Storage
+        // Exemplo: await uploadToSupabase(pdfOutput, fileName);
     } catch (error) {
         console.error("Erro ao salvar o PDF:", error);
-        alert("Ocorreu um erro ao tentar salvar o PDF.");
+        throw new Error("Ocorreu um erro ao tentar salvar o PDF.");
     }
 };
-
-// Função para salvar o PDF no Firebase Storage
-async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, dateStr: string) {
-    try {
-        // Obter o output do PDF como array buffer
-        const pdfBlob = doc.output('blob');
-        
-        // Obter uma referência ao storage
-        const storage = getStorage();
-        
-        // Criar caminho para o arquivo no storage com o ID do TCO
-        const filePath = `tcos/${data.createdBy}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
-        const fileRef = ref(storage, filePath);
-        
-        // Upload do arquivo
-        console.log(`Enviando arquivo para Firebase Storage: ${filePath}`);
-        const uploadResult = await uploadBytes(fileRef, pdfBlob);
-        console.log('Upload concluído:', uploadResult);
-        
-        // Obter o URL de download
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-        console.log('URL do arquivo:', downloadURL);
-        
-        // Atualizar o documento no Firestore com a URL do PDF
-        if (data.id) {
-            const tcoRef = doc(db, "tcos", data.id);
-            await updateDoc(tcoRef, {
-                pdfUrl: downloadURL,
-                pdfPath: filePath,
-                updatedAt: new Date()
-            });
-            console.log(`Documento TCO ${data.id} atualizado com URL do PDF`);
-        } else {
-            console.warn("ID do TCO não encontrado, não foi possível atualizar o documento no Firestore");
-        }
-        
-        return downloadURL;
-    } catch (error) {
-        console.error("Erro ao salvar PDF no Firebase:", error);
-        throw error;
-    }
-}
