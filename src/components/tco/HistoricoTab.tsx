@@ -23,10 +23,10 @@ interface HistoricoTabProps {
   representacao?: string;
   setRepresentacao?: (value: string) => void;
   natureza: string;
-  videoLinks?: string[];
-  setVideoLinks?: (value: string[]) => void;
-  selectedFiles?: Array<{file: File, id: string}>;
-  setSelectedFiles?: (files: Array<{file: File, id: string}>) => void;
+  videoLinks: string[];
+  setVideoLinks: (value: string[]) => void;
+  selectedFiles: Array<{file: File, id: string}>;
+  setSelectedFiles: (files: Array<{file: File, id: string}>) => void;
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
@@ -49,20 +49,28 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   videoLinks = [],
   setVideoLinks,
   selectedFiles = [],
-  setSelectedFiles = () => {}
+  setSelectedFiles
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
 
   useEffect(() => {
     return () => {
-      selectedFiles.forEach(({
-        file
-      }) => {
-        URL.revokeObjectURL(URL.createObjectURL(file));
+      // Cleanup function to revoke object URLs when component unmounts
+      selectedFiles.forEach(({ file }) => {
+        try {
+          URL.revokeObjectURL(URL.createObjectURL(file));
+        } catch (error) {
+          console.error("Error revoking URL:", error);
+        }
       });
     };
   }, [selectedFiles]);
+
+  // Update videoUrls state when videoLinks prop changes
+  useEffect(() => {
+    setVideoUrls(videoLinks.join("\n"));
+  }, [videoLinks]);
 
   const handleFileUploadClick = () => {
     if (fileInputRef.current) {
@@ -83,9 +91,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
         id: `${file.name}-${Date.now()}-${Math.random()}`
       }));
       setSelectedFiles([...selectedFiles, ...newFiles]);
-      const fileNames = newFiles.map(({
-        file
-      }) => file.name).join(', ');
+      const fileNames = newFiles.map(({ file }) => file.name).join(', ');
       console.log(`Selected files: ${fileNames}`);
     }
   };
@@ -97,9 +103,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   const handleVideoUrlsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const urls = e.target.value;
     setVideoUrls(urls);
-    if (setVideoLinks) {
-      setVideoLinks(urls.split("\n").filter(url => url.trim() !== ""));
-    }
+    setVideoLinks(urls.split("\n").filter(url => url.trim() !== ""));
   };
 
   const truncateFileName = (name: string, maxLength: number = 15): string => {
@@ -109,7 +113,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
 
   const isDrugCase = natureza === "Porte de drogas para consumo";
 
-  return <div className="border rounded-lg shadow-sm bg-white">
+  return (
+    <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
         <h3 className="text-2xl font-semibold flex items-center">Histórico</h3>
       </div>
@@ -124,11 +129,13 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea id="relatoAutor" placeholder="Descreva o relato do autor" value={relatoAutor} onChange={e => setRelatoAutor(e.target.value)} className="min-h-[150px]" />
         </div>
         
-        {!isDrugCase && <div>
+        {!isDrugCase && (
+          <div>
             <Label htmlFor="relatoVitima">RELATO DA VÍTIMA</Label>
             <Textarea id="relatoVitima" placeholder="Descreva o relato da vítima" value={relatoVitima} onChange={e => setRelatoVitima(e.target.value)} className="min-h-[150px]" />
             
-            {setRepresentacao && <div className="mt-4 p-4 border rounded-md">
+            {setRepresentacao && (
+              <div className="mt-4 p-4 border rounded-md">
                 <Label className="font-bold mb-2 block">Representação da Vítima</Label>
                 <RadioGroup value={representacao} onValueChange={setRepresentacao}>
                   <div className="flex items-center space-x-2">
@@ -140,8 +147,10 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
                     <Label htmlFor="posteriormente">Representação posterior (6 meses)</Label>
                   </div>
                 </RadioGroup>
-              </div>}
-          </div>}
+              </div>
+            )}
+          </div>
+        )}
         
         <div>
           <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
@@ -153,7 +162,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea id="apreensoes" placeholder="Descreva os objetos ou documentos apreendidos, se houver" value={apreensoes} onChange={e => setApreensoes(e.target.value)} className="min-h-[100px]" />
         </div>
         
-        {/* Seção de Upload de Fotos */}
+        {/* Seção de Upload de Fotos e Vídeos */}
         <div>
           <Label className="block mb-2">FOTOS E VÍDEOS</Label>
           
@@ -222,6 +231,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea id="conclusaoPolicial" placeholder="Descreva a conclusão policial" value={conclusaoPolicial} onChange={e => setConclusaoPolicial(e.target.value)} className="min-h-[150px]" />
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default HistoricoTab;

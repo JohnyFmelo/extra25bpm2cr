@@ -1,6 +1,6 @@
 
 import jsPDF from "jspdf";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
@@ -89,23 +89,37 @@ export const generatePDF = async (inputData: any) => {
 
     // Prepara os dados de imagem para o PDF
     if (data.selectedFiles && Array.isArray(data.selectedFiles) && data.selectedFiles.length > 0) {
-        // Converte os arquivos de imagem para Data URLs para incluir no PDF
         try {
+            console.log(`Processando ${data.selectedFiles.length} imagens para incluir no PDF`);
+            // Converte os arquivos de imagem para Data URLs para incluir no PDF
             const imageDataUrls = await Promise.all(
-                data.selectedFiles.map(fileObj => {
-                    return new Promise((resolve, reject) => {
+                data.selectedFiles.map((fileObj: {file: File, id: string}) => {
+                    return new Promise<string>((resolve, reject) => {
                         const reader = new FileReader();
-                        reader.onload = () => resolve(reader.result);
-                        reader.onerror = reject;
+                        reader.onload = () => {
+                            if (typeof reader.result === 'string') {
+                                resolve(reader.result);
+                            } else {
+                                reject(new Error("FileReader não retornou uma string"));
+                            }
+                        };
+                        reader.onerror = (error) => {
+                            console.error("Erro lendo arquivo:", error);
+                            reject(error);
+                        };
                         reader.readAsDataURL(fileObj.file);
                     });
                 })
             );
+            
             data.objetosApreendidos = imageDataUrls;
             console.log(`Convertidas ${imageDataUrls.length} imagens para inclusão no PDF`);
         } catch (error) {
             console.error("Erro ao converter imagens para o PDF:", error);
         }
+    } else {
+        console.log("Nenhuma imagem selecionada para incluir no PDF");
+        data.objetosApreendidos = [];
     }
 
     // --- PÁGINA 1: AUTUAÇÃO ---
@@ -142,12 +156,12 @@ export const generatePDF = async (inputData: any) => {
     // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
     // Verifica se algum autor ou vítima tem laudoPericial: "Sim"
     const pessoasComLaudo = [
-        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
-        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-    ].filter(p => p.nome && p.nome.trim()); // Filtra nomes válidos
+        ...(data.autores || []).filter((a: any) => a.laudoPericial === "Sim").map((a: any) => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
+        ...(data.vitimas || []).filter((v: any) => v.laudoPericial === "Sim").map((v: any) => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
+    ].filter((p: any) => p.nome && p.nome.trim()); // Filtra nomes válidos
 
     if (pessoasComLaudo.length > 0) {
-        pessoasComLaudo.forEach(pessoa => {
+        pessoasComLaudo.forEach((pessoa: any) => {
             console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
             addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
         });
