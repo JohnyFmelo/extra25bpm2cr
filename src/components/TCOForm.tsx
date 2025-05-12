@@ -1,3 +1,4 @@
+```typescript
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react";
@@ -517,12 +518,6 @@ const TCOForm = () => {
     setIsTimerRunning(false);
 
     try {
-      // Verificar autenticação
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        throw new Error("Usuário não autenticado. Faça login para continuar.");
-      }
-
       const displayNaturezaReal = natureza === "Outros" ? customNatureza : natureza;
       const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc : indicios) : "";
       
@@ -531,6 +526,7 @@ const TCOForm = () => {
 
       const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
       const userRegistration = userInfo.registration || "";
+      const createdBy = userInfo.id || "anonymous"; // Fallback para usuário não autenticado
 
       // Converter imagens para base64
       const imageBase64Array: { name: string; data: string }[] = [];
@@ -586,7 +582,7 @@ const TCOForm = () => {
         startTime: startTime?.toISOString(),
         endTime: completionNow.toISOString(),
         createdAt: new Date(),
-        createdBy: user.id, // Usar ID do usuário autenticado
+        createdBy,
         userRegistration: userRegistration,
         videoLinks: videoLinks,
         imageBase64: imageBase64Array,
@@ -638,7 +634,7 @@ const TCOForm = () => {
           posto: p.posto
         })),
         pdfPath,
-        createdBy: user.id,
+        createdBy,
       };
 
       console.log("Metadados a serem salvos:", tcoMetadata);
@@ -891,3 +887,4 @@ const TCOForm = () => {
 };
 
 export default TCOForm;
+```
