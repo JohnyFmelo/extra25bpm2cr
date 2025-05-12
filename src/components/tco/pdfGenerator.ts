@@ -21,7 +21,7 @@ import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
 
 // Função auxiliar para adicionar imagens ao PDF
-const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; data: string }[], pageWidth: number, pageHeight: number) => {
+export const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; data: string }[], pageWidth: number, pageHeight: number) => {
     const maxImageWidth = pageWidth - MARGIN_RIGHT * 2; // Largura máxima da imagem
     const maxImageHeight = 100; // Altura máxima por imagem (ajustável)
     const marginBetweenImages = 10; // Espaço entre imagens
@@ -52,7 +52,7 @@ const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; d
             // Atualiza a posição Y
             currentY += imgHeight + marginBetweenImages;
 
-            // Adiciona o nome do arquivo como legenda (opcional)
+            // Adiciona o nome do arquivo como legenda
             doc.setFontSize(8);
             doc.text(`Imagem: ${image.name}`, MARGIN_RIGHT, currentY);
             currentY += 5; // Espaço após a legenda
@@ -89,16 +89,11 @@ export const generatePDF = async (inputData: any) => {
     // --- PÁGINA 1: AUTUAÇÃO ---
     yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
 
-    // --- Adiciona Imagens Abaixo do QR Code (assumindo que o QR code está na página de autuação) ---
-    if (data.imageBase64 && data.imageBase64.length > 0) {
-        yPosition = addImagesToPDF(doc, yPosition + 10, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT); // +10 para espaço após QR code
-    }
-
     // --- RESTANTE DO TCO (PÁGINAS 2+) ---
     yPosition = addNewPage(doc, data);
 
     // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
-    yPosition = await generateHistoricoContent(doc, yPosition, data);
+    yPosition = await generateHistoricoContent(doc, yPosition, data, PAGE_WIDTH, PAGE_HEIGHT);
 
     // --- ADIÇÃO DOS TERMOS ---
     if (data.autores && data.autores.length > 0) {
