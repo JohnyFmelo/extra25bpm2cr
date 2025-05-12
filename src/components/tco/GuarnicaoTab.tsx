@@ -1,430 +1,360 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Trash2, Users, UserPlus, Info, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    Box, TextField, Button, IconButton, List, ListItem, ListItemText,
+    Typography, Divider, Checkbox, FormControlLabel, CircularProgress, Alert
+} from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
 
-// --- Funções Auxiliares ---
-const somenteNumeros = (value: string | null | undefined): string => {
-  return value?.replace(/\D/g, '') || '';
-};
-const formatarCPF = (value: string): string => {
-  const numeros = somenteNumeros(value);
-  let cpfFormatado = numeros.slice(0, 11);
-  cpfFormatado = cpfFormatado.replace(/^(\d{3})(\d)/, '$1.$2');
-  cpfFormatado = cpfFormatado.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
-  cpfFormatado = cpfFormatado.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
-  return cpfFormatado;
-};
-const formatarCelular = (value: string): string => {
-  const numeros = somenteNumeros(value);
-  let foneFormatado = numeros.slice(0, 11);
-  if (foneFormatado.length === 11) {
-    foneFormatado = foneFormatado.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-  } else if (foneFormatado.length === 10) {
-    foneFormatado = foneFormatado.replace(/^(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-  } else if (foneFormatado.length > 6) {
-    foneFormatado = foneFormatado.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
-  } else if (foneFormatado.length > 2) {
-    foneFormatado = foneFormatado.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
-  }
-  return foneFormatado;
-};
-const validateCPF = (cpf: string) => {
-  cpf = somenteNumeros(cpf);
-  if (cpf.length !== 11) return false;
-  if (/^(\d)\1{10}$/.test(cpf)) return false;
-  let sum = 0;
-  for (let i = 0; i < 9; i++) {
-    sum += parseInt(cpf.charAt(i)) * (10 - i);
-  }
-  let remainder = sum % 11;
-  let digit1 = remainder < 2 ? 0 : 11 - remainder;
-  if (digit1 !== parseInt(cpf.charAt(9))) return false;
-  sum = 0;
-  for (let i = 0; i < 10; i++) {
-    sum += parseInt(cpf.charAt(i)) * (11 - i);
-  }
-  remainder = sum % 11;
-  let digit2 = remainder < 2 ? 0 : 11 - remainder;
-  return digit2 === parseInt(cpf.charAt(10));
+// Mock function to simulate fetching military personnel data
+// Replace with your actual API call or data source
+const fetchMilitarPorRg = async (rgpm: string): Promise<Militar | null> => {
+    console.log(`Buscando militar com RGPM: ${rgpm}`);
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Example data store (replace with actual API call)
+    const militaresDb: { [key: string]: Militar } = {
+        '12345': { id: '1', nome: 'Fulano de Tal da Silva', posto: 'SD PM', rg: '12345' },
+        '67890': { id: '2', nome: 'Beltrano de Sousa Oliveira', posto: 'CB PM', rg: '67890' },
+        '11223': { id: '3', nome: 'Ciclano Santos Pereira', posto: 'SGT PM', rg: '11223' },
+        '99887': { id: '4', nome: 'MARIA OLIVEIRA COSTA', posto: 'SD PM', rg: '99887' },
+        '55443': { id: '5', nome: 'JOÃO PEREIRA ALVES', posto: 'CB PM', rg: '55443' },
+        '77665': { id: '6', nome: 'ANA CLARA FERREIRA', posto: 'TEN PM', rg: '77665' }, // Added for more testing
+        '33442': { id: '7', nome: 'PAULO ROBERTO LIMA', posto: 'MAJ PM', rg: '33442' }  // Added for more testing
+    };
+
+    return militaresDb[rgpm] || null; // Return found militar or null
 };
 
-// --- Interfaces ---
-interface ComponenteGuarnicao {
-  rg: string;
-  nome: string;
-  posto: string;
-  pai?: string;
-  mae?: string;
-  naturalidade?: string;
-  cpf?: string;
-  telefone?: string;
+
+// Define the structure for a military member
+interface Militar {
+    id: string | number; // Unique identifier
+    nome: string;
+    posto: string;
+    rg: string;
 }
-interface PoliceOfficerSearchResult {
-  nome: string | null;
-  graduacao: string | null;
-  pai: string | null;
-  mae: string | null;
-  naturalidade: string | null;
-  cpf: string | null;
-  telefone: string | null;
-}
-interface PoliceOfficerFormData {
-  rgpm: string;
-  nome: string;
-  graduacao: string;
-  pai: string;
-  mae: string;
-  naturalidade: string;
-  cpf: string;
-  telefone: string;
-}
-const initialOfficerFormData: PoliceOfficerFormData = {
-  rgpm: "",
-  nome: "",
-  graduacao: "",
-  pai: "",
-  mae: "",
-  naturalidade: "",
-  cpf: "",
-  telefone: ""
-};
-const graduacoes = ["SD PM", "CB PM", "3º SGT PM", "2º SGT PM", "1º SGT PM", "SUB TEN PM", "ASPIRANTE PM", "2º TEN PM", "1º TEN PM", "CAP PM", "MAJ PM", "TEN CEL PM", "CEL PM"];
+
 interface GuarnicaoTabProps {
-  currentGuarnicaoList: ComponenteGuarnicao[];
-  onAddPolicial: (policial: ComponenteGuarnicao) => void;
-  onRemovePolicial: (index: number) => void;
+    // Pass initial data for both main and support components
+    initialData?: {
+        componentes?: Militar[];
+        apoio?: Militar[];
+    };
+    // Callback function to update the parent component's state
+    onGuarnicaoChange: (data: { componentes: Militar[], apoio: Militar[] }) => void;
 }
 
-// --- Componente GuarnicaoTab ---
-const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
-  currentGuarnicaoList,
-  onAddPolicial,
-  onRemovePolicial
-}) => {
-  const {
-    toast
-  } = useToast();
-  const [searchRgpm, setSearchRgpm] = useState<string>("");
-  const [isSearching, setIsSearching] = useState<boolean>(false);
-  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState<boolean>(false);
-  const [newOfficerFormData, setNewOfficerFormData] = useState<PoliceOfficerFormData>(initialOfficerFormData);
-  useEffect(() => {
-    console.log("[GuarnicaoTab] Prop 'currentGuarnicaoList' recebida:", currentGuarnicaoList);
-  }, [currentGuarnicaoList]);
-  const handleSearchRgpmChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = event.target.value;
-    const numeros = somenteNumeros(rawValue).slice(0, 6);
-    setSearchRgpm(numeros);
-  };
-  const handleSearchAndAdd = useCallback(async () => {
-    const rgpmToSearch = searchRgpm;
-    console.log("[GuarnicaoTab] Iniciando busca por RGPM:", rgpmToSearch);
-    if (rgpmToSearch.length !== 6) {
-      toast({
-        variant: "destructive",
-        title: "RGPM Inválido",
-        description: "O RGPM da busca deve conter exatamente 6 dígitos."
-      });
-      return;
-    }
-    const alreadyExists = currentGuarnicaoList.some(comp => comp.rg === rgpmToSearch);
-    if (alreadyExists) {
-      console.log("[GuarnicaoTab] RGPM já existe na lista (prop):", rgpmToSearch);
-      toast({
-        variant: "warning",
-        title: "Duplicado",
-        description: "Este policial já está na guarnição."
-      });
-      setSearchRgpm("");
-      return;
-    }
-    setIsSearching(true);
-    console.log("[GuarnicaoTab] Buscando no Supabase...");
-    try {
-      const {
-        data,
-        error
-      } = await supabase.from("police_officers").select("nome, graduacao, pai, mae, naturalidade, cpf, telefone").eq("rgpm", rgpmToSearch).single();
-      console.log("[GuarnicaoTab] Resposta Supabase:", {
-        data,
-        error
-      });
-      console.log("[GuarnicaoTab] Telefone retornado do Supabase:", data?.telefone);
-      if (error && error.code === 'PGRST116') {
-        toast({
-          variant: "warning",
-          title: "Não Encontrado",
-          description: `Nenhum policial encontrado com o RGPM ${rgpmToSearch}. Considere cadastrá-lo.`
-        });
-      } else if (error) {
-        throw error;
-      } else if (data) {
-        const officerData = data as PoliceOfficerSearchResult;
-        const newComponente: ComponenteGuarnicao = {
-          rg: rgpmToSearch,
-          nome: officerData.nome?.toUpperCase() || "NOME NÃO INFORMADO",
-          posto: officerData.graduacao || "POSTO NÃO INFORMADO",
-          pai: officerData.pai?.toUpperCase() || "NÃO INFORMADO",
-          mae: officerData.mae?.toUpperCase() || "NÃO INFORMADO",
-          naturalidade: officerData.naturalidade?.toUpperCase() || "NÃO INFORMADO",
-          cpf: officerData.cpf ? formatarCPF(officerData.cpf) : "NÃO INFORMADO",
-          telefone: officerData.telefone ? formatarCelular(officerData.telefone) : "NÃO INFORMADO"
+const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({ initialData, onGuarnicaoChange }) => {
+    // --- State for Main Unit ---
+    const [componentes, setComponentes] = useState<Militar[]>(initialData?.componentes || []);
+    const [rgpmInput, setRgpmInput] = useState('');
+    const [militarEncontrado, setMilitarEncontrado] = useState<Militar | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // --- State for Supporting Unit(s) ---
+    // Initialize teveApoio based on whether initial apoio data exists and has members
+    const [teveApoio, setTeveApoio] = useState<boolean>(!!(initialData?.apoio && initialData.apoio.length > 0));
+    const [apoioGuarnicao, setApoioGuarnicao] = useState<Militar[]>(initialData?.apoio || []);
+    const [rgpmApoioInput, setRgpmApoioInput] = useState('');
+    const [militarApoioEncontrado, setMilitarApoioEncontrado] = useState<Militar | null>(null);
+    const [loadingApoio, setLoadingApoio] = useState(false);
+    const [errorApoio, setErrorApoio] = useState<string | null>(null);
+
+    // --- Callback to Parent ---
+    // Use useCallback to memoize the function and prevent unnecessary updates if passed in dependency arrays
+    const triggerParentUpdate = useCallback(() => {
+        // Ensure 'apoio' is only included if teveApoio is true, otherwise send empty array
+        const dataToSend = {
+             componentes,
+             apoio: teveApoio ? apoioGuarnicao : []
         };
-        console.log("[GuarnicaoTab] Componente criado com telefone:", newComponente.telefone);
-        console.log("[GuarnicaoTab] Policial encontrado. Chamando onAddPolicial:", newComponente);
-        onAddPolicial(newComponente);
-        setSearchRgpm("");
-      }
-    } catch (error: any) {
-      console.error("[GuarnicaoTab] Erro na busca:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro na Busca",
-        description: `Falha ao buscar dados: ${error.message || 'Erro desconhecido'}`
-      });
-    } finally {
-      setIsSearching(false);
-      console.log("[GuarnicaoTab] Busca finalizada.");
-    }
-  }, [searchRgpm, currentGuarnicaoList, toast, onAddPolicial]);
-  const handleRemove = (index: number) => {
-    const itemToRemove = currentGuarnicaoList[index];
-    console.log("[GuarnicaoTab] Chamando onRemovePolicial para índice:", index, itemToRemove);
-    onRemovePolicial(index);
-    toast({
-      title: "Removido",
-      description: `Componente ${itemToRemove?.nome || ''} removido da guarnição.`
-    });
-  };
-  const openRegisterDialog = () => setIsRegisterDialogOpen(true);
-  const closeRegisterDialog = () => {
-    setIsRegisterDialogOpen(false);
-    setNewOfficerFormData(initialOfficerFormData);
-  };
-  const handleRegisterInputChange = (field: keyof PoliceOfficerFormData, value: string) => {
-    let processedValue = value;
-    if (field === 'cpf') {
-      processedValue = formatarCPF(value);
-    } else if (field === 'telefone') {
-      processedValue = formatarCelular(value);
-    } else if (field === 'rgpm') {
-      processedValue = somenteNumeros(value).slice(0, 6);
-    } else if (['nome', 'pai', 'mae', 'naturalidade'].includes(field)) {
-      processedValue = value.toUpperCase();
-    }
-    setNewOfficerFormData(prev => ({
-      ...prev,
-      [field]: processedValue
-    }));
-  };
-  const handleSaveNewOfficer = async () => {
-    console.log("[GuarnicaoTab] Tentando salvar novo policial no BD:", newOfficerFormData);
-    const {
-      rgpm,
-      nome,
-      graduacao,
-      pai,
-      mae,
-      naturalidade,
-      cpf,
-      telefone
-    } = newOfficerFormData;
-    const camposObrigatorios: (keyof PoliceOfficerFormData)[] = ['rgpm', 'nome', 'graduacao', 'pai', 'mae', 'naturalidade', 'cpf', 'telefone'];
-    const camposFaltando = camposObrigatorios.filter(key => !newOfficerFormData[key]?.trim());
-    if (camposFaltando.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Campos Obrigatórios",
-        description: `Preencha: ${camposFaltando.join(', ')}`
-      });
-      return;
-    }
-    const rgpmNumeros = somenteNumeros(rgpm);
-    if (rgpmNumeros.length !== 6) {
-      toast({
-        variant: "destructive",
-        title: "RGPM Inválido",
-        description: "O RGPM deve ter 6 dígitos."
-      });
-      return;
-    }
-    const cpfNumeros = somenteNumeros(cpf);
-    if (cpfNumeros.length !== 11 || !validateCPF(cpf)) {
-      toast({
-        variant: "destructive",
-        title: "CPF Inválido",
-        description: "Verifique o CPF."
-      });
-      return;
-    }
-    const telefoneNumeros = somenteNumeros(telefone);
-    if (telefoneNumeros.length !== 10 && telefoneNumeros.length !== 11) {
-      toast({
-        variant: "destructive",
-        title: "Telefone Inválido",
-        description: "Formato DDD + 8 ou 9 dígitos."
-      });
-      return;
-    }
-    try {
-      const dataToSave = {
-        rgpm: rgpmNumeros,
-        nome: nome.toUpperCase(),
-        graduacao: graduacao,
-        pai: pai.toUpperCase(),
-        mae: mae.toUpperCase(),
-        naturalidade: naturalidade.toUpperCase(),
-        cpf: cpfNumeros,
-        telefone: telefoneNumeros
-      };
-      console.log("[GuarnicaoTab] Dados a serem salvos/atualizados no BD com telefone:", dataToSave.telefone);
-      const {
-        error
-      } = await supabase.from("police_officers").upsert(dataToSave, {
-        onConflict: "rgpm"
-      });
-      if (error) {
-        throw error;
-      }
-      toast({
-        title: "Sucesso",
-        description: "Policial cadastrado/atualizado no banco de dados."
-      });
-      closeRegisterDialog();
-    } catch (error: any) {
-      console.error("[GuarnicaoTab] Erro ao salvar policial no BD:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao Salvar no BD",
-        description: `Falha: ${error.message || 'Erro desconhecido'}`
-      });
-    }
-  };
-  const isSaveDisabled = useCallback((): boolean => {
-    const {
-      rgpm,
-      nome,
-      graduacao,
-      pai,
-      mae,
-      naturalidade,
-      cpf,
-      telefone
-    } = newOfficerFormData;
-    if (!rgpm || !nome || !graduacao || !pai || !mae || !naturalidade || !cpf || !telefone) return true;
-    if (somenteNumeros(rgpm).length !== 6) return true;
-    if (somenteNumeros(cpf).length !== 11 || !validateCPF(cpf)) return true;
-    const telNums = somenteNumeros(telefone);
-    if (telNums.length !== 10 && telNums.length !== 11) return true;
-    return false;
-  }, [newOfficerFormData]);
-  return <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="flex items-center">
-              <Users className="mr-2 h-5 w-5" /> GUARNIÇÃO
-            </CardTitle>
-            <CardDescription>Adicione os componentes buscando por RGPM</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={openRegisterDialog}>
-            <UserPlus className="h-4 w-4 mr-2" /> Cadastrar/Atualizar Policial
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex gap-2 items-center">
-            <Input id="rgpmSearchInput" type="text" inputMode="numeric" placeholder="Buscar por RGPM (6 dígitos)" value={searchRgpm} onChange={handleSearchRgpmChange} disabled={isSearching} className="flex-grow" maxLength={6} onKeyDown={e => {
-            if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
-          }} />
-            <Button onClick={handleSearchAndAdd} disabled={isSearching || searchRgpm.length !== 6}>
-              {isSearching ? "Buscando..." : <><Search className="h-4 w-4 mr-1" /> Adicionar</>}
-            </Button>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Componentes da Guarnição Atual</Label>
-          {currentGuarnicaoList.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4 border rounded-md border-dashed">
-              Nenhum componente adicionado. Use a busca acima.
-            </p> : <div className="border rounded-md overflow-hidden">
-              {currentGuarnicaoList.map((componente, index) => <div key={`${componente.rg}-${index}`} className={`flex items-center justify-between p-3 ${index > 0 ? "border-t" : ""} ${index === 0 ? "bg-blue-50" : "bg-background"}`}>
-                  <div className="flex flex-col flex-grow mr-2 truncate">
-                    <span className="text-sm font-medium truncate" title={`${componente.posto} ${componente.nome} (RGPM: ${componente.rg})`}>
-                      {index === 0 && <span className="font-bold text-blue-800">(Condutor) </span>}
-                      <span>{componente.posto || "Sem Posto"}</span>{' '}
-                      <span>{componente.nome || "Sem Nome"}</span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">RGPM: {componente.rg || "Não informado"}</span>
-                  </div>
-                  <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0" onClick={() => handleRemove(index)} aria-label={`Remover ${componente.nome}`}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>)}
-            </div>}
-        </div>
-      </CardContent>
-      <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle>Cadastrar ou Atualizar Policial</DialogTitle>
-            
-          </DialogHeader>
-          <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-3 px-[5px] py-0 my-0">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dlg-rgpm">RGPM (6 dígitos) * <Info className="inline h-3 w-3 text-muted-foreground ml-1" title="Usado para buscar e identificar o policial. Não pode ser alterado após cadastro inicial (a menos que haja erro)." /></Label>
-                <Input id="dlg-rgpm" value={newOfficerFormData.rgpm} onChange={e => handleRegisterInputChange("rgpm", e.target.value)} placeholder="000000" required inputMode="numeric" maxLength={6} />
-              </div>
-              <div>
-                <Label htmlFor="dlg-graduacao">Graduação *</Label>
-                <select id="dlg-graduacao" value={newOfficerFormData.graduacao} onChange={e => handleRegisterInputChange("graduacao", e.target.value)} required className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-                  <option value="">Selecione...</option>
-                  {graduacoes.map(grad => <option key={grad} value={grad}>{grad}</option>)}
-                </select>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="dlg-nome">Nome Completo *</Label>
-              <Input id="dlg-nome" value={newOfficerFormData.nome} onChange={e => handleRegisterInputChange("nome", e.target.value)} placeholder="Nome completo" required />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dlg-cpf">CPF *</Label>
-                <Input id="dlg-cpf" value={newOfficerFormData.cpf} onChange={e => handleRegisterInputChange("cpf", e.target.value)} placeholder="000.000.000-00" required inputMode="numeric" maxLength={14} />
-              </div>
-              <div>
-                <Label htmlFor="dlg-telefone">Telefone (com DDD) *</Label>
-                <Input id="dlg-telefone" value={newOfficerFormData.telefone} onChange={e => handleRegisterInputChange("telefone", e.target.value)} placeholder="(00) 00000-0000" required inputMode="tel" maxLength={15} />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="dlg-naturalidade">Naturalidade (Cidade/UF) *</Label>
-              <Input id="dlg-naturalidade" value={newOfficerFormData.naturalidade} onChange={e => handleRegisterInputChange("naturalidade", e.target.value)} placeholder="Ex: Cuiabá/MT" required />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dlg-pai">Nome do Pai *</Label>
-                <Input id="dlg-pai" value={newOfficerFormData.pai} onChange={e => handleRegisterInputChange("pai", e.target.value)} required placeholder="Nome completo do pai" />
-              </div>
-              <div>
-                <Label htmlFor="dlg-mae">Nome da Mãe *</Label>
-                <Input id="dlg-mae" value={newOfficerFormData.mae} onChange={e => handleRegisterInputChange("mae", e.target.value)} required placeholder="Nome completo da mãe" />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeRegisterDialog}> Cancelar </Button>
-            <Button onClick={handleSaveNewOfficer} disabled={isSaveDisabled()}> Salvar no Banco </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>;
+        onGuarnicaoChange(dataToSend);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Including onGuarnicaoChange can cause loops if parent isn't memoizing it
+    }, [componentes, apoioGuarnicao, teveApoio]); // Depend on state variables that affect the output
+
+    // Trigger update to parent when relevant state changes
+    useEffect(() => {
+        triggerParentUpdate();
+    }, [triggerParentUpdate]); // Depend only on the memoized callback
+
+    // --- Logic for Main Unit ---
+    const buscarMilitar = async () => {
+        const rgTrimmed = rgpmInput.trim();
+        if (!rgTrimmed) return;
+        setLoading(true);
+        setError(null);
+        setMilitarEncontrado(null); // Clear previous find
+        try {
+            const militar = await fetchMilitarPorRg(rgTrimmed);
+            if (militar) {
+                // Check if already in the main list
+                if (componentes.some(c => c.rg === militar.rg)) {
+                   setError(`Militar ${militar.nome} (RG: ${militar.rg}) já consta na guarnição principal.`);
+                // Optional: Check if in support list
+                } else if (teveApoio && apoioGuarnicao.some(a => a.rg === militar.rg)) {
+                   setError(`Militar ${militar.nome} (RG: ${militar.rg}) já consta na lista de apoio.`);
+                } else {
+                    setMilitarEncontrado(militar);
+                }
+            } else {
+                setError('Militar não encontrado com este RGPM.');
+            }
+        } catch (err) {
+            setError('Erro ao buscar militar. Verifique a conexão ou tente novamente.');
+            console.error("Erro buscando militar:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const adicionarMilitar = () => {
+        // Double check conditions before adding
+        if (militarEncontrado && !componentes.some(c => c.id === militarEncontrado.id)) {
+            setComponentes(prev => [...prev, militarEncontrado]);
+            setMilitarEncontrado(null); // Clear found militar display
+            setRgpmInput(''); // Clear search input
+            setError(null); // Clear any previous error
+        }
+    };
+
+    const removerMilitar = (idToRemove: string | number) => {
+        setComponentes(prev => prev.filter(m => m.id !== idToRemove));
+    };
+
+    // --- Logic for Supporting Unit(s) ---
+    const handleToggleApoio = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const checked = event.target.checked;
+        setTeveApoio(checked);
+        if (!checked) {
+            // Clear support info if toggled off for immediate feedback, update will propagate via useEffect
+            setApoioGuarnicao([]);
+            setRgpmApoioInput('');
+            setMilitarApoioEncontrado(null);
+            setErrorApoio(null);
+        }
+    };
+
+    const buscarMilitarApoio = async () => {
+        const rgTrimmed = rgpmApoioInput.trim();
+        if (!rgTrimmed) return;
+        setLoadingApoio(true);
+        setErrorApoio(null);
+        setMilitarApoioEncontrado(null); // Clear previous find
+        try {
+            const militar = await fetchMilitarPorRg(rgTrimmed);
+            if (militar) {
+                 // Check if already in the support list
+                 if (apoioGuarnicao.some(a => a.rg === militar.rg)) {
+                     setErrorApoio(`Militar ${militar.nome} (RG: ${militar.rg}) já consta na lista de apoio.`);
+                 }
+                 // Check if they are in the main list
+                 else if (componentes.some(c => c.rg === militar.rg)) {
+                    setErrorApoio(`Militar ${militar.nome} (RG: ${militar.rg}) já consta na guarnição principal.`);
+                 }
+                  else {
+                    setMilitarApoioEncontrado(militar);
+                 }
+            } else {
+                setErrorApoio('Militar não encontrado com este RGPM.');
+            }
+        } catch (err) {
+            setErrorApoio('Erro ao buscar militar de apoio. Verifique a conexão ou tente novamente.');
+            console.error("Erro buscando militar de apoio:", err);
+        } finally {
+            setLoadingApoio(false);
+        }
+    };
+
+     const adicionarMilitarApoio = () => {
+        // Double check conditions before adding
+        if (militarApoioEncontrado && !apoioGuarnicao.some(a => a.id === militarApoioEncontrado.id)) {
+            // Redundant check (already done in search), but safe
+            if (componentes.some(c => c.id === militarApoioEncontrado.id)) {
+                 setErrorApoio(`Militar ${militarApoioEncontrado.nome} já está na guarnição principal.`);
+                 return;
+             }
+            setApoioGuarnicao(prev => [...prev, militarApoioEncontrado]);
+            setMilitarApoioEncontrado(null); // Clear display
+            setRgpmApoioInput(''); // Clear search input
+            setErrorApoio(null); // Clear error
+        }
+    };
+
+    const removerMilitarApoio = (idToRemove: string | number) => {
+        setApoioGuarnicao(prev => prev.filter(m => m.id !== idToRemove));
+    };
+
+
+    return (
+        <Box sx={{ p: 2 }}>
+            {/* --- Seção Guarnição Principal --- */}
+            <Typography variant="h6" gutterBottom>Identificação da Guarnição Principal</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                <TextField
+                    label="Buscar por RG PMMT"
+                    variant="outlined"
+                    size="small"
+                    value={rgpmInput}
+                    onChange={(e) => { setRgpmInput(e.target.value); setError(null); }} // Clear error on change
+                    onKeyPress={(e) => e.key === 'Enter' && buscarMilitar()}
+                    disabled={loading}
+                    sx={{ flexGrow: 1, minWidth: '150px' }}
+                />
+                <Button
+                    variant="contained"
+                    onClick={buscarMilitar}
+                    disabled={loading || !rgpmInput.trim()}
+                    startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SearchIcon />}
+                    sx={{ height: '40px' }} // Match TextField height
+                >
+                    Buscar
+                </Button>
+            </Box>
+
+            {error && <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+
+            {militarEncontrado && (
+                <Box sx={{ mb: 2, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'action.hover' }}>
+                    <Typography variant="body2" gutterBottom>Militar encontrado:</Typography>
+                    <Typography variant="body1" fontWeight="medium">
+                        {militarEncontrado.posto} {militarEncontrado.nome} - RG: {militarEncontrado.rg}
+                    </Typography>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={adicionarMilitar}
+                        startIcon={<AddIcon />}
+                        sx={{ mt: 1 }}
+                    >
+                        Adicionar à Guarnição Principal
+                    </Button>
+                </Box>
+            )}
+
+            <Typography variant="subtitle1" gutterBottom>Componentes da Guarnição Principal:</Typography>
+            <List dense sx={{ mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
+                {componentes.length === 0 ? (
+                     <ListItem>
+                        <ListItemText primary="Nenhum militar adicionado." sx={{ fontStyle: 'italic', color: 'text.secondary' }}/>
+                    </ListItem>
+                ) : (
+                    componentes.map((militar) => (
+                        <ListItem
+                            key={militar.id}
+                            secondaryAction={
+                                <IconButton edge="end" aria-label="delete" onClick={() => removerMilitar(militar.id)} size="small">
+                                    <DeleteIcon fontSize="small"/>
+                                </IconButton>
+                            }
+                            sx={{ borderBottom: '1px dashed', borderColor: 'divider', '&:last-child': { borderBottom: 'none' } }}
+                        >
+                            <ListItemText
+                                primary={`${militar.posto} ${militar.nome}`}
+                                secondary={`RG PMMT: ${militar.rg}`}
+                            />
+                        </ListItem>
+                    ))
+                )}
+            </List>
+
+            <Divider sx={{ my: 3 }} />
+
+            {/* --- Seção de Apoio --- */}
+            <Typography variant="h6" gutterBottom>Apoio na Ocorrência</Typography>
+            <FormControlLabel
+                control={<Checkbox checked={teveApoio} onChange={handleToggleApoio} />}
+                label="Houve apoio de outra(s) guarnição(ões) / militar(es)?"
+                sx={{ mb: 1 }}
+            />
+
+            {teveApoio && (
+                <Box sx={{ mt: 1, pl: 2, borderLeft: '3px solid', borderColor: 'secondary.main', animation: 'fadeIn 0.5s ease-in-out' }}>
+                    { /* Animation requires appropriate CSS/SX if needed */ }
+                    <Typography variant="subtitle1" gutterBottom color="secondary.dark">Adicionar Militar de Apoio</Typography>
+                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                        <TextField
+                            label="Buscar por RG PMMT (Apoio)"
+                            variant="outlined"
+                            size="small"
+                            color="secondary"
+                            value={rgpmApoioInput}
+                            onChange={(e) => { setRgpmApoioInput(e.target.value); setErrorApoio(null); }} // Clear error on change
+                            onKeyPress={(e) => e.key === 'Enter' && buscarMilitarApoio()}
+                            disabled={loadingApoio}
+                             sx={{ flexGrow: 1, minWidth: '150px' }}
+                        />
+                        <Button
+                            variant="contained"
+                            color="secondary"
+                            onClick={buscarMilitarApoio}
+                            disabled={loadingApoio || !rgpmApoioInput.trim()}
+                            startIcon={loadingApoio ? <CircularProgress size={20} color="inherit" /> : <SearchIcon />}
+                             sx={{ height: '40px' }} // Match TextField height
+                        >
+                            Buscar Apoio
+                        </Button>
+                    </Box>
+
+                    {errorApoio && <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setErrorApoio(null)}>{errorApoio}</Alert>}
+
+                    {militarApoioEncontrado && (
+                        <Box sx={{ mb: 2, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'action.hover' }}>
+                             <Typography variant="body2" gutterBottom>Militar de apoio encontrado:</Typography>
+                            <Typography variant="body1" fontWeight="medium">
+                                {militarApoioEncontrado.posto} {militarApoioEncontrado.nome} - RG: {militarApoioEncontrado.rg}
+                            </Typography>
+                             <Button
+                                variant="outlined"
+                                size="small"
+                                color="secondary"
+                                onClick={adicionarMilitarApoio}
+                                startIcon={<AddIcon />}
+                                sx={{ mt: 1 }}
+                            >
+                                Adicionar à Lista de Apoio
+                            </Button>
+                        </Box>
+                    )}
+
+                    <Typography variant="subtitle1" gutterBottom>Militares de Apoio Adicionados:</Typography>
+                     <List dense sx={{ mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
+                        {apoioGuarnicao.length === 0 ? (
+                             <ListItem>
+                                <ListItemText primary="Nenhum militar de apoio adicionado." sx={{ fontStyle: 'italic', color: 'text.secondary' }}/>
+                            </ListItem>
+                        ) : (
+                            apoioGuarnicao.map((militar) => (
+                                <ListItem
+                                    key={militar.id}
+                                    secondaryAction={
+                                        <IconButton edge="end" aria-label="delete" onClick={() => removerMilitarApoio(militar.id)} size="small">
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    }
+                                    sx={{ borderBottom: '1px dashed', borderColor: 'divider', '&:last-child': { borderBottom: 'none' } }}
+                                >
+                                    <ListItemText
+                                        // Display Posto for context in UI, but PDF will omit it per requirement
+                                        primary={`${militar.posto} ${militar.nome}`}
+                                        secondary={`RG PMMT: ${militar.rg}`}
+                                    />
+                                </ListItem>
+                            ))
+                        )}
+                    </List>
+                </Box>
+            )}
+             {/* Add some bottom padding to the main box */}
+             <Box sx={{ pb: 3 }} />
+        </Box>
+    );
 };
+
 export default GuarnicaoTab;
+
+// Simple fade-in animation (optional, requires @mui/system or styled-components potentially)
+// You might need to add `@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }` to your global CSS or use Sx prop with keyframes
