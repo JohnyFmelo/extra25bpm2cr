@@ -87,20 +87,19 @@ export const generatePDF = async (inputData: any) => {
     let yPosition;
 
     // --- PÁGINA 1: AUTUAÇÃO ---
-  
-    // --- RESTANTE DO TCO (PÁGINAS 2+) ---
-    yPosition = addNewPage(doc, data);
-
-    // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
-    yPosition = await generateHistoricoContent(doc, yPosition, data);
-
     yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
 
     // --- Adiciona Imagens Abaixo do QR Code (assumindo que o QR code está na página de autuação) ---
     if (data.imageBase64 && data.imageBase64.length > 0) {
         yPosition = addImagesToPDF(doc, yPosition + 10, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT); // +10 para espaço após QR code
     }
-    
+
+    // --- RESTANTE DO TCO (PÁGINAS 2+) ---
+    yPosition = addNewPage(doc, data);
+
+    // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
+    yPosition = await generateHistoricoContent(doc, yPosition, data);
+
     // --- ADIÇÃO DOS TERMOS ---
     if (data.autores && data.autores.length > 0) {
         addTermoCompromisso(doc, data);
