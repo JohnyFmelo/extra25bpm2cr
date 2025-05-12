@@ -164,7 +164,7 @@ const TCOForm = () => {
   const [isUnknownMaterial, setIsUnknownMaterial] = useState(false);
   const [juizadoEspecialData, setJuizadoEspecialData] = useState("");
   const [juizadoEspecialHora, setJuizadoEspecialHora] = useState("");
-  const [Brands, setVideoLinks] = useState<string[]>([]);
+  const [videoLinks, setVideoLinks] = useState<string[]>([]);
   const [newVideoLink, setNewVideoLink] = useState("");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
