@@ -160,25 +160,10 @@ const addQRCodeBlock = async (doc: jsPDF, videoLinks: string[], x: number, y: nu
   const qrSize = 40;
   const padding = 5;
 
-  // Adiciona logs para depuração
-  console.log('Gerando QR Codes para os seguintes links de vídeo:', videoLinks);
-
-  if (!videoLinks || videoLinks.length === 0) {
-    console.log('Nenhum link de vídeo encontrado para gerar QR Codes.');
-    return currentY;
-  }
-
   for (let i = 0; i < videoLinks.length; i++) {
-    const link = videoLinks[i];
-    if (!link || typeof link !== 'string' || !link.trim()) {
-      console.warn(`Link de vídeo inválido no índice ${i}:`, link);
-      continue;
-    }
-
     try {
-      console.log(`Gerando QR Code para o link ${i + 1}: ${link}`);
-      const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
-      if (currentY + qrSize + 10 > 270) {
+      const qrCodeDataUrl = await QRCode.toDataURL(videoLinks[i], { width: qrSize, margin: 1 });
+      if (currentY + qrSize > 270) {
         doc.addPage();
         currentY = 50;
         addHeader(doc, doc.getProperties().title || 'TCO', doc.getNumberOfPages());
@@ -187,15 +172,14 @@ const addQRCodeBlock = async (doc: jsPDF, videoLinks: string[], x: number, y: nu
       doc.addImage(qrCodeDataUrl, 'PNG', x + (i % 4) * (qrSize + padding), currentY, qrSize, qrSize);
       doc.setFontSize(8);
       doc.text(`Vídeo ${i + 1}`, x + (i % 4) * (qrSize + padding) + qrSize / 2, currentY + qrSize + 5, { align: 'center' });
-      console.log(`QR Code para o vídeo ${i + 1} adicionado na posição Y: ${currentY}`);
       if ((i + 1) % 4 === 0) {
         currentY += qrSize + padding + 10;
       }
     } catch (error) {
-      console.error(`Erro ao gerar QR Code para o vídeo ${i + 1} (${link}):`, error);
+      console.error('Erro ao gerar QR Code:', error);
     }
   }
-  if (videoLinks.length % 4 !== 0 && videoLinks.length > 0) {
+  if (videoLinks.length % 4 !== 0) {
     currentY += qrSize + padding + 10;
   }
   return currentY;
