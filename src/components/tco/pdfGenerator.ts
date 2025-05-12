@@ -20,6 +20,50 @@ import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
 
+// Função auxiliar para adicionar imagens ao PDF
+const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; data: string }[], pageWidth: number, pageHeight: number) => {
+    const maxImageWidth = pageWidth - MARGIN_RIGHT * 2; // Largura máxima da imagem
+    const maxImageHeight = 100; // Altura máxima por imagem (ajustável)
+    const marginBetweenImages = 10; // Espaço entre imagens
+    let currentY = yPosition;
+
+    for (const image of images) {
+        try {
+            // Extrai o formato da imagem a partir do início da string base64 (ex: "data:image/jpeg;base64,...")
+            const formatMatch = image.data.match(/^data:image\/(jpeg|png);base64,/);
+            const format = formatMatch ? formatMatch[1].toUpperCase() : 'JPEG'; // Default para JPEG se não identificado
+
+            // Remove o prefixo "data:image/..." para obter apenas os dados base64
+            const base64Data = image.data.replace(/^data:image\/[a-z]+;base64,/, '');
+
+            // Verifica se a posição atual ultrapassa o limite da página
+            if (currentY + maxImageHeight + MARGIN_BOTTOM > pageHeight) {
+                currentY = addNewPage(doc, {});
+                currentY = MARGIN_TOP; // Reseta a posição Y para o topo da nova página
+            }
+
+            // Adiciona a imagem ao PDF
+            doc.addImage(base64Data, format, MARGIN_RIGHT, currentY, maxImageWidth, 0); // Altura 0 para manter proporção
+
+            // Obtém as dimensões reais da imagem adicionada
+            const imgProps = doc.getImageProperties(base64Data);
+            const imgHeight = (imgProps.height * maxImageWidth) / imgProps.width; // Calcula altura proporcional
+
+            // Atualiza a posição Y
+            currentY += imgHeight + marginBetweenImages;
+
+            // Adiciona o nome do arquivo como legenda (opcional)
+            doc.setFontSize(8);
+            doc.text(`Imagem: ${image.name}`, MARGIN_RIGHT, currentY);
+            currentY += 5; // Espaço após a legenda
+        } catch (error) {
+            console.error(`Erro ao adicionar imagem ${image.name}:`, error);
+        }
+    }
+
+    return currentY; // Retorna a nova posição Y após adicionar todas as imagens
+};
+
 // --- Função Principal de Geração ---
 export const generatePDF = async (inputData: any) => {
     if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
@@ -44,6 +88,11 @@ export const generatePDF = async (inputData: any) => {
 
     // --- PÁGINA 1: AUTUAÇÃO ---
     yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
+
+    // --- Adiciona Imagens Abaixo do QR Code (assumindo que o QR code está na página de autuação) ---
+    if (data.imageBase64 && data.imageBase64.length > 0) {
+        yPosition = addImagesToPDF(doc, yPosition + 10, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT); // +10 para espaço após QR code
+    }
 
     // --- RESTANTE DO TCO (PÁGINAS 2+) ---
     yPosition = addNewPage(doc, data);
@@ -74,11 +123,10 @@ export const generatePDF = async (inputData: any) => {
     }
 
     // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
-    // Verifica se algum autor ou vítima tem laudoPericial: "Sim"
     const pessoasComLaudo = [
         ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
         ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-    ].filter(p => p.nome && p.nome.trim()); // Filtra nomes válidos
+    ].filter(p => p.nome && p.nome.trim());
 
     if (pessoasComLaudo.length > 0) {
         pessoasComLaudo.forEach(pessoa => {
@@ -95,7 +143,8 @@ export const generatePDF = async (inputData: any) => {
     const pageCount = doc.internal.pages.length - 1;
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
-        doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
         doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
 
         if (i > 1) {
@@ -103,7 +152,7 @@ export const generatePDF = async (inputData: any) => {
         }
     }
 
-    // --- Salvamento Local ---
+    // --- Salvamento Local e no Firebase ---
     const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
     const dateStr = new Date().toISOString().slice(0, 10);
     const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
@@ -112,15 +161,15 @@ export const generatePDF = async (inputData: any) => {
         // Gera o PDF e salva localmente
         const pdfOutput = doc.output('blob');
         const pdfUrl = URL.createObjectURL(pdfOutput);
-        
+
         // Cria um link para download e simula o clique
         const downloadLink = document.createElement('a');
         downloadLink.href = pdfUrl;
         downloadLink.download = fileName;
         downloadLink.click();
-        
+
         console.log(`PDF Gerado: ${fileName}`);
-        
+
         // Salva o PDF no Firebase Storage
         await savePDFToFirebase(doc, data, tcoNumParaNome, dateStr);
     } catch (error) {
@@ -134,23 +183,23 @@ async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, 
     try {
         // Obter o output do PDF como array buffer
         const pdfBlob = doc.output('blob');
-        
+
         // Obter uma referência ao storage
         const storage = getStorage();
-        
+
         // Criar caminho para o arquivo no storage com o ID do TCO
         const filePath = `tcos/${data.createdBy}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
         const fileRef = ref(storage, filePath);
-        
+
         // Upload do arquivo
         console.log(`Enviando arquivo para Firebase Storage: ${filePath}`);
         const uploadResult = await uploadBytes(fileRef, pdfBlob);
         console.log('Upload concluído:', uploadResult);
-        
+
         // Obter o URL de download
         const downloadURL = await getDownloadURL(uploadResult.ref);
         console.log('URL do arquivo:', downloadURL);
-        
+
         // Atualizar o documento no Firestore com a URL do PDF
         if (data.id) {
             const tcoRef = doc(db, "tcos", data.id);
@@ -159,12 +208,8 @@ async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, 
                 pdfPath: filePath,
                 updatedAt: new Date()
             });
-            console.log(`Documento TCO ${data.id} atualizado com URL do PDF`);
-        } else {
-            console.warn("ID do TCO não encontrado, não foi possível atualizar o documento no Firestore");
+            console.log(`Documento TCO ${data.id} atualizado com URL do PDF.`);
         }
-        
-        return downloadURL;
     } catch (error) {
         console.error("Erro ao salvar PDF no Firebase:", error);
         throw error;
