@@ -1,16 +1,10 @@
 import jsPDF from "jspdf";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { updateDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-
-// Importa funções auxiliares e de página da subpasta PDF
+import { supabase } from "@/integrations/supabase/client";
 import {
     MARGIN_TOP, MARGIN_BOTTOM, MARGIN_RIGHT, getPageConstants,
     addNewPage,
     addStandardFooterContent
 } from './PDF/pdfUtils.js';
-
-// Importa geradores de conteúdo da subpasta PDF
 import { generateAutuacaoPage } from './PDF/PDFautuacao.js';
 import { generateHistoricoContent } from './PDF/PDFhistorico.js';
 import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
@@ -20,7 +14,55 @@ import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
 
-// --- Função Principal de Geração ---
+// Função para carregar imagem local
+const loadImage = (url: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`Falha ao carregar imagem: ${url}`));
+        img.src = url;
+    });
+};
+
+// Função para adicionar imagens ao PDF
+const addImagesToPDF = async (doc: jsPDF, imageUrls: string[], startY: number) => {
+    let yPosition = startY;
+    const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
+    const MAX_IMAGE_WIDTH = PAGE_WIDTH - 2 * MARGIN_RIGHT;
+    const MAX_IMAGE_HEIGHT = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM - 20;
+
+    for (const url of imageUrls) {
+        try {
+            const img = await loadImage(url);
+            const imgProps = doc.getImageProperties(img);
+            let width = imgProps.width;
+            let height = imgProps.height;
+
+            const aspectRatio = width / height;
+            if (width > MAX_IMAGE_WIDTH) {
+                width = MAX_IMAGE_WIDTH;
+                height = width / aspectRatio;
+            }
+            if (height > MAX_IMAGE_HEIGHT) {
+                height = MAX_IMAGE_HEIGHT;
+                width = height * aspectRatio;
+            }
+
+            if (yPosition + height + MARGIN_BOTTOM > PAGE_HEIGHT) {
+                yPosition = addNewPage(doc, {});
+            }
+
+            doc.addImage(img, 'JPEG', MARGIN_RIGHT, yPosition, width, height);
+            yPosition += height + 10;
+        } catch (error) {
+            console.error(`Erro ao adicionar imagem ${url}:`, error);
+        }
+    }
+
+    return yPosition;
+};
+
 export const generatePDF = async (inputData: any) => {
     if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
         console.error("Input data missing or invalid. Cannot generate PDF.");
@@ -28,57 +70,63 @@ export const generatePDF = async (inputData: any) => {
         return;
     }
 
-    // Cria a instância do jsPDF
     const doc = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "a4",
     });
 
-    // Clona os dados para evitar mutações inesperadas no objeto original
     const data = { ...inputData };
-
-    // Pega as constantes da página
     const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
     let yPosition;
 
-    // --- PÁGINA 1: AUTUAÇÃO ---
+    // Página 1: Autuação
     yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
 
-    // --- RESTANTE DO TCO (PÁGINAS 2+) ---
+    // Páginas seguintes
     yPosition = addNewPage(doc, data);
 
-    // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
+    // Seção de histórico e envolvidos
     yPosition = await generateHistoricoContent(doc, yPosition, data);
 
-    // --- ADIÇÃO DOS TERMOS ---
+    // Adicionar imagens locais, se existirem
+    if (data.image_urls && data.image_urls.length > 0) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("ANEXOS - IMAGENS", MARGIN_RIGHT, yPosition);
+        yPosition += 10;
+
+        yPosition = await addImagesToPDF(doc, data.image_urls, yPosition);
+    } else {
+        console.log("Nenhuma imagem fornecida para inclusão no PDF.");
+    }
+
+    // Adicionar termos
     if (data.autores && data.autores.length > 0) {
         addTermoCompromisso(doc, data);
     } else {
         console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
     }
 
-    // Adiciona Termo de Manifestação apenas se NÃO for caso de droga
     if (data.natureza !== "Porte de drogas para consumo") {
         addTermoManifestacao(doc, data);
     } else {
         console.log("Caso de droga detectado, pulando Termo de Manifestação da Vítima.");
     }
 
-    if (data.apreensaoDescrição || data.apreensoes) {
+    if (data.apreensoes) {
         addTermoApreensao(doc, data);
     }
 
-    if (data.drogaTipo || data.drogaNomeComum) {
+    if (data.droga_tipo || data.droga_nome_comum) {
         addTermoConstatacaoDroga(doc, data);
     }
 
-    // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
-    // Verifica se algum autor ou vítima tem laudoPericial: "Sim"
+    // Requisição de exame de lesão corporal
     const pessoasComLaudo = [
-        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
-        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-    ].filter(p => p.nome && p.nome.trim()); // Filtra nomes válidos
+        ...(data.autores || []).filter(a => a.laudo_pericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
+        ...(data.vitimas || []).filter(v => v.laudo_pericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
+    ].filter(p => p.nome && p.nome.trim());
 
     if (pessoasComLaudo.length > 0) {
         pessoasComLaudo.forEach(pessoa => {
@@ -91,11 +139,12 @@ export const generatePDF = async (inputData: any) => {
 
     addTermoEncerramentoRemessa(doc, data);
 
-    // --- Finalização: Adiciona Números de Página e Salva ---
+    // Adicionar numeração de páginas
     const pageCount = doc.internal.pages.length - 1;
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
-        doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
         doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
 
         if (i > 1) {
@@ -103,70 +152,54 @@ export const generatePDF = async (inputData: any) => {
         }
     }
 
-    // --- Salvamento Local ---
-    const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
+    // Salvamento
+    const tcoNumParaNome = data.tco_number || 'SEM_NUMERO';
     const dateStr = new Date().toISOString().slice(0, 10);
     const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
 
     try {
-        // Gera o PDF e salva localmente
+        // Gerar PDF
         const pdfOutput = doc.output('blob');
         const pdfUrl = URL.createObjectURL(pdfOutput);
-        
-        // Cria um link para download e simula o clique
+
+        // Download local
         const downloadLink = document.createElement('a');
         downloadLink.href = pdfUrl;
         downloadLink.download = fileName;
         downloadLink.click();
-        
+
         console.log(`PDF Gerado: ${fileName}`);
-        
-        // Salva o PDF no Firebase Storage
-        await savePDFToFirebase(doc, data, tcoNumParaNome, dateStr);
+
+        // Upload do PDF para o Supabase Storage
+        const filePath = `tco-pdfs/${data.created_by}/${data.id}_${dateStr}.pdf`;
+        const { error: uploadError } = await supabase.storage
+            .from('tco-pdfs')
+            .upload(filePath, pdfOutput, { contentType: 'application/pdf', upsert: true });
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+            .from('tco-pdfs')
+            .getPublicUrl(filePath);
+        const downloadURL = urlData.publicUrl;
+
+        console.log('URL do PDF:', downloadURL);
+
+        // Atualizar registro no Supabase com a URL do PDF
+        if (data.id) {
+            const { error: updateError } = await supabase
+                .from('tcos')
+                .update({
+                    pdf_url: downloadURL,
+                    updated_at: new Date()
+                })
+                .eq('id', data.id);
+            if (updateError) throw updateError;
+            console.log(`TCO ${data.id} atualizado com URL do PDF`);
+        } else {
+            console.warn("ID do TCO não encontrado, não foi possível atualizar o registro.");
+        }
     } catch (error) {
         console.error("Erro ao salvar o PDF:", error);
         alert("Ocorreu um erro ao tentar salvar o PDF.");
     }
 };
-
-// Função para salvar o PDF no Firebase Storage
-async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, dateStr: string) {
-    try {
-        // Obter o output do PDF como array buffer
-        const pdfBlob = doc.output('blob');
-        
-        // Obter uma referência ao storage
-        const storage = getStorage();
-        
-        // Criar caminho para o arquivo no storage com o ID do TCO
-        const filePath = `tcos/${data.createdBy}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
-        const fileRef = ref(storage, filePath);
-        
-        // Upload do arquivo
-        console.log(`Enviando arquivo para Firebase Storage: ${filePath}`);
-        const uploadResult = await uploadBytes(fileRef, pdfBlob);
-        console.log('Upload concluído:', uploadResult);
-        
-        // Obter o URL de download
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-        console.log('URL do arquivo:', downloadURL);
-        
-        // Atualizar o documento no Firestore com a URL do PDF
-        if (data.id) {
-            const tcoRef = doc(db, "tcos", data.id);
-            await updateDoc(tcoRef, {
-                pdfUrl: downloadURL,
-                pdfPath: filePath,
-                updatedAt: new Date()
-            });
-            console.log(`Documento TCO ${data.id} atualizado com URL do PDF`);
-        } else {
-            console.warn("ID do TCO não encontrado, não foi possível atualizar o documento no Firestore");
-        }
-        
-        return downloadURL;
-    } catch (error) {
-        console.error("Erro ao salvar PDF no Firebase:", error);
-        throw error;
-    }
-}
