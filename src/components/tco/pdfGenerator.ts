@@ -29,9 +29,9 @@ const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; d
 
     for (const image of images) {
         try {
-            // Extrai o formato da imagem a partir do início da string base64 (ex: "data:image/jpeg;base64,...")
+            // Extrai o formato da imagem a partir do início da string base64
             const formatMatch = image.data.match(/^data:image\/(jpeg|png);base64,/);
-            const format = formatMatch ? formatMatch[1].toUpperCase() : 'JPEG'; // Default para JPEG se não identificado
+            const format = formatMatch ? formatMatch[1].toUpperCase() : 'JPEG'; // Default para JPEG
 
             // Remove o prefixo "data:image/..." para obter apenas os dados base64
             const base64Data = image.data.replace(/^data:image\/[a-z]+;base64,/, '');
@@ -39,7 +39,7 @@ const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; d
             // Verifica se a posição atual ultrapassa o limite da página
             if (currentY + maxImageHeight + MARGIN_BOTTOM > pageHeight) {
                 currentY = addNewPage(doc, {});
-                currentY = MARGIN_TOP; // Reseta a posição Y para o topo da nova página
+                currentY = MARGIN_TOP; // Reseta a posição Y
             }
 
             // Adiciona a imagem ao PDF
@@ -52,7 +52,7 @@ const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; d
             // Atualiza a posição Y
             currentY += imgHeight + marginBetweenImages;
 
-            // Adiciona o nome do arquivo como legenda (opcional)
+            // Adiciona o nome do arquivo como legenda
             doc.setFontSize(8);
             doc.text(`Imagem: ${image.name}`, MARGIN_RIGHT, currentY);
             currentY += 5; // Espaço após a legenda
@@ -61,7 +61,7 @@ const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; d
         }
     }
 
-    return currentY; // Retorna a nova posição Y após adicionar todas as imagens
+    return currentY; // Retorna a nova posição Y
 };
 
 // --- Função Principal de Geração ---
@@ -79,7 +79,7 @@ export const generatePDF = async (inputData: any) => {
         format: "a4",
     });
 
-    // Clona os dados para evitar mutações inesperadas no objeto original
+    // Clona os dados para evitar mutações inesperadas
     const data = { ...inputData };
 
     // Pega as constantes da página
@@ -88,11 +88,6 @@ export const generatePDF = async (inputData: any) => {
 
     // --- PÁGINA 1: AUTUAÇÃO ---
     yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
-
-    // --- Adiciona Imagens Abaixo do QR Code (assumindo que o QR code está na página de autuação) ---
-    if (data.imageBase64 && data.imageBase64.length > 0) {
-        yPosition = addImagesToPDF(doc, yPosition + 10, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT); // +10 para espaço após QR code
-    }
 
     // --- RESTANTE DO TCO (PÁGINAS 2+) ---
     yPosition = addNewPage(doc, data);
@@ -107,7 +102,6 @@ export const generatePDF = async (inputData: any) => {
         console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
     }
 
-    // Adiciona Termo de Manifestação apenas se NÃO for caso de droga
     if (data.natureza !== "Porte de drogas para consumo") {
         addTermoManifestacao(doc, data);
     } else {
@@ -181,26 +175,18 @@ export const generatePDF = async (inputData: any) => {
 // Função para salvar o PDF no Firebase Storage
 async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, dateStr: string) {
     try {
-        // Obter o output do PDF como array buffer
         const pdfBlob = doc.output('blob');
-
-        // Obter uma referência ao storage
         const storage = getStorage();
-
-        // Criar caminho para o arquivo no storage com o ID do TCO
         const filePath = `tcos/${data.createdBy}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
         const fileRef = ref(storage, filePath);
 
-        // Upload do arquivo
         console.log(`Enviando arquivo para Firebase Storage: ${filePath}`);
         const uploadResult = await uploadBytes(fileRef, pdfBlob);
         console.log('Upload concluído:', uploadResult);
 
-        // Obter o URL de download
         const downloadURL = await getDownloadURL(uploadResult.ref);
         console.log('URL do arquivo:', downloadURL);
 
-        // Atualizar o documento no Firestore com a URL do PDF
         if (data.id) {
             const tcoRef = doc(db, "tcos", data.id);
             await updateDoc(tcoRef, {
