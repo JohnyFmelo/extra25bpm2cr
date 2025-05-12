@@ -164,7 +164,7 @@ const TCOForm = () => {
   const [isUnknownMaterial, setIsUnknownMaterial] = useState(false);
   const [juizadoEspecialData, setJuizadoEspecialData] = useState("");
   const [juizadoEspecialHora, setJuizadoEspecialHora] = useState("");
-  const [videoLinks, setVideoLinks] = useState<string[]>([]);
+  const [Brands, setVideoLinks] = useState<string[]>([]);
   const [newVideoLink, setNewVideoLink] = useState("");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -680,14 +680,21 @@ const TCOForm = () => {
           onRemovePolicial={handleRemovePolicialFromList}
         />
         <HistoricoTab
-          relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelato-PolicialChange}
-          relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor}
-          relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima}
-          relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha}
-          apreensoes={apreensoes} setApreensoes={setApreensoes}
-          conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial}
+          relatoPolicial={relatoPolicial}
+          setRelatoPolicial={handleRelatoPolicialChange}
+          relatoAutor={relatoAutor}
+          setRelatoAutor={setRelatoAutor}
+          relatoVitima={relatoVitima}
+          setRelatoVitima={setRelatoVitima}
+          relatoTestemunha={relatoTestemunha}
+          setRelatoTestemunha={setRelatoTestemunha}
+          apreensoes={apreensoes}
+          setApreensoes={setApreensoes}
+          conclusaoPolicial={conclusaoPolicial}
+          setConclusaoPolicial={setConclusaoPolicial}
           drugSeizure={natureza === "Porte de drogas para consumo"}
-          representacao={representacao} setRepresentacao={setRepresentacao}
+          representacao={representacao}
+          setRepresentacao={setRepresentacao}
           natureza={natureza}
         />
 
