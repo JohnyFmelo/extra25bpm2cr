@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase"; // Keep this import as we've now added db export in firebase.ts
+import { db } from "@/lib/firebase";
 import { UserRoundCog, CalendarDays, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -316,7 +316,6 @@ const TimeSlotsList = () => {
       });
       return;
     }
-    
     const userSlotCount = timeSlots.reduce((count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
     if (userSlotCount >= slotLimit && !isAdmin) {
       toast({
@@ -326,7 +325,6 @@ const TimeSlotsList = () => {
       });
       return;
     }
-    
     const slotsForDate = timeSlots.filter(slot => slot.date === timeSlot.date);
     const isAlreadyRegistered = slotsForDate.some(slot => slot.volunteers?.includes(volunteerName));
     if (isAlreadyRegistered) {
@@ -337,25 +335,20 @@ const TimeSlotsList = () => {
       });
       return;
     }
-    
     try {
       const updatedSlot = {
         ...timeSlot,
         slots_used: timeSlot.slots_used + 1,
         volunteers: [...(timeSlot.volunteers || []), volunteerName]
       };
-      
-      // Use dataOperations (which now uses Supabase) instead of direct Firebase calls
       const result = await dataOperations.update(updatedSlot, {
         date: timeSlot.date,
         start_time: timeSlot.start_time,
         end_time: timeSlot.end_time
       });
-      
       if (!result.success) {
         throw new Error('Falha ao atualizar o horário');
       }
-      
       toast({
         title: "Sucesso!✅🤠",
         description: "Extra marcada. Aguarde a escala."
@@ -379,25 +372,20 @@ const TimeSlotsList = () => {
       });
       return;
     }
-    
     try {
       const updatedSlot = {
         ...timeSlot,
         slots_used: timeSlot.slots_used - 1,
         volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerName)
       };
-      
-      // Use dataOperations (which now uses Supabase) instead of direct Firebase calls
       const result = await dataOperations.update(updatedSlot, {
         date: timeSlot.date,
         start_time: timeSlot.start_time,
         end_time: timeSlot.end_time
       });
-      
       if (!result.success) {
         throw new Error('Falha ao atualizar o horário');
       }
-      
       toast({
         title: "Desmarcado! 👀🤔",
         description: "Extra desmarcada com sucesso!"

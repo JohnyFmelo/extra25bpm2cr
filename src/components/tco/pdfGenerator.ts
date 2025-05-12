@@ -1,6 +1,7 @@
-
 import jsPDF from "jspdf";
-import supabase from "@/lib/supabaseClient";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { updateDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
@@ -120,59 +121,52 @@ export const generatePDF = async (inputData: any) => {
         
         console.log(`PDF Gerado: ${fileName}`);
         
-        // Salva o PDF no Supabase Storage
-        await savePDFToSupabase(pdfOutput, data, tcoNumParaNome, dateStr);
+        // Salva o PDF no Firebase Storage
+        await savePDFToFirebase(doc, data, tcoNumParaNome, dateStr);
     } catch (error) {
         console.error("Erro ao salvar o PDF:", error);
         alert("Ocorreu um erro ao tentar salvar o PDF.");
     }
 };
 
-// Função para salvar o PDF no Supabase Storage
-async function savePDFToSupabase(pdfBlob: Blob, data: any, tcoNumParaNome: string, dateStr: string) {
+// Função para salvar o PDF no Firebase Storage
+async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, dateStr: string) {
     try {
-        // Criar caminho para o arquivo no storage
+        // Obter o output do PDF como array buffer
+        const pdfBlob = doc.output('blob');
+        
+        // Obter uma referência ao storage
+        const storage = getStorage();
+        
+        // Criar caminho para o arquivo no storage com o ID do TCO
         const filePath = `tcos/${data.createdBy}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
+        const fileRef = ref(storage, filePath);
         
-        // Upload do arquivo para o Supabase Storage
-        console.log(`Enviando arquivo para Supabase Storage: ${filePath}`);
-        const { data: fileData, error } = await supabase.storage
-            .from('tco_images')
-            .upload(filePath, pdfBlob, {
-                contentType: 'application/pdf',
-                upsert: true
-            });
+        // Upload do arquivo
+        console.log(`Enviando arquivo para Firebase Storage: ${filePath}`);
+        const uploadResult = await uploadBytes(fileRef, pdfBlob);
+        console.log('Upload concluído:', uploadResult);
         
-        if (error) {
-            throw error;
-        }
-        
-        console.log('Upload concluído:', fileData);
-        
-        // Obter o URL de download público
-        const { data: publicUrlData } = supabase.storage
-            .from('tco_images')
-            .getPublicUrl(filePath);
-            
-        const downloadURL = publicUrlData.publicUrl;
+        // Obter o URL de download
+        const downloadURL = await getDownloadURL(uploadResult.ref);
         console.log('URL do arquivo:', downloadURL);
         
-        // Atualizar o documento no Supabase com a URL do PDF
+        // Atualizar o documento no Firestore com a URL do PDF
         if (data.id) {
-            const { error: updateError } = await supabase
-                .from('tcos')
-                .update({
-                    pdf_url: downloadURL,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', data.id);
-                
-            if (updateError) {
-                console.error('Erro ao atualizar URL do PDF no registro:', updateError);
-            }
+            const tcoRef = doc(db, "tcos", data.id);
+            await updateDoc(tcoRef, {
+                pdfUrl: downloadURL,
+                pdfPath: filePath,
+                updatedAt: new Date()
+            });
+            console.log(`Documento TCO ${data.id} atualizado com URL do PDF`);
+        } else {
+            console.warn("ID do TCO não encontrado, não foi possível atualizar o documento no Firestore");
         }
+        
+        return downloadURL;
     } catch (error) {
-        console.error('Erro ao salvar PDF no Supabase:', error);
+        console.error("Erro ao salvar PDF no Firebase:", error);
         throw error;
     }
 }

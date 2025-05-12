@@ -1,9 +1,9 @@
-//
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react"; // Adicionado useRef
 import { Button } from "@/components/ui/button";
 import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
+import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import BasicInformationTab from "./tco/BasicInformationTab";
 import GeneralInformationTab from "./tco/GeneralInformationTab";
@@ -172,8 +172,9 @@ const TCOForm = () => {
   // Estados para anexos
   const [videoLinks, setVideoLinks] = useState<string[]>([]);
   const [newVideoLink, setNewVideoLink] = useState("");
-  const [imageFiles, setImageFiles] = useState<File[]>([]); // Estado para arquivos de imagem
+  const [imageFiles, setImageFiles] = useState<File[]>([]); // Novo estado para arquivos de imagem
   const imageInputRef = useRef<HTMLInputElement>(null); // Ref para o input de imagem
+
 
   const [autores, setAutores] = useState<Pessoa[]>([{ ...initialPersonData }]);
   const [vitimas, setVitimas] = useState<Pessoa[]>([{ ...initialPersonData }]);
@@ -333,11 +334,7 @@ const TCOForm = () => {
       });
       toast({ title: "Adicionado", description: `Policial ${novoPolicial.nome} adicionado à guarnição.` });
     } else {
-      toast({ 
-        variant: "destructive", 
-        title: "Duplicado", 
-        description: "Este policial já está na guarnição." 
-      });
+      toast({ variant: "warning", title: "Duplicado", description: "Este policial já está na guarnição." });
     }
   }, [componentesGuarnicao, toast]);
 
@@ -392,11 +389,7 @@ const TCOForm = () => {
     if (field === 'cpf') {
       processedValue = formatCPF(value);
       if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
-        toast({ 
-          variant: "destructive", 
-          title: "CPF Inválido (Vítima)", 
-          description: "O CPF informado não é válido." 
-        });
+        toast({ variant: "destructive", title: "CPF Inválido (Vítima)", description: "O CPF informado não é válido." });
       }
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
@@ -411,11 +404,7 @@ const TCOForm = () => {
     if (field === 'cpf') {
       processedValue = formatCPF(value);
       if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
-        toast({ 
-          variant: "destructive", 
-          title: "CPF Inválido (Testemunha)", 
-          description: "O CPF informado não é válido." 
-        });
+        toast({ variant: "destructive", title: "CPF Inválido (Testemunha)", description: "O CPF informado não é válido." });
       }
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
@@ -430,11 +419,7 @@ const TCOForm = () => {
     if (field === 'cpf') {
       processedValue = formatCPF(value);
       if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
-        toast({ 
-          variant: "destructive", 
-          title: "CPF Inválido (Autor)", 
-          description: "O CPF informado não é válido." 
-        });
+        toast({ variant: "destructive", title: "CPF Inválido (Autor)", description: "O CPF informado não é válido." });
       }
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
@@ -446,11 +431,7 @@ const TCOForm = () => {
         const m = today.getMonth() - birthDate.getMonth();
         if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
         if (age < 18) {
-          toast({ 
-            variant: "destructive", 
-            title: "Atenção: Autor Menor de Idade", 
-            description: "Avalie se cabe TCO." 
-          });
+          toast({ variant: "destructive", title: "Atenção: Autor Menor de Idade", description: "Avalie se cabe TCO." });
         }
       }
     }
@@ -468,28 +449,16 @@ const TCOForm = () => {
   const handleAddVideoLink = () => {
     if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
       if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
-          toast({ 
-            variant: "destructive", 
-            title: "Link Inválido", 
-            description: "Por favor, insira um link válido começando com http:// ou https://." 
-          });
+          toast({ variant: "warning", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
           return;
       }
       setVideoLinks(prev => [...prev, newVideoLink.trim()]);
       setNewVideoLink("");
       toast({ title: "Link Adicionado", description: "Link de vídeo adicionado com sucesso." });
     } else if (!newVideoLink.trim()) {
-      toast({ 
-        variant: "destructive", 
-        title: "Link Vazio", 
-        description: "Por favor, insira um link." 
-      });
+      toast({ variant: "warning", title: "Link Vazio", description: "Por favor, insira um link." });
     } else {
-      toast({ 
-        variant: "destructive", 
-        title: "Link Duplicado", 
-        description: "Este link já foi adicionado." 
-      });
+      toast({ variant: "warning", title: "Link Duplicado", description: "Este link já foi adicionado." });
     }
   };
 
@@ -510,11 +479,7 @@ const TCOForm = () => {
         setImageFiles((prevFiles) => [...prevFiles, ...uniqueNewFiles]);
         toast({ title: `${uniqueNewFiles.length} Imagem(ns) Adicionada(s)`, description: "Imagens selecionadas para anexo." });
       } else if (newFiles.length > 0) {
-        toast({ 
-          variant: "destructive", 
-          title: "Imagens Duplicadas", 
-          description: "Algumas ou todas as imagens selecionadas já foram adicionadas." 
-        });
+        toast({ variant: "warning", title: "Imagens Duplicadas", description: "Algumas ou todas as imagens selecionadas já foram adicionadas." });
       }
       // Resetar o valor do input para permitir selecionar o mesmo arquivo novamente após removê-lo
       if (imageInputRef.current) {
@@ -527,6 +492,7 @@ const TCOForm = () => {
     setImageFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
     toast({ title: "Imagem Removida", description: "Imagem removida da lista de anexos." });
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -547,11 +513,7 @@ const TCOForm = () => {
     }
 
     if (natureza === "Porte de drogas para consumo" && (!quantidade || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc) || !lacreNumero)) {
-      toast({ 
-        variant: "destructive", 
-        title: "Dados da Droga Incompletos", 
-        description: "Preencha Quantidade, Substância, Cor, Descrição (se material desconhecido) e Número do Lacre." 
-      });
+      toast({ variant: "destructive", title: "Dados da Droga Incompletos", description: "Preencha Quantidade, Substância, Cor, Descrição (se material desconhecido) e Número do Lacre." });
       return;
     }
 
@@ -568,53 +530,26 @@ const TCOForm = () => {
       const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
       const userRegistration = userInfo.registration || "";
 
-      // Upload de imagens para Supabase Storage
-      const imageUrls: string[] = [];
-      
-      if (imageFiles.length > 0) {
-        for (const file of imageFiles) {
-          const filePath = `tcos/${userInfo.id}/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('tco_images')
-            .upload(filePath, file, {
-              cacheControl: '3600',
-              upsert: false
-            });
-            
-          if (uploadError) {
-            console.error("Erro ao fazer upload da imagem:", uploadError);
-            toast({
-              variant: "destructive",
-              title: "Erro no Upload",
-              description: `Falha ao enviar imagem ${file.name}: ${uploadError.message}`
-            });
-            continue;
-          }
-          
-          // Obter URL pública da imagem
-          const { data: publicUrlData } = supabase.storage
-            .from('tco_images')
-            .getPublicUrl(filePath);
-            
-          imageUrls.push(publicUrlData.publicUrl);
-        }
-      }
+      // TODO: Implementar upload de imageFiles para Firebase Storage
+      // Por agora, imageFiles (objetos File) não serão salvos diretamente no Firestore.
+      // Salve as URLs retornadas pelo Storage no campo 'imageUrls' (ou similar) do tcoDataParaSalvar.
+      console.log("Arquivos de imagem selecionados (não serão enviados ao DB nesta etapa):", imageFiles.map(f => f.name));
+      const imageUrls: string[] = []; // Placeholder para URLs de imagens após upload
 
       const tcoDataParaSalvar: any = {
-        tco_number: tcoNumber.trim(),
+        tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
-        original_natureza: natureza,
-        custom_natureza: customNatureza.trim(),
+        originalNatureza: natureza,
+        customNatureza: customNatureza.trim(),
         tipificacao: tipificacao.trim(),
-        pena_descricao: penaDescricao.trim(),
-        data_fato: dataFato,
-        hora_fato: horaFato,
-        data_inicio_registro: dataInicioRegistro,
-        hora_inicio_registro: horaInicioRegistro,
-        data_termino_registro: completionDate,
-        hora_termino_registro: completionTime,
-        local_fato: localFato.trim(),
+        penaDescricao: penaDescricao.trim(),
+        dataFato,
+        horaFato,
+        dataInicioRegistro,
+        horaInicioRegistro,
+        dataTerminoRegistro: completionDate,
+        horaTerminoRegistro: completionTime,
+        localFato: localFato.trim(),
         endereco: endereco.trim(),
         municipio,
         comunicante,
@@ -623,58 +558,55 @@ const TCOForm = () => {
         testemunhas: testemunhasFiltradas,
         guarnicao: guarnicao.trim(),
         operacao: operacao.trim(),
-        componentes_guarnicao: componentesGuarnicao,
-        relato_policial: relatoPolicial.trim(),
-        relato_autor: relatoAutor.trim(),
-        relato_testemunha: relatoTestemunha.trim(),
+        componentesGuarnicao,
+        relatoPolicial: relatoPolicial.trim(),
+        relatoAutor: relatoAutor.trim(),
+        relatoTestemunha: relatoTestemunha.trim(),
         apreensoes: apreensoes.trim(),
-        conclusao_policial: conclusaoPolicial.trim(),
-        lacre_numero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : "",
-        droga_quantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : "",
-        droga_tipo: natureza === "Porte de drogas para consumo" ? substancia : "",
-        droga_cor: natureza === "Porte de drogas para consumo" ? cor : "",
-        droga_nome_comum: natureza === "Porte de drogas para consumo" ? indicioFinalDroga : "",
-        droga_custom_desc: natureza === "Porte de drogas para consumo" && isUnknownMaterial ? customMaterialDesc.trim() : "",
-        droga_is_unknown: natureza === "Porte de drogas para consumo" ? isUnknownMaterial : false,
-        start_time: startTime?.toISOString(),
-        end_time: completionNow.toISOString(),
-        created_at: new Date(),
-        created_by: userInfo.id,
-        user_registration: userRegistration,
-        video_links: videoLinks,
-        image_urls: imageUrls,
+        conclusaoPolicial: conclusaoPolicial.trim(),
+        lacreNumero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : "",
+        drogaQuantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : undefined,
+        drogaTipo: natureza === "Porte de drogas para consumo" ? substancia : undefined,
+        drogaCor: natureza === "Porte de drogas para consumo" ? cor : undefined,
+        drogaNomeComum: natureza === "Porte de drogas para consumo" ? indicioFinalDroga : undefined,
+        drogaCustomDesc: natureza === "Porte de drogas para consumo" && isUnknownMaterial ? customMaterialDesc.trim() : undefined,
+        drogaIsUnknown: natureza === "Porte de drogas para consumo" ? isUnknownMaterial : undefined,
+        startTime: startTime?.toISOString(),
+        endTime: completionNow.toISOString(),
+        createdAt: new Date(),
+        createdBy: userInfo.id,
+        userRegistration: userRegistration,
+        videoLinks: videoLinks,
+        imageUrls: imageUrls, // Adicionado campo para URLs de imagens
         juizadoEspecialData: juizadoEspecialData.trim(),
         juizadoEspecialHora: juizadoEspecialHora.trim(),
+        // Campos legados ou não usados no formulário atual (remover se não necessários):
+        // lacre: "", 
+        // objetosApreendidos: [],
       };
 
       if (vitimasFiltradas.length > 0) {
-        tcoDataParaSalvar.relato_vitima = relatoVitima.trim();
+        tcoDataParaSalvar.relatoVitima = relatoVitima.trim();
         if (representacao) {
           tcoDataParaSalvar.representacao = formatRepresentacao(representacao);
         }
       } else {
-        tcoDataParaSalvar.relato_vitima = "";
+        tcoDataParaSalvar.relatoVitima = "";
+        delete tcoDataParaSalvar.representacao;
       }
+
+      Object.keys(tcoDataParaSalvar).forEach(key => tcoDataParaSalvar[key] === undefined && delete tcoDataParaSalvar[key]);
 
       console.log("Dados a serem salvos/gerados:", tcoDataParaSalvar);
 
-      // Inserir no Supabase
-      const { data: insertedTco, error: insertError } = await supabase
-        .from('tcos')
-        .insert(tcoDataParaSalvar)
-        .select()
-        .single();
-        
-      if (insertError) {
-        throw insertError;
-      }
+      const docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
       
-      const tcoComId = { ...tcoDataParaSalvar, id: insertedTco.id };
+      tcoDataParaSalvar.id = docRef.id; // Adicionar ID do documento para uso no PDF
       
       toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
       
-      // Passar tcoDataParaSalvar com o ID para o PDF
-      await generatePDF(tcoComId); 
+      // Passar tcoDataParaSalvar (que inclui imageUrls, mesmo que vazias por agora) para o PDF
+      await generatePDF(tcoDataParaSalvar); 
       
       navigate("/?tab=tco");
     } catch (error: any) {
@@ -727,10 +659,6 @@ const TCOForm = () => {
           penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
           customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
           startTime={startTime} isTimerRunning={isTimerRunning}
-          juizadoEspecialData={juizadoEspecialData}
-          setJuizadoEspecialData={setJuizadoEspecialData}
-          juizadoEspecialHora={juizadoEspecialHora}
-          setJuizadoEspecialHora={setJuizadoEspecialHora}
         />
         {natureza === "Porte de drogas para consumo" && (
           <DrugVerificationTab

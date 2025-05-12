@@ -1,27 +1,37 @@
+import { initializeApp } from 'firebase/app';
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  getDocs, 
+  deleteDoc, 
+  doc, 
+  updateDoc,
+  Firestore,
+  DocumentData,
+  QuerySnapshot
+} from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { TimeSlot } from '@/types/user';
 
-// This file is kept for reference or potential rollback, but functionality has been moved to Supabase
-// You can safely delete this file if no other parts of the app are using Firebase
-
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-
-// Mock Firebase config for compatibility
 const firebaseConfig = {
-  apiKey: "mock-api-key",
-  authDomain: "mock-auth-domain",
-  projectId: "mock-project-id",
-  storageBucket: "mock-storage-bucket",
-  messagingSenderId: "mock-messaging-sender-id",
-  appId: "mock-app-id"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase app with mock config
 const app = initializeApp(firebaseConfig);
-
-// Export the db object for compatibility with existing code
 export const db = getFirestore(app);
+export const auth = getAuth(app);
 
-const safeClone = (data: any): Record<string, any> => {
+// Helper function to safely clone Firestore data
+const safeClone = (data: DocumentData): Record<string, any> => {
   const serializableData: Record<string, any> = {};
   
   for (const [key, value] of Object.entries(data)) {
@@ -52,119 +62,113 @@ const safeClone = (data: any): Record<string, any> => {
   return serializableData;
 };
 
-// Update dataOperations to use Supabase
-import supabase from "./supabaseClient";
+// Helper function to safely get documents from a query snapshot
+const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    title: doc.data().title || '',
+    description: doc.data().description || '',
+    date: doc.data().date || '',
+    ...safeClone(doc.data())
+  }));
+};
+
+// Helper function to handle Firestore operations with proper cleanup
+const handleFirestoreOperation = async <T>(
+  operation: (db: Firestore) => Promise<T>
+): Promise<T> => {
+  try {
+    const result = await operation(db);
+    return result;
+  } catch (error) {
+    console.error('Firestore operation error:', error);
+    throw error;
+  }
+};
 
 export const dataOperations = {
-  fetch: async () => {
-    try {
-      const { data, error } = await supabase.from('timeSlots').select('*');
-      
-      if (error) {
-        console.error("Error fetching data from Supabase:", error);
-        return [];
-      }
-      
-      return data || [];
-    } catch (error) {
-      console.error("Error in fetch operation:", error);
+  async fetch(): Promise<TimeSlot[]> {
+    return handleFirestoreOperation(async (db) => {
+      const timeSlotCollection = collection(db, 'timeSlots');
+      const querySnapshot = await getDocs(timeSlotCollection);
+      return getDocsFromSnapshot(querySnapshot);
+    }).catch(error => {
+      console.error('Error fetching data:', error);
       return [];
-    }
+    });
   },
-  
-  insert: async (data: any) => {
-    try {
-      const { data: insertedData, error } = await supabase
-        .from('timeSlots')
-        .insert([data])
-        .select();
-        
-      if (error) {
-        console.error("Error inserting data to Supabase:", error);
-        return { success: false, message: error.message };
-      }
-      
-      return { success: true, data: insertedData };
-    } catch (error: any) {
-      console.error("Error in insert operation:", error);
-      return { success: false, message: error.message };
-    }
-  },
-  
-  update: async (newData: any, condition: any) => {
-    try {
-      let query = supabase.from('timeSlots').update(newData);
-      
-      // Apply conditions
-      if (condition.date) {
-        query = query.eq('date', condition.date);
-      }
-      if (condition.start_time) {
-        query = query.eq('start_time', condition.start_time);
-      }
-      if (condition.end_time) {
-        query = query.eq('end_time', condition.end_time);
-      }
-      
-      const { data, error } = await query.select();
-      
-      if (error) {
-        console.error("Error updating data in Supabase:", error);
-        return { success: false, message: error.message };
-      }
-      
-      return { success: true, data };
-    } catch (error: any) {
-      console.error("Error in update operation:", error);
-      return { success: false, message: error.message };
-    }
-  },
-  
-  delete: async (condition: any) => {
-    try {
-      let query = supabase.from('timeSlots').delete();
-      
-      // Apply conditions
-      if (condition.date) {
-        query = query.eq('date', condition.date);
-      }
-      if (condition.start_time) {
-        query = query.eq('start_time', condition.start_time);
-      }
-      if (condition.end_time) {
-        query = query.eq('end_time', condition.end_time);
-      }
-      
-      const { error } = await query;
-      
-      if (error) {
-        console.error("Error deleting data from Supabase:", error);
-        return { success: false, message: error.message };
-      }
-      
+
+  async insert(newSlot: any) {
+    return handleFirestoreOperation(async (db) => {
+      const timeSlotCollection = collection(db, 'timeSlots');
+      const clonedSlot = safeClone(newSlot);
+      await addDoc(timeSlotCollection, clonedSlot);
       return { success: true };
-    } catch (error: any) {
-      console.error("Error in delete operation:", error);
-      return { success: false, message: error.message };
-    }
+    }).catch(error => {
+      console.error('Error inserting data:', error);
+      return { success: false };
+    });
   },
-  
-  clear: async () => {
-    try {
-      const { error } = await supabase
-        .from('timeSlots')
-        .delete()
-        .neq('id', 'placeholder'); // Delete all rows
-        
-      if (error) {
-        console.error("Error clearing data from Supabase:", error);
-        return { success: false, message: error.message };
-      }
+
+  async update(updatedSlot: any, conditions: any) {
+    return handleFirestoreOperation(async (db) => {
+      const timeSlotCollection = collection(db, 'timeSlots');
+      const q = query(
+        timeSlotCollection,
+        where('date', '==', conditions.date),
+        where('start_time', '==', conditions.start_time),
+        where('end_time', '==', conditions.end_time)
+      );
       
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
+        const clonedSlot = safeClone(updatedSlot);
+        await updateDoc(docRef, clonedSlot);
+        return { success: true };
+      }
+      return { success: false };
+    }).catch(error => {
+      console.error('Error updating data:', error);
+      return { success: false };
+    });
+  },
+
+  async delete(conditions: any) {
+    return handleFirestoreOperation(async (db) => {
+      const timeSlotCollection = collection(db, 'timeSlots');
+      const q = query(
+        timeSlotCollection,
+        where('date', '==', conditions.date),
+        where('start_time', '==', conditions.start_time),
+        where('end_time', '==', conditions.end_time)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
+        await deleteDoc(docRef);
+        return { success: true };
+      }
+      return { success: false };
+    }).catch(error => {
+      console.error('Error deleting data:', error);
+      return { success: false };
+    });
+  },
+
+  async clear() {
+    return handleFirestoreOperation(async (db) => {
+      const timeSlotCollection = collection(db, 'timeSlots');
+      const querySnapshot = await getDocs(timeSlotCollection);
+      
+      await Promise.all(
+        querySnapshot.docs.map(doc => deleteDoc(doc.ref))
+      );
       return { success: true };
-    } catch (error: any) {
-      console.error("Error in clear operation:", error);
-      return { success: false, message: error.message };
-    }
+    }).catch(error => {
+      console.error('Error clearing data:', error);
+      return { success: false };
+    });
   }
 };

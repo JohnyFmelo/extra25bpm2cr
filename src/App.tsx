@@ -1,33 +1,86 @@
 
-import { useState, useEffect } from 'react';
-import { ThemeProvider } from '@/components/ThemeProvider';
-import { Toaster } from '@/components/ui/toaster';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import AppRoutes from '@/routes';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { TeamProvider } from '@/contexts/TeamContext';
-import { NotificationProvider } from '@/contexts/NotificationContext';
-import { UnreadMessagesProvider } from '@/contexts/UnreadMessagesContext';
-import SupabaseSetup from '@/components/SupabaseSetup';
+import React from "react";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Hours from "./pages/Hours";
+import TopBar from "./components/TopBar";
 
-function App() {
-  const [router] = useState(() => createBrowserRouter(AppRoutes));
+// Protected Route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const user = localStorage.getItem('user');
   
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-      <AuthProvider>
-        <TeamProvider>
-          <NotificationProvider>
-            <UnreadMessagesProvider>
-              <RouterProvider router={router} />
-              <Toaster />
-              <SupabaseSetup />
-            </UnreadMessagesProvider>
-          </NotificationProvider>
-        </TeamProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <div className="flex min-h-screen w-full">
+      <div className="flex-1 flex flex-col">
+        <TopBar />
+        <main className="flex-1">
+          {children}
+        </main>
+      </div>
+    </div>
   );
-}
+};
+
+const App = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        retry: 1,
+      },
+    },
+  });
+
+  return (
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Index />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/hours" 
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Hours />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              {/* Redirect any unknown routes to login */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </TooltipProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </React.StrictMode>
+  );
+};
 
 export default App;
