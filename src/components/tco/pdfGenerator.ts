@@ -1,6 +1,7 @@
-
 import jsPDF from "jspdf";
-import { supabase } from "@/lib/supabaseClient";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { updateDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
@@ -18,109 +19,6 @@ import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
-
-/**
- * Upload PDF to Supabase Storage
- * @param pdfBlob PDF file blob
- * @param createdBy User ID of creator
- * @param tcoId TCO ID or number
- * @returns Object with download URL and file path
- */
-const uploadPDFToSupabase = async (pdfBlob: Blob, createdBy: string, tcoId: string): Promise<{url: string, path: string}> => {
-  try {
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const filePath = `tcos/${createdBy}/${tcoId}_${dateStr}.pdf`;
-    
-    console.log(`Enviando arquivo para Supabase Storage: ${filePath}`);
-    
-    // Upload the file to Supabase storage
-    const { data, error } = await supabase
-      .storage
-      .from('pdfs')
-      .upload(filePath, pdfBlob, {
-        contentType: 'application/pdf',
-        upsert: true
-      });
-    
-    if (error) throw error;
-    
-    console.log('Upload concluído:', data);
-    
-    // Get public URL for the file
-    const { data: urlData } = supabase
-      .storage
-      .from('pdfs')
-      .getPublicUrl(filePath);
-    
-    const downloadURL = urlData.publicUrl;
-    console.log('URL do arquivo:', downloadURL);
-    
-    return {
-      url: downloadURL,
-      path: filePath
-    };
-  } catch (error) {
-    console.error("Erro ao fazer upload do PDF no Supabase:", error);
-    throw error;
-  }
-};
-
-/**
- * Upload image files to Supabase Storage
- * @param files Array of file objects to upload
- * @param createdBy User ID of creator
- * @param tcoId TCO ID or number
- * @returns Array of objects with URLs and paths
- */
-const uploadImagesToSupabase = async (
-  files: Array<{file: File, id: string}>, 
-  createdBy: string, 
-  tcoId: string
-): Promise<{url: string, path: string}[]> => {
-  try {
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const results = [];
-
-    for (const {file} of files) {
-      const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-      const filePath = `tcos/${createdBy}/${tcoId}/images/${fileName}`;
-      
-      console.log(`Enviando imagem para Supabase Storage: ${filePath}`);
-      
-      // Upload the file to Supabase storage
-      const { data, error } = await supabase
-        .storage
-        .from('images')
-        .upload(filePath, file, {
-          contentType: file.type,
-          upsert: true
-        });
-      
-      if (error) {
-        console.error(`Erro ao fazer upload da imagem ${fileName}:`, error);
-        continue;
-      }
-      
-      // Get public URL for the file
-      const { data: urlData } = supabase
-        .storage
-        .from('images')
-        .getPublicUrl(filePath);
-      
-      results.push({
-        url: urlData.publicUrl,
-        path: filePath
-      });
-      
-      console.log(`Imagem ${fileName} enviada: ${urlData.publicUrl}`);
-    }
-    
-    return results;
-  } catch (error) {
-    console.error("Erro ao fazer upload das imagens no Supabase:", error);
-    throw error;
-  }
-};
 
 // --- Função Principal de Geração ---
 export const generatePDF = async (inputData: any) => {
@@ -143,43 +41,6 @@ export const generatePDF = async (inputData: any) => {
     // Pega as constantes da página
     const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
     let yPosition;
-
-    // Prepara os dados de imagem para o PDF
-    if (data.selectedFiles && Array.isArray(data.selectedFiles) && data.selectedFiles.length > 0) {
-        try {
-            console.log(`Processando ${data.selectedFiles.length} imagens para incluir no PDF`);
-            
-            // Converte os arquivos de imagem para Data URLs para incluir no PDF
-            const imageDataUrls = await Promise.all(
-                data.selectedFiles.map((fileObj: {file: File, id: string}) => {
-                    return new Promise<string>((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                            if (typeof reader.result === 'string') {
-                                resolve(reader.result);
-                            } else {
-                                reject(new Error("FileReader não retornou uma string"));
-                            }
-                        };
-                        reader.onerror = (error) => {
-                            console.error("Erro lendo arquivo:", error);
-                            reject(error);
-                        };
-                        reader.readAsDataURL(fileObj.file);
-                    });
-                })
-            );
-            
-            data.objetosApreendidos = imageDataUrls;
-            console.log(`Convertidas ${imageDataUrls.length} imagens para inclusão no PDF`);
-        } catch (error) {
-            console.error("Erro ao converter imagens para o PDF:", error);
-            data.objetosApreendidos = [];
-        }
-    } else {
-        console.log("Nenhuma imagem selecionada para incluir no PDF");
-        data.objetosApreendidos = [];
-    }
 
     // --- PÁGINA 1: AUTUAÇÃO ---
     yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
@@ -215,12 +76,12 @@ export const generatePDF = async (inputData: any) => {
     // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
     // Verifica se algum autor ou vítima tem laudoPericial: "Sim"
     const pessoasComLaudo = [
-        ...(data.autores || []).filter((a: any) => a.laudoPericial === "Sim").map((a: any) => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
-        ...(data.vitimas || []).filter((v: any) => v.laudoPericial === "Sim").map((v: any) => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-    ].filter((p: any) => p.nome && p.nome.trim()); // Filtra nomes válidos
+        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
+        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
+    ].filter(p => p.nome && p.nome.trim()); // Filtra nomes válidos
 
     if (pessoasComLaudo.length > 0) {
-        pessoasComLaudo.forEach((pessoa: any) => {
+        pessoasComLaudo.forEach(pessoa => {
             console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
             addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
         });
@@ -242,7 +103,7 @@ export const generatePDF = async (inputData: any) => {
         }
     }
 
-    // --- Salvamento Local e Supabase ---
+    // --- Salvamento Local ---
     const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
     const dateStr = new Date().toISOString().slice(0, 10);
     const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
@@ -260,72 +121,52 @@ export const generatePDF = async (inputData: any) => {
         
         console.log(`PDF Gerado: ${fileName}`);
         
-        // Salva o PDF no Supabase e registra as informações
-        if (data.id && data.createdBy) {
-            await savePDFAndUpdateRecord(pdfOutput, data);
-        } else {
-            console.warn("ID do TCO ou usuário não encontrado, não foi possível salvar no banco de dados");
-        }
+        // Salva o PDF no Firebase Storage
+        await savePDFToFirebase(doc, data, tcoNumParaNome, dateStr);
     } catch (error) {
         console.error("Erro ao salvar o PDF:", error);
         alert("Ocorreu um erro ao tentar salvar o PDF.");
     }
 };
 
-// Função para salvar o PDF no Supabase e atualizar registro
-async function savePDFAndUpdateRecord(pdfBlob: Blob, data: any) {
+// Função para salvar o PDF no Firebase Storage
+async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, dateStr: string) {
     try {
-        // Upload do PDF para o Supabase Storage
-        const { url: downloadURL, path: filePath } = await uploadPDFToSupabase(
-            pdfBlob,
-            data.createdBy,
-            data.id || data.tcoNumber
-        );
+        // Obter o output do PDF como array buffer
+        const pdfBlob = doc.output('blob');
         
-        // Processa e faz upload das imagens, se houver
-        let imageUrls: {url: string, path: string}[] = [];
-        if (data.selectedFiles && Array.isArray(data.selectedFiles) && data.selectedFiles.length > 0) {
-            console.log(`Fazendo upload de ${data.selectedFiles.length} imagens para o Supabase...`);
-            imageUrls = await uploadImagesToSupabase(
-                data.selectedFiles,
-                data.createdBy,
-                data.id || data.tcoNumber
-            );
-            console.log(`${imageUrls.length} imagens enviadas com sucesso`);
-        }
+        // Obter uma referência ao storage
+        const storage = getStorage();
         
-        // Extrai as informações dos policiais para salvar no Supabase
-        const policiais = data.componentesGuarnicao ? data.componentesGuarnicao.map((policial: any) => ({
-            nome: policial.nome,
-            posto: policial.posto,
-            rg: policial.rgpm || policial.rg,
-        })) : [];
+        // Criar caminho para o arquivo no storage com o ID do TCO
+        const filePath = `tcos/${data.createdBy}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
+        const fileRef = ref(storage, filePath);
         
-        // Atualiza o registro no Supabase com o URL do PDF e informações dos policiais
-        const { error } = await supabase
-            .from('tcos')
-            .update({
+        // Upload do arquivo
+        console.log(`Enviando arquivo para Firebase Storage: ${filePath}`);
+        const uploadResult = await uploadBytes(fileRef, pdfBlob);
+        console.log('Upload concluído:', uploadResult);
+        
+        // Obter o URL de download
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+        console.log('URL do arquivo:', downloadURL);
+        
+        // Atualizar o documento no Firestore com a URL do PDF
+        if (data.id) {
+            const tcoRef = doc(db, "tcos", data.id);
+            await updateDoc(tcoRef, {
                 pdfUrl: downloadURL,
                 pdfPath: filePath,
-                policiais: policiais,
-                natureza: data.natureza,
-                tcoNumber: data.tcoNumber,
-                imageUrls: imageUrls.map(img => img.url), // Armazena as URLs das imagens
-                imagePaths: imageUrls.map(img => img.path), // Armazena os caminhos das imagens
-                updatedAt: new Date().toISOString()
-            })
-            .eq('id', data.id);
-            
-        if (error) {
-            console.error("Erro ao atualizar registro no Supabase:", error);
-            throw error;
+                updatedAt: new Date()
+            });
+            console.log(`Documento TCO ${data.id} atualizado com URL do PDF`);
+        } else {
+            console.warn("ID do TCO não encontrado, não foi possível atualizar o documento no Firestore");
         }
         
-        console.log(`Documento TCO ${data.id} atualizado com URL do PDF e informações dos policiais`);
-        console.log(`Adicionadas ${imageUrls.length} imagens ao registro`);
         return downloadURL;
     } catch (error) {
-        console.error("Erro ao salvar PDF:", error);
+        console.error("Erro ao salvar PDF no Firebase:", error);
         throw error;
     }
 }

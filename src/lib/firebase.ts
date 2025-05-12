@@ -1,13 +1,20 @@
-
 import { initializeApp } from 'firebase/app';
 import { 
-  getStorage, 
-  ref as storageRef, 
-  uploadBytes, 
-  getDownloadURL 
-} from 'firebase/storage';
+  getFirestore, 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  getDocs, 
+  deleteDoc, 
+  doc, 
+  updateDoc,
+  Firestore,
+  DocumentData,
+  QuerySnapshot
+} from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { TimeSlot } from '@/types/user';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,39 +27,148 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const storage = getStorage(app);
-export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const auth = getAuth(app);
 
-// Time slot operations for WeeklyCalendar component
-export const dataOperations = {
-  fetch: async () => {
-    const timeSlots = localStorage.getItem('timeSlots');
-    return timeSlots ? JSON.parse(timeSlots) : [];
-  },
-  insert: async (slot: any) => {
-    const timeSlots = await dataOperations.fetch();
-    timeSlots.push(slot);
-    localStorage.setItem('timeSlots', JSON.stringify(timeSlots));
-    return timeSlots;
-  },
-  update: async (slot: any) => {
-    const timeSlots = await dataOperations.fetch();
-    const index = timeSlots.findIndex((s: any) => s.id === slot.id);
-    if (index !== -1) {
-      timeSlots[index] = slot;
-      localStorage.setItem('timeSlots', JSON.stringify(timeSlots));
+// Helper function to safely clone Firestore data
+const safeClone = (data: DocumentData): Record<string, any> => {
+  const serializableData: Record<string, any> = {};
+  
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'function' || value instanceof ReadableStream) {
+      continue;
     }
-    return timeSlots;
+    
+    if (value instanceof Date) {
+      serializableData[key] = value.toISOString();
+      continue;
+    }
+    
+    if (Array.isArray(value)) {
+      serializableData[key] = value.map(item => 
+        typeof item === 'object' && item !== null ? safeClone(item) : item
+      );
+      continue;
+    }
+    
+    if (typeof value === 'object' && value !== null) {
+      serializableData[key] = safeClone(value);
+      continue;
+    }
+    
+    serializableData[key] = value;
+  }
+  
+  return serializableData;
+};
+
+// Helper function to safely get documents from a query snapshot
+const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    title: doc.data().title || '',
+    description: doc.data().description || '',
+    date: doc.data().date || '',
+    ...safeClone(doc.data())
+  }));
+};
+
+// Helper function to handle Firestore operations with proper cleanup
+const handleFirestoreOperation = async <T>(
+  operation: (db: Firestore) => Promise<T>
+): Promise<T> => {
+  try {
+    const result = await operation(db);
+    return result;
+  } catch (error) {
+    console.error('Firestore operation error:', error);
+    throw error;
+  }
+};
+
+export const dataOperations = {
+  async fetch(): Promise<TimeSlot[]> {
+    return handleFirestoreOperation(async (db) => {
+      const timeSlotCollection = collection(db, 'timeSlots');
+      const querySnapshot = await getDocs(timeSlotCollection);
+      return getDocsFromSnapshot(querySnapshot);
+    }).catch(error => {
+      console.error('Error fetching data:', error);
+      return [];
+    });
   },
-  delete: async (id: string) => {
-    const timeSlots = await dataOperations.fetch();
-    const filteredSlots = timeSlots.filter((slot: any) => slot.id !== id);
-    localStorage.setItem('timeSlots', JSON.stringify(filteredSlots));
-    return filteredSlots;
+
+  async insert(newSlot: any) {
+    return handleFirestoreOperation(async (db) => {
+      const timeSlotCollection = collection(db, 'timeSlots');
+      const clonedSlot = safeClone(newSlot);
+      await addDoc(timeSlotCollection, clonedSlot);
+      return { success: true };
+    }).catch(error => {
+      console.error('Error inserting data:', error);
+      return { success: false };
+    });
   },
-  clear: async () => {
-    localStorage.removeItem('timeSlots');
-    return [];
+
+  async update(updatedSlot: any, conditions: any) {
+    return handleFirestoreOperation(async (db) => {
+      const timeSlotCollection = collection(db, 'timeSlots');
+      const q = query(
+        timeSlotCollection,
+        where('date', '==', conditions.date),
+        where('start_time', '==', conditions.start_time),
+        where('end_time', '==', conditions.end_time)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
+        const clonedSlot = safeClone(updatedSlot);
+        await updateDoc(docRef, clonedSlot);
+        return { success: true };
+      }
+      return { success: false };
+    }).catch(error => {
+      console.error('Error updating data:', error);
+      return { success: false };
+    });
+  },
+
+  async delete(conditions: any) {
+    return handleFirestoreOperation(async (db) => {
+      const timeSlotCollection = collection(db, 'timeSlots');
+      const q = query(
+        timeSlotCollection,
+        where('date', '==', conditions.date),
+        where('start_time', '==', conditions.start_time),
+        where('end_time', '==', conditions.end_time)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
+        await deleteDoc(docRef);
+        return { success: true };
+      }
+      return { success: false };
+    }).catch(error => {
+      console.error('Error deleting data:', error);
+      return { success: false };
+    });
+  },
+
+  async clear() {
+    return handleFirestoreOperation(async (db) => {
+      const timeSlotCollection = collection(db, 'timeSlots');
+      const querySnapshot = await getDocs(timeSlotCollection);
+      
+      await Promise.all(
+        querySnapshot.docs.map(doc => deleteDoc(doc.ref))
+      );
+      return { success: true };
+    }).catch(error => {
+      console.error('Error clearing data:', error);
+      return { success: false };
+    });
   }
 };
