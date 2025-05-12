@@ -74,7 +74,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addSectionTitle(doc, yPos, "ENVOLVIDOS", "2", 1, data);
 
     // Seção 2.1: Autor(es) - Ajusta singular/plural
-    const autoresValidsoftware = data.autores ? data.autores.filter(a => a?.nome) : [];
+    const autoresValidos = data.autores ? data.autores.filter(a => a?.nome) : [];
     const autorTitle = autoresValidos.length === 1 ? "AUTOR DO FATO" : "AUTORES DO FATO";
     yPos = addSectionTitle(doc, yPos, autorTitle, "2.1", 2, data);
     if (autoresValidos.length > 0) {
