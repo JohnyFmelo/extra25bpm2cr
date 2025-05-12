@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from "react";
-import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
-import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { db } from "@/lib/firebase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Trash2, FileText, Download, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { getStorage, ref, getDownloadURL } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 
 interface TCOmeusProps {
   user: { id: string; registration?: string };
@@ -23,22 +23,20 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
 
-  // Function to fetch user's TCOs
+  // Function to fetch user's TCOs from Supabase
   const fetchUserTcos = async () => {
     if (!user.id) return;
     setIsLoading(true);
     try {
-      const tcoRef = collection(db, "tcos");
-      const q = query(tcoRef, where("createdBy", "==", user.id));
-      const querySnapshot = await getDocs(q);
-      const tcos: any[] = [];
-      querySnapshot.forEach(doc => {
-        tcos.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
-      setTcoList(tcos);
+      const { data, error } = await supabase
+        .from('tcos')
+        .select('*')
+        .eq('createdBy', user.id)
+        .order('createdAt', { ascending: false });
+      
+      if (error) throw error;
+      
+      setTcoList(data || []);
     } catch (error) {
       console.error("Error fetching TCOs:", error);
       toast({
@@ -51,12 +49,19 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     }
   };
 
-  // Function to delete a TCO
+  // Function to delete a TCO from Supabase
   const handleDeleteTco = async (tcoId: string) => {
     try {
-      await deleteDoc(doc(db, "tcos", tcoId));
+      const { error } = await supabase
+        .from('tcos')
+        .delete()
+        .eq('id', tcoId);
+        
+      if (error) throw error;
+      
       setTcoList(tcoList.filter(tco => tco.id !== tcoId));
       if (selectedTco?.id === tcoId) setSelectedTco(null);
+      
       toast({
         title: "TCO Excluído",
         description: "O TCO foi removido com sucesso."
@@ -79,7 +84,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         setIsPdfDialogOpen(true);
       } else if (tco.pdfPath) {
         // Se tiver apenas o caminho do PDF no Storage, mas não a URL
-        const storage = getStorage();
         const pdfRef = ref(storage, tco.pdfPath);
         const url = await getDownloadURL(pdfRef);
         setSelectedPdfUrl(url);
@@ -108,7 +112,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
       
       if (!url && tco.pdfPath) {
         // Se tiver apenas o caminho do PDF no Storage, mas não a URL
-        const storage = getStorage();
         const pdfRef = ref(storage, tco.pdfPath);
         url = await getDownloadURL(pdfRef);
       }
@@ -168,7 +171,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
                 <TableCell className="font-medium">{tco.tcoNumber}</TableCell>
                 <TableCell>
                   {tco.createdAt
-                    ? format(new Date(tco.createdAt.seconds * 1000), "dd/MM/yyyy")
+                    ? format(new Date(tco.createdAt), "dd/MM/yyyy")
                     : "-"}
                 </TableCell>
                 <TableCell>{tco.natureza}</TableCell>

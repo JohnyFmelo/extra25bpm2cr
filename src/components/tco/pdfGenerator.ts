@@ -1,7 +1,7 @@
+
 import jsPDF from "jspdf";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { updateDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { uploadPDFToFirebase } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
@@ -103,7 +103,7 @@ export const generatePDF = async (inputData: any) => {
         }
     }
 
-    // --- Salvamento Local ---
+    // --- Salvamento Local e Firebase ---
     const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
     const dateStr = new Date().toISOString().slice(0, 10);
     const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
@@ -121,52 +121,55 @@ export const generatePDF = async (inputData: any) => {
         
         console.log(`PDF Gerado: ${fileName}`);
         
-        // Salva o PDF no Firebase Storage
-        await savePDFToFirebase(doc, data, tcoNumParaNome, dateStr);
+        // Salva apenas o PDF no Firebase e registra a referência no Supabase
+        if (data.id && data.createdBy) {
+            await savePDFAndUpdateRecord(pdfOutput, data);
+        } else {
+            console.warn("ID do TCO ou usuário não encontrado, não foi possível salvar no banco de dados");
+        }
     } catch (error) {
         console.error("Erro ao salvar o PDF:", error);
         alert("Ocorreu um erro ao tentar salvar o PDF.");
     }
 };
 
-// Função para salvar o PDF no Firebase Storage
-async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, dateStr: string) {
+// Função para salvar o PDF no Firebase e atualizar registro no Supabase
+async function savePDFAndUpdateRecord(pdfBlob: Blob, data: any) {
     try {
-        // Obter o output do PDF como array buffer
-        const pdfBlob = doc.output('blob');
+        // Upload do PDF para o Firebase Storage
+        const { url: downloadURL, path: filePath } = await uploadPDFToFirebase(
+            pdfBlob,
+            data.createdBy,
+            data.id || data.tcoNumber
+        );
         
-        // Obter uma referência ao storage
-        const storage = getStorage();
+        // Extrai apenas as informações dos policiais para salvar no Supabase
+        const policiais = data.componentesGuarnicao ? data.componentesGuarnicao.map((policial: any) => ({
+            nome: policial.nome,
+            posto: policial.posto,
+            rg: policial.rgpm || policial.rg,
+        })) : [];
         
-        // Criar caminho para o arquivo no storage com o ID do TCO
-        const filePath = `tcos/${data.createdBy}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
-        const fileRef = ref(storage, filePath);
-        
-        // Upload do arquivo
-        console.log(`Enviando arquivo para Firebase Storage: ${filePath}`);
-        const uploadResult = await uploadBytes(fileRef, pdfBlob);
-        console.log('Upload concluído:', uploadResult);
-        
-        // Obter o URL de download
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-        console.log('URL do arquivo:', downloadURL);
-        
-        // Atualizar o documento no Firestore com a URL do PDF
-        if (data.id) {
-            const tcoRef = doc(db, "tcos", data.id);
-            await updateDoc(tcoRef, {
+        // Atualiza o registro no Supabase com o URL do PDF e informações dos policiais
+        const { error } = await supabase
+            .from('tcos')
+            .update({
                 pdfUrl: downloadURL,
                 pdfPath: filePath,
-                updatedAt: new Date()
-            });
-            console.log(`Documento TCO ${data.id} atualizado com URL do PDF`);
-        } else {
-            console.warn("ID do TCO não encontrado, não foi possível atualizar o documento no Firestore");
+                policiais: policiais,
+                updatedAt: new Date().toISOString()
+            })
+            .eq('id', data.id);
+            
+        if (error) {
+            console.error("Erro ao atualizar registro no Supabase:", error);
+            throw error;
         }
         
+        console.log(`Documento TCO ${data.id} atualizado com URL do PDF e informações dos policiais`);
         return downloadURL;
     } catch (error) {
-        console.error("Erro ao salvar PDF no Firebase:", error);
+        console.error("Erro ao salvar PDF:", error);
         throw error;
     }
 }
