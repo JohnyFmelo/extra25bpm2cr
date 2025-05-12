@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from "react"; // Adicionado useRef
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
-import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import BasicInformationTab from "./tco/BasicInformationTab";
 import GeneralInformationTab from "./tco/GeneralInformationTab";
 import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
@@ -13,7 +12,6 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
 
-// ... (interfaces e funções de formatação permanecem as mesmas) ...
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
@@ -164,17 +162,12 @@ const TCOForm = () => {
   const [indicios, setIndicios] = useState("");
   const [customMaterialDesc, setCustomMaterialDesc] = useState("");
   const [isUnknownMaterial, setIsUnknownMaterial] = useState(false);
-  
-  // Novos estados para Apresentação em Juizado Especial
   const [juizadoEspecialData, setJuizadoEspecialData] = useState("");
   const [juizadoEspecialHora, setJuizadoEspecialHora] = useState("");
-
-  // Estados para anexos
   const [videoLinks, setVideoLinks] = useState<string[]>([]);
   const [newVideoLink, setNewVideoLink] = useState("");
-  const [imageFiles, setImageFiles] = useState<File[]>([]); // Novo estado para arquivos de imagem
-  const imageInputRef = useRef<HTMLInputElement>(null); // Ref para o input de imagem
-
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const [autores, setAutores] = useState<Pessoa[]>([{ ...initialPersonData }]);
   const [vitimas, setVitimas] = useState<Pessoa[]>([{ ...initialPersonData }]);
@@ -230,16 +223,12 @@ const TCOForm = () => {
         }
       }
     } else {
-      // Não resetar lacreNumero aqui, pois pode ser usado em outras naturezas ou ser preenchido manualmente.
-      // setLacreNumero(""); 
       setVitimas(prevVitimas => {
         if (prevVitimas.length === 0) {
           return [{ ...initialPersonData }];
         }
         return prevVitimas;
       });
-      // Considerar como tratar apreensoes se a natureza mudar de "Porte de drogas" para outra.
-      // Por ora, se foi manualmente editada, mantém. Se for o template de droga, pode ser necessário limpar.
     }
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes, relatoPolicialTemplate]);
 
@@ -272,7 +261,7 @@ const TCOForm = () => {
     const autorTexto = autoresValidos.length === 0 ? "O(A) AUTOR(A)" :
       autoresValidos.length === 1 ? (autoresValidos[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
       autoresValidos.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
-    
+
     const testemunhasValidas = testemunhas.filter(t => t.nome.trim() !== "");
     const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : (testemunhasValidas.length === 1 ? "TESTEMUNHA" : "");
 
@@ -292,7 +281,7 @@ const TCOForm = () => {
 
     updatedRelato = updatedRelato
       .replace("[HORÁRIO]", horaFato || "[HORÁRIO]")
-      .replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : "[DATA]")
+      .replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : "[DATA]")
       .replace("[GUARNIÇÃO]", guarnicao || "[GUARNIÇÃO PENDENTE]")
       .replace("[OPERACAO_TEXT]", operacaoText)
       .replace("[GUPM]", gupm)
@@ -349,7 +338,7 @@ const TCOForm = () => {
   const handleRemoveVitima = (index: number) => {
     const newVitimas = vitimas.filter((_, i) => i !== index);
     if (newVitimas.length === 0) {
-      setVitimas([{...initialPersonData}]);
+      setVitimas([{ ...initialPersonData }]);
     } else {
       setVitimas(newVitimas);
     }
@@ -362,7 +351,7 @@ const TCOForm = () => {
   const handleRemoveTestemunha = (index: number) => {
     const newTestemunhas = testemunhas.filter((_, i) => i !== index);
     if (newTestemunhas.length === 0) {
-      setTestemunhas([{...initialPersonData}]);
+      setTestemunhas([{ ...initialPersonData }]);
     } else {
       setTestemunhas(newTestemunhas);
     }
@@ -375,7 +364,7 @@ const TCOForm = () => {
   const handleRemoveAutor = (index: number) => {
     const newAutores = autores.filter((_, i) => i !== index);
     if (newAutores.length === 0) {
-      setAutores([{...initialPersonData}]);
+      setAutores([{ ...initialPersonData }]);
     } else {
       setAutores(newAutores);
     }
@@ -445,12 +434,11 @@ const TCOForm = () => {
     setIsRelatoPolicialManuallyEdited(true);
   };
 
-  // Funções para anexos de vídeo
   const handleAddVideoLink = () => {
     if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
       if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
-          toast({ variant: "warning", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
-          return;
+        toast({ variant: "warning", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
+        return;
       }
       setVideoLinks(prev => [...prev, newVideoLink.trim()]);
       setNewVideoLink("");
@@ -467,7 +455,6 @@ const TCOForm = () => {
     toast({ title: "Link Removido", description: "Link de vídeo removido com sucesso." });
   };
 
-  // Funções para anexos de imagem
   const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const newFiles = Array.from(event.target.files);
@@ -481,7 +468,6 @@ const TCOForm = () => {
       } else if (newFiles.length > 0) {
         toast({ variant: "warning", title: "Imagens Duplicadas", description: "Algumas ou todas as imagens selecionadas já foram adicionadas." });
       }
-      // Resetar o valor do input para permitir selecionar o mesmo arquivo novamente após removê-lo
       if (imageInputRef.current) {
         imageInputRef.current.value = "";
       }
@@ -493,15 +479,13 @@ const TCOForm = () => {
     toast({ title: "Imagem Removida", description: "Imagem removida da lista de anexos." });
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validações essenciais
     const completionNow = new Date();
     const completionDate = completionNow.toISOString().split('T')[0];
     const completionTime = completionNow.toTimeString().slice(0, 5);
-    
+
     const autoresValidos = autores.filter(a => a.nome?.trim());
     if (!tcoNumber || natureza === "Selecione..." || (natureza === "Outros" && !customNatureza) || autoresValidos.length === 0 || componentesGuarnicao.length === 0) {
       toast({
@@ -522,92 +506,84 @@ const TCOForm = () => {
 
     try {
       const displayNaturezaReal = natureza === "Outros" ? customNatureza : natureza;
-      const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc : indicios) : "";
-      
-      const vitimasFiltradas = vitimas.filter(v => v.nome?.trim());
-      const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim());
-
       const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
       const userRegistration = userInfo.registration || "";
 
-      // TODO: Implementar upload de imageFiles para Firebase Storage
-      // Por agora, imageFiles (objetos File) não serão salvos diretamente no Firestore.
-      // Salve as URLs retornadas pelo Storage no campo 'imageUrls' (ou similar) do tcoDataParaSalvar.
-      console.log("Arquivos de imagem selecionados (não serão enviados ao DB nesta etapa):", imageFiles.map(f => f.name));
-      const imageUrls: string[] = []; // Placeholder para URLs de imagens após upload
+      // Preparar dados para salvar no Supabase
+      const policiais = componentesGuarnicao
+        .filter(c => c.nome && c.rg)
+        .map(c => ({ nome: c.nome, rg: c.rg }));
 
       const tcoDataParaSalvar: any = {
-        tcoNumber: tcoNumber.trim(),
+        tco_number: tcoNumber.trim(),
         natureza: displayNaturezaReal,
-        originalNatureza: natureza,
-        customNatureza: customNatureza.trim(),
+        policiais,
+        created_by: userInfo.id,
+        // Dados completos para o PDF
+        original_natureza: natureza,
+        custom_natureza: customNatureza.trim(),
         tipificacao: tipificacao.trim(),
-        penaDescricao: penaDescricao.trim(),
-        dataFato,
-        horaFato,
-        dataInicioRegistro,
-        horaInicioRegistro,
-        dataTerminoRegistro: completionDate,
-        horaTerminoRegistro: completionTime,
-        localFato: localFato.trim(),
+        pena_descricao: penaDescricao.trim(),
+        data_fato: dataFato,
+        hora_fato: horaFato,
+        data_inicio_registro: dataInicioRegistro,
+        hora_inicio_registro: horaInicioRegistro,
+        data_termino_registro: completionDate,
+        hora_termino_registro: completionTime,
+        local_fato: localFato.trim(),
         endereco: endereco.trim(),
         municipio,
         comunicante,
         autores: autoresValidos,
-        vitimas: vitimasFiltradas,
-        testemunhas: testemunhasFiltradas,
+        vitimas: vitimas.filter(v => v.nome?.trim()),
+        testemunhas: testemunhas.filter(t => t.nome?.trim()),
         guarnicao: guarnicao.trim(),
         operacao: operacao.trim(),
-        componentesGuarnicao,
-        relatoPolicial: relatoPolicial.trim(),
-        relatoAutor: relatoAutor.trim(),
-        relatoTestemunha: relatoTestemunha.trim(),
+        relato_policial: relatoPolicial.trim(),
+        relato_autor: relatoAutor.trim(),
+        relato_testemunha: relatoTestemunha.trim(),
         apreensoes: apreensoes.trim(),
-        conclusaoPolicial: conclusaoPolicial.trim(),
-        lacreNumero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : "",
-        drogaQuantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : undefined,
-        drogaTipo: natureza === "Porte de drogas para consumo" ? substancia : undefined,
-        drogaCor: natureza === "Porte de drogas para consumo" ? cor : undefined,
-        drogaNomeComum: natureza === "Porte de drogas para consumo" ? indicioFinalDroga : undefined,
-        drogaCustomDesc: natureza === "Porte de drogas para consumo" && isUnknownMaterial ? customMaterialDesc.trim() : undefined,
-        drogaIsUnknown: natureza === "Porte de drogas para consumo" ? isUnknownMaterial : undefined,
-        startTime: startTime?.toISOString(),
-        endTime: completionNow.toISOString(),
-        createdAt: new Date(),
-        createdBy: userInfo.id,
-        userRegistration: userRegistration,
-        videoLinks: videoLinks,
-        imageUrls: imageUrls, // Adicionado campo para URLs de imagens
-        juizadoEspecialData: juizadoEspecialData.trim(),
-        juizadoEspecialHora: juizadoEspecialHora.trim(),
-        // Campos legados ou não usados no formulário atual (remover se não necessários):
-        // lacre: "", 
-        // objetosApreendidos: [],
+        conclusao_policial: conclusaoPolicial.trim(),
+        lacre_numero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : "",
+        droga_quantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : undefined,
+        droga_tipo: natureza === "Porte de drogas para consumo" ? substancia : undefined,
+        droga_cor: natureza === "Porte de drogas para consumo" ? cor : undefined,
+        droga_nome_comum: natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc : indicios) : undefined,
+        droga_custom_desc: natureza === "Porte de drogas para consumo" && isUnknownMaterial ? customMaterialDesc.trim() : undefined,
+        droga_is_unknown: natureza === "Porte de drogas para consumo" ? isUnknownMaterial : undefined,
+        start_time: startTime?.toISOString(),
+        end_time: completionNow.toISOString(),
+        created_at: new Date(),
+        video_links: videoLinks,
+        image_urls: imageFiles.map(file => URL.createObjectURL(file)), // URLs locais para o PDF
+        juizado_especial_data: juizadoEspecialData.trim(),
+        juizado_especial_hora: juizadoEspecialHora.trim(),
+        relato_vitima: vitimas.filter(v => v.nome?.trim()).length > 0 ? relatoVitima.trim() : "",
+        representacao: vitimas.filter(v => v.nome?.trim()).length > 0 && representacao ? formatRepresentacao(representacao) : undefined
       };
 
-      if (vitimasFiltradas.length > 0) {
-        tcoDataParaSalvar.relatoVitima = relatoVitima.trim();
-        if (representacao) {
-          tcoDataParaSalvar.representacao = formatRepresentacao(representacao);
-        }
-      } else {
-        tcoDataParaSalvar.relatoVitima = "";
-        delete tcoDataParaSalvar.representacao;
-      }
-
+      // Remover campos undefined
       Object.keys(tcoDataParaSalvar).forEach(key => tcoDataParaSalvar[key] === undefined && delete tcoDataParaSalvar[key]);
 
-      console.log("Dados a serem salvos/gerados:", tcoDataParaSalvar);
+      // Salvar apenas os dados necessários no Supabase
+      const { data: tcoResult, error: tcoError } = await supabase
+        .from('tcos')
+        .insert({
+          tco_number: tcoDataParaSalvar.tco_number,
+          natureza: tcoDataParaSalvar.natureza,
+          policiais: tcoDataParaSalvar.policiais,
+          created_by: tcoDataParaSalvar.created_by
+        })
+        .select()
+        .single();
+      if (tcoError) throw tcoError;
 
-      const docRef = await addDoc(collection(db, "tcos"), tcoDataParaSalvar);
-      
-      tcoDataParaSalvar.id = docRef.id; // Adicionar ID do documento para uso no PDF
-      
+      tcoDataParaSalvar.id = tcoResult.id;
+
+      // Gerar PDF
+      await generatePDF(tcoDataParaSalvar);
+
       toast({ title: "TCO Registrado", description: "Registrado com sucesso no banco de dados!" });
-      
-      // Passar tcoDataParaSalvar (que inclui imageUrls, mesmo que vazias por agora) para o PDF
-      await generatePDF(tcoDataParaSalvar); 
-      
       navigate("/?tab=tco");
     } catch (error: any) {
       console.error("Erro ao salvar ou gerar TCO:", error);
@@ -642,7 +618,7 @@ const TCOForm = () => {
           )) ||
         target.tagName === 'TEXTAREA'
       ) {
-        if (target.tagName !== 'TEXTAREA') { // Permite Enter em Textarea
+        if (target.tagName !== 'TEXTAREA') {
           e.preventDefault();
         }
       }
@@ -704,7 +680,7 @@ const TCOForm = () => {
           onRemovePolicial={handleRemovePolicialFromList}
         />
         <HistoricoTab
-          relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange}
+          relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelato-PolicialChange}
           relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor}
           relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima}
           relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha}
@@ -715,22 +691,19 @@ const TCOForm = () => {
           natureza={natureza}
         />
 
-        {/* SEÇÃO DE ANEXOS ATUALIZADA */}
         <div className="space-y-4 pt-4 border-t border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800 uppercase">
             ANEXOS
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Card de Fotos */}
             <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-3 hover:border-blue-500 transition-colors">
-                <div className="flex flex-col items-center text-center">
-                    <ImageIcon className="w-12 h-12 text-blue-600" />
-                    <h3 className="text-lg font-medium text-gray-700 mt-1">Fotos</h3>
-                    <p className="text-sm text-gray-500 px-4">
-                        Selecione ou arraste arquivos de imagem para anexar.
-                    </p>
-                </div>
-              
+              <div className="flex flex-col items-center text-center">
+                <ImageIcon className="w-12 h-12 text-blue-600" />
+                <h3 className="text-lg font-medium text-gray-700 mt-1">Fotos</h3>
+                <p className="text-sm text-gray-500 px-4">
+                  Selecione ou arraste arquivos de imagem para anexar.
+                </p>
+              </div>
               <input
                 type="file"
                 multiple
@@ -740,27 +713,26 @@ const TCOForm = () => {
                 className="hidden"
                 id="imageUpload"
               />
-              <Button 
-                type="button" 
+              <Button
+                type="button"
                 onClick={() => imageInputRef.current?.click()}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium w-full sm:w-auto mx-auto"
               >
                 <Plus className="mr-2 h-5 w-5" />
                 Anexar Fotos
               </Button>
-
               {imageFiles.length > 0 && (
                 <div className="w-full pt-2">
                   <ul className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                     {imageFiles.map((file, index) => (
                       <li key={`${file.name}-${index}`} className="flex justify-between items-center p-1.5 bg-gray-100 border border-gray-200 rounded-md text-sm group">
                         <span className="truncate mr-2 flex-1" title={file.name}>
-                          {file.name} ({ (file.size / 1024).toFixed(1) } KB)
+                          {file.name} ({(file.size / 1024).toFixed(1)} KB)
                         </span>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleRemoveImageFile(index)} 
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveImageFile(index)}
                           className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7"
                           aria-label="Remover imagem"
                         >
@@ -772,18 +744,15 @@ const TCOForm = () => {
                 </div>
               )}
               {imageFiles.length === 0 && (
-                  <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p>
-               )}
+                <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p>
+              )}
             </div>
-
-            {/* Card de Vídeos */}
             <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-3 hover:border-blue-500 transition-colors">
               <div className="flex flex-col items-center text-center">
                 <VideoIcon className="w-12 h-12 text-blue-600" />
                 <h3 className="text-lg font-medium text-gray-700 mt-1">Vídeos</h3>
                 <p className="text-sm text-gray-500">Adicione links para vídeos online.</p>
               </div>
-              
               <div className="flex w-full space-x-2 items-center pt-1">
                 <input
                   type="url"
@@ -792,35 +761,34 @@ const TCOForm = () => {
                   placeholder="Cole o link do vídeo aqui (YouTube, Vimeo, etc.)"
                   className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
-                <Button 
-                  type="button" 
-                  onClick={handleAddVideoLink} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white" 
+                <Button
+                  type="button"
+                  onClick={handleAddVideoLink}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                   size="icon"
                   aria-label="Adicionar link de vídeo"
                 >
                   <Plus className="h-5 w-5" />
                 </Button>
               </div>
-
               {videoLinks.length > 0 && (
                 <div className="w-full pt-2">
                   <ul className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                     {videoLinks.map((link, index) => (
                       <li key={index} className="flex justify-between items-center p-1.5 bg-gray-100 border border-gray-200 rounded-md text-sm group">
-                        <a 
-                          href={link} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="text-blue-600 hover:underline truncate mr-2 flex-1" 
+                        <a
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline truncate mr-2 flex-1"
                           title={link}
                         >
                           {link}
                         </a>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleRemoveVideoLink(index)} 
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveVideoLink(index)}
                           className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7"
                           aria-label="Remover link"
                         >
@@ -831,14 +799,12 @@ const TCOForm = () => {
                   </ul>
                 </div>
               )}
-               {videoLinks.length === 0 && (
-                  <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p>
-               )}
+              {videoLinks.length === 0 && (
+                <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p>
+              )}
             </div>
           </div>
         </div>
-        {/* FIM DA SEÇÃO DE ANEXOS */}
-
         <div className="flex justify-end mt-10">
           <Button type="submit" disabled={isSubmitting} size="lg">
             <FileText className="mr-2 h-5 w-5" />
