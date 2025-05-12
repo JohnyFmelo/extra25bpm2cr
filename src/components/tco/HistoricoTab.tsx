@@ -90,9 +90,9 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
         file,
         id: `${file.name}-${Date.now()}-${Math.random()}`
       }));
+      
+      console.log("Arquivos selecionados:", newFiles.map(f => f.file.name).join(", "));
       setSelectedFiles([...selectedFiles, ...newFiles]);
-      const fileNames = newFiles.map(({ file }) => file.name).join(', ');
-      console.log(`Selected files: ${fileNames}`);
     }
   };
 

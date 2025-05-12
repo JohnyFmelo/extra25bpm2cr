@@ -65,6 +65,63 @@ const uploadPDFToSupabase = async (pdfBlob: Blob, createdBy: string, tcoId: stri
   }
 };
 
+/**
+ * Upload image files to Supabase Storage
+ * @param files Array of file objects to upload
+ * @param createdBy User ID of creator
+ * @param tcoId TCO ID or number
+ * @returns Array of objects with URLs and paths
+ */
+const uploadImagesToSupabase = async (
+  files: Array<{file: File, id: string}>, 
+  createdBy: string, 
+  tcoId: string
+): Promise<{url: string, path: string}[]> => {
+  try {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const results = [];
+
+    for (const {file} of files) {
+      const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+      const filePath = `tcos/${createdBy}/${tcoId}/images/${fileName}`;
+      
+      console.log(`Enviando imagem para Supabase Storage: ${filePath}`);
+      
+      // Upload the file to Supabase storage
+      const { data, error } = await supabase
+        .storage
+        .from('images')
+        .upload(filePath, file, {
+          contentType: file.type,
+          upsert: true
+        });
+      
+      if (error) {
+        console.error(`Erro ao fazer upload da imagem ${fileName}:`, error);
+        continue;
+      }
+      
+      // Get public URL for the file
+      const { data: urlData } = supabase
+        .storage
+        .from('images')
+        .getPublicUrl(filePath);
+      
+      results.push({
+        url: urlData.publicUrl,
+        path: filePath
+      });
+      
+      console.log(`Imagem ${fileName} enviada: ${urlData.publicUrl}`);
+    }
+    
+    return results;
+  } catch (error) {
+    console.error("Erro ao fazer upload das imagens no Supabase:", error);
+    throw error;
+  }
+};
+
 // --- Função Principal de Geração ---
 export const generatePDF = async (inputData: any) => {
     if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
@@ -91,6 +148,7 @@ export const generatePDF = async (inputData: any) => {
     if (data.selectedFiles && Array.isArray(data.selectedFiles) && data.selectedFiles.length > 0) {
         try {
             console.log(`Processando ${data.selectedFiles.length} imagens para incluir no PDF`);
+            
             // Converte os arquivos de imagem para Data URLs para incluir no PDF
             const imageDataUrls = await Promise.all(
                 data.selectedFiles.map((fileObj: {file: File, id: string}) => {
@@ -116,6 +174,7 @@ export const generatePDF = async (inputData: any) => {
             console.log(`Convertidas ${imageDataUrls.length} imagens para inclusão no PDF`);
         } catch (error) {
             console.error("Erro ao converter imagens para o PDF:", error);
+            data.objetosApreendidos = [];
         }
     } else {
         console.log("Nenhuma imagem selecionada para incluir no PDF");
@@ -223,6 +282,18 @@ async function savePDFAndUpdateRecord(pdfBlob: Blob, data: any) {
             data.id || data.tcoNumber
         );
         
+        // Processa e faz upload das imagens, se houver
+        let imageUrls: {url: string, path: string}[] = [];
+        if (data.selectedFiles && Array.isArray(data.selectedFiles) && data.selectedFiles.length > 0) {
+            console.log(`Fazendo upload de ${data.selectedFiles.length} imagens para o Supabase...`);
+            imageUrls = await uploadImagesToSupabase(
+                data.selectedFiles,
+                data.createdBy,
+                data.id || data.tcoNumber
+            );
+            console.log(`${imageUrls.length} imagens enviadas com sucesso`);
+        }
+        
         // Extrai as informações dos policiais para salvar no Supabase
         const policiais = data.componentesGuarnicao ? data.componentesGuarnicao.map((policial: any) => ({
             nome: policial.nome,
@@ -239,6 +310,8 @@ async function savePDFAndUpdateRecord(pdfBlob: Blob, data: any) {
                 policiais: policiais,
                 natureza: data.natureza,
                 tcoNumber: data.tcoNumber,
+                imageUrls: imageUrls.map(img => img.url), // Armazena as URLs das imagens
+                imagePaths: imageUrls.map(img => img.path), // Armazena os caminhos das imagens
                 updatedAt: new Date().toISOString()
             })
             .eq('id', data.id);
@@ -249,6 +322,7 @@ async function savePDFAndUpdateRecord(pdfBlob: Blob, data: any) {
         }
         
         console.log(`Documento TCO ${data.id} atualizado com URL do PDF e informações dos policiais`);
+        console.log(`Adicionadas ${imageUrls.length} imagens ao registro`);
         return downloadURL;
     } catch (error) {
         console.error("Erro ao salvar PDF:", error);
