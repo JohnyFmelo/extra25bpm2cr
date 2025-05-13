@@ -66,7 +66,6 @@ const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; d
 
 // --- Função Principal de Geração ---
 export const generatePDF = async (inputData: any) => {
-    console.log("Iniciando generatePDF com dados:", JSON.stringify(inputData, null, 2));
     if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
         console.error("Input data missing or invalid. Cannot generate PDF.");
         alert("Erro: Dados inválidos para gerar o PDF.");
@@ -147,27 +146,33 @@ export const generatePDF = async (inputData: any) => {
         }
     }
 
-    // --- Retorna o Blob do PDF ---
-    const pdfOutput = doc.output('blob');
-    console.log("PDF gerado, tamanho do blob:", pdfOutput.size);
-    if (!pdfOutput || pdfOutput.size === 0) {
-        throw new Error("Generated PDF is empty or invalid.");
+    // --- Salvamento Local e no Firebase ---
+    const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
+
+    try {
+        // Gera o PDF e salva localmente
+        const pdfOutput = doc.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfOutput);
+
+        // Cria um link para download e simula o clique
+        const downloadLink = document.createElement('a');
+        downloadLink.href = pdfUrl;
+        downloadLink.download = fileName;
+        downloadLink.click();
+
+        console.log(`PDF Gerado: ${fileName}`);
+
+        // Salva o PDF no Firebase Storage
+        await savePDFToFirebase(doc, data, tcoNumParaNome, dateStr);
+    } catch (error) {
+        console.error("Erro ao salvar o PDF:", error);
+        alert("Ocorreu um erro ao tentar salvar o PDF.");
     }
-    return pdfOutput;
 };
 
-// Função para salvar o PDF no Supabase Storage
-async function savePDFToSupabase(pdfBlob: Blob, tcoNumber: string) {
-    const sanitizedTcoNumber = tcoNumber.trim().replace(/[^a-zA-Z0-9-_]/g, '');
-    const filePath = `tcos/${sanitizedTcoNumber}/${sanitizedTcoNumber}.pdf`;
-    const { error } = await supabase.storage.from('tco-pdfs').upload(filePath, pdfBlob, { contentType: 'application/pdf', upsert: true });
-    if (error) throw new Error(`Erro ao salvar PDF no Supabase: ${error.message}`);
-    const { data: { publicUrl } } = supabase.storage.from('tco-pdfs').getPublicUrl(filePath);
-    return publicUrl;
-}
-
-// Comentando a função original do Firebase para evitar conflitos
-/*
+// Função para salvar o PDF no Firebase Storage
 async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, dateStr: string) {
     try {
         const pdfBlob = doc.output('blob');
@@ -196,4 +201,3 @@ async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, 
         throw error;
     }
 }
-*/
