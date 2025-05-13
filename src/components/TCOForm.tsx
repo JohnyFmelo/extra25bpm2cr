@@ -51,6 +51,7 @@ interface Pessoa {
 }
 // --- END OF Interfaces ---
 
+
 // --- Keep Helper Functions: initialPersonData, formatRepresentacao, formatCPF, formatPhone, validateCPF, formatarGuarnicao, formatarRelatoAutor, numberToText, fileToBase64 ---
 const initialPersonData: Pessoa = {
   nome: "", sexo: "", estadoCivil: "", profissao: "",
@@ -150,7 +151,7 @@ const fileToBase64 = (file: File): Promise<string> => {
 // --- END OF Helper Functions ---
 
 
-const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => void }) => {
+const TCOForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -270,39 +271,6 @@ const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => vo
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]); // Removed relatoPolicialTemplate
 
   useEffect(() => {
-    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
-    let tipificacaoAtual = "";
-    let penaAtual = "";
-    if (natureza === "Outros") {
-      tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
-      penaAtual = penaDescricao || "";
-    } else {
-      switch (natureza) {
-        case "Ameaça": tipificacaoAtual = "ART. 147 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
-        case "Vias de Fato": tipificacaoAtual = "ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS"; penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA"; break;
-        case "Lesão Corporal": tipificacaoAtual = "ART. 129 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO"; break;
-        case "Dano": tipificacaoAtual = "ART. 163 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
-        case "Injúria": tipificacaoAtual = "ART. 140 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
-        case "Difamação": tipificacaoAtual = "ART. 139 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO, E MULTA"; break;
-        case "Calúnia": tipificacaoAtual = "ART. 138 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 6 MESES A 2 ANOS, E MULTA"; break;
-        case "Perturbação do Sossego": tipificacaoAtual = "ART. 42 DA LEI DE CONTRAVENÇÕES PENAIS"; penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA"; break;
-        case "Porte de drogas para consumo": tipificacaoAtual = "ART. 28 DA LEI Nº 11.343/2006 (LEI DE DROGAS)"; penaAtual = "ADVERTÊNCIA SOBRE OS EFEITOS DAS DROGAS, PRESTAÇÃO DE SERVIÇOS À COMUNIDADE OU MEDIDA EDUCATIVA DE COMPARECIMENTO A PROGRAMA OU CURSO EDUCATIVO."; break;
-        default: tipificacaoAtual = "[TIPIFICAÇÃO NÃO MAPEADA]"; penaAtual = "";
-      }
-      setTipificacao(tipificacaoAtual);
-      setPenaDescricao(penaAtual);
-    }
-    const autoresValidos = autores.filter(a => a.nome.trim() !== "");
-    const autorTexto = autoresValidos.length === 0 ? "O(A) AUTOR(A)" :
-      autoresValidos.length === 1 ? (autoresValidos[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
-      autoresValidos.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
-    const testemunhasValidas = testemunhas.filter(t => t.nome.trim() !== "");
-    const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : (testemunhasValidas.length === 1 ? "TESTEMUNHA" : "");
-    const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
-    setConclusaoPolicial(conclusaoBase);
-  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]); // Removed tipificacao from dependency array to prevent potential loop if natureza="Outros"
-
-   useEffect(() => {
     if (isRelatoPolicialManuallyEdited) return;
     let updatedRelato = relatoPolicialTemplate;
     const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
@@ -359,7 +327,7 @@ const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => vo
       });
       toast({ title: "Adicionado", description: `Policial ${novoPolicial.nome} adicionado à guarnição.` });
     } else {
-      toast({ variant: "destructive", title: "Duplicado", description: "Este policial já está na guarnição." });
+      toast({ variant: "warning", title: "Duplicado", description: "Este policial já está na guarnição." });
     }
   }, [componentesGuarnicao, toast]);
 
@@ -500,16 +468,16 @@ const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => vo
   const handleAddVideoLink = () => {
     if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
       if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
-          toast({ variant: "destructive", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
+          toast({ variant: "warning", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
           return;
       }
       setVideoLinks(prev => [...prev, newVideoLink.trim()]);
       setNewVideoLink("");
       toast({ title: "Link Adicionado", description: "Link de vídeo adicionado com sucesso." });
     } else if (!newVideoLink.trim()) {
-      toast({ variant: "destructive", title: "Link Vazio", description: "Por favor, insira um link." });
+      toast({ variant: "warning", title: "Link Vazio", description: "Por favor, insira um link." });
     } else {
-      toast({ variant: "destructive", title: "Link Duplicado", description: "Este link já foi adicionado." });
+      toast({ variant: "warning", title: "Link Duplicado", description: "Este link já foi adicionado." });
     }
   };
 
@@ -529,7 +497,7 @@ const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => vo
         setImageFiles((prevFiles) => [...prevFiles, ...uniqueNewFiles]);
         toast({ title: `${uniqueNewFiles.length} Imagem(ns) Adicionada(s)`, description: "Imagens selecionadas para anexo." });
       } else if (newFiles.length > 0) {
-        toast({ variant: "destructive", title: "Imagens Duplicadas", description: "Algumas ou todas as imagens selecionadas já foram adicionadas." });
+        toast({ variant: "warning", title: "Imagens Duplicadas", description: "Algumas ou todas as imagens selecionadas já foram adicionadas." });
       }
       if (imageInputRef.current) {
         imageInputRef.current.value = "";
@@ -563,13 +531,20 @@ const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => vo
     setIsTimerRunning(false);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ variant: "destructive", title: "Erro", description: "Usuário não autenticado." });
+        return;
+      }
+      const userId = session.user.id;
+
       const displayNaturezaReal = natureza === "Outros" ? customNatureza.trim() : natureza;
       const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc.trim() : indicios) : "";
       const vitimasFiltradas = vitimas.filter(v => v.nome?.trim() || v.cpf?.trim());
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim() || t.cpf?.trim());
-      const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
-      const userId = userInfo.id || null;
-      const userRegistration = userInfo.registration || "";
+      // const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
+      // const userId = userInfo.id || null;
+      const userRegistration = session.user.user_metadata?.registration || "";
 
       const imageBase64Array: { name: string; data: string }[] = [];
       for (const file of imageFiles) {
@@ -578,7 +553,7 @@ const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => vo
           imageBase64Array.push({ name: file.name, data: base64Data });
         } catch (error) {
           console.error(`Erro ao converter imagem ${file.name} para base64:`, error);
-          toast({ variant: "destructive", title: "Erro ao Processar Imagem", description: `Não foi possível processar a imagem ${file.name}. Ela não será incluída.` });
+          toast({ variant: "warning", title: "Erro ao Processar Imagem", description: `Não foi possível processar a imagem ${file.name}. Ela não será incluída.` });
         }
       }
 
@@ -612,12 +587,14 @@ const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => vo
       if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
 
-      const pdfFileName = `${tcoNumber.trim()}.pdf`;
-      const pdfPath = `tcos/${tcoNumber.trim()}/${pdfFileName}`;
+      const sanitizedTcoNumber = tcoNumber.trim().replace(/[^a-zA-Z0-9-_]/g, '');
+      const pdfFileName = `${sanitizedTcoNumber}.pdf`;
+      const pdfPath = `tcos/${sanitizedTcoNumber}/${pdfFileName}`;
       const BUCKET_NAME = 'tco-pdfs';
       console.log(`Fazendo upload para: ${BUCKET_NAME}/${pdfPath}`);
 
-      const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
+      const { data: uploadData, error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
+      console.log("Resultado do upload:", { uploadData, uploadError });
       if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
       console.log("PDF enviado com sucesso para Supabase Storage:", pdfPath);
 
@@ -628,6 +605,7 @@ const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => vo
         policiais: componentesValidos.map(p => ({ nome: p.nome, rg: p.rg, posto: p.posto })), // Store only valid ones
         pdfPath: pdfPath,
         createdBy: userId,
+        created_timestamp: new Date().toISOString(),
       };
       console.log("Metadados para salvar no DB:", tcoMetadata);
 
@@ -689,10 +667,6 @@ const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => vo
               penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
               customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
               startTime={startTime} isTimerRunning={isTimerRunning}
-              juizadoEspecialData={juizadoEspecialData} 
-              setJuizadoEspecialData={setJuizadoEspecialData}
-              juizadoEspecialHora={juizadoEspecialHora} 
-              setJuizadoEspecialHora={setJuizadoEspecialHora}
             />
           </CardContent>
         </Card>
@@ -726,37 +700,23 @@ const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => vo
           </CardHeader>
           <CardContent>
             <GeneralInformationTab
-                natureza={natureza}
-                tipificacao={tipificacao}
-                setTipificacao={setTipificacao}
-                isCustomNatureza={natureza === "Outros"}
-                customNatureza={customNatureza}
-                dataFato={dataFato}
-                setDataFato={setDataFato}
-                horaFato={horaFato}
-                setHoraFato={setHoraFato}
-                dataInicioRegistro={dataInicioRegistro}
-                horaInicioRegistro={horaInicioRegistro}
-                dataTerminoRegistro={dataTerminoRegistro}
-                horaTerminoRegistro={horaTerminoRegistro}
-                localFato={localFato}
-                setLocalFato={setLocalFato}
-                endereco={endereco}
-                setEndereco={setEndereco}
+                natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao}
+                isCustomNatureza={natureza === "Outros"} customNatureza={customNatureza}
+                dataFato={dataFato} setDataFato={setDataFato}
+                horaFato={horaFato} setHoraFato={setHoraFato}
+                dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro}
+                dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} // Display only
+                localFato={localFato} setLocalFato={setLocalFato}
+                endereco={endereco} setEndereco={setEndereco}
                 municipio={municipio}
-                comunicante={comunicante}
-                setComunicante={setComunicante}
-                guarnicao={guarnicao}
-                setGuarnicao={setGuarnicao}
-                operacao={operacao}
-                setOperacao={setOperacao}
+                comunicante={comunicante} setComunicante={setComunicante}
+                guarnicao={guarnicao} setGuarnicao={setGuarnicao}
+                operacao={operacao} setOperacao={setOperacao}
                 condutorNome={condutorParaDisplay?.nome || ""}
                 condutorPosto={condutorParaDisplay?.posto || ""}
                 condutorRg={condutorParaDisplay?.rg || ""}
-                juizadoEspecialData={juizadoEspecialData}
-                setJuizadoEspecialData={setJuizadoEspecialData}
-                juizadoEspecialHora={juizadoEspecialHora}
-                setJuizadoEspecialHora={setJuizadoEspecialHora}
+                juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData}
+                juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora}
             />
           </CardContent>
         </Card>

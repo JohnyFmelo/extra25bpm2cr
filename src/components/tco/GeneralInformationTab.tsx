@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 interface GeneralInformationTabProps {
   natureza: string;
   tipificacao: string;
@@ -24,19 +24,14 @@ interface GeneralInformationTabProps {
   municipio: string;
   comunicante: string;
   setComunicante: (value: string) => void;
+  condutorNome: string;
+  condutorPosto: string;
+  condutorRg: string;
   guarnicao: string;
   setGuarnicao: (value: string) => void;
   operacao: string;
   setOperacao: (value: string) => void;
-  condutorNome: string;
-  condutorPosto: string;
-  condutorRg: string;
-  juizadoEspecialData: string;
-  setJuizadoEspecialData: (value: string) => void;
-  juizadoEspecialHora: string;
-  setJuizadoEspecialHora: (value: string) => void;
 }
-
 const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   natureza,
   tipificacao,
@@ -58,17 +53,13 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   municipio,
   comunicante,
   setComunicante,
-  guarnicao,
-  setGuarnicao,
-  operacao,
-  setOperacao,
   condutorNome,
   condutorPosto,
   condutorRg,
-  juizadoEspecialData,
-  setJuizadoEspecialData,
-  juizadoEspecialHora,
-  setJuizadoEspecialHora
+  guarnicao,
+  setGuarnicao,
+  operacao,
+  setOperacao
 }) => {
   const displayNatureza = isCustomNatureza ? customNatureza || "Outros" : natureza;
 
@@ -165,18 +156,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
           <Label htmlFor="operacao">OPERAÇÃO</Label>
           <Input id="operacao" placeholder="Ex: Operação Asfixia IV" value={operacao} onChange={e => setOperacao(e.target.value)} />
         </div>
-        
-        <div>
-          <Label htmlFor="juizadoEspecialData">DATA DO JUÍZO ESPECIAL</Label>
-          <Input id="juizadoEspecialData" type="date" value={juizadoEspecialData} onChange={e => setJuizadoEspecialData(e.target.value)} />
-        </div>
-        
-        <div>
-          <Label htmlFor="juizadoEspecialHora">HORA DO JUÍZO ESPECIAL</Label>
-          <Input id="juizadoEspecialHora" type="time" value={juizadoEspecialHora} onChange={e => setJuizadoEspecialHora(e.target.value)} />
-        </div>
       </CardContent>
     </Card>;
 };
-
 export default GeneralInformationTab;
