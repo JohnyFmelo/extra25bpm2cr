@@ -137,7 +137,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
     if (alreadyExists) {
       console.log("[GuarnicaoTab] RGPM já existe na lista (prop):", rgpmToSearch);
       toast({
-        variant: "warning",
+        variant: "destructive",
         title: "Duplicado",
         description: "Este policial já está na guarnição."
       });
@@ -379,7 +379,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
           <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-3 px-[5px] py-0 my-0">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="dlg-rgpm">RGPM (6 dígitos) * <Info className="inline h-3 w-3 text-muted-foreground ml-1" title="Usado para buscar e identificar o policial. Não pode ser alterado após cadastro inicial (a menos que haja erro)." /></Label>
+                <Label htmlFor="dlg-rgpm">RGPM (6 dígitos) * <Info className="inline h-3 w-3 text-muted-foreground ml-1" aria-label="Usado para buscar e identificar o policial. Não pode ser alterado após cadastro inicial (a menos que haja erro)." /></Label>
                 <Input id="dlg-rgpm" value={newOfficerFormData.rgpm} onChange={e => handleRegisterInputChange("rgpm", e.target.value)} placeholder="000000" required inputMode="numeric" maxLength={6} />
               </div>
               <div>
