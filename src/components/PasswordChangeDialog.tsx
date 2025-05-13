@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +47,6 @@ const PasswordChangeDialog = ({ open, onOpenChange, userId, currentPassword }: P
       toast({
         title: "Sucesso",
         description: "Senha alterada com sucesso",
-        className: "bg-blue-500 text-white",
       });
       onOpenChange(false);
       setOldPassword("");

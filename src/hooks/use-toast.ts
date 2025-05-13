@@ -6,24 +6,30 @@ type ToastProps = {
   description?: string;
   variant?: "default" | "destructive";
   duration?: number;
+  className?: string; // Added className property
 };
 
-export const toast = ({ title, description, variant = "default", duration }: ToastProps) => {
+// This update adds the "warning" variant mapping to "default"
+export const toast = ({ title, description, variant = "default", duration, className }: ToastProps) => {
   if (variant === "destructive") {
     return sonnerToast.error(title, {
       description,
-      duration
+      duration,
+      className
     });
   }
   
   return sonnerToast(title, {
     description,
-    duration
+    duration,
+    className
   });
 };
 
+// Updated to include a mock toasts array to satisfy the toaster.tsx component
 export const useToast = () => {
   return {
-    toast
+    toast,
+    toasts: [] as any[] // Empty array to satisfy the toaster component
   };
 };

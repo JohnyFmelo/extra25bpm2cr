@@ -360,7 +360,7 @@ const TCOForm = () => {
       });
       toast({ title: "Adicionado", description: `Policial ${novoPolicial.nome} adicionado à guarnição.` });
     } else {
-      toast({ variant: "warning", title: "Duplicado", description: "Este policial já está na guarnição." });
+      toast({ variant: "default", title: "Duplicado", description: "Este policial já está na guarnição." });
     }
   }, [componentesGuarnicao, toast]);
 
@@ -501,16 +501,16 @@ const TCOForm = () => {
   const handleAddVideoLink = () => {
     if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
       if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
-          toast({ variant: "warning", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
+          toast({ variant: "default", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
           return;
       }
       setVideoLinks(prev => [...prev, newVideoLink.trim()]);
       setNewVideoLink("");
       toast({ title: "Link Adicionado", description: "Link de vídeo adicionado com sucesso." });
     } else if (!newVideoLink.trim()) {
-      toast({ variant: "warning", title: "Link Vazio", description: "Por favor, insira um link." });
+      toast({ variant: "default", title: "Link Vazio", description: "Por favor, insira um link." });
     } else {
-      toast({ variant: "warning", title: "Link Duplicado", description: "Este link já foi adicionado." });
+      toast({ variant: "default", title: "Link Duplicado", description: "Este link já foi adicionado." });
     }
   };
 
@@ -530,7 +530,7 @@ const TCOForm = () => {
         setImageFiles((prevFiles) => [...prevFiles, ...uniqueNewFiles]);
         toast({ title: `${uniqueNewFiles.length} Imagem(ns) Adicionada(s)`, description: "Imagens selecionadas para anexo." });
       } else if (newFiles.length > 0) {
-        toast({ variant: "warning", title: "Imagens Duplicadas", description: "Algumas ou todas as imagens selecionadas já foram adicionadas." });
+        toast({ variant: "default", title: "Imagens Duplicadas", description: "Algumas ou todas as imagens selecionadas já foram adicionadas." });
       }
       if (imageInputRef.current) {
         imageInputRef.current.value = "";
@@ -737,6 +737,8 @@ const TCOForm = () => {
               penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
               customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
               startTime={startTime} isTimerRunning={isTimerRunning}
+              juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData}
+              juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora}
             />
           </CardContent>
         </Card>
@@ -775,7 +777,7 @@ const TCOForm = () => {
                 dataFato={dataFato} setDataFato={setDataFato}
                 horaFato={horaFato} setHoraFato={setHoraFato}
                 dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro}
-                dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} // Display only
+                dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro}
                 localFato={localFato} setLocalFato={setLocalFato}
                 endereco={endereco} setEndereco={setEndereco}
                 municipio={municipio}

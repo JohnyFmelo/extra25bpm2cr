@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 
 // --- Funções Auxiliares ---
 const somenteNumeros = (value: string | null | undefined): string => {
@@ -137,7 +137,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
     if (alreadyExists) {
       console.log("[GuarnicaoTab] RGPM já existe na lista (prop):", rgpmToSearch);
       toast({
-        variant: "warning",
+        variant: "default",
         title: "Duplicado",
         description: "Este policial já está na guarnição."
       });
@@ -158,7 +158,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       console.log("[GuarnicaoTab] Telefone retornado do Supabase:", data?.telefone);
       if (error && error.code === 'PGRST116') {
         toast({
-          variant: "warning",
+          variant: "default",
           title: "Não Encontrado",
           description: `Nenhum policial encontrado com o RGPM ${rgpmToSearch}. Considere cadastrá-lo.`
         });
@@ -374,12 +374,11 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
             <DialogTitle>Cadastrar ou Atualizar Policial</DialogTitle>
-            
           </DialogHeader>
           <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-3 px-[5px] py-0 my-0">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="dlg-rgpm">RGPM (6 dígitos) * <Info className="inline h-3 w-3 text-muted-foreground ml-1" title="Usado para buscar e identificar o policial. Não pode ser alterado após cadastro inicial (a menos que haja erro)." /></Label>
+                <Label htmlFor="dlg-rgpm">RGPM (6 dígitos) * <Info className="inline h-3 w-3 text-muted-foreground ml-1" aria-label="Usado para buscar e identificar o policial" /></Label>
                 <Input id="dlg-rgpm" value={newOfficerFormData.rgpm} onChange={e => handleRegisterInputChange("rgpm", e.target.value)} placeholder="000000" required inputMode="numeric" maxLength={6} />
               </div>
               <div>
