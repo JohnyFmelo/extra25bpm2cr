@@ -271,6 +271,39 @@ const TCOForm = () => {
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]); // Removed relatoPolicialTemplate
 
   useEffect(() => {
+    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
+    let tipificacaoAtual = "";
+    let penaAtual = "";
+    if (natureza === "Outros") {
+      tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
+      penaAtual = penaDescricao || "";
+    } else {
+      switch (natureza) {
+        case "Ameaça": tipificacaoAtual = "ART. 147 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
+        case "Vias de Fato": tipificacaoAtual = "ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS"; penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA"; break;
+        case "Lesão Corporal": tipificacaoAtual = "ART. 129 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO"; break;
+        case "Dano": tipificacaoAtual = "ART. 163 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
+        case "Injúria": tipificacaoAtual = "ART. 140 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA"; break;
+        case "Difamação": tipificacaoAtual = "ART. 139 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO, E MULTA"; break;
+        case "Calúnia": tipificacaoAtual = "ART. 138 DO CÓDIGO PENAL"; penaAtual = "DETENÇÃO DE 6 MESES A 2 ANOS, E MULTA"; break;
+        case "Perturbação do Sossego": tipificacaoAtual = "ART. 42 DA LEI DE CONTRAVENÇÕES PENAIS"; penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA"; break;
+        case "Porte de drogas para consumo": tipificacaoAtual = "ART. 28 DA LEI Nº 11.343/2006 (LEI DE DROGAS)"; penaAtual = "ADVERTÊNCIA SOBRE OS EFEITOS DAS DROGAS, PRESTAÇÃO DE SERVIÇOS À COMUNIDADE OU MEDIDA EDUCATIVA DE COMPARECIMENTO A PROGRAMA OU CURSO EDUCATIVO."; break;
+        default: tipificacaoAtual = "[TIPIFICAÇÃO NÃO MAPEADA]"; penaAtual = "";
+      }
+      setTipificacao(tipificacaoAtual);
+      setPenaDescricao(penaAtual);
+    }
+    const autoresValidos = autores.filter(a => a.nome.trim() !== "");
+    const autorTexto = autoresValidos.length === 0 ? "O(A) AUTOR(A)" :
+      autoresValidos.length === 1 ? (autoresValidos[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
+      autoresValidos.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
+    const testemunhasValidas = testemunhas.filter(t => t.nome.trim() !== "");
+    const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : (testemunhasValidas.length === 1 ? "TESTEMUNHA" : "");
+    const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
+    setConclusaoPolicial(conclusaoBase);
+  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]); // Removed tipificacao from dependency array to prevent potential loop if natureza="Outros"
+
+   useEffect(() => {
     if (isRelatoPolicialManuallyEdited) return;
     let updatedRelato = relatoPolicialTemplate;
     const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
@@ -531,20 +564,13 @@ const TCOForm = () => {
     setIsTimerRunning(false);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({ variant: "destructive", title: "Erro", description: "Usuário não autenticado." });
-        return;
-      }
-      const userId = session.user.id;
-
       const displayNaturezaReal = natureza === "Outros" ? customNatureza.trim() : natureza;
       const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc.trim() : indicios) : "";
       const vitimasFiltradas = vitimas.filter(v => v.nome?.trim() || v.cpf?.trim());
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim() || t.cpf?.trim());
-      // const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
-      // const userId = userInfo.id || null;
-      const userRegistration = session.user.user_metadata?.registration || "";
+      const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
+      const userId = userInfo.id || null;
+      const userRegistration = userInfo.registration || "";
 
       const imageBase64Array: { name: string; data: string }[] = [];
       for (const file of imageFiles) {
@@ -587,14 +613,12 @@ const TCOForm = () => {
       if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
 
-      const sanitizedTcoNumber = tcoNumber.trim().replace(/[^a-zA-Z0-9-_]/g, '');
-      const pdfFileName = `${sanitizedTcoNumber}.pdf`;
-      const pdfPath = `tcos/${sanitizedTcoNumber}/${pdfFileName}`;
+      const pdfFileName = `${tcoNumber.trim()}.pdf`;
+      const pdfPath = `tcos/${tcoNumber.trim()}/${pdfFileName}`;
       const BUCKET_NAME = 'tco-pdfs';
       console.log(`Fazendo upload para: ${BUCKET_NAME}/${pdfPath}`);
 
-      const { data: uploadData, error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
-      console.log("Resultado do upload:", { uploadData, uploadError });
+      const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
       if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
       console.log("PDF enviado com sucesso para Supabase Storage:", pdfPath);
 
@@ -605,7 +629,6 @@ const TCOForm = () => {
         policiais: componentesValidos.map(p => ({ nome: p.nome, rg: p.rg, posto: p.posto })), // Store only valid ones
         pdfPath: pdfPath,
         createdBy: userId,
-        created_timestamp: new Date().toISOString(),
       };
       console.log("Metadados para salvar no DB:", tcoMetadata);
 
