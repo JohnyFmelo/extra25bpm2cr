@@ -92,23 +92,14 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             let yPosition; // Posição Y inicial para o conteúdo
 
             // --- PÁGINA 1: AUTUAÇÃO ---
-            // generateAutuacaoPage é responsável por sua própria página e rodapé, se houver.
             yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
 
-            // --- CONTEÚDO PRINCIPAL DO TCO (A PARTIR DA PÁGINA 2) ---
-            // Inicia uma nova página para o histórico e demais seções.
-            // addNewPage deve lidar com a configuração do rodapé (via addStandardFooterContent), exceto numeração.
+            // --- CONTEÚDO PRINCIPAL DO TCO ---
             yPosition = addNewPage(doc, data); // yPosition é resetado para MARGIN_TOP da nova página
 
-            // generateHistoricoContent pode ser síncrono ou assíncrono.
-            // Se for síncrono, o .then não é estritamente necessário. Mantendo a estrutura.
             Promise.resolve(generateHistoricoContent(doc, yPosition, data))
                 .then(() => {
                     // --- ADIÇÃO DOS TERMOS ---
-                    // Cada função de termo (addTermoCompromisso, etc.) deve:
-                    // 1. Chamar addNewPage(doc, data) para garantir uma nova página.
-                    // 2. Chamar addStandardFooterContent(doc, data) ao final de seu conteúdo, se aplicável.
-
                     if (data.autores && data.autores.length > 0) {
                         addTermoCompromisso(doc, data);
                     } else {
@@ -126,63 +117,46 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         addTermoApreensao(doc, data);
                     }
 
-                    // **** INÍCIO DA LÓGICA SOLICITADA ****
-                    // REQUISIÇÃO DE EXAME EM DROGAS (CONDICIONAL, APÓS TERMO DE APREENSÃO)
+                    // REQUISIÇÃO DE EXAME EM DROGAS
                     const naturezaDaOcorrencia = (data.natureza || "").toLowerCase();
                     const isDrugRelated = !!(
                         data.drogaTipo ||
                         data.drogaNomeComum ||
                         (typeof data.natureza === 'string' && naturezaDaOcorrencia.includes("droga")) ||
                         (typeof data.natureza === 'string' && naturezaDaOcorrencia.includes("entorpecente"))
-                        // Adicione outras verificações específicas se necessário
                     );
-                    
+
                     if (isDrugRelated) {
                         console.log("Natureza relacionada a drogas detectada, adicionando Requisição de Exame em Drogas.");
-                        addRequisicaoExameDrogas(doc, data); // Esta função já chama addNewPage e addStandardFooterContent
-                    } else {
-                        // console.log("Natureza não relacionada a drogas ou informações de droga ausentes, pulando Requisição de Exame em Drogas.");
+                        addRequisicaoExameDrogas(doc, data);
                     }
-                    // **** FIM DA LÓGICA SOLICITADA ****
 
                     // TERMO DE CONSTATAÇÃO DE DROGA
-                    // Adicionado somente se houver tipo de droga ou nome comum informado.
                     if (data.drogaTipo || data.drogaNomeComum) {
-                        addTermoConstatacaoDroga(doc, data); // Esta função também deve chamar addNewPage e addStandardFooterContent
+                        addTermoConstatacaoDroga(doc, data);
                     }
 
                     // REQUISIÇÃO DE EXAME DE LESÃO CORPORAL
                     const pessoasComLaudo = [
                         ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
                         ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-                    ].filter(p => p.nome && p.nome.trim());
+                    ];
 
                     if (pessoasComLaudo.length > 0) {
                         pessoasComLaudo.forEach(pessoa => {
-                            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
-                            // Passa uma cópia de data com informações específicas da pessoa periciada
+                            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome}`);
                             addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
                         });
-                    } else {
-                        // console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
                     }
-                    
-                    // CADEIA DE CUSTÓDIA (se necessário)
-                    // A importação existe mas não é chamada. Se precisar, adicione a lógica condicional:
-                    // if (condicao_para_cadeia_custodia) { addTermoCadeiaCustodia(doc, data); }
 
-                    addTermoEncerramentoRemessa(doc, data); // Esta função também deve gerenciar sua página e rodapé
+                    addTermoEncerramentoRemessa(doc, data);
 
-                    // --- Finalização: Adiciona APENAS Números de Página ---
-                    // O conteúdo do rodapé (brasão, etc.) deve ser adicionado por cada função de seção
-                    // através de addStandardFooterContent chamado após addNewPage.
+                    // Finalização: Adiciona números de página
                     const pageCount = doc.internal.getNumberOfPages();
                     for (let i = 1; i <= pageCount; i++) {
                         doc.setPage(i);
                         doc.setFont("helvetica", "normal");
                         doc.setFontSize(8);
-                        // Ajuste o posicionamento Y do número da página conforme necessário.
-                        // (marginBottomFromUtils / 2) ou um valor fixo podem funcionar.
                         doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - (MARGIN_RIGHT || 15), PAGE_HEIGHT - (marginBottomFromUtils / 2 || 7.5), { align: "right" });
                     }
 
@@ -202,15 +176,15 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     clearTimeout(timeout);
                     resolve(pdfBlob);
                 })
-                .catch(histError => {
+                .catch(error => {
                     clearTimeout(timeout);
-                    console.error("Erro detalhado ao gerar seções do PDF (após histórico):", histError);
-                    reject(new Error(`Erro ao gerar seções do PDF: ${histError.message || histError}`));
+                    console.error("Erro ao gerar PDF:", error);
+                    reject(new Error("Erro ao gerar PDF."));
                 });
         } catch (error) {
             clearTimeout(timeout);
-            console.error("Erro detalhado na configuração inicial da geração do PDF:", error);
-            reject(new Error(`Erro na geração do PDF: ${error.message || error}`));
+            console.error("Erro inicial ao configurar PDF:", error);
+            reject(new Error("Erro ao configurar PDF."));
         }
     });
 };
