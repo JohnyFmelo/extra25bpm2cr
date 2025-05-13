@@ -662,7 +662,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         pdfPath: filePath,
         pdfUrl: downloadURL,
         createdBy: userId,
-        createdAt: new Date().toISOString()
+        created_at: new Date().toISOString()
       };
       
       console.log("Metadados para salvar no DB:", tcoMetadata);
