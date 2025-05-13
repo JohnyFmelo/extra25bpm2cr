@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabaseClient";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
@@ -153,17 +154,64 @@ export const generatePDF = async (inputData: any) => {
     if (!pdfOutput || pdfOutput.size === 0) {
         throw new Error("Generated PDF is empty or invalid.");
     }
+    
+    // Se temos um ID de TCO, salvar o PDF no Supabase
+    if (data.id) {
+        try {
+            const pdfUrl = await savePDFToSupabase(pdfOutput, data.tcoNumber || data.id);
+            console.log("PDF salvo no Supabase, URL:", pdfUrl);
+        } catch (error) {
+            console.error("Erro ao salvar PDF no Supabase:", error);
+            throw error;
+        }
+    }
+    
     return pdfOutput;
 };
 
 // Função para salvar o PDF no Supabase Storage
 async function savePDFToSupabase(pdfBlob: Blob, tcoNumber: string) {
-    const sanitizedTcoNumber = tcoNumber.trim().replace(/[^a-zA-Z0-9-_]/g, '');
-    const filePath = `tcos/${sanitizedTcoNumber}/${sanitizedTcoNumber}.pdf`;
-    const { error } = await supabase.storage.from('tco-pdfs').upload(filePath, pdfBlob, { contentType: 'application/pdf', upsert: true });
-    if (error) throw new Error(`Erro ao salvar PDF no Supabase: ${error.message}`);
-    const { data: { publicUrl } } = supabase.storage.from('tco-pdfs').getPublicUrl(filePath);
-    return publicUrl;
+    try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userId = user?.id || 'unknown';
+        
+        const sanitizedTcoNumber = String(tcoNumber).trim().replace(/[^a-zA-Z0-9-_]/g, '');
+        const filePath = `tcos/${sanitizedTcoNumber}/${sanitizedTcoNumber}.pdf`;
+        
+        console.log(`Enviando PDF para Supabase Storage: ${filePath}, userId: ${userId}`);
+        
+        const { error: uploadError } = await supabase.storage
+            .from('tco_pdfs')
+            .upload(filePath, pdfBlob, { 
+                contentType: 'application/pdf',
+                upsert: true
+            });
+            
+        if (uploadError) throw new Error(`Erro no upload: ${uploadError.message}`);
+        
+        const { data: { publicUrl } } = supabase.storage
+            .from('tco_pdfs')
+            .getPublicUrl(filePath);
+            
+        // Atualizar a tabela com as informações do PDF
+        const { error: updateError } = await supabase
+            .from('tco_pdfs')
+            .upsert({
+                tco_id: tcoNumber,
+                pdf_url: publicUrl,
+                pdf_path: filePath,
+                createdBy: userId,
+                updated_at: new Date().toISOString()
+            });
+            
+        if (updateError) throw new Error(`Erro ao atualizar informações do TCO: ${updateError.message}`);
+        
+        console.log("PDF salvo com sucesso no Supabase");
+        return publicUrl;
+    } catch (error) {
+        console.error("Erro ao salvar PDF no Supabase:", error);
+        throw error;
+    }
 }
 
 // Comentando a função original do Firebase para evitar conflitos
