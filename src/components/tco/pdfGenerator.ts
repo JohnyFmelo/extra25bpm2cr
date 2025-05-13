@@ -1,7 +1,5 @@
+
 import jsPDF from "jspdf";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { updateDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
@@ -65,139 +63,121 @@ const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; d
 };
 
 // --- Função Principal de Geração ---
-export const generatePDF = async (inputData: any) => {
-    if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
-        console.error("Input data missing or invalid. Cannot generate PDF.");
-        alert("Erro: Dados inválidos para gerar o PDF.");
-        return;
-    }
+export const generatePDF = async (inputData: any): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+        // Set timeout to prevent infinite processing
+        const timeout = setTimeout(() => {
+            reject(new Error("Tempo limite excedido ao gerar PDF. Por favor, tente novamente."));
+        }, 60000); // 60 segundos de timeout
+        
+        try {
+            if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
+                clearTimeout(timeout);
+                reject(new Error("Dados inválidos para gerar o PDF."));
+                return;
+            }
 
-    // Cria a instância do jsPDF
-    const doc = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-    });
-
-    // Clona os dados para evitar mutações inesperadas
-    const data = { ...inputData };
-
-    // Pega as constantes da página
-    const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
-    let yPosition;
-
-    // --- PÁGINA 1: AUTUAÇÃO ---
-    yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
-
-    // --- RESTANTE DO TCO (PÁGINAS 2+) ---
-    yPosition = addNewPage(doc, data);
-
-    // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
-    yPosition = await generateHistoricoContent(doc, yPosition, data);
-
-    // --- ADIÇÃO DOS TERMOS ---
-    if (data.autores && data.autores.length > 0) {
-        addTermoCompromisso(doc, data);
-    } else {
-        console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
-    }
-
-    if (data.natureza !== "Porte de drogas para consumo") {
-        addTermoManifestacao(doc, data);
-    } else {
-        console.log("Caso de droga detectado, pulando Termo de Manifestação da Vítima.");
-    }
-
-    if (data.apreensaoDescrição || data.apreensoes) {
-        addTermoApreensao(doc, data);
-    }
-
-    if (data.drogaTipo || data.drogaNomeComum) {
-        addTermoConstatacaoDroga(doc, data);
-    }
-
-    // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
-    const pessoasComLaudo = [
-        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
-        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-    ].filter(p => p.nome && p.nome.trim());
-
-    if (pessoasComLaudo.length > 0) {
-        pessoasComLaudo.forEach(pessoa => {
-            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
-            addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
-        });
-    } else {
-        console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
-    }
-
-    addTermoEncerramentoRemessa(doc, data);
-
-    // --- Finalização: Adiciona Números de Página e Salva ---
-    const pageCount = doc.internal.pages.length - 1;
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-        doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
-
-        if (i > 1) {
-            addStandardFooterContent(doc);
-        }
-    }
-
-    // --- Salvamento Local e no Firebase ---
-    const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
-
-    try {
-        // Gera o PDF e salva localmente
-        const pdfOutput = doc.output('blob');
-        const pdfUrl = URL.createObjectURL(pdfOutput);
-
-        // Cria um link para download e simula o clique
-        const downloadLink = document.createElement('a');
-        downloadLink.href = pdfUrl;
-        downloadLink.download = fileName;
-        downloadLink.click();
-
-        console.log(`PDF Gerado: ${fileName}`);
-
-        // Salva o PDF no Firebase Storage
-        await savePDFToFirebase(doc, data, tcoNumParaNome, dateStr);
-    } catch (error) {
-        console.error("Erro ao salvar o PDF:", error);
-        alert("Ocorreu um erro ao tentar salvar o PDF.");
-    }
-};
-
-// Função para salvar o PDF no Firebase Storage
-async function savePDFToFirebase(doc: jsPDF, data: any, tcoNumParaNome: string, dateStr: string) {
-    try {
-        const pdfBlob = doc.output('blob');
-        const storage = getStorage();
-        const filePath = `tcos/${data.createdBy}/${data.id || data.tcoNumber}_${dateStr}.pdf`;
-        const fileRef = ref(storage, filePath);
-
-        console.log(`Enviando arquivo para Firebase Storage: ${filePath}`);
-        const uploadResult = await uploadBytes(fileRef, pdfBlob);
-        console.log('Upload concluído:', uploadResult);
-
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-        console.log('URL do arquivo:', downloadURL);
-
-        if (data.id) {
-            const tcoRef = doc(db, "tcos", data.id);
-            await updateDoc(tcoRef, {
-                pdfUrl: downloadURL,
-                pdfPath: filePath,
-                updatedAt: new Date()
+            // Cria a instância do jsPDF
+            const doc = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4",
             });
-            console.log(`Documento TCO ${data.id} atualizado com URL do PDF.`);
+
+            // Clona os dados para evitar mutações inesperadas
+            const data = { ...inputData };
+
+            // Pega as constantes da página
+            const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
+            let yPosition;
+
+            // --- PÁGINA 1: AUTUAÇÃO ---
+            yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
+
+            // --- RESTANTE DO TCO (PÁGINAS 2+) ---
+            yPosition = addNewPage(doc, data);
+
+            // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
+            generateHistoricoContent(doc, yPosition, data)
+                .then(() => {
+                    // --- ADIÇÃO DOS TERMOS ---
+                    if (data.autores && data.autores.length > 0) {
+                        addTermoCompromisso(doc, data);
+                    } else {
+                        console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
+                    }
+
+                    if (data.natureza !== "Porte de drogas para consumo") {
+                        addTermoManifestacao(doc, data);
+                    } else {
+                        console.log("Caso de droga detectado, pulando Termo de Manifestação da Vítima.");
+                    }
+
+                    if (data.apreensaoDescrição || data.apreensoes) {
+                        addTermoApreensao(doc, data);
+                    }
+
+                    if (data.drogaTipo || data.drogaNomeComum) {
+                        addTermoConstatacaoDroga(doc, data);
+                    }
+
+                    // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
+                    const pessoasComLaudo = [
+                        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
+                        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
+                    ].filter(p => p.nome && p.nome.trim());
+
+                    if (pessoasComLaudo.length > 0) {
+                        pessoasComLaudo.forEach(pessoa => {
+                            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
+                            addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
+                        });
+                    } else {
+                        console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
+                    }
+
+                    addTermoEncerramentoRemessa(doc, data);
+
+                    // --- Finalização: Adiciona Números de Página e Salva ---
+                    const pageCount = doc.internal.pages.length - 1;
+                    for (let i = 1; i <= pageCount; i++) {
+                        doc.setPage(i);
+                        doc.setFont("helvetica", "normal");
+                        doc.setFontSize(8);
+                        doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
+
+                        if (i > 1) {
+                            addStandardFooterContent(doc);
+                        }
+                    }
+
+                    // Opcionalmente, gera um download local
+                    if (data.downloadLocal) {
+                        try {
+                            const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
+                            const dateStr = new Date().toISOString().slice(0, 10);
+                            const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
+                            
+                            doc.save(fileName);
+                            console.log(`PDF salvo localmente: ${fileName}`);
+                        } catch (downloadError) {
+                            console.error("Erro ao salvar o PDF localmente:", downloadError);
+                            // Não falha a Promise principal se o download falhar
+                        }
+                    }
+
+                    // Generate blob and resolve the promise
+                    const pdfBlob = doc.output('blob');
+                    clearTimeout(timeout);
+                    resolve(pdfBlob);
+                })
+                .catch(histError => {
+                    clearTimeout(timeout);
+                    reject(new Error(`Erro ao gerar histórico do PDF: ${histError.message}`));
+                });
+        } catch (error) {
+            clearTimeout(timeout);
+            reject(new Error(`Erro na geração do PDF: ${error.message}`));
         }
-    } catch (error) {
-        console.error("Erro ao salvar PDF no Firebase:", error);
-        throw error;
-    }
-}
+    });
+};

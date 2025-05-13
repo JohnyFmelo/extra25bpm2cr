@@ -579,7 +579,7 @@ const TCOForm = () => {
           imageBase64Array.push({ name: file.name, data: base64Data });
         } catch (error) {
           console.error(`Erro ao converter imagem ${file.name} para base64:`, error);
-          toast({ variant: "warning", title: "Erro ao Processar Imagem", description: `Não foi possível processar a imagem ${file.name}. Ela não será incluída.` });
+          toast({ variant: "destructive", title: "Erro ao Processar Imagem", description: `Não foi possível processar a imagem ${file.name}. Ela não será incluída.` });
         }
       }
 
@@ -605,46 +605,93 @@ const TCOForm = () => {
         juizadoEspecialData: juizadoEspecialData.trim() || undefined, juizadoEspecialHora: juizadoEspecialHora.trim() || undefined,
         relatoVitima: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' ? relatoVitima.trim() : undefined, // Only include if there's a real victim narrative
         representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined, // Only include if real victim and representation chosen
+        downloadLocal: true // Enable local download as a backup
       };
       Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
 
       console.log("Dados para gerar PDF:", tcoDataParaPDF);
-      const pdfBlob: Blob = await generatePDF(tcoDataParaPDF);
+      
+      // Configure timeout for PDF generation
+      const pdfGenerationPromise = generatePDF(tcoDataParaPDF);
+      const timeoutPromise = new Promise<Blob>((_, reject) => {
+          setTimeout(() => reject(new Error("Tempo limite excedido ao gerar o PDF.")), 90000); // 90 segundos
+      });
+      
+      // Use Promise.race to implement timeout
+      const pdfBlob = await Promise.race([pdfGenerationPromise, timeoutPromise]);
       if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
 
-      const pdfFileName = `${tcoNumber.trim()}.pdf`;
-      const pdfPath = `tcos/${tcoNumber.trim()}/${pdfFileName}`;
+      // Prepare for Supabase upload
+      const tcoNumParaNome = tcoNumber.trim();
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
+      const filePath = `tcos/${userId || 'anonimo'}/${tcoNumParaNome}_${dateStr}.pdf`;
       const BUCKET_NAME = 'tco-pdfs';
-      console.log(`Fazendo upload para: ${BUCKET_NAME}/${pdfPath}`);
-
-      const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
+      
+      console.log(`Enviando arquivo para Supabase Storage: ${filePath}`);
+      
+      // Upload to Supabase Storage with timeout
+      const uploadPromise = supabase.storage.from(BUCKET_NAME).upload(filePath, pdfBlob, { 
+          contentType: 'application/pdf',
+          upsert: true 
+      });
+      
+      const uploadTimeoutPromise = new Promise<any>((_, reject) => {
+          setTimeout(() => reject(new Error("Tempo limite excedido ao enviar o arquivo.")), 60000); // 60 segundos
+      });
+      
+      const { data: uploadData, error: uploadError } = await Promise.race([uploadPromise, uploadTimeoutPromise]);
       if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
-      console.log("PDF enviado com sucesso para Supabase Storage:", pdfPath);
+      
+      console.log("Upload concluído:", uploadData);
 
+      // Get the public URL
+      const { data: publicUrlData } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+      const downloadURL = publicUrlData?.publicUrl || '';
+      console.log('URL pública do arquivo:', downloadURL);
+
+      // Save metadata to Supabase database
       const TABLE_NAME = 'tco_pdfs';
       const tcoMetadata = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
         policiais: componentesValidos.map(p => ({ nome: p.nome, rg: p.rg, posto: p.posto })), // Store only valid ones
-        pdfPath: pdfPath,
+        pdfPath: filePath,
+        pdfUrl: downloadURL,
         createdBy: userId,
+        createdAt: new Date().toISOString()
       };
+      
       console.log("Metadados para salvar no DB:", tcoMetadata);
 
-      const { data: insertData, error: insertError } = await supabase.from(TABLE_NAME).insert([tcoMetadata]).select('id').single();
+      // Save metadata with timeout
+      const insertPromise = supabase.from(TABLE_NAME).insert([tcoMetadata]).select('id').single();
+      const dbTimeoutPromise = new Promise<any>((_, reject) => {
+          setTimeout(() => reject(new Error("Tempo limite excedido ao salvar metadados no banco de dados.")), 30000); // 30 segundos
+      });
+      
+      const { data: insertData, error: insertError } = await Promise.race([insertPromise, dbTimeoutPromise]);
+      
       if (insertError) {
         console.error("Erro ao salvar metadados no Supabase DB:", insertError);
-        await supabase.storage.from(BUCKET_NAME).remove([pdfPath]).catch(deleteError => console.error("Falha ao remover PDF após erro de inserção no DB:", deleteError));
+        await supabase.storage.from(BUCKET_NAME).remove([filePath]).catch(deleteError => 
+            console.error("Falha ao remover PDF após erro de inserção no DB:", deleteError));
         throw new Error(`Erro ao salvar informações do TCO: ${insertError.message}`);
       }
+      
       console.log("Metadados salvos com sucesso no DB, ID:", insertData?.id);
       toast({ title: "TCO Registrado com Sucesso!", description: "PDF enviado e informações salvas no sistema." });
       navigate("/?tab=tco");
 
     } catch (error: any) {
       console.error("Erro geral no processo de submissão do TCO:", error);
-      toast({ variant: "destructive", title: "Erro ao Finalizar TCO", description: `Ocorreu um erro: ${error.message || 'Erro desconhecido.'}`, duration: 7000 });
+      toast({ 
+        variant: "destructive", 
+        title: "Erro ao Finalizar TCO", 
+        description: `Ocorreu um erro: ${error.message || 'Erro desconhecido.'}`, 
+        duration: 7000 
+      });
     } finally {
       setIsSubmitting(false);
     }
