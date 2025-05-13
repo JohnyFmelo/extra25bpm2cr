@@ -1,6 +1,3 @@
-// --- START OF FILE TCOForm (32)_redesigned.tsx ---
-
-// --- START OF TCOForm.tsx ---
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +48,11 @@ interface Pessoa {
 }
 // --- END OF Interfaces ---
 
+// Define TCOForm props interface
+interface TCOFormProps {
+  selectedTco?: any; // You might want to define a more specific type here
+  onClear?: () => void;
+}
 
 // --- Keep Helper Functions: initialPersonData, formatRepresentacao, formatCPF, formatPhone, validateCPF, formatarGuarnicao, formatarRelatoAutor, numberToText, fileToBase64 ---
 const initialPersonData: Pessoa = {
@@ -151,7 +153,7 @@ const fileToBase64 = (file: File): Promise<string> => {
 // --- END OF Helper Functions ---
 
 
-const TCOForm = () => {
+const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -787,8 +789,6 @@ const TCOForm = () => {
                 condutorNome={condutorParaDisplay?.nome || ""}
                 condutorPosto={condutorParaDisplay?.posto || ""}
                 condutorRg={condutorParaDisplay?.rg || ""}
-                juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData}
-                juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora}
             />
           </CardContent>
         </Card>
@@ -963,6 +963,3 @@ const TCOForm = () => {
 };
 
 export default TCOForm;
-// --- END OF TCOForm.tsx ---
-
-// --- END OF FILE TCOForm (32)_redesigned.tsx ---

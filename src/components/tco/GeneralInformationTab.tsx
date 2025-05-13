@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -31,6 +32,10 @@ interface GeneralInformationTabProps {
   setGuarnicao: (value: string) => void;
   operacao: string;
   setOperacao: (value: string) => void;
+  juizadoEspecialData?: string;  // Added as optional
+  setJuizadoEspecialData?: (value: string) => void;  // Added as optional
+  juizadoEspecialHora?: string;  // Added as optional
+  setJuizadoEspecialHora?: (value: string) => void;  // Added as optional
 }
 const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   natureza,

@@ -1,3 +1,4 @@
+
 import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Scale, Plus } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -29,7 +30,7 @@ const Index = () => {
   const unreadCount = useNotifications();
 
   // States for TCO management
-  const [selectedTco, setSelectedTco] = useState(null);
+  const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list"); // Controls sub-tabs in TCO section
 
   const handleEditorClick = () => {
@@ -372,3 +373,4 @@ const Index = () => {
 };
 
 export default Index;
+
