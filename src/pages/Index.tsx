@@ -1,4 +1,3 @@
-
 import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Scale, Plus } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -70,11 +69,11 @@ const Index = () => {
 
   return (
     <div className="relative min-h-screen bg-[#E8F1F2] flex flex-col">
-      <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto flex flex-col flex-grow w-full">
+      <div className="pt-8 px-6 pb-20 max-w-7xl mx-auto flex flex-col flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8 flex flex-col flex-grow">
           <TabsList className="hidden">
             <TabsTrigger value="main">Main</TabsTrigger>
-            <TabsTrigger value="editor">Editor</TabsTrigger>
+            <TabsTrigger value="editor">Editor chinese: true
             <TabsTrigger value="extra">Extra</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -86,20 +85,8 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="main">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <IconCard icon={Clock} label="Horas" />
-              <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
-              <IconCard icon={Bell} label="Notificações" onClick={handleNotificationsClick} badge={unreadCount > 0 ? unreadCount : undefined} />
-              {user.userType === "admin" && (
-                <>
-                  <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
-                  <IconCard icon={MessageSquare} label="Recados" onClick={handleMessageClick} />
-                  <IconCard icon={Scale} label="TCO" onClick={handleTCOClick} />
-                </>
-              )}
-              <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
-              <IconCard icon={Settings} label="Configurações" onClick={handleSettingsClick} />
-              <IconCard icon={MapPinned} label="Viagens" onClick={handleTravelClick} />
+            <div className="flex-grow">
+              {/* Empty main tab */}
             </div>
           </TabsContent>
 
@@ -115,7 +102,7 @@ const Index = () => {
                 </button>
               </div>
               {user.userType === "admin" && (
-                <div className="fixed bottom-6 right-6 z-10">
+                <div className="fixed bottom-20 right-6 z-10">
                   <Button
                     onClick={handleEditorClick}
                     className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 flex items-center justify-center text-gray-50 bg-red-500 hover:bg-red-400"
@@ -368,9 +355,58 @@ const Index = () => {
           />
         )}
       </div>
+
+      {/* Fixed Bottom Navigation Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200">
+        <div className="flex justify-around items-center h-16 max-w-7xl mx-auto">
+          <button
+            onClick={() => setActiveTab("main")}
+            className="flex flex-col items-center text-gray-600 hover:text-primary transition-colors"
+            aria-label="Horas"
+          >
+            <Clock className="h-6 w-6" />
+            <span className="text-xs mt-1">Horas</span>
+          </button>
+          <button
+            onClick={handleExtraClick}
+            className="flex flex-col items-center text-gray-600 hover:text-primary transition-colors"
+            aria-label="Extra"
+          >
+            <Calendar className="h-6 w-6" />
+            <span className="text-xs mt-1">Extra</span>
+          </button>
+          <button
+            onClick={handleTravelClick}
+            className="flex flex-col items-center text-gray-600 hover:text-primary transition-colors"
+            aria-label="Viagens"
+          >
+            <MapPinned className="h-6 w-6" />
+            <span className="text-xs mt-1">Viagens</span>
+          </button>
+          {user.userType === "admin" && (
+            <>
+              <button
+                onClick={handleTCOClick}
+                className="flex flex-col items-center text-gray-600 hover:text-primary transition-colors"
+                aria-label="TCO"
+              >
+                <Scale className="h-6 w-6" />
+                <span className="text-xs mt-1">TCO</span>
+              </button>
+              <button
+                onClick={handleMessageClick}
+                className="flex flex-col items-center text-gray-600 hover:text-primary transition-colors"
+                aria-label="Recados"
+              >
+                <MessageSquare className="h-6 w-6" />
+                <span className="text-xs mt-1">Recados</span>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
 
 export default Index;
-
