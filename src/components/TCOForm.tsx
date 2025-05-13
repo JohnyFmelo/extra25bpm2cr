@@ -1,5 +1,3 @@
---- START OF FILE TCOForm (35).tsx ---
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,10 +6,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter, // Added if needed for specific sections
-} from "@/components/ui/card"; // Import Card components
-import { Label } from "@/components/ui/label"; // Import Label for Anexos section
-import { Input } from "@/components/ui/input"; // Import Input for Anexos section
+  CardFooter,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -21,12 +19,9 @@ import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
 import GuarnicaoTab from "./tco/GuarnicaoTab";
 import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
-import { generatePDF } from "./tco/pdfGenerator"; // Assuming this returns a Blob
-// Import the Supabase client
-import { supabase } from "@/integrations/supabase/client";// Use default import
-// Import hypothetical Supabase utility functions
-// The user needs to ensure these utilities are correctly implemented in the specified path.
-import { ensureBucketExists, ensureTableExists } from "@/integrations/supabase/supabaseUtils"; // HYPOTHETICAL PATH
+import { generatePDF } from "./tco/pdfGenerator";
+import { supabase } from "@/integrations/supabase/client";
+import { createBucketIfNotExists, createTableIfNotExists } from "@/integrations/supabase/supabaseUtils";
 
 // --- Keep Interfaces: ComponenteGuarnicao, Pessoa ---
 interface ComponenteGuarnicao {
@@ -55,7 +50,7 @@ interface Pessoa {
 
 // Define TCOForm props interface
 interface TCOFormProps {
-  selectedTco?: any; // You might want to define a more specific type here
+  selectedTco?: any;
   onClear?: () => void;
 }
 
@@ -88,7 +83,7 @@ const formatPhone = (phone: string) => {
   if (phone.length === 11) {
     phone = phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
   } else if (phone.length === 10) {
-    phone = phone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    phone = phone.replace(/(\d{2})(\d{4})(\d{4})/, '($1 Decode $2-$3');
   } else if (phone.length > 6) {
     phone = phone.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
   } else if (phone.length > 2) {
@@ -157,35 +152,6 @@ const fileToBase64 = (file: File): Promise<string> => {
 };
 // --- END OF Helper Functions ---
 
-// Define the schema for the tco_pdfs table for ensureTableExists utility
-const TABLE_TCO_PDFS_SCHEMA = `
-  CREATE TABLE IF NOT EXISTS public.tco_pdfs (
-    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    "tcoNumber" TEXT, -- Use quotes if column names have uppercase chars or are keywords
-    natureza TEXT,
-    policiais JSONB,
-    "pdfPath" TEXT,
-    "pdfUrl" TEXT,
-    "createdBy" UUID REFERENCES auth.users(id),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-  );
-
-  CREATE OR REPLACE FUNCTION public.update_updated_at_column()
-  RETURNS TRIGGER AS $$
-  BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-  END;
-  $$ LANGUAGE plpgsql;
-
-  DROP TRIGGER IF EXISTS tco_pdfs_update_updated_at ON public.tco_pdfs;
-  CREATE TRIGGER tco_pdfs_update_updated_at
-  BEFORE UPDATE ON public.tco_pdfs
-  FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at_column();
-`;
-
 
 const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const { toast } = useToast();
@@ -201,7 +167,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const [tcoNumber, setTcoNumber] = useState("");
   const [natureza, setNatureza] = useState("Vias de Fato");
   const [customNatureza, setCustomNatureza] = useState("");
-  const [autor, setAutor] = useState(""); // Note: Primarily driven by autores[0].nome now
+  const [autor, setAutor] = useState("");
   const [representacao, setRepresentacao] = useState("");
   const [tipificacao, setTipificacao] = useState("Art. 21 da Lei de Contravenções Penais");
   const [penaDescricao, setPenaDescricao] = useState("");
@@ -326,706 +292,702 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       setTipificacao(tipificacaoAtual);
       setPenaDescricao(penaAtual);
     }
-    const autoresValidos = autores.filter(a => a.nome.trim() !== "");
-    const autorTexto = autoresValidos.length === 0 ? "O(A) AUTOR(A)" :
-      autoresValidos.length === 1 ? (autoresValidos[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") :
-      autoresValidos.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
-    const testemunhasValidas = testemunhas.filter(t => t.nome.trim() !== "");
-    const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : (testemunhasValidas.length === 1 ? "TESTEMUNHA" : "");
-    const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
-    setConclusaoPolicial(conclusaoBase);
-  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
+    const autoresValidos = autores.filter(a => a.nome.trim() !== suxport: 1px; /* Added to fix a bug where the border would not be visible on some browsers */
+    border-radius: 4px;
+    padding: 2px;
+    margin-left: 4px;
+}
+  const testemunhasValidas = testemunhas.filter(t => t.nome.trim() !== "");
+  const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : (testemunhasValidas.length === 1 ? "TESTEMUNHA" : "");
+  const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
+  setConclusaoPolicial(conclusaoBase);
+}, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
 
-   useEffect(() => {
-    if (isRelatoPolicialManuallyEdited) return;
-    let updatedRelato = relatoPolicialTemplate;
-    const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
-    const gupm = formatarGuarnicao(componentesGuarnicao);
-    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "OUTROS" : natureza;
-    const operacaoText = operacao ? `, DURANTE A ${operacao.toUpperCase()},` : "";
-    updatedRelato = updatedRelato
-      .replace("[HORÁRIO]", horaFato || "[HORÁRIO PENDENTE]")
-      .replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : "[DATA PENDENTE]")
-      .replace("[GUARNIÇÃO]", guarnicao || "[GUARNIÇÃO PENDENTE]")
-      .replace("[OPERACAO_TEXT]", operacaoText)
-      .replace("[GUPM]", gupm)
-      .replace("[BAIRRO]", bairro)
-      .replace("[MEIO DE ACIONAMENTO]", comunicante || "[ACIONAMENTO PENDENTE]")
-      .replace("[NATUREZA]", displayNaturezaReal.toUpperCase() || "[NATUREZA PENDENTE]")
-      .replace("[LOCAL]", localFato || "[LOCAL PENDENTE]")
-      .replace("[VERSÃO INICIAL]", "[VERSÃO INICIAL]")
-      .replace("[O QUE A PM DEPAROU]", "[O QUE A PM DEPAROU]")
-      .replace("[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]", "[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]")
-      .replace("[DILIGÊNCIAS E APREENSÕES REALIZADAS]", "[DILIGÊNCIAS E APREENSÕES REALIZADAS]")
-      .replace("[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]", "[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]");
-     if (!isRelatoPolicialManuallyEdited || relatoPolicial === relatoPolicialTemplate) {
-       setRelatoPolicial(updatedRelato.toUpperCase());
-     } else {
-       setRelatoPolicial(updatedRelato);
-     }
-  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited, relatoPolicial]);
+useEffect(() => {
+  if (isRelatoPolicialManuallyEdited) return;
+  let updatedRelato = relatoPolicialTemplate;
+  const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
+  const gupm = formatarGuarnicao(componentesGuarnicao);
+  const displayNaturezaReal = natureza === "Outros" ? customNatureza || "OUTROS" : natureza;
+  const operacaoText = operacao ? `, DURANTE A ${operacao.toUpperCase()},` : "";
+  updatedRelato = updatedRelato
+    .replace("[HORÁRIO]", horaFato || "[HORÁRIO PENDENTE]")
+    .replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : "[DATA PENDENTE]")
+    .replace("[GUARNIÇÃO]", guarnicao || "[GUARNIÇÃO PENDENTE]")
+    .replace("[OPERACAO_TEXT]", operacaoText)
+    .replace("[GUPM]", gupm)
+    .replace("[BAIRRO]", bairro)
+    .replace("[MEIO DE ACIONAMENTO]", comunicante || "[ACIONAMENTO PENDENTE]")
+    .replace("[NATUREZA]", displayNaturezaReal.toUpperCase() || "[NATUREZA PENDENTE]")
+    .replace("[LOCAL]", localFato || "[LOCAL PENDENTE]")
+    .replace("[VERSÃO INICIAL]", "[VERSÃO INICIAL]")
+    .replace("[O QUE A PM DEPAROU]", "[O QUE A PM DEPAROU]")
+    .replace("[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]", "[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]")
+    .replace("[DILIGÊNCIAS E APREENSÕES REALIZADAS]", "[DILIGÊNCIAS E APREENSÕES REALIZADAS]")
+    .replace("[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]", "[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]");
+   if (!isRelatoPolicialManuallyEdited || relatoPolicial === relatoPolicialTemplate) {
+     setRelatoPolicial(updatedRelato.toUpperCase());
+   } else {
+     setRelatoPolicial(updatedRelato);
+   }
+}, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited, relatoPolicial]);
 
-  useEffect(() => {
-    const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
-    if (!relatoAutor.includes('[INSIRA DECLARAÇÃO]') || relatoAutor.startsWith("O AUTOR") || relatoAutor.startsWith("A AUTORA") || relatoAutor.startsWith("OS AUTORES") || relatoAutor.startsWith("AS AUTORAS")) {
-      setRelatoAutor(novoRelatoAutor);
-    }
-  }, [autores, relatoAutor]);
+useEffect(() => {
+  const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
+  if (!relatoAutor.includes('[INSIRA DECLARAÇÃO]') || relatoAutor.startsWith("O AUTOR") || relatoAutor.startsWith("A AUTORA") || relatoAutor.startsWith("OS AUTORES") || relatoAutor.startsWith("AS AUTORAS")) {
+    setRelatoAutor(novoRelatoAutor);
+  }
+}, [autores, relatoAutor]);
 
-  useEffect(() => {
-    const currentFirstAutorName = autores.length > 0 ? autores[0].nome : "";
-    if (currentFirstAutorName !== autor) {
-      setAutor(currentFirstAutorName);
-    }
-  }, [autores, autor]);
-  // --- END OF useEffect hooks ---
+useEffect(() => {
+  const currentFirstAutorName = autores.length > 0 ? autores[0].nome : "";
+  if (currentFirstAutorName !== autor) {
+    setAutor(currentFirstAutorName);
+  }
+}, [autores, autor]);
+// --- END OF useEffect hooks ---
 
 
-  // --- Keep all handler functions ---
-  const handleAddPolicialToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
-    const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
-    if (!alreadyExists) {
-      setComponentesGuarnicao(prevList => {
-        const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto)
-          ? [novoPolicial]
-          : [...prevList, novoPolicial];
-        return newList;
-      });
-      toast({ title: "Adicionado", description: `Policial ${novoPolicial.nome} adicionado à guarnição.` });
-    } else {
-      toast({ variant: "default", title: "Duplicado", description: "Este policial já está na guarnição." });
-    }
-  }, [componentesGuarnicao, toast]);
+// --- Keep all handler functions ---
+const handleAddPolicialToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
+  const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
+  if (!alreadyExists) {
+    setComponentesGuarnicao(prevList => {
+      const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto)
+        ? [novoPolicial]
+        : [...prevList, novoPolicial];
+      return newList;
+    });
+    toast({ title: "Adicionado", description: `Policial ${novoPolicial.nome} adicionado à guarnição.` });
+  } else {
+    toast({ variant: "default", title: "Duplicado", description: "Este policial já está na guarnição." });
+  }
+}, [componentesGuarnicao, toast]);
 
-  const handleRemovePolicialFromList = useCallback((indexToRemove: number) => {
-    setComponentesGuarnicao(prevList => prevList.filter((_, index) => index !== indexToRemove));
-  }, []);
+const handleRemovePolicialFromList = useCallback((indexToRemove: number) => {
+  setComponentesGuarnicao(prevList => prevList.filter((_, index) => index !== indexToRemove));
+}, []);
 
-  const handleAddVitima = () => {
-    const hasOnlyPlaceholder = vitimas.length === 1 && (!vitimas[0].nome && !vitimas[0].cpf) || (vitimas.length === 1 && vitimas[0].nome === "O ESTADO");
-    if (hasOnlyPlaceholder) {
-        setVitimas([{ ...initialPersonData }]);
-    } else {
-        setVitimas(prevVitimas => [...prevVitimas, { ...initialPersonData }]);
-    }
-  };
+const handleAddVitima = () => {
+  const hasOnlyPlaceholder = vitimas.length === 1 && (!vitimas[0].nome && !vitimas[0].cpf) || (vitimas.length === 1 && vitimas[0].nome === "O ESTADO");
+  if (hasOnlyPlaceholder) {
+      setVitimas([{ ...initialPersonData }]);
+  } else {
+      setVitimas(prevVitimas => [...prevVitimas, { ...initialPersonData }]);
+  }
+};
 
-  const handleRemoveVitima = (index: number) => {
-    const newVitimas = vitimas.filter((_, i) => i !== index);
-    if (newVitimas.length === 0) {
-      setVitimas([{...initialPersonData}]);
-    } else {
-      setVitimas(newVitimas);
-    }
-  };
-
-  const handleAddTestemunha = () => {
-     const hasOnlyPlaceholder = testemunhas.length === 1 && !testemunhas[0].nome && !testemunhas[0].cpf;
-     if (hasOnlyPlaceholder) {
-         setTestemunhas([{ ...initialPersonData }]);
-     } else {
-         setTestemunhas(prev => [...prev, { ...initialPersonData }]);
-     }
-  };
-
-  const handleRemoveTestemunha = (index: number) => {
-    const newTestemunhas = testemunhas.filter((_, i) => i !== index);
-     if (newTestemunhas.length === 0) {
-      setTestemunhas([{...initialPersonData}]);
-    } else {
-      setTestemunhas(newTestemunhas);
-    }
-  };
-
-  const handleAddAutor = () => {
-      const hasOnlyPlaceholder = autores.length === 1 && !autores[0].nome && !autores[0].cpf;
-      if (hasOnlyPlaceholder) {
-          setAutores([{ ...initialPersonData }]);
-      } else {
-          setAutores(prev => [...prev, { ...initialPersonData }]);
-      }
-  };
-
-  const handleRemoveAutor = (index: number) => {
-    const newAutores = autores.filter((_, i) => i !== index);
-     if (newAutores.length === 0) {
-      setAutores([{...initialPersonData}]);
-    } else {
-      setAutores(newAutores);
-    }
-    if (index === 0) {
-         setAutor(newAutores.length > 0 ? newAutores[0].nome : "");
-    }
-  };
-
-  const handleVitimaChange = (index: number, field: string, value: string) => {
-    const newVitimas = [...vitimas];
-    let processedValue = value;
-    if (field === 'cpf') {
-      processedValue = formatCPF(value);
-      if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
-        toast({ variant: "destructive", title: "CPF Inválido (Vítima)", description: "O CPF informado não é válido." });
-      }
-    } else if (field === 'celular') {
-      processedValue = formatPhone(value);
-    }
-    if (newVitimas[index].nome === "O ESTADO" && field === 'nome' && value.trim() !== "O ESTADO") {
-        newVitimas[index] = { ...initialPersonData, [field]: processedValue };
-    } else {
-        newVitimas[index] = { ...newVitimas[index], [field]: processedValue };
-    }
+const handleRemoveVitima = (index: number) => {
+  const newVitimas = vitimas.filter((_, i) => i !== index);
+  if (newVitimas.length === 0) {
+    setVitimas([{...initialPersonData}]);
+  } else {
     setVitimas(newVitimas);
-  };
+  }
+};
 
-  const handleTestemunhaChange = (index: number, field: string, value: string) => {
-    const newTestemunhas = [...testemunhas];
-    let processedValue = value;
-    if (field === 'cpf') {
-      processedValue = formatCPF(value);
-      if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
-        toast({ variant: "destructive", title: "CPF Inválido (Testemunha)", description: "O CPF informado não é válido." });
-      }
-    } else if (field === 'celular') {
-      processedValue = formatPhone(value);
-    }
-    newTestemunhas[index] = { ...newTestemunhas[index], [field]: processedValue };
+const handleAddTestemunha = () => {
+   const hasOnlyPlaceholder = testemunhas.length === 1 && !testemunhas[0].nome && !testemunhas[0].cpf;
+   if (hasOnlyPlaceholder) {
+       setTestemunhas([{ ...initialPersonData }]);
+   } else {
+       setTestemunhas(prev => [...prev, { ...initialPersonData }]);
+   }
+};
+
+const handleRemoveTestemunha = (index: number) => {
+  const newTestemunhas = testemunhas.filter((_, i) => i !== index);
+   if (newTestemunhas.length === 0) {
+    setTestemunhas([{...initialPersonData}]);
+  } else {
     setTestemunhas(newTestemunhas);
-  };
+  }
+};
 
-  const handleAutorDetalhadoChange = (index: number, field: string, value: string) => {
-    const newAutores = [...autores];
-    let processedValue = value;
-    if (field === 'cpf') {
-      processedValue = formatCPF(value);
-      if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
-        toast({ variant: "destructive", title: "CPF Inválido (Autor)", description: "O CPF informado não é válido." });
-      }
-    } else if (field === 'celular') {
-      processedValue = formatPhone(value);
-    } else if (field === 'dataNascimento') {
-      const birthDate = new Date(value + 'T00:00:00Z');
-      if (value && !isNaN(birthDate.getTime())) {
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-        if (age < 18) {
-          toast({ variant: "destructive", title: "Atenção: Autor Menor de Idade", description: "Avalie se cabe TCO." });
-        }
-      }
-    }
-    newAutores[index] = { ...newAutores[index], [field]: processedValue };
-    setAutores(newAutores);
-    if (index === 0 && field === 'nome') {
-        setAutor(processedValue);
-    }
-  };
-
-  const handleRelatoPolicialChange = (value: string) => {
-    setRelatoPolicial(value);
-    if (value !== relatoPolicialTemplate && !value.includes("[HORÁRIO]")) {
-        setIsRelatoPolicialManuallyEdited(true);
-    }
-  };
-
-  const handleAddVideoLink = () => {
-    if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
-      if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
-          toast({ variant: "default", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
-          return;
-      }
-      setVideoLinks(prev => [...prev, newVideoLink.trim()]);
-      setNewVideoLink("");
-      toast({ title: "Link Adicionado", description: "Link de vídeo adicionado com sucesso." });
-    } else if (!newVideoLink.trim()) {
-      toast({ variant: "default", title: "Link Vazio", description: "Por favor, insira um link." });
+const handleAddAutor = () => {
+    const hasOnlyPlaceholder = autores.length === 1 && !autores[0].nome && !autores[0].cpf;
+    if (hasOnlyPlaceholder) {
+        setAutores([{ ...initialPersonData }]);
     } else {
-      toast({ variant: "default", title: "Link Duplicado", description: "Este link já foi adicionado." });
+        setAutores(prev => [...prev, { ...initialPersonData }]);
     }
-  };
+};
 
-  const handleRemoveVideoLink = (index: number) => {
-    setVideoLinks(prev => prev.filter((_, i) => i !== index));
-    toast({ title: "Link Removido", description: "Link de vídeo removido com sucesso." });
-  };
+const handleRemoveAutor = (index: number) => {
+  const newAutores = autores.filter((_, i) => i !== index);
+   if (newAutores.length === 0) {
+    setAutores([{...initialPersonData}]);
+  } else {
+    setAutores(newAutores);
+  }
+  if (index === 0) {
+       setAutor(newAutores.length > 0 ? newAutores[0].nome : "");
+  }
+};
 
-  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const newFiles = Array.from(event.target.files);
-      const uniqueNewFiles = newFiles.filter(
-        (file) => !imageFiles.some((existingFile) => existingFile.name === file.name && existingFile.size === file.size)
-      );
+const handleVitimaChange = (index: number, field: string, value: string) => {
+  const newVitimas = [...vitimas];
+  let processedValue = value;
+  if (field === 'cpf') {
+    processedValue = formatCPF(value);
+    if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
+      toast({ variant: "destructive", title: "CPF Inválido (Vítima)", description: "O CPF informado não é válido." });
+    }
+  } else if (field === 'celular') {
+    processedValue = formatPhone(value);
+  }
+  if (newVitimas[index].nome === "O ESTADO" && field === 'nome' && value.trim() !== "O ESTADO") {
+      newVitimas[index] = { ...initialPersonData, [field]: processedValue };
+  } else {
+      newVitimas[index] = { ...newVitimas[index], [field]: processedValue };
+  }
+  setVitimas(newVitimas);
+};
 
-      if (uniqueNewFiles.length > 0) {
-        setImageFiles((prevFiles) => [...prevFiles, ...uniqueNewFiles]);
-        toast({ title: `${uniqueNewFiles.length} Imagem(ns) Adicionada(s)`, description: "Imagens selecionadas para anexo." });
-      } else if (newFiles.length > 0) {
-        toast({ variant: "default", title: "Imagens Duplicadas", description: "Algumas ou todas as imagens selecionadas já foram adicionadas." });
-      }
-      if (imageInputRef.current) {
-        imageInputRef.current.value = "";
+const handleTestemunhaChange = (index: number, field: string, value: string) => {
+  const newTestemunhas = [...testemunhas];
+  let processedValue = value;
+  if (field === 'cpf') {
+    processedValue = formatCPF(value);
+    if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
+      toast({ variant: "destructive", title: "CPF Inválido (Testemunha)", description: "O CPF informado não é válido." });
+    }
+  } else if (field === 'celular') {
+    processedValue = formatPhone(value);
+  }
+  newTestemunhas[index] = { ...newTestemunhas[index], [field]: processedValue };
+  setTestemunhas(newTestemunhas);
+};
+
+const handleAutorDetalhadoChange = (index: number, field: string, value: string) => {
+  const newAutores = [...autores];
+  let processedValue = value;
+  if (field === 'cpf') {
+    processedValue = formatCPF(value);
+    if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
+      toast({ variant: "destructive", title: "CPF Inválido (Autor)", description: "O CPF informado não é válido." });
+    }
+  } else if (field === 'celular') {
+    processedValue = formatPhone(value);
+  } else if (field === 'dataNascimento') {
+    const birthDate = new Date(value + 'T00:00:00Z');
+    if (value && !isNaN(birthDate.getTime())) {
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+      if (age < 18) {
+        toast({ variant: "destructive", title: "Atenção: Autor Menor de Idade", description: "Avalie se cabe TCO." });
       }
     }
-  };
+  }
+  newAutores[index] = { ...newAutores[index], [field]: processedValue };
+  setAutores(newAutores);
+  if (index === 0 && field === 'nome') {
+      setAutor(processedValue);
+  }
+};
 
-  const handleRemoveImageFile = (index: number) => {
-    setImageFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
-    toast({ title: "Imagem Removida", description: "Imagem removida da lista de anexos." });
-  };
+const handleRelatoPolicialChange = (value: string) => {
+  setRelatoPolicial(value);
+  if (value !== relatoPolicialTemplate && !value.includes("[HORÁRIO]")) {
+      setIsRelatoPolicialManuallyEdited(true);
+  }
+};
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Iniciando processo de submissão do TCO...");
-    const completionNow = new Date();
-    const completionDate = completionNow.toISOString().split('T')[0];
-    const completionTime = completionNow.toTimeString().slice(0, 5);
+const handleAddVideoLink = () => {
+  if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
+    if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
+        toast({ variant: "default", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
+        return;
+    }
+    setVideoLinks(prev => [...prev, newVideoLink.trim()]);
+    setNewVideoLink("");
+    toast({ title: "Link Adicionado", description: "Link de vídeo adicionado com sucesso." });
+  } else if (!newVideoLink.trim()) {
+    toast({ variant: "default", title: "Link Vazio", description: "Por favor, insira um link." });
+  } else {
+    toast({ variant: "default", title: "Link Duplicado", description: "Este link já foi adicionado." });
+  }
+};
 
-    // --- Validations ---
-    const autoresValidos = autores.filter(a => a.nome?.trim());
-    if (!tcoNumber.trim()) { toast({ variant: "destructive", title: "Campo Obrigatório", description: "O número do TCO é obrigatório." }); return; }
-    if (natureza === "Selecione...") { toast({ variant: "destructive", title: "Campo Obrigatório", description: "Selecione a Natureza da Ocorrência." }); return; }
-    if (natureza === "Outros" && !customNatureza.trim()) { toast({ variant: "destructive", title: "Campo Obrigatório", description: "Descreva a Natureza em 'Outros'." }); return; }
-    if (autoresValidos.length === 0) { toast({ variant: "destructive", title: "Campo Obrigatório", description: "Adicione pelo menos um Autor com nome." }); return; }
-    const componentesValidos = componentesGuarnicao.filter(c => c.nome?.trim() && c.rg?.trim());
-    if (componentesValidos.length === 0) { toast({ variant: "destructive", title: "Campo Obrigatório", description: "Adicione pelo menos um Componente da Guarnição válido (Nome e RG)." }); return; }
-    if (natureza === "Porte de drogas para consumo" && (!quantidade.trim() || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc.trim()) || !lacreNumero.trim())) { toast({ variant: "destructive", title: "Dados da Droga Incompletos", description: "Para Porte de Drogas, preencha Quantidade, Substância, Cor, Número do Lacre e Descrição (se material desconhecido)." }); return; }
+const handleRemoveVideoLink = (index: number) => {
+  setVideoLinks(prev => prev.filter((_, i) => i !== index));
+  toast({ title: "Link Removido", description: "Link de vídeo removido com sucesso." });
+};
+
+const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  if (event.target.files) {
+    const newFiles = Array.from(event.target.files);
+    const uniqueNewFiles = newFiles.filter(
+      (file) => !imageFiles.some((existingFile) => existingFile.name === file.name && existingFile.size === file.size)
+    );
+
+    if (uniqueNewFiles.length > 0) {
+      setImageFiles((prevFiles) => [...prevFiles, ...uniqueNewFiles]);
+      toast({ title: `${uniqueNewFiles.length} Imagem(ns) Adicionada(s)`, description: "Imagens selecionadas para anexo." });
+    } else if (newFiles.length > 0) {
+      toast({ variant: "default", title: "Imagens Duplicadas", description: "Algumas ou todas as imagens selecionadas já foram adicionadas." });
+    }
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+  }
+};
+
+const handleRemoveImageFile = (index: number) => {
+  setImageFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
+  toast({ title: "Imagem Removida", description: "Imagem removida da lista de anexos." });
+};
+
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const completionNow = new Date();
+  const completionDate = completionNow.toISOString().split('T')[0];
+  const completionTime = completionNow.toTimeString().slice(0, 5);
+
+  // --- Validations ---
+  const autoresValidos = autores.filter(a => a.nome?.trim());
+  if (!tcoNumber.trim()) { toast({ variant: "destructive", title: "Campo Obrigatório", description: "O número do TCO é obrigatório." }); return; }
+  if (natureza === "Selecione...") { toast({ variant: "destructive", title: "Campo Obrigatório", description: "Selecione a Natureza da Ocorrência." }); return; }
+  if (natureza === "Outros" && !customNatureza.trim()) { toast({ variant: "destructive", title: "Campo Obrigatório", description: "Descreva a Natureza em 'Outros'." }); return; }
+  if (autoresValidos.length === 0) { toast({ variant: "destructive", title: "Campo Obrigatório", description: "Adicione pelo menos um Autor com nome." }); return; }
+  const componentesValidos = componentesGuarnicao.filter(c => c.nome?.trim() && c.rg?.trim());
+  if (componentesValidos.length === 0) { toast({ variant: "destructive", title: "Campo Obrigatório", description: "Adicione pelo menos um Componente da Guarnição válido (Nome e RG)." }); return; }
+  if (natureza === "Porte de drogas para consumo" && (!quantidade.trim() || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc.trim()) || !lacreNumero.trim())) { toast({ variant: "destructive", title: "Dados da Droga Incompletos", description: "Para Porte de Drogas, preencha Quantidade, Substância, Cor, Número do Lacre e Descrição (se material desconhecido)." }); return; }
+  // --- End Validations ---
+
+  setIsSubmitting(true);
+  setIsTimerRunning(false);
+
+  try {
+    const displayNaturezaReal = natureza === "Outros" ? customNatureza.trim() : natureza;
+    const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc.trim() : indicios) : "";
+    const vitimasFiltradas = vitimas.filter(v => v.nome?.trim() || v.cpf?.trim());
+    const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim() || t.cpf?.trim());
     const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = userInfo.id || null;
-    if (!userId) {
-      toast({ variant: "destructive", title: "Erro de Autenticação", description: "Usuário não identificado. Faça login novamente." });
-      return;
-    }
-    // --- End Validations ---
+    const userRegistration = userInfo.registration || "";
 
-    setIsSubmitting(true);
-    setIsTimerRunning(false);
-    console.log("Validações concluídas, iniciando processamento.");
-
-    const BUCKET_NAME = 'tco-pdfs';
-    const TABLE_NAME = 'tco_pdfs'; // Ensure this uses correct PostgreSQL naming (often lowercase)
-
-    try {
-      // Step 1: Ensure Supabase Bucket and Table exist
-      console.log("Verificando/Criando infraestrutura Supabase (bucket e tabela)...");
+    const imageBase64Array: { name: string; data: string }[] = [];
+    for (const file of imageFiles) {
       try {
-        await ensureBucketExists(BUCKET_NAME); // From supabaseUtils.ts
-        await ensureTableExists(TABLE_NAME, TABLE_TCO_PDFS_SCHEMA); // From supabaseUtils.ts
-        console.log("Infraestrutura Supabase verificada/criada com sucesso.");
-      } catch (infraError: any) {
-        console.error("Erro crítico ao configurar infraestrutura Supabase:", infraError);
-        throw new Error(`Falha ao preparar armazenamento/banco de dados: ${infraError.message}`);
+        const base64Data = await fileToBase64(file);
+        imageBase64Array.push({ name: file.name, data: base64Data });
+      } catch (error) {
+        console.error(`Erro ao converter imagem ${file.name} para base64:`, error);
+        toast({ variant: "destructive", title: "Erro ao Processar Imagem", description: `Não foi possível processar a imagem ${file.name}. Ela não será incluída.` });
       }
+    }
 
-      const displayNaturezaReal = natureza === "Outros" ? customNatureza.trim() : natureza;
-      const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc.trim() : indicios) : "";
-      const vitimasFiltradas = vitimas.filter(v => v.nome?.trim() || v.cpf?.trim());
-      const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim() || t.cpf?.trim());
-      const userRegistration = userInfo.registration || "";
+    const tcoDataParaPDF: any = {
+      tcoNumber: tcoNumber.trim(), natureza: displayNaturezaReal, originalNatureza: natureza,
+      customNatureza: customNatureza.trim(), tipificacao: tipificacao.trim(), penaDescricao: penaDescricao.trim(),
+      dataFato, horaFato, dataInicioRegistro, horaInicioRegistro,
+      dataTerminoRegistro: completionDate, horaTerminoRegistro: completionTime,
+      localFato: localFato.trim(), endereco: endereco.trim(), municipio, comunicante,
+      autores: autoresValidos, vitimas: vitimasFiltradas, testemunhas: testemunhasFiltradas,
+      guarnicao: guarnicao.trim(), operacao: operacao.trim(), componentesGuarnicao: componentesValidos,
+      relatoPolicial: relatoPolicial.trim(), relatoAutor: relatoAutor.trim(),
+      relatoTestemunha: relatoTestemunha.trim(), apreensoes: apreensoes.trim(), conclusaoPolicial: conclusaoPolicial.trim(),
+      lacreNumero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : undefined,
+      drogaQuantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : undefined,
+      drogaTipo: natureza === "Porte de drogas para consumo" ? substancia : undefined,
+      drogaCor: natureza === "Porte de drogas para consumo" ? cor : undefined,
+      drogaNomeComum: natureza === "Porte de drogas para consumo" ? indicioFinalDroga : undefined,
+      drogaCustomDesc: natureza === "Porte de drogas para consumo" && isUnknownMaterial ? customMaterialDesc.trim() : undefined,
+      drogaIsUnknown: natureza === "Porte de drogas para consumo" ? isUnknownMaterial : undefined,
+      startTime: startTime?.toISOString(), endTime: completionNow.toISOString(), userRegistration: userRegistration,
+      videoLinks: videoLinks, imageBase64: imageBase64Array,
+      juizadoEspecialData: juizadoEspecialData.trim() || undefined, juizadoEspecialHora: juizadoEspecialHora.trim() || undefined,
+      relatoVitima: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' ? relatoVitima.trim() : undefined,
+      representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined,
+      downloadLocal: true
+    };
+    Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
 
-      console.log("Convertendo imagens para Base64...");
-      const imageBase64Array: { name: string; data: string }[] = [];
-      for (const file of imageFiles) {
-        try {
-          const base64Data = await fileToBase64(file);
-          imageBase64Array.push({ name: file.name, data: base64Data });
-        } catch (error) {
-          console.error(`Erro ao converter imagem ${file.name} para base64:`, error);
-          toast({ variant: "destructive", title: "Erro ao Processar Imagem", description: `Não foi possível processar a imagem ${file.name}. Ela não será incluída.` });
-        }
-      }
-      console.log(`${imageBase64Array.length} imagens convertidas.`);
+    console.log("Dados para gerar PDF:", tcoDataParaPDF);
 
-      const tcoDataParaPDF: any = {
-        tcoNumber: tcoNumber.trim(), natureza: displayNaturezaReal, originalNatureza: natureza,
-        customNatureza: customNatureza.trim(), tipificacao: tipificacao.trim(), penaDescricao: penaDescricao.trim(),
-        dataFato, horaFato, dataInicioRegistro, horaInicioRegistro,
-        dataTerminoRegistro: completionDate, horaTerminoRegistro: completionTime,
-        localFato: localFato.trim(), endereco: endereco.trim(), municipio, comunicante,
-        autores: autoresValidos, vitimas: vitimasFiltradas, testemunhas: testemunhasFiltradas,
-        guarnicao: guarnicao.trim(), operacao: operacao.trim(), componentesGuarnicao: componentesValidos,
-        relatoPolicial: relatoPolicial.trim(), relatoAutor: relatoAutor.trim(),
-        relatoTestemunha: relatoTestemunha.trim(), apreensoes: apreensoes.trim(), conclusaoPolicial: conclusaoPolicial.trim(),
-        lacreNumero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : undefined,
-        drogaQuantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : undefined,
-        drogaTipo: natureza === "Porte de drogas para consumo" ? substancia : undefined,
-        drogaCor: natureza === "Porte de drogas para consumo" ? cor : undefined,
-        drogaNomeComum: natureza === "Porte de drogas para consumo" ? indicioFinalDroga : undefined,
-        drogaCustomDesc: natureza === "Porte de drogas para consumo" && isUnknownMaterial ? customMaterialDesc.trim() : undefined,
-        drogaIsUnknown: natureza === "Porte de drogas para consumo" ? isUnknownMaterial : undefined,
-        startTime: startTime?.toISOString(), endTime: completionNow.toISOString(), userRegistration: userRegistration,
-        videoLinks: videoLinks, imageBase64: imageBase64Array,
-        juizadoEspecialData: juizadoEspecialData.trim() || undefined, juizadoEspecialHora: juizadoEspecialHora.trim() || undefined,
-        relatoVitima: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' ? relatoVitima.trim() : undefined,
-        representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined,
-        downloadLocal: true
-      };
-      Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
+    const pdfGenerationPromise = generatePDF(tcoDataParaPDF);
+    const timeoutPromise = new Promise<Blob>((_, reject) => {
+        setTimeout(() => reject(new Error("Tempo limite excedido ao gerar o PDF.")), 90000);
+    });
 
-      console.log("Dados para gerar PDF:", tcoDataParaPDF);
-      console.log("Gerando PDF...");
-      const pdfGenerationPromise = generatePDF(tcoDataParaPDF);
-      const timeoutPromise = new Promise<Blob>((_, reject) => {
-          setTimeout(() => reject(new Error("Tempo limite excedido ao gerar o PDF (90s).")), 90000);
-      });
-      
-      const pdfBlob = await Promise.race([pdfGenerationPromise, timeoutPromise]);
-      if (!pdfBlob || pdfBlob.size === 0) {
-        console.error("Falha na geração do PDF: O arquivo está vazio ou nulo.");
-        throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
-      }
-      console.log("PDF gerado com sucesso, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
+    const pdfBlob = await Promise.race([pdfGenerationPromise, timeoutPromise]);
+    if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
+    console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
 
-      const tcoNumParaNome = tcoNumber.trim().replace(/[^a-zA-Z0-9_.-]/g, '_'); // Sanitize TCO number for filename
-      const dateStr = new Date().toISOString().slice(0, 10);
-      const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
-      const filePath = `tcos/${userId}/${fileName}`; // Ensure userId is safe for path
-      
-      console.log(`Iniciando upload do PDF para Supabase Storage: ${filePath} no bucket ${BUCKET_NAME}`);
-      
-      const uploadPromise = supabase.storage.from(BUCKET_NAME).upload(filePath, pdfBlob, { 
-          contentType: 'application/pdf',
-          upsert: true 
-      });
-      
-      const uploadTimeoutPromise = new Promise<any>((_, reject) => {
-          setTimeout(() => reject(new Error("Tempo limite excedido ao enviar o arquivo para o Storage (60s).")), 60000);
-      });
-      
-      const { data: uploadData, error: uploadError } = await Promise.race([uploadPromise, uploadTimeoutPromise]);
-      
-      if (uploadError) {
-        console.error("Erro no upload do PDF para Supabase Storage:", uploadError);
-        throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
-      }
-      if (!uploadData) {
-          console.error("Upload do PDF para Supabase Storage não retornou dados válidos.");
-          throw new Error("Upload do PDF falhou, dados de retorno inválidos.");
-      }
-      console.log("Upload do PDF concluído com sucesso:", uploadData);
+    const tcoNumParaNome = tcoNumber.trim();
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
+    const filePath = `tcos/${userId || 'anonimo'}/${tcoNumParaNome}_${dateStr}.pdf`;
+    const BUCKET_NAME = 'tco-pdfs';
+    const TABLE_NAME = 'tco_pdfs';
 
-      console.log("Obtendo URL pública do PDF...");
-      const { data: publicUrlData } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-      const downloadURL = publicUrlData?.publicUrl || '';
-      if (!downloadURL) {
-        console.warn("Não foi possível obter a URL pública do PDF. O arquivo pode ter sido carregado, mas a URL não está disponível.");
-      }
-      console.log('URL pública do arquivo:', downloadURL);
-
-      console.log("Preparando metadados para salvar no banco de dados...");
-      const tcoMetadata = {
-        tcoNumber: tcoNumber.trim(), // Use actual column name as defined in TABLE_TCO_PDFS_SCHEMA
-        natureza: displayNaturezaReal,
-        policiais: componentesValidos.map(p => ({ nome: p.nome, rg: p.rg, posto: p.posto })),
-        pdfPath: filePath,    // Use actual column name
-        pdfUrl: downloadURL,  // Use actual column name
-        createdBy: userId,    // Use actual column name
-        // created_at and updated_at will be handled by default/trigger
-      };
-      
-      console.log("Metadados para salvar:", tcoMetadata);
-      console.log(`Inserindo metadados na tabela '${TABLE_NAME}'...`);
-
-      const insertPromise = supabase.from(TABLE_NAME).insert([tcoMetadata]).select('id').single();
-      const dbTimeoutPromise = new Promise<any>((_, reject) => {
-          setTimeout(() => reject(new Error("Tempo limite excedido ao salvar metadados no banco de dados (30s).")), 30000);
-      });
-      
-      const { data: insertData, error: insertError } = await Promise.race([insertPromise, dbTimeoutPromise]);
-      
-      if (insertError) {
-        console.error("Erro ao salvar metadados no Supabase DB:", insertError);
-        // Attempt to remove uploaded PDF if DB insert fails
-        console.log(`Tentando remover o PDF ${filePath} devido a erro no DB...`);
-        await supabase.storage.from(BUCKET_NAME).remove([filePath]).catch(deleteError => 
-            console.error("Falha ao remover PDF após erro de inserção no DB:", deleteError)
-        );
-        let userMessage = `Erro ao salvar informações do TCO: ${insertError.message}`;
-        if (insertError.code === '23503' && insertError.message.includes('fkey_tco_pdfs_createdBy')) {
-            userMessage = "Erro de referência de usuário. Tente fazer login novamente.";
-        } else if (insertError.code === '42P01') { // undefined_table (should be caught by ensureTableExists)
-            userMessage = "A tabela de TCOs não foi encontrada. Contate o suporte.";
-        } else if (insertError.code === '42703') { // undefined_column
-            userMessage = `Erro de schema: coluna '${insertError.message.split('"')[1]}' não encontrada. Contate o suporte.`;
-        }
-        throw new Error(userMessage);
-      }
-      
-      console.log("Metadados salvos com sucesso no DB, ID do registro:", insertData?.id);
-      toast({ title: "TCO Registrado com Sucesso!", description: "PDF enviado e informações salvas no sistema." });
-      navigate("/?tab=tco");
-
+    // Ensure bucket and table exist
+    console.log(`Verificando existência do bucket ${BUCKET_NAME}`);
+    try {
+      await createBucketIfNotExists(BUCKET_NAME);
+      console.log(`Bucket ${ BUCKET_NAME } verificado/criado com sucesso`);
     } catch (error: any) {
-      console.error("Erro geral no processo de submissão do TCO:", error);
-      // Provide more specific error feedback to the user
-      let detailedMessage = error.message || 'Erro desconhecido.';
-      if (error.message?.includes("supabaseUtils")) {
-          detailedMessage = "Ocorreu um problema ao configurar o ambiente no servidor. Tente novamente mais tarde.";
-      } else if (error.message?.includes("NetworkError")) {
-          detailedMessage = "Erro de rede. Verifique sua conexão com a internet e tente novamente.";
-      }
+      console.error("Erro ao verificar/criar bucket:", error);
+      throw new Error(`Falha ao configurar o bucket de armazenamento: ${error.message}`);
+    }
 
-      toast({ 
-        variant: "destructive", 
-        title: "Erro ao Finalizar TCO", 
-        description: detailedMessage, 
-        duration: 9000 
+    console.log(`Verificando existência da tabela ${TABLE_NAME}`);
+    try {
+      await createTableIfNotExists(TABLE_NAME, {
+        tcoNumber: 'text',
+        natureza: 'text',
+        policiais: 'jsonb',
+        pdfPath: 'text',
+        pdfUrl: 'text',
+        createdBy: 'uuid',
+        created_at: 'timestamp with time zone'
       });
-    } finally {
-      console.log("Finalizando processo de submissão.");
-      setIsSubmitting(false);
+      console.log(`Tabela ${ TABLE_NAME } verificada/criada com sucesso`);
+    } catch (error: any) {
+      console.error("Erro ao verificar/criar tabela:", error);
+      throw new Error(`Falha ao configurar a tabela de metadados: ${error.message}`);
     }
-  };
 
-  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
-    if (e.key === 'Enter') {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'BUTTON' && (target as HTMLButtonElement).type === 'submit') return;
-      if (target.tagName === 'INPUT' || target.tagName === 'SELECT') {
-        e.preventDefault();
+    console.log(`Iniciando upload do arquivo para Supabase Storage: ${filePath}`);
+
+    const uploadPromise = supabase.storage.from(BUCKET_NAME).upload(filePath, pdfBlob, {
+        contentType: 'application/pdf',
+        upsert: true
+    });
+
+    const uploadTimeoutPromise = new Promise<any>((_, reject) => {
+        setTimeout(() => reject(new Error("Tempo limite excedido ao enviar o arquivo.")), 60000);
+    });
+
+    const { data: uploadData, error: uploadError } = await Promise.race([uploadPromise, uploadTimeoutPromise]);
+    if (uploadError) {
+      console.error("Erro detalhado no upload:", {
+        message: uploadError.message,
+        name: uploadError.name,
+        stack: uploadError.stack,
+        status: uploadError.status,
+        details: uploadError
+      });
+      throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
+    }
+
+    console.log("Upload concluído:", uploadData);
+
+    const { data: publicUrlData } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+    const downloadURL = publicUrlData?.publicUrl || '';
+    console.log('URL pública do arquivo:', downloadURL);
+
+    const tcoMetadata = {
+      tcoNumber: tcoNumber.trim(),
+      natureza: displayNaturezaReal,
+      policiais: componentesValidos.map(p => ({ nome: p.nome, rg: p.rg, posto: p.posto })),
+      pdfPath: filePath,
+      pdfUrl: downloadURL,
+      createdBy: userId,
+      created_at: new Date().toISOString()
+    };
+
+    console.log("Metadados para salvar no DB:", tcoMetadata);
+
+    const insertPromise = supabase.from(TABLE_NAME).insert([tcoMetadata]).select('id').single();
+    const dbTimeoutPromise = new Promise<any>((_, reject) => {
+        setTimeout(() => reject(new Error("Tempo limite excedido ao salvar metadados no banco de dados.")), 30000);
+    });
+
+    const { data: insertData, error: insertError } = await Promise.race([insertPromise, dbTimeoutPromise]);
+
+    if (insertError) {
+      console.error("Erro detalhado ao salvar metadados:", {
+        message: insertError.message,
+        code: insertError.code,
+        details: insertError.details,
+        hint: insertError.hint,
+        stack: insertError.stack
+      });
+      if (insertError.code === '42P01') {
+        throw new Error("Tabela tco_pdfs não existe no banco de dados.");
+      } else if (insertError.code === '42703') {
+        throw new Error("Coluna(s) especificada(s) no metadados não existe(m) na tabela tco_pdfs.");
       }
+      await supabase.storage.from(BUCKET_NAME).remove([filePath]).catch(deleteError =>
+          console.error("Falha ao remover PDF após erro de inserção no DB:", deleteError));
+      throw new Error(`Erro ao salvar informações do TCO: ${insertError.message}`);
     }
-  };
 
-  const naturezaOptions = [
-    "Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria",
-    "Difamação", "Calúnia", "Perturbação do Sossego",
-    "Porte de drogas para consumo", "Outros"
-  ];
+    console.log("Metadados salvos com sucesso no DB, ID:", insertData?.id);
+    toast({ title: "TCO Registrado com Sucesso!", description: "PDF enviado e informações salvas no sistema." });
+    navigate("/?tab=tco");
 
-  const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
-  // --- END OF Handler functions ---
+  } catch (error: any) {
+    console.error("Erro geral no processo de submissão do TCO:", {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      details: error
+    });
+    toast({
+      variant: "destructive",
+      title: "Erro ao Finalizar TCO",
+      description: `Ocorreu um erro: ${error.message || 'Erro desconhecido.'}`,
+      duration: 7000
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+  if (e.key === 'Enter') {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'BUTTON' && (target as HTMLButtonElement).type === 'submit') return;
+    if (target.tagName === 'INPUT' || target.tagName === 'SELECT') {
+      e.preventDefault();
+    }
+  }
+};
+
+const naturezaOptions = [
+  "Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria",
+  "Difamação", "Calúnia", "Perturbação do Sossego",
+  "Porte de drogas para consumo", "Outros"
+];
+
+const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
+// --- END OF Handler functions ---
 
 
-  // --- Redesigned JSX Structure using Cards ---
-  return (
-    <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
-      <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
+// --- Redesigned JSX Structure using Cards ---
+return (
+  <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
+    <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
+      <Card>
+        <CardHeader>
+          <CardTitle>Informações Básicas</CardTitle>
+          <CardDescription>Identificação inicial do TCO e natureza principal.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BasicInformationTab
+            tcoNumber={tcoNumber} setTcoNumber={setTcoNumber}
+            natureza={natureza} setNatureza={setNatureza}
+            autor={autor} setAutor={setAutor}
+            penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
+            customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
+            startTime={start
 
+Time} isTimerRunning={isTimerRunning}
+            juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData}
+            juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora}
+          />
+        </CardContent>
+      </Card>
+
+      {natureza === "Porte de drogas para consumo" && (
         <Card>
           <CardHeader>
-            <CardTitle>Informações Básicas</CardTitle>
-            <CardDescription>Identificação inicial do TCO e natureza principal.</CardDescription>
+            <CardTitle>Verificação de Entorpecente</CardTitle>
+            <CardDescription>Detalhes sobre a substância apreendida.</CardDescription>
           </CardHeader>
           <CardContent>
-            <BasicInformationTab
-              tcoNumber={tcoNumber} setTcoNumber={setTcoNumber}
-              natureza={natureza} setNatureza={setNatureza}
-              autor={autor} setAutor={setAutor}
-              penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
-              customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
-              startTime={startTime} isTimerRunning={isTimerRunning}
-              juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData}
-              juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora}
+            <DrugVerificationTab
+              quantidade={quantidade} setQuantidade={setQuantidade}
+              substancia={substancia} setSubstancia={setSubstancia}
+              cor={cor} setCor={setCor}
+              indicios={indicios}
+              customMaterialDesc={customMaterialDesc} setCustomMaterialDesc={setCustomMaterialDesc}
+              isUnknownMaterial={isUnknownMaterial}
+              lacreNumero={lacreNumero} setLacreNumero={setLacreNumero}
             />
           </CardContent>
         </Card>
+      )}
 
-        {natureza === "Porte de drogas para consumo" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Verificação de Entorpecente</CardTitle>
-              <CardDescription>Detalhes sobre a substância apreendida.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DrugVerificationTab
-                quantidade={quantidade} setQuantidade={setQuantidade}
-                substancia={substancia} setSubstancia={setSubstancia}
-                cor={cor} setCor={setCor}
-                indicios={indicios}
-                customMaterialDesc={customMaterialDesc} setCustomMaterialDesc={setCustomMaterialDesc}
-                isUnknownMaterial={isUnknownMaterial}
-                lacreNumero={lacreNumero} setLacreNumero={setLacreNumero}
-              />
-            </CardContent>
-          </Card>
-        )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Informações Gerais da Ocorrência</CardTitle>
+          <CardDescription>Detalhes sobre local, data, hora, acionamento e tipificação legal.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <GeneralInformationTab
+              natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao}
+              isCustomNatureza={natureza === "Outros"} customNatureza={customNatureza}
+              dataFato={dataFato} setDataFato={setDataFato}
+              horaFato={horaFato} setHoraFato={setHoraFato}
+              dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro}
+              dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro}
+              localFato={localFato} setLocalFato={setLocalFato}
+              endereco={endereco} setEndereco={setEndereco}
+              municipio={municipio}
+              comunicante={comunicante} setComunicante={setComunicante}
+              guarnicao={guarnicao} setGuarnicao={setGuarnicao}
+              operacao={operacao} setOperacao={setOperacao}
+              condutorNome={condutorParaDisplay?.nome || ""}
+              condutorPosto={condutorParaDisplay?.posto || ""}
+              condutorRg={condutorParaDisplay?.rg || ""}
+          />
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Informações Gerais da Ocorrência</CardTitle>
-            <CardDescription>Detalhes sobre local, data, hora, acionamento e tipificação legal.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <GeneralInformationTab
-                natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao}
-                isCustomNatureza={natureza === "Outros"} customNatureza={customNatureza}
-                dataFato={dataFato} setDataFato={setDataFato}
-                horaFato={horaFato} setHoraFato={setHoraFato}
-                dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro}
-                dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro}
-                localFato={localFato} setLocalFato={setLocalFato}
-                endereco={endereco} setEndereco={setEndereco}
-                municipio={municipio}
-                comunicante={comunicante} setComunicante={setComunicante}
-                guarnicao={guarnicao} setGuarnicao={setGuarnicao}
-                operacao={operacao} setOperacao={setOperacao}
-                condutorNome={condutorParaDisplay?.nome || ""}
-                condutorPosto={condutorParaDisplay?.posto || ""}
-                condutorRg={condutorParaDisplay?.rg || ""}
-            />
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Pessoas Envolvidas</CardTitle>
+          <CardDescription>Detalhes sobre Autores, Vítimas e Testemunhas.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PessoasEnvolvidasTab
+              vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
+              testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
+              autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
+              natureza={natureza}
+          />
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Pessoas Envolvidas</CardTitle>
-            <CardDescription>Detalhes sobre Autores, Vítimas e Testemunhas.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PessoasEnvolvidasTab
-                vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
-                testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
-                autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
-                natureza={natureza}
-            />
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Guarnição Policial</CardTitle>
+          <CardDescription>Componentes da equipe que atendeu a ocorrência.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <GuarnicaoTab
+            currentGuarnicaoList={componentesGuarnicao}
+            onAddPolicial={handleAddPolicialToList}
+            onRemovePolicial={handleRemovePolicialFromList}
+          />
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Guarnição Policial</CardTitle>
-            <CardDescription>Componentes da equipe que atendeu a ocorrência.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <GuarnicaoTab
-              currentGuarnicaoList={componentesGuarnicao}
-              onAddPolicial={handleAddPolicialToList}
-              onRemovePolicial={handleRemovePolicialFromList}
-            />
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Histórico e Narrativas</CardTitle>
+          <CardDescription>Relatos, apreensões, conclusão e manifestação da vítima.</CardDescription>
+        </CardHeader>
+        <CardContent>
+           <HistoricoTab
+              relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange}
+              relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor}
+              relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima}
+              relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha}
+              apreensoes={apreensoes} setApreensoes={setApreensoes}
+              conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial}
+              drugSeizure={natureza === "Porte de drogas para consumo"}
+              representacao={representacao} setRepresentacao={setRepresentacao}
+              natureza={natureza}
+           />
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Histórico e Narrativas</CardTitle>
-            <CardDescription>Relatos, apreensões, conclusão e manifestação da vítima.</CardDescription>
-          </CardHeader>
-          <CardContent>
-             <HistoricoTab
-                relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange}
-                relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor}
-                relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima}
-                relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha}
-                apreensoes={apreensoes} setApreensoes={setApreensoes}
-                conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial}
-                drugSeizure={natureza === "Porte de drogas para consumo"}
-                representacao={representacao} setRepresentacao={setRepresentacao}
-                natureza={natureza}
-             />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Anexos (Opcional)</CardTitle>
-            <CardDescription>Adicione fotos ou links de vídeos relacionados à ocorrência.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
-               <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-blue-500 transition-colors duration-200 ease-in-out">
-                   <div className="flex flex-col items-center text-center">
-                       <ImageIcon className="w-12 h-12 text-blue-600 mb-2" />
-                       <h3 className="text-lg font-medium text-gray-700">Fotos</h3>
-                       <p className="text-sm text-gray-500 px-4 mt-1">
-                           Anexe imagens relevantes (JPG, PNG, GIF). Serão incluídas no PDF.
-                       </p>
-                   </div>
-                 <input
-                   type="file" multiple accept="image/jpeg, image/png, image/gif"
-                   ref={imageInputRef} onChange={handleImageFileChange}
-                   className="hidden" id="imageUpload"
-                 />
-                 <Button
-                   type="button" variant="outline"
-                   onClick={() => imageInputRef.current?.click()}
-                   className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto mx-auto"
-                   aria-label="Selecionar imagens para anexar"
-                 >
-                   <Plus className="mr-2 h-5 w-5" />
-                   Selecionar Fotos
-                 </Button>
-                 {imageFiles.length > 0 && (
-                   <div className="w-full pt-2">
-                     <p className="text-sm font-medium text-gray-600 mb-1.5">Arquivos selecionados:</p>
-                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
-                       {imageFiles.map((file, index) => (
-                         <li key={`${file.name}-${index}-${file.lastModified}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
-                           <span className="truncate mr-2 flex-1 text-gray-700" title={file.name}>
-                             {file.name} <span className="text-gray-400 text-xs">({ (file.size / 1024).toFixed(1) } KB)</span>
-                           </span>
-                           <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveImageFile(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover imagem ${file.name}`}>
-                             <X className="h-4 w-4" />
-                           </Button>
-                         </li>
-                       ))}
-                     </ul>
-                   </div>
-                 )}
-                 {imageFiles.length === 0 && ( <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p> )}
-               </div>
-
-               <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-green-500 transition-colors duration-200 ease-in-out">
+      <Card>
+        <CardHeader>
+          <CardTitle>Anexos (Opcional)</CardTitle>
+          <CardDescription>Adicione fotos ou links de vídeos relacionados à ocorrência.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-2 gap-6">
+             <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-blue-500 transition-colors duration-200 ease-in-out">
                  <div className="flex flex-col items-center text-center">
-                   <VideoIcon className="w-12 h-12 text-green-600 mb-2" />
-                   <h3 className="text-lg font-medium text-gray-700">Vídeos (Links)</h3>
-                   <p className="text-sm text-gray-500 px-4 mt-1">Adicione links para vídeos online (YouTube, Drive, etc.).</p>
+                     <ImageIcon className="w-12 h-12 text-blue-600 mb-2" />
+                     <h3 className="text-lg font-medium text-gray-700">Fotos</h3>
+                     <p className="text-sm text-gray-500 px-4 mt-1">
+                         Anexe imagens relevantes (JPG, PNG, GIF). Serão incluídas no PDF.
+                     </p>
                  </div>
-                 <div className="flex w-full space-x-2 items-center pt-1">
-                   <Input
-                     type="url" value={newVideoLink}
-                     onChange={(e) => setNewVideoLink(e.target.value)}
-                     placeholder="https://..."
-                     aria-label="Link do vídeo"
-                     className="flex-1 text-sm"
-                   />
-                   <Button type="button" onClick={handleAddVideoLink} className="bg-green-600 hover:bg-green-700 text-white shrink-0" size="icon" aria-label="Adicionar link de vídeo" disabled={!newVideoLink.trim()}>
-                     <Plus className="h-5 w-5" />
-                   </Button>
+               <input
+                 type="file" multiple accept="image/jpeg, image/png, image/gif"
+                 ref={imageInputRef} onChange={handleImageFileChange}
+                 className="hidden" id="imageUpload"
+               />
+               <Button
+                 type="button" variant="outline"
+                 onClick={() => imageInputRef.current?.click()}
+                 className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto mx-auto"
+                 aria-label="Selecionar imagens para anexar"
+               >
+                 <Plus className="mr-2 h-5 w-5" />
+                 Selecionar Fotos
+               </Button>
+               {imageFiles.length > 0 && (
+                 <div className="w-full pt-2">
+                   <p className="text-sm font-medium text-gray-600 mb-1.5">Arquivos selecionados:</p>
+                   <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
+                     {imageFiles.map((file, index) => (
+                       <li key={`${file.name}-${index}-${file.lastModified}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
+                         <span className="truncate mr-2 flex-1 text-gray-700" title={file.name}>
+                           {file.name} <span className="text-gray-400 text-xs">({ (file.size / 1024).toFixed(1) } KB)</span>
+                         </span>
+                         <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveImageFile(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover imagem ${file.name}`}>
+                           <X className="h-4 w-4" />
+                         </Button>
+                       </li>
+                     ))}
+                   </ul>
                  </div>
-                 {videoLinks.length > 0 && (
-                   <div className="w-full pt-2">
-                     <p className="text-sm font-medium text-gray-600 mb-1.5">Links adicionados:</p>
-                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
-                       {videoLinks.map((link, index) => (
-                         <li key={`${index}-${link}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
-                           <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate mr-2 flex-1" title={`Abrir link: ${link}`}> {link} </a>
-                           <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveVideoLink(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover link ${link}`}>
-                             <X className="h-4 w-4" />
-                           </Button>
-                         </li>
-                       ))}
-                     </ul>
-                   </div>
-                 )}
-                  {videoLinks.length === 0 && ( <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p> )}
-               </div>
-            </div>
-          </CardContent>
-        </Card>
+               )}
+               {imageFiles.length === 0 && ( <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p> )}
+             </div>
 
-        <div className="flex justify-end mt-8 pt-6 border-t border-gray-300">
-          <Button type="submit" disabled={isSubmitting} size="lg" className="min-w-[200px]">
-            {isSubmitting ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Processando...
-              </>
-            ) : (
-               <>
-                 <FileText className="mr-2 h-5 w-5" />
-                 Finalizar e Salvar TCO
-               </>
-            )}
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
+              <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-green-500 transition-colors duration-200 ease-in-out">
+               <div className="flex flex-col items-center text-center">
+                 <VideoIcon className="w-12 h-12 text-green-600 mb-2" />
+                 <h3 className="text-lg font-medium text-gray-700">Vídeos (Links)</h3>
+                 <p className="text-sm text-gray-500 px-4 mt-1">Adicione links para vídeos online (YouTube, Drive, etc.).</p>
+               </div>
+               <div className="flex w-full space-x-2 items-center pt-1">
+                 <Input
+                   type="url" value={newVideoLink}
+                   onChange={(e) => setNewVideoLink(e.target.value)}
+                   placeholder="https://..."
+                   aria-label="Link do vídeo"
+                   className="flex-1 text-sm"
+                 />
+                 <Button type="button" onClick={handleAddVideoLink} className="bg-green-600 hover:bg-green-700 text-white shrink-0" size="icon" aria-label="Adicionar link de vídeo" disabled={!newVideoLink.trim()}>
+                   <Plus className="h-5 w-5" />
+                 </Button>
+               </div>
+               {videoLinks.length > 0 && (
+                 <div className="w-full pt-2">
+                   <p className="text-sm font-medium text-gray-600 mb-1.5">Links adicionados:</p>
+                   <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
+                     {videoLinks.map((link, index) => (
+                       <li key={`${index}-${link}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
+                         <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate mr-2 flex-1" title={`Abrir link: ${link}`}> {link} </a>
+                         <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveVideoLink(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover link ${link}`}>
+                           <X className="h-4 w-4" />
+                         </Button>
+                       </li>
+                     ))}
+                   </ul>
+                 </div>
+               )}
+                {videoLinks.length === 0 && ( <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p> )}
+             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end mt-8 pt-6 border-t border-gray-300">
+        <Button type="submit" disabled={isSubmitting} size="lg" className="min-w-[200px]">
+          {isSubmitting ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Processando...
+            </>
+          ) : (
+             <>
+               <FileText className="mr-2 h-5 w-5" />
+               Finalizar e Salvar TCO
+             </>
+          )}
+        </Button>
+      </div>
+    </form>
+  </div>
+);
 };
 
 export default TCOForm;
-
---- END OF FILE TCOForm (35).tsx ---
