@@ -21,7 +21,7 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator"; // Assuming this returns a Blob
 // Import the Supabase client
-import supabase from "@/lib/supabaseClient"; // Use default import
+import { supabase } from "@/integrations/supabase/client";// Use default import
 
 // --- Keep Interfaces: ComponenteGuarnicao, Pessoa ---
 interface ComponenteGuarnicao {
