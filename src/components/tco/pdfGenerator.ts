@@ -19,13 +19,7 @@ import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js'; // Adicion
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
-// import { addTermoCadeiaCustodia } from './PDFcadeiadecustodia'; // Importação com caminho diferente, não utilizada no fluxo atual.
 
-/**
- * Função auxiliar para adicionar imagens ao PDF.
- * NOTA: Esta função não está sendo chamada no fluxo `generatePDF` fornecido.
- * Se for necessário, chame-a no local apropriado dentro de `generatePDF`.
- */
 const addImagesToPDF = (
     doc: jsPDF,
     yPosition: number,
