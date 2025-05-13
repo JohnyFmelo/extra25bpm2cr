@@ -1,4 +1,4 @@
-
+// src/components/tco/pdfGenerator.ts
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -6,7 +6,7 @@ import {
     MARGIN_TOP, MARGIN_BOTTOM, MARGIN_RIGHT, getPageConstants,
     addNewPage,
     addStandardFooterContent
-} from './PDF/pdfUtils.js';
+} from './PDF/pdfUtils.js'; // Assuming .js extension as per original
 
 // Importa geradores de conteúdo da subpasta PDF
 import { generateAutuacaoPage } from './PDF/PDFautuacao.js';
@@ -15,6 +15,9 @@ import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
 import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
+// **** NEW IMPORT ****
+import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas'; // .tsx extension might be resolved automatically by bundler
+// ********************
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
 
@@ -36,7 +39,7 @@ const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; d
 
             // Verifica se a posição atual ultrapassa o limite da página
             if (currentY + maxImageHeight + MARGIN_BOTTOM > pageHeight) {
-                currentY = addNewPage(doc, {});
+                currentY = addNewPage(doc, {}); // Pass empty object or necessary data for new page footer
                 currentY = MARGIN_TOP; // Reseta a posição Y
             }
 
@@ -95,7 +98,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
 
             // --- RESTANTE DO TCO (PÁGINAS 2+) ---
-            yPosition = addNewPage(doc, data);
+            yPosition = addNewPage(doc, data); // Pass data for potential footer content on new page
 
             // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
             generateHistoricoContent(doc, yPosition, data)
@@ -113,18 +116,23 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Caso de droga detectado, pulando Termo de Manifestação da Vítima.");
                     }
 
-                    if (data.apreensaoDescrição || data.apreensoes) {
+                    // Ensure field names match your 'data' object structure
+                    if (data.apreensaoDescrição || data.apreensoes) { // Check if 'apreensaoDescrição' is a typo or intended. Use 'data.apreensoes' if that's the correct field.
                         addTermoApreensao(doc, data);
                     }
 
                     if (data.drogaTipo || data.drogaNomeComum) {
                         addTermoConstatacaoDroga(doc, data);
+                        // **** CALL THE NEW FUNCTION HERE ****
+                        // This will add the drug examination request page after the drug constatation term
+                        addRequisicaoExameDrogas(doc, data);
+                        // ***********************************
                     }
 
                     // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
                     const pessoasComLaudo = [
-                        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
-                        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
+                        ...(data.autores || []).filter((a: any) => a.laudoPericial === "Sim").map((a: any) => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
+                        ...(data.vitimas || []).filter((v: any) => v.laudoPericial === "Sim").map((v: any) => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
                     ].filter(p => p.nome && p.nome.trim());
 
                     if (pessoasComLaudo.length > 0) {
@@ -136,18 +144,34 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
                     }
 
+                    // --- ADICIONAR IMAGENS SE EXISTIREM ---
+                    // It's better to add images before the final closing term if they relate to evidence.
+                    // Or, add them at the very end as an appendix.
+                    // For now, placing it before the encerramento.
+                    if (data.imageBase64 && data.imageBase64.length > 0) {
+                        console.log("Adicionando imagens ao PDF...");
+                        // Start images on a new page to avoid overlap if current page is full
+                        let imageYPos = addNewPage(doc, data); 
+                        imageYPos = MARGIN_TOP; // Reset Y position for the image page
+                        imageYPos = addImagesToPDF(doc, imageYPos, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT);
+                        // Note: addImagesToPDF handles its own page breaks if multiple images are large.
+                    }
+
+
                     addTermoEncerramentoRemessa(doc, data);
 
                     // --- Finalização: Adiciona Números de Página e Salva ---
-                    const pageCount = doc.internal.pages.length - 1;
+                    const pageCount = doc.internal.pages.length - 1; // doc.internal.pages is 1-indexed
                     for (let i = 1; i <= pageCount; i++) {
                         doc.setPage(i);
                         doc.setFont("helvetica", "normal");
                         doc.setFontSize(8);
                         doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
 
-                        if (i > 1) {
-                            addStandardFooterContent(doc);
+                        // Add standard footer content to all pages except the first (Autuação) if desired
+                        // The Autuação page might have its own specific footer or no standard footer.
+                        if (i > 1) { // Or adjust condition based on your first page's footer
+                            addStandardFooterContent(doc, data); // Pass data if footer needs it
                         }
                     }
 
@@ -175,9 +199,9 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     clearTimeout(timeout);
                     reject(new Error(`Erro ao gerar histórico do PDF: ${histError.message}`));
                 });
-        } catch (error) {
+        } catch (error: any) { // Explicitly type error
             clearTimeout(timeout);
-            reject(new Error(`Erro na geração do PDF: ${error.message}`));
+            reject(new Error(`Erro na geração do PDF: ${error.message}`)); // Access error.message
         }
     });
 };
