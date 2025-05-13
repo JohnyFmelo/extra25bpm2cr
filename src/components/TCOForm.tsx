@@ -6,10 +6,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+  CardFooter, // Added if needed for specific sections
+} from "@/components/ui/card"; // Import Card components
+import { Label } from "@/components/ui/label"; // Import Label for Anexos section
+import { Input } from "@/components/ui/input"; // Import Input for Anexos section
 import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -19,11 +19,11 @@ import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
 import GuarnicaoTab from "./tco/GuarnicaoTab";
 import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
-import { generatePDF } from "./tco/pdfGenerator";
-import { supabase } from "@/integrations/supabase/client";
-import { ensureBucketExists, ensureTableExists } from "@/integrations/supabase/supabaseUtils";
+import { generatePDF } from "./tco/pdfGenerator"; // Assuming this returns a Blob
+// Import the Supabase client
+import { supabase } from "@/integrations/supabase/client";// Use default import
 
-// Interfaces
+// --- Keep Interfaces: ComponenteGuarnicao, Pessoa ---
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
@@ -46,13 +46,15 @@ interface Pessoa {
   email: string;
   laudoPericial: string;
 }
+// --- END OF Interfaces ---
 
+// Define TCOForm props interface
 interface TCOFormProps {
-  selectedTco?: any;
+  selectedTco?: any; // You might want to define a more specific type here
   onClear?: () => void;
 }
 
-// Helper Functions
+// --- Keep Helper Functions: initialPersonData, formatRepresentacao, formatCPF, formatPhone, validateCPF, formatarGuarnicao, formatarRelatoAutor, numberToText, fileToBase64 ---
 const initialPersonData: Pessoa = {
   nome: "", sexo: "", estadoCivil: "", profissao: "",
   endereco: "", dataNascimento: "", naturalidade: "",
@@ -141,20 +143,22 @@ const numberToText = (num: number): string => {
 };
 
 const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-    reader.readAsDataURL(file);
-  });
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
 };
+// --- END OF Helper Functions ---
+
 
 const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // State Variables
+  // --- Keep all existing state variables ---
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const now = new Date();
@@ -163,7 +167,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const [tcoNumber, setTcoNumber] = useState("");
   const [natureza, setNatureza] = useState("Vias de Fato");
   const [customNatureza, setCustomNatureza] = useState("");
-  const [autor, setAutor] = useState("");
+  const [autor, setAutor] = useState(""); // Note: Primarily driven by autores[0].nome now
   const [representacao, setRepresentacao] = useState("");
   const [tipificacao, setTipificacao] = useState("Art. 21 da Lei de Contravenções Penais");
   const [penaDescricao, setPenaDescricao] = useState("");
@@ -204,8 +208,9 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const [relatoTestemunha, setRelatoTestemunha] = useState("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.");
   const [conclusaoPolicial, setConclusaoPolicial] = useState("");
   const [isRelatoPolicialManuallyEdited, setIsRelatoPolicialManuallyEdited] = useState(false);
+  // --- END OF State Variables ---
 
-  // useEffect Hooks
+  // --- Keep all useEffect hooks ---
   useEffect(() => {
     if (tcoNumber && !isTimerRunning) {
       setStartTime(new Date());
@@ -242,27 +247,30 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
             ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${customMaterialDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.`
             : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`;
           if (!apreensoes || apreensoes.startsWith("[DESCRIÇÃO]") || apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("MATERIAL DESCONHECIDO")) {
-            setApreensoes(descriptiveText);
+             setApreensoes(descriptiveText);
           }
         }
       }
-      setVitimas([{ ...initialPersonData, nome: "O ESTADO" }]);
-      setRepresentacao("");
+       // In drug cases, Vítima is usually "O ESTADO" or similar, clear specific victim data if added accidentally
+       setVitimas([{ ...initialPersonData, nome: "O ESTADO" }]); // Or clear it: setVitimas([{ ...initialPersonData }]);
+       setRepresentacao(""); // No representation needed for drug cases usually
     } else {
-      if (apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("MATERIAL DESCONHECIDO")) {
-        setApreensoes("");
-      }
-      setVitimas(prevVitimas => {
-        if (prevVitimas.length === 1 && prevVitimas[0].nome === "O ESTADO") {
-          return [{ ...initialPersonData }];
+        if (apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("MATERIAL DESCONHECIDO")){
+            setApreensoes("");
         }
-        if (prevVitimas.length === 0 || (prevVitimas.length === 1 && !prevVitimas[0].nome && !prevVitimas[0].cpf)) {
-          return [{ ...initialPersonData }];
-        }
-        return prevVitimas;
-      });
+       setVitimas(prevVitimas => {
+         // If nature changes *away* from drugs, reset victim if it was set to "O ESTADO"
+         if (prevVitimas.length === 1 && prevVitimas[0].nome === "O ESTADO") {
+             return [{ ...initialPersonData }];
+         }
+         // Otherwise, keep existing victims or ensure one empty slot
+         if (prevVitimas.length === 0 || (prevVitimas.length === 1 && !prevVitimas[0].nome && !prevVitimas[0].cpf)) {
+           return [{ ...initialPersonData }];
+         }
+         return prevVitimas;
+       });
     }
-  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]);
+  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]); // Removed relatoPolicialTemplate
 
   useEffect(() => {
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
@@ -295,9 +303,9 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : (testemunhasValidas.length === 1 ? "TESTEMUNHA" : "");
     const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
     setConclusaoPolicial(conclusaoBase);
-  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
+  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]); // Removed tipificacao from dependency array to prevent potential loop if natureza="Outros"
 
-  useEffect(() => {
+   useEffect(() => {
     if (isRelatoPolicialManuallyEdited) return;
     let updatedRelato = relatoPolicialTemplate;
     const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
@@ -319,28 +327,30 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       .replace("[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]", "[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]")
       .replace("[DILIGÊNCIAS E APREENSÕES REALIZADAS]", "[DILIGÊNCIAS E APREENSÕES REALIZADAS]")
       .replace("[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]", "[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]");
-    if (!isRelatoPolicialManuallyEdited || relatoPolicial === relatoPolicialTemplate) {
-      setRelatoPolicial(updatedRelato.toUpperCase());
-    } else {
-      setRelatoPolicial(updatedRelato);
-    }
-  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited, relatoPolicial]);
+     if (!isRelatoPolicialManuallyEdited || relatoPolicial === relatoPolicialTemplate) {
+       setRelatoPolicial(updatedRelato.toUpperCase());
+     } else {
+       setRelatoPolicial(updatedRelato);
+     }
+  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited, relatoPolicial]); // Added relatoPolicial
 
   useEffect(() => {
     const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
     if (!relatoAutor.includes('[INSIRA DECLARAÇÃO]') || relatoAutor.startsWith("O AUTOR") || relatoAutor.startsWith("A AUTORA") || relatoAutor.startsWith("OS AUTORES") || relatoAutor.startsWith("AS AUTORAS")) {
       setRelatoAutor(novoRelatoAutor);
     }
-  }, [autores, relatoAutor]);
+  }, [autores, relatoAutor]); // Added relatoAutor
 
   useEffect(() => {
     const currentFirstAutorName = autores.length > 0 ? autores[0].nome : "";
     if (currentFirstAutorName !== autor) {
-      setAutor(currentFirstAutorName);
+      setAutor(currentFirstAutorName); // Update the simple 'autor' state shown in Basic Info
     }
   }, [autores, autor]);
+  // --- END OF useEffect hooks ---
 
-  // Handler Functions
+
+  // --- Keep all handler functions ---
   const handleAddPolicialToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
     const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
     if (!alreadyExists) {
@@ -363,57 +373,58 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const handleAddVitima = () => {
     const hasOnlyPlaceholder = vitimas.length === 1 && (!vitimas[0].nome && !vitimas[0].cpf) || (vitimas.length === 1 && vitimas[0].nome === "O ESTADO");
     if (hasOnlyPlaceholder) {
-      setVitimas([{ ...initialPersonData }]);
+        setVitimas([{ ...initialPersonData }]); // Replace placeholder/Estado
     } else {
-      setVitimas(prevVitimas => [...prevVitimas, { ...initialPersonData }]);
+        setVitimas(prevVitimas => [...prevVitimas, { ...initialPersonData }]);
     }
   };
 
   const handleRemoveVitima = (index: number) => {
     const newVitimas = vitimas.filter((_, i) => i !== index);
     if (newVitimas.length === 0) {
-      setVitimas([{...initialPersonData}]);
+      setVitimas([{...initialPersonData}]); // Keep one empty entry
     } else {
       setVitimas(newVitimas);
     }
   };
 
   const handleAddTestemunha = () => {
-    const hasOnlyPlaceholder = testemunhas.length === 1 && !testemunhas[0].nome && !testemunhas[0].cpf;
-    if (hasOnlyPlaceholder) {
-      setTestemunhas([{ ...initialPersonData }]);
-    } else {
-      setTestemunhas(prev => [...prev, { ...initialPersonData }]);
-    }
+     const hasOnlyPlaceholder = testemunhas.length === 1 && !testemunhas[0].nome && !testemunhas[0].cpf;
+     if (hasOnlyPlaceholder) {
+         setTestemunhas([{ ...initialPersonData }]);
+     } else {
+         setTestemunhas(prev => [...prev, { ...initialPersonData }]);
+     }
   };
 
   const handleRemoveTestemunha = (index: number) => {
     const newTestemunhas = testemunhas.filter((_, i) => i !== index);
-    if (newTestemunhas.length === 0) {
+     if (newTestemunhas.length === 0) {
       setTestemunhas([{...initialPersonData}]);
     } else {
-      set Wistemunhas(newTestemunhas);
+      setTestemunhas(newTestemunhas);
     }
   };
 
   const handleAddAutor = () => {
-    const hasOnlyPlaceholder = autores.length === 1 && !autores[0].nome && !autores[0].cpf;
-    if (hasOnlyPlaceholder) {
-      setAutores([{ ...initialPersonData }]);
-    } else {
-      setAutores(prev => [...prev, { ...initialPersonData }]);
-    }
+      const hasOnlyPlaceholder = autores.length === 1 && !autores[0].nome && !autores[0].cpf;
+      if (hasOnlyPlaceholder) {
+          setAutores([{ ...initialPersonData }]);
+      } else {
+          setAutores(prev => [...prev, { ...initialPersonData }]);
+      }
   };
 
   const handleRemoveAutor = (index: number) => {
     const newAutores = autores.filter((_, i) => i !== index);
-    if (newAutores.length === 0) {
+     if (newAutores.length === 0) {
       setAutores([{...initialPersonData}]);
     } else {
       setAutores(newAutores);
     }
+    // Update the main 'autor' field if the first author was removed
     if (index === 0) {
-      setAutor(newAutores.length > 0 ? newAutores[0].nome : "");
+         setAutor(newAutores.length > 0 ? newAutores[0].nome : "");
     }
   };
 
@@ -428,10 +439,11 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
     }
+    // If editing the placeholder "O ESTADO", replace it entirely
     if (newVitimas[index].nome === "O ESTADO" && field === 'nome' && value.trim() !== "O ESTADO") {
-      newVitimas[index] = { ...initialPersonData, [field]: processedValue };
+        newVitimas[index] = { ...initialPersonData, [field]: processedValue };
     } else {
-      newVitimas[index] = { ...newVitimas[index], [field]: processedValue };
+        newVitimas[index] = { ...newVitimas[index], [field]: processedValue };
     }
     setVitimas(newVitimas);
   };
@@ -475,23 +487,24 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     }
     newAutores[index] = { ...newAutores[index], [field]: processedValue };
     setAutores(newAutores);
+    // Update main 'autor' state only if the *first* author's name is changed
     if (index === 0 && field === 'nome') {
-      setAutor(processedValue);
+        setAutor(processedValue);
     }
   };
 
   const handleRelatoPolicialChange = (value: string) => {
     setRelatoPolicial(value);
-    if (value !== relatoPolicialTemplate && !value.includes("[HORÁRIO]")) {
-      setIsRelatoPolicialManuallyEdited(true);
+    if (value !== relatoPolicialTemplate && !value.includes("[HORÁRIO]")) { // Example check
+        setIsRelatoPolicialManuallyEdited(true);
     }
   };
 
   const handleAddVideoLink = () => {
     if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
       if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
-        toast({ variant: "default", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
-        return;
+          toast({ variant: "default", title: "Link Inválido", description: "Por favor, insira um link válido começando com http:// ou https://." });
+          return;
       }
       setVideoLinks(prev => [...prev, newVideoLink.trim()]);
       setNewVideoLink("");
@@ -538,7 +551,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     const completionDate = completionNow.toISOString().split('T')[0];
     const completionTime = completionNow.toTimeString().slice(0, 5);
 
-    // Validations
+    // --- Validations ---
     const autoresValidos = autores.filter(a => a.nome?.trim());
     if (!tcoNumber.trim()) { toast({ variant: "destructive", title: "Campo Obrigatório", description: "O número do TCO é obrigatório." }); return; }
     if (natureza === "Selecione...") { toast({ variant: "destructive", title: "Campo Obrigatório", description: "Selecione a Natureza da Ocorrência." }); return; }
@@ -547,6 +560,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     const componentesValidos = componentesGuarnicao.filter(c => c.nome?.trim() && c.rg?.trim());
     if (componentesValidos.length === 0) { toast({ variant: "destructive", title: "Campo Obrigatório", description: "Adicione pelo menos um Componente da Guarnição válido (Nome e RG)." }); return; }
     if (natureza === "Porte de drogas para consumo" && (!quantidade.trim() || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc.trim()) || !lacreNumero.trim())) { toast({ variant: "destructive", title: "Dados da Droga Incompletos", description: "Para Porte de Drogas, preencha Quantidade, Substância, Cor, Número do Lacre e Descrição (se material desconhecido)." }); return; }
+    // --- End Validations ---
 
     setIsSubmitting(true);
     setIsTimerRunning(false);
@@ -578,7 +592,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         dataTerminoRegistro: completionDate, horaTerminoRegistro: completionTime,
         localFato: localFato.trim(), endereco: endereco.trim(), municipio, comunicante,
         autores: autoresValidos, vitimas: vitimasFiltradas, testemunhas: testemunhasFiltradas,
-        guarnicao: guarnicao.trim(), operacao: operacao.trim(), componentesGuarnicao: componentesValidos,
+        guarnicao: guarnicao.trim(), operacao: operacao.trim(), componentesGuarnicao: componentesValidos, // Use filtered valid components
         relatoPolicial: relatoPolicial.trim(), relatoAutor: relatoAutor.trim(),
         relatoTestemunha: relatoTestemunha.trim(), apreensoes: apreensoes.trim(), conclusaoPolicial: conclusaoPolicial.trim(),
         lacreNumero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : undefined,
@@ -591,19 +605,21 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         startTime: startTime?.toISOString(), endTime: completionNow.toISOString(), userRegistration: userRegistration,
         videoLinks: videoLinks, imageBase64: imageBase64Array,
         juizadoEspecialData: juizadoEspecialData.trim() || undefined, juizadoEspecialHora: juizadoEspecialHora.trim() || undefined,
-        relatoVitima: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' ? relatoVitima.trim() : undefined,
-        representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined,
-        downloadLocal: true
+        relatoVitima: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' ? relatoVitima.trim() : undefined, // Only include if there's a real victim narrative
+        representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined, // Only include if real victim and representation chosen
+        downloadLocal: true // Enable local download as a backup
       };
       Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
 
       console.log("Dados para gerar PDF:", tcoDataParaPDF);
-
-      // Generate PDF
+      
+      // Configure timeout for PDF generation
       const pdfGenerationPromise = generatePDF(tcoDataParaPDF);
       const timeoutPromise = new Promise<Blob>((_, reject) => {
-        setTimeout(() => reject(new Error("Tempo limite excedido ao gerar o PDF.")), 90000);
+          setTimeout(() => reject(new Error("Tempo limite excedido ao gerar o PDF.")), 90000); // 90 segundos
       });
+      
+      // Use Promise.race to implement timeout
       const pdfBlob = await Promise.race([pdfGenerationPromise, timeoutPromise]);
       if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
@@ -614,105 +630,68 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
       const filePath = `tcos/${userId || 'anonimo'}/${tcoNumParaNome}_${dateStr}.pdf`;
       const BUCKET_NAME = 'tco-pdfs';
-      const TABLE_NAME = 'tco_pdfs';
-
-      // Ensure bucket exists
-      console.log(`Verificando existência do bucket: ${BUCKET_NAME}`);
-      try {
-        await ensureBucketExists(BUCKET_NAME);
-        console.log(`Bucket ${BUCKET_NAME} verificado/criado com sucesso.`);
-      } catch (error) {
-        console.error("Erro ao verificar/criar bucket:", error);
-        throw new Error(`Falha ao garantir a existência do bucket ${BUCKET_NAME}: ${error.message}`);
-      }
-
-      // Ensure table exists
-      console.log(`Verificando existência da tabela: ${TABLE_NAME}`);
-      try {
-        const requiredColumns = ['tcoNumber', 'natureza', 'policiais', 'pdfPath', 'pdfUrl', 'createdBy', 'created_at'];
-        await ensureTableExists(TABLE_NAME, requiredColumns);
-        console.log(`Tabela ${TABLE_NAME} verificada/criada com sucesso.`);
-      } catch (error) {
-        console.error("Erro ao verificar/criar tabela:", error);
-        throw new Error(`Falha ao garantir a existência da tabela ${TABLE_NAME}: ${error.message}`);
-      }
-
-      // Upload to Supabase Storage
-      console.log(`Iniciando upload do arquivo para Supabase Storage: ${filePath}`);
-      const uploadPromise = supabase.storage.from(BUCKET_NAME).upload(filePath, pdfBlob, {
-        contentType: 'application/pdf',
-        upsert: true
+      
+      console.log(`Enviando arquivo para Supabase Storage: ${filePath}`);
+      
+      // Upload to Supabase Storage with timeout
+      const uploadPromise = supabase.storage.from(BUCKET_NAME).upload(filePath, pdfBlob, { 
+          contentType: 'application/pdf',
+          upsert: true 
       });
+      
       const uploadTimeoutPromise = new Promise<any>((_, reject) => {
-        setTimeout(() => reject(new Error("Tempo limite excedido ao enviar o arquivo.")), 60000);
+          setTimeout(() => reject(new Error("Tempo limite excedido ao enviar o arquivo.")), 60000); // 60 segundos
       });
+      
       const { data: uploadData, error: uploadError } = await Promise.race([uploadPromise, uploadTimeoutPromise]);
-      if (uploadError) {
-        console.error("Erro durante o upload do PDF:", uploadError);
-        throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
-      }
+      if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
+      
       console.log("Upload concluído:", uploadData);
 
-      // Get public URL
-      console.log(`Obtendo URL pública para o arquivo: ${filePath}`);
-      const { data: publicUrlData, error: urlError } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-      if (urlError) {
-        console.error("Erro ao obter URL pública:", urlError);
-        throw new Error(`Erro ao obter URL pública do arquivo: ${urlError.message}`);
-      }
+      // Get the public URL
+      const { data: publicUrlData } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
       const downloadURL = publicUrlData?.publicUrl || '';
       console.log('URL pública do arquivo:', downloadURL);
 
       // Save metadata to Supabase database
+      const TABLE_NAME = 'tco_pdfs';
       const tcoMetadata = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
-        policiais: componentesValidos.map(p => ({ nome: p.nome, rg: p.rg, posto: p.posto })),
+        policiais: componentesValidos.map(p => ({ nome: p.nome, rg: p.rg, posto: p.posto })), // Store only valid ones
         pdfPath: filePath,
         pdfUrl: downloadURL,
         createdBy: userId,
         created_at: new Date().toISOString()
       };
+      
       console.log("Metadados para salvar no DB:", tcoMetadata);
 
-      try {
-        const insertPromise = supabase.from(TABLE_NAME).insert([tcoMetadata]).select('id').single();
-        const dbTimeoutPromise = new Promise<any>((_, reject) => {
-          setTimeout(() => reject(new Error("Tempo limite excedido ao salvar metadados no banco de dados.")), 30000);
-        });
-        const { data: insertData, error: insertError } = await Promise.race([insertPromise, dbTimeoutPromise]);
-        if (insertError) {
-          console.error("Erro ao salvar metadados no Supabase DB:", insertError);
-          if (insertError.message.includes('relation') && insertError.message.includes('does not exist')) {
-            throw new Error(`Tabela ${TABLE_NAME} não existe no banco de dados.`);
-          } else if (insertError.message.includes('column')) {
-            throw new Error(`Erro de estrutura da tabela ${TABLE_NAME}: uma ou mais colunas necessárias estão ausentes.`);
-          }
-          await supabase.storage.from(BUCKET_NAME).remove([filePath]).catch(deleteError => 
-            console.error("Falha ao remover PDF após erro de inserção no DB:", deleteError));
-          throw new Error(`Erro ao salvar informações do TCO: ${insertError.message}`);
-        }
-        console.log("Metadados salvos com sucesso no DB, ID:", insertData?.id);
-        toast({ title: "TCO Registrado com Sucesso!", description: "PDF enviado e informações salvas no sistema." });
-        navigate("/?tab=tco");
-      } catch (error) {
-        console.error("Erro durante a inserção de metadados:", error);
+      // Save metadata with timeout
+      const insertPromise = supabase.from(TABLE_NAME).insert([tcoMetadata]).select('id').single();
+      const dbTimeoutPromise = new Promise<any>((_, reject) => {
+          setTimeout(() => reject(new Error("Tempo limite excedido ao salvar metadados no banco de dados.")), 30000); // 30 segundos
+      });
+      
+      const { data: insertData, error: insertError } = await Promise.race([insertPromise, dbTimeoutPromise]);
+      
+      if (insertError) {
+        console.error("Erro ao salvar metadados no Supabase DB:", insertError);
         await supabase.storage.from(BUCKET_NAME).remove([filePath]).catch(deleteError => 
-          console.error("Falha ao remover PDF após erro de inserção no DB:", deleteError));
-        throw error;
+            console.error("Falha ao remover PDF após erro de inserção no DB:", deleteError));
+        throw new Error(`Erro ao salvar informações do TCO: ${insertError.message}`);
       }
+      
+      console.log("Metadados salvos com sucesso no DB, ID:", insertData?.id);
+      toast({ title: "TCO Registrado com Sucesso!", description: "PDF enviado e informações salvas no sistema." });
+      navigate("/?tab=tco");
 
     } catch (error: any) {
-      console.error("Erro geral no processo de submissão do TCO:", {
-        message: error.message,
-        stack: error.stack,
-        tcoNumber: tcoNumber,
-        userId: JSON.parse(localStorage.getItem("user") || "{}").id || 'unknown'
-      });
+      console.error("Erro geral no processo de submissão do TCO:", error);
       toast({ 
         variant: "destructive", 
         title: "Erro ao Finalizar TCO", 
-        description: `Ocorreu um erro: ${error.message || 'Erro desconhecido. Verifique os logs para mais detalhes.'}`, 
+        description: `Ocorreu um erro: ${error.message || 'Erro desconhecido.'}`, 
         duration: 7000 
       });
     } finally {
@@ -736,12 +715,17 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     "Porte de drogas para consumo", "Outros"
   ];
 
+  // Condutor for display derived from valid components
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
+  // --- END OF Handler functions ---
 
-  // JSX Structure
+
+  // --- Redesigned JSX Structure using Cards ---
   return (
     <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
-      <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
+      <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate> {/* Adjusted spacing */}
+
+        {/* Card: Basic Information */}
         <Card>
           <CardHeader>
             <CardTitle>Informações Básicas</CardTitle>
@@ -751,7 +735,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
             <BasicInformationTab
               tcoNumber={tcoNumber} setTcoNumber={setTcoNumber}
               natureza={natureza} setNatureza={setNatureza}
-              autor={autor} setAutor={setAutor}
+              autor={autor} setAutor={setAutor} // Still passed, though derived from autores list
               penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
               customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
               startTime={startTime} isTimerRunning={isTimerRunning}
@@ -761,6 +745,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </CardContent>
         </Card>
 
+        {/* Card: Drug Verification (Conditional) */}
         {natureza === "Porte de drogas para consumo" && (
           <Card>
             <CardHeader>
@@ -781,6 +766,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </Card>
         )}
 
+        {/* Card: General Information */}
         <Card>
           <CardHeader>
             <CardTitle>Informações Gerais da Ocorrência</CardTitle>
@@ -788,25 +774,26 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </CardHeader>
           <CardContent>
             <GeneralInformationTab
-              natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao}
-              isCustomNatureza={natureza === "Outros"} customNatureza={customNatureza}
-              dataFato={dataFato} setDataFato={setDataFato}
-              horaFato={horaFato} setHoraFato={setHoraFato}
-              dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro}
-              dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro}
-              localFato={localFato} setLocalFato={setLocalFato}
-              endereco={endereco} setEndereco={setEndereco}
-              municipio={municipio}
-              comunicante={comunicante} setComunicante={setComunicante}
-              guarnicao={guarnicao} setGuarnicao={setGuarnicao}
-              operacao={operacao} setOperacao={setOperacao}
-              condutorNome={condutorParaDisplay?.nome || ""}
-              condutorPosto={condutorParaDisplay?.posto || ""}
-              condutorRg={condutorParaDisplay?.rg || ""}
+                natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao}
+                isCustomNatureza={natureza === "Outros"} customNatureza={customNatureza}
+                dataFato={dataFato} setDataFato={setDataFato}
+                horaFato={horaFato} setHoraFato={setHoraFato}
+                dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro}
+                dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro}
+                localFato={localFato} setLocalFato={setLocalFato}
+                endereco={endereco} setEndereco={setEndereco}
+                municipio={municipio}
+                comunicante={comunicante} setComunicante={setComunicante}
+                guarnicao={guarnicao} setGuarnicao={setGuarnicao}
+                operacao={operacao} setOperacao={setOperacao}
+                condutorNome={condutorParaDisplay?.nome || ""}
+                condutorPosto={condutorParaDisplay?.posto || ""}
+                condutorRg={condutorParaDisplay?.rg || ""}
             />
           </CardContent>
         </Card>
 
+        {/* Card: Pessoas Envolvidas */}
         <Card>
           <CardHeader>
             <CardTitle>Pessoas Envolvidas</CardTitle>
@@ -814,14 +801,15 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </CardHeader>
           <CardContent>
             <PessoasEnvolvidasTab
-              vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
-              testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
-              autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
-              natureza={natureza}
+                vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
+                testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
+                autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
+                natureza={natureza} // Pass nature to conditionally disable/adjust victim input
             />
           </CardContent>
         </Card>
 
+        {/* Card: Guarnicao */}
         <Card>
           <CardHeader>
             <CardTitle>Guarnição Policial</CardTitle>
@@ -836,115 +824,122 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </CardContent>
         </Card>
 
+        {/* Card: Historico */}
         <Card>
           <CardHeader>
             <CardTitle>Histórico e Narrativas</CardTitle>
             <CardDescription>Relatos, apreensões, conclusão e manifestação da vítima.</CardDescription>
           </CardHeader>
           <CardContent>
-            <HistoricoTab
-              relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange}
-              relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor}
-              relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima}
-              relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha}
-              apreensoes={apreensoes} setApreensoes={setApreensoes}
-              conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial}
-              drugSeizure={natureza === "Porte de drogas para consumo"}
-              representacao={representacao} setRepresentacao={setRepresentacao}
-              natureza={natureza}
-            />
+             <HistoricoTab
+                relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange}
+                relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor}
+                relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima}
+                relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha}
+                apreensoes={apreensoes} setApreensoes={setApreensoes}
+                conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial}
+                drugSeizure={natureza === "Porte de drogas para consumo"}
+                representacao={representacao} setRepresentacao={setRepresentacao}
+                natureza={natureza} // Pass nature to conditionally show/hide representation
+             />
           </CardContent>
         </Card>
 
+        {/* Card: Anexos */}
         <Card>
           <CardHeader>
             <CardTitle>Anexos (Opcional)</CardTitle>
             <CardDescription>Adicione fotos ou links de vídeos relacionados à ocorrência.</CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Keep the existing grid layout for anexos inside the card content */}
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-blue-500 transition-colors duration-200 ease-in-out">
-                <div className="flex flex-col items-center text-center">
-                  <ImageIcon className="w-12 h-12 text-blue-600 mb-2" />
-                  <h3 className="text-lg font-medium text-gray-700">Fotos</h3>
-                  <p className="text-sm text-gray-500 px-4 mt-1">
-                    Anexe imagens relevantes (JPG, PNG, GIF). Serão incluídas no PDF.
-                  </p>
-                </div>
-                <input
-                  type="file" multiple accept="image/jpeg, image/png, image/gif"
-                  ref={imageInputRef} onChange={handleImageFileChange}
-                  className="hidden" id="imageUpload"
-                />
-                <Button
-                  type="button" variant="outline"
-                  onClick={() => imageInputRef.current?.click()}
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto mx-auto"
-                  aria-label="Selecionar imagens para anexar"
-                >
-                  <Plus className="mr-2 h-5 w-5" />
-                  Selecionar Fotos
-                </Button>
-                {imageFiles.length > 0 && (
-                  <div className="w-full pt-2">
-                    <p className="text-sm font-medium text-gray-600 mb-1.5">Arquivos selecionados:</p>
-                    <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
-                      {imageFiles.map((file, index) => (
-                        <li key={`${file.name}-${index}-${file.lastModified}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
-                          <span className="truncate mr-2 flex-1 text-gray-700" title={file.name}>
-                            {file.name} <span className="text-gray-400 text-xs">({ (file.size / 1024).toFixed(1) } KB)</span>
-                          </span>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveImageFile(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover imagem ${file.name}`}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {imageFiles.length === 0 && ( <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p> )}
-              </div>
+               {/* Image Upload */}
+               <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-blue-500 transition-colors duration-200 ease-in-out">
+                   <div className="flex flex-col items-center text-center">
+                       <ImageIcon className="w-12 h-12 text-blue-600 mb-2" />
+                       <h3 className="text-lg font-medium text-gray-700">Fotos</h3>
+                       <p className="text-sm text-gray-500 px-4 mt-1">
+                           Anexe imagens relevantes (JPG, PNG, GIF). Serão incluídas no PDF.
+                       </p>
+                   </div>
+                 <input
+                   type="file" multiple accept="image/jpeg, image/png, image/gif"
+                   ref={imageInputRef} onChange={handleImageFileChange}
+                   className="hidden" id="imageUpload"
+                 />
+                 <Button
+                   type="button" variant="outline"
+                   onClick={() => imageInputRef.current?.click()}
+                   className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto mx-auto"
+                   aria-label="Selecionar imagens para anexar"
+                 >
+                   <Plus className="mr-2 h-5 w-5" />
+                   Selecionar Fotos
+                 </Button>
+                 {imageFiles.length > 0 && (
+                   <div className="w-full pt-2">
+                     <p className="text-sm font-medium text-gray-600 mb-1.5">Arquivos selecionados:</p>
+                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
+                       {imageFiles.map((file, index) => (
+                         <li key={`${file.name}-${index}-${file.lastModified}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
+                           <span className="truncate mr-2 flex-1 text-gray-700" title={file.name}>
+                             {file.name} <span className="text-gray-400 text-xs">({ (file.size / 1024).toFixed(1) } KB)</span>
+                           </span>
+                           <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveImageFile(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover imagem ${file.name}`}>
+                             <X className="h-4 w-4" />
+                           </Button>
+                         </li>
+                       ))}
+                     </ul>
+                   </div>
+                 )}
+                 {imageFiles.length === 0 && ( <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p> )}
+               </div>
 
-              <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-green-500 transition-colors duration-200 ease-in-out">
-                <div className="flex flex-col items-center text-center">
-                  <VideoIcon className="w-12 h-12 text-green-600 mb-2" />
-                  <h3 className="text-lg font-medium text-gray-700">Vídeos (Links)</h3>
-                  <p className="text-sm text-gray-500 px-4 mt-1">Adicione links para vídeos online (YouTube, Drive, etc.).</p>
-                </div>
-                <div className="flex w-full space-x-2 items-center pt-1">
-                  <Input
-                    type="url" value={newVideoLink}
-                    onChange={(e) => setNewVideoLink(e.target.value)}
-                    placeholder="https://..."
-                    aria-label="Link do vídeo"
-                    className="flex-1 text-sm"
-                  />
-                  <Button type="button" onClick={handleAddVideoLink} className="bg-green-600 hover:bg-green-700 text-white shrink-0" size="icon" aria-label="Adicionar link de vídeo" disabled={!newVideoLink.trim()}>
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                </div>
-                {videoLinks.length > 0 && (
-                  <div className="w-full pt-2">
-                    <p className="text-sm font-medium text-gray-600 mb-1.5">Links adicionados:</p>
-                    <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
-                      {videoLinks.map((link, index) => (
-                        <li key={`${index}-${link}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
-                          <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate mr-2 flex-1" title={`Abrir link: ${link}`}> {link} </a>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveVideoLink(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover link ${link}`}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {videoLinks.length === 0 && ( <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p> )}
-              </div>
+                {/* Video Links */}
+               <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-green-500 transition-colors duration-200 ease-in-out">
+                 <div className="flex flex-col items-center text-center">
+                   <VideoIcon className="w-12 h-12 text-green-600 mb-2" />
+                   <h3 className="text-lg font-medium text-gray-700">Vídeos (Links)</h3>
+                   <p className="text-sm text-gray-500 px-4 mt-1">Adicione links para vídeos online (YouTube, Drive, etc.).</p>
+                 </div>
+                 <div className="flex w-full space-x-2 items-center pt-1">
+                   {/* Using ShadCN Input component for consistency */}
+                   <Input
+                     type="url" value={newVideoLink}
+                     onChange={(e) => setNewVideoLink(e.target.value)}
+                     placeholder="https://..."
+                     aria-label="Link do vídeo"
+                     className="flex-1 text-sm" // Adjusted class for ShadCN Input
+                   />
+                   <Button type="button" onClick={handleAddVideoLink} className="bg-green-600 hover:bg-green-700 text-white shrink-0" size="icon" aria-label="Adicionar link de vídeo" disabled={!newVideoLink.trim()}>
+                     <Plus className="h-5 w-5" />
+                   </Button>
+                 </div>
+                 {videoLinks.length > 0 && (
+                   <div className="w-full pt-2">
+                     <p className="text-sm font-medium text-gray-600 mb-1.5">Links adicionados:</p>
+                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
+                       {videoLinks.map((link, index) => (
+                         <li key={`${index}-${link}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
+                           <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate mr-2 flex-1" title={`Abrir link: ${link}`}> {link} </a>
+                           <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveVideoLink(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover link ${link}`}>
+                             <X className="h-4 w-4" />
+                           </Button>
+                         </li>
+                       ))}
+                     </ul>
+                   </div>
+                 )}
+                  {videoLinks.length === 0 && ( <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p> )}
+               </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="flex justify-end mt-8 pt-6 border-t border-gray-300">
+        {/* Submit Button Section (Kept separate for final action clarity) */}
+        <div className="flex justify-end mt-8 pt-6 border-t border-gray-300"> {/* Added slightly more top margin */}
           <Button type="submit" disabled={isSubmitting} size="lg" className="min-w-[200px]">
             {isSubmitting ? (
               <>
@@ -955,10 +950,10 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
                 Processando...
               </>
             ) : (
-              <>
-                <FileText className="mr-2 h-5 w-5" />
-                Finalizar e Salvar TCO
-              </>
+               <>
+                 <FileText className="mr-2 h-5 w-5" />
+                 Finalizar e Salvar TCO
+               </>
             )}
           </Button>
         </div>
