@@ -1,5 +1,3 @@
---- START OF FILE TCOForm (35).tsx ---
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,9 +22,6 @@ import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator"; // Assuming this returns a Blob
 // Import the Supabase client
 import { supabase } from "@/integrations/supabase/client";// Use default import
-// Import hypothetical Supabase utility functions
-// The user needs to ensure these utilities are correctly implemented in the specified path.
-import { ensureBucketExists, ensureTableExists } from "@/integrations/supabase/supabaseUtils"; // HYPOTHETICAL PATH
 
 // --- Keep Interfaces: ComponenteGuarnicao, Pessoa ---
 interface ComponenteGuarnicao {
@@ -157,35 +152,6 @@ const fileToBase64 = (file: File): Promise<string> => {
 };
 // --- END OF Helper Functions ---
 
-// Define the schema for the tco_pdfs table for ensureTableExists utility
-const TABLE_TCO_PDFS_SCHEMA = `
-  CREATE TABLE IF NOT EXISTS public.tco_pdfs (
-    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    "tcoNumber" TEXT, -- Use quotes if column names have uppercase chars or are keywords
-    natureza TEXT,
-    policiais JSONB,
-    "pdfPath" TEXT,
-    "pdfUrl" TEXT,
-    "createdBy" UUID REFERENCES auth.users(id),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-  );
-
-  CREATE OR REPLACE FUNCTION public.update_updated_at_column()
-  RETURNS TRIGGER AS $$
-  BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-  END;
-  $$ LANGUAGE plpgsql;
-
-  DROP TRIGGER IF EXISTS tco_pdfs_update_updated_at ON public.tco_pdfs;
-  CREATE TRIGGER tco_pdfs_update_updated_at
-  BEFORE UPDATE ON public.tco_pdfs
-  FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at_column();
-`;
-
 
 const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const { toast } = useToast();
@@ -285,23 +251,26 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           }
         }
       }
-       setVitimas([{ ...initialPersonData, nome: "O ESTADO" }]);
-       setRepresentacao("");
+       // In drug cases, Vítima is usually "O ESTADO" or similar, clear specific victim data if added accidentally
+       setVitimas([{ ...initialPersonData, nome: "O ESTADO" }]); // Or clear it: setVitimas([{ ...initialPersonData }]);
+       setRepresentacao(""); // No representation needed for drug cases usually
     } else {
         if (apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("MATERIAL DESCONHECIDO")){
             setApreensoes("");
         }
        setVitimas(prevVitimas => {
+         // If nature changes *away* from drugs, reset victim if it was set to "O ESTADO"
          if (prevVitimas.length === 1 && prevVitimas[0].nome === "O ESTADO") {
              return [{ ...initialPersonData }];
          }
+         // Otherwise, keep existing victims or ensure one empty slot
          if (prevVitimas.length === 0 || (prevVitimas.length === 1 && !prevVitimas[0].nome && !prevVitimas[0].cpf)) {
            return [{ ...initialPersonData }];
          }
          return prevVitimas;
        });
     }
-  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]);
+  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]); // Removed relatoPolicialTemplate
 
   useEffect(() => {
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
@@ -334,7 +303,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : (testemunhasValidas.length === 1 ? "TESTEMUNHA" : "");
     const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
     setConclusaoPolicial(conclusaoBase);
-  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
+  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]); // Removed tipificacao from dependency array to prevent potential loop if natureza="Outros"
 
    useEffect(() => {
     if (isRelatoPolicialManuallyEdited) return;
@@ -363,19 +332,19 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
      } else {
        setRelatoPolicial(updatedRelato);
      }
-  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited, relatoPolicial]);
+  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited, relatoPolicial]); // Added relatoPolicial
 
   useEffect(() => {
     const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
     if (!relatoAutor.includes('[INSIRA DECLARAÇÃO]') || relatoAutor.startsWith("O AUTOR") || relatoAutor.startsWith("A AUTORA") || relatoAutor.startsWith("OS AUTORES") || relatoAutor.startsWith("AS AUTORAS")) {
       setRelatoAutor(novoRelatoAutor);
     }
-  }, [autores, relatoAutor]);
+  }, [autores, relatoAutor]); // Added relatoAutor
 
   useEffect(() => {
     const currentFirstAutorName = autores.length > 0 ? autores[0].nome : "";
     if (currentFirstAutorName !== autor) {
-      setAutor(currentFirstAutorName);
+      setAutor(currentFirstAutorName); // Update the simple 'autor' state shown in Basic Info
     }
   }, [autores, autor]);
   // --- END OF useEffect hooks ---
@@ -404,7 +373,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const handleAddVitima = () => {
     const hasOnlyPlaceholder = vitimas.length === 1 && (!vitimas[0].nome && !vitimas[0].cpf) || (vitimas.length === 1 && vitimas[0].nome === "O ESTADO");
     if (hasOnlyPlaceholder) {
-        setVitimas([{ ...initialPersonData }]);
+        setVitimas([{ ...initialPersonData }]); // Replace placeholder/Estado
     } else {
         setVitimas(prevVitimas => [...prevVitimas, { ...initialPersonData }]);
     }
@@ -413,7 +382,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const handleRemoveVitima = (index: number) => {
     const newVitimas = vitimas.filter((_, i) => i !== index);
     if (newVitimas.length === 0) {
-      setVitimas([{...initialPersonData}]);
+      setVitimas([{...initialPersonData}]); // Keep one empty entry
     } else {
       setVitimas(newVitimas);
     }
@@ -453,6 +422,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     } else {
       setAutores(newAutores);
     }
+    // Update the main 'autor' field if the first author was removed
     if (index === 0) {
          setAutor(newAutores.length > 0 ? newAutores[0].nome : "");
     }
@@ -469,6 +439,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
     }
+    // If editing the placeholder "O ESTADO", replace it entirely
     if (newVitimas[index].nome === "O ESTADO" && field === 'nome' && value.trim() !== "O ESTADO") {
         newVitimas[index] = { ...initialPersonData, [field]: processedValue };
     } else {
@@ -516,6 +487,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     }
     newAutores[index] = { ...newAutores[index], [field]: processedValue };
     setAutores(newAutores);
+    // Update main 'autor' state only if the *first* author's name is changed
     if (index === 0 && field === 'nome') {
         setAutor(processedValue);
     }
@@ -523,7 +495,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
   const handleRelatoPolicialChange = (value: string) => {
     setRelatoPolicial(value);
-    if (value !== relatoPolicialTemplate && !value.includes("[HORÁRIO]")) {
+    if (value !== relatoPolicialTemplate && !value.includes("[HORÁRIO]")) { // Example check
         setIsRelatoPolicialManuallyEdited(true);
     }
   };
@@ -575,7 +547,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Iniciando processo de submissão do TCO...");
     const completionNow = new Date();
     const completionDate = completionNow.toISOString().split('T')[0];
     const completionTime = completionNow.toTimeString().slice(0, 5);
@@ -589,40 +560,20 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     const componentesValidos = componentesGuarnicao.filter(c => c.nome?.trim() && c.rg?.trim());
     if (componentesValidos.length === 0) { toast({ variant: "destructive", title: "Campo Obrigatório", description: "Adicione pelo menos um Componente da Guarnição válido (Nome e RG)." }); return; }
     if (natureza === "Porte de drogas para consumo" && (!quantidade.trim() || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc.trim()) || !lacreNumero.trim())) { toast({ variant: "destructive", title: "Dados da Droga Incompletos", description: "Para Porte de Drogas, preencha Quantidade, Substância, Cor, Número do Lacre e Descrição (se material desconhecido)." }); return; }
-    const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
-    const userId = userInfo.id || null;
-    if (!userId) {
-      toast({ variant: "destructive", title: "Erro de Autenticação", description: "Usuário não identificado. Faça login novamente." });
-      return;
-    }
     // --- End Validations ---
 
     setIsSubmitting(true);
     setIsTimerRunning(false);
-    console.log("Validações concluídas, iniciando processamento.");
-
-    const BUCKET_NAME = 'tco-pdfs';
-    const TABLE_NAME = 'tco_pdfs'; // Ensure this uses correct PostgreSQL naming (often lowercase)
 
     try {
-      // Step 1: Ensure Supabase Bucket and Table exist
-      console.log("Verificando/Criando infraestrutura Supabase (bucket e tabela)...");
-      try {
-        await ensureBucketExists(BUCKET_NAME); // From supabaseUtils.ts
-        await ensureTableExists(TABLE_NAME, TABLE_TCO_PDFS_SCHEMA); // From supabaseUtils.ts
-        console.log("Infraestrutura Supabase verificada/criada com sucesso.");
-      } catch (infraError: any) {
-        console.error("Erro crítico ao configurar infraestrutura Supabase:", infraError);
-        throw new Error(`Falha ao preparar armazenamento/banco de dados: ${infraError.message}`);
-      }
-
       const displayNaturezaReal = natureza === "Outros" ? customNatureza.trim() : natureza;
       const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc.trim() : indicios) : "";
       const vitimasFiltradas = vitimas.filter(v => v.nome?.trim() || v.cpf?.trim());
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim() || t.cpf?.trim());
+      const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
+      const userId = userInfo.id || null;
       const userRegistration = userInfo.registration || "";
 
-      console.log("Convertendo imagens para Base64...");
       const imageBase64Array: { name: string; data: string }[] = [];
       for (const file of imageFiles) {
         try {
@@ -633,7 +584,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           toast({ variant: "destructive", title: "Erro ao Processar Imagem", description: `Não foi possível processar a imagem ${file.name}. Ela não será incluída.` });
         }
       }
-      console.log(`${imageBase64Array.length} imagens convertidas.`);
 
       const tcoDataParaPDF: any = {
         tcoNumber: tcoNumber.trim(), natureza: displayNaturezaReal, originalNatureza: natureza,
@@ -642,7 +592,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         dataTerminoRegistro: completionDate, horaTerminoRegistro: completionTime,
         localFato: localFato.trim(), endereco: endereco.trim(), municipio, comunicante,
         autores: autoresValidos, vitimas: vitimasFiltradas, testemunhas: testemunhasFiltradas,
-        guarnicao: guarnicao.trim(), operacao: operacao.trim(), componentesGuarnicao: componentesValidos,
+        guarnicao: guarnicao.trim(), operacao: operacao.trim(), componentesGuarnicao: componentesValidos, // Use filtered valid components
         relatoPolicial: relatoPolicial.trim(), relatoAutor: relatoAutor.trim(),
         relatoTestemunha: relatoTestemunha.trim(), apreensoes: apreensoes.trim(), conclusaoPolicial: conclusaoPolicial.trim(),
         lacreNumero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : undefined,
@@ -655,123 +605,96 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         startTime: startTime?.toISOString(), endTime: completionNow.toISOString(), userRegistration: userRegistration,
         videoLinks: videoLinks, imageBase64: imageBase64Array,
         juizadoEspecialData: juizadoEspecialData.trim() || undefined, juizadoEspecialHora: juizadoEspecialHora.trim() || undefined,
-        relatoVitima: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' ? relatoVitima.trim() : undefined,
-        representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined,
-        downloadLocal: true
+        relatoVitima: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' ? relatoVitima.trim() : undefined, // Only include if there's a real victim narrative
+        representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined, // Only include if real victim and representation chosen
+        downloadLocal: true // Enable local download as a backup
       };
       Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
 
       console.log("Dados para gerar PDF:", tcoDataParaPDF);
-      console.log("Gerando PDF...");
+      
+      // Configure timeout for PDF generation
       const pdfGenerationPromise = generatePDF(tcoDataParaPDF);
       const timeoutPromise = new Promise<Blob>((_, reject) => {
-          setTimeout(() => reject(new Error("Tempo limite excedido ao gerar o PDF (90s).")), 90000);
+          setTimeout(() => reject(new Error("Tempo limite excedido ao gerar o PDF.")), 90000); // 90 segundos
       });
       
+      // Use Promise.race to implement timeout
       const pdfBlob = await Promise.race([pdfGenerationPromise, timeoutPromise]);
-      if (!pdfBlob || pdfBlob.size === 0) {
-        console.error("Falha na geração do PDF: O arquivo está vazio ou nulo.");
-        throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
-      }
-      console.log("PDF gerado com sucesso, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
+      if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
+      console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
 
-      const tcoNumParaNome = tcoNumber.trim().replace(/[^a-zA-Z0-9_.-]/g, '_'); // Sanitize TCO number for filename
+      // Prepare for Supabase upload
+      const tcoNumParaNome = tcoNumber.trim();
       const dateStr = new Date().toISOString().slice(0, 10);
       const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
-      const filePath = `tcos/${userId}/${fileName}`; // Ensure userId is safe for path
+      const filePath = `tcos/${userId || 'anonimo'}/${tcoNumParaNome}_${dateStr}.pdf`;
+      const BUCKET_NAME = 'tco-pdfs';
       
-      console.log(`Iniciando upload do PDF para Supabase Storage: ${filePath} no bucket ${BUCKET_NAME}`);
+      console.log(`Enviando arquivo para Supabase Storage: ${filePath}`);
       
+      // Upload to Supabase Storage with timeout
       const uploadPromise = supabase.storage.from(BUCKET_NAME).upload(filePath, pdfBlob, { 
           contentType: 'application/pdf',
           upsert: true 
       });
       
       const uploadTimeoutPromise = new Promise<any>((_, reject) => {
-          setTimeout(() => reject(new Error("Tempo limite excedido ao enviar o arquivo para o Storage (60s).")), 60000);
+          setTimeout(() => reject(new Error("Tempo limite excedido ao enviar o arquivo.")), 60000); // 60 segundos
       });
       
       const { data: uploadData, error: uploadError } = await Promise.race([uploadPromise, uploadTimeoutPromise]);
+      if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
       
-      if (uploadError) {
-        console.error("Erro no upload do PDF para Supabase Storage:", uploadError);
-        throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
-      }
-      if (!uploadData) {
-          console.error("Upload do PDF para Supabase Storage não retornou dados válidos.");
-          throw new Error("Upload do PDF falhou, dados de retorno inválidos.");
-      }
-      console.log("Upload do PDF concluído com sucesso:", uploadData);
+      console.log("Upload concluído:", uploadData);
 
-      console.log("Obtendo URL pública do PDF...");
+      // Get the public URL
       const { data: publicUrlData } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
       const downloadURL = publicUrlData?.publicUrl || '';
-      if (!downloadURL) {
-        console.warn("Não foi possível obter a URL pública do PDF. O arquivo pode ter sido carregado, mas a URL não está disponível.");
-      }
       console.log('URL pública do arquivo:', downloadURL);
 
-      console.log("Preparando metadados para salvar no banco de dados...");
+      // Save metadata to Supabase database
+      const TABLE_NAME = 'tco_pdfs';
       const tcoMetadata = {
-        tcoNumber: tcoNumber.trim(), // Use actual column name as defined in TABLE_TCO_PDFS_SCHEMA
+        tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
-        policiais: componentesValidos.map(p => ({ nome: p.nome, rg: p.rg, posto: p.posto })),
-        pdfPath: filePath,    // Use actual column name
-        pdfUrl: downloadURL,  // Use actual column name
-        createdBy: userId,    // Use actual column name
-        // created_at and updated_at will be handled by default/trigger
+        policiais: componentesValidos.map(p => ({ nome: p.nome, rg: p.rg, posto: p.posto })), // Store only valid ones
+        pdfPath: filePath,
+        pdfUrl: downloadURL,
+        createdBy: userId,
+        created_at: new Date().toISOString()
       };
       
-      console.log("Metadados para salvar:", tcoMetadata);
-      console.log(`Inserindo metadados na tabela '${TABLE_NAME}'...`);
+      console.log("Metadados para salvar no DB:", tcoMetadata);
 
+      // Save metadata with timeout
       const insertPromise = supabase.from(TABLE_NAME).insert([tcoMetadata]).select('id').single();
       const dbTimeoutPromise = new Promise<any>((_, reject) => {
-          setTimeout(() => reject(new Error("Tempo limite excedido ao salvar metadados no banco de dados (30s).")), 30000);
+          setTimeout(() => reject(new Error("Tempo limite excedido ao salvar metadados no banco de dados.")), 30000); // 30 segundos
       });
       
       const { data: insertData, error: insertError } = await Promise.race([insertPromise, dbTimeoutPromise]);
       
       if (insertError) {
         console.error("Erro ao salvar metadados no Supabase DB:", insertError);
-        // Attempt to remove uploaded PDF if DB insert fails
-        console.log(`Tentando remover o PDF ${filePath} devido a erro no DB...`);
         await supabase.storage.from(BUCKET_NAME).remove([filePath]).catch(deleteError => 
-            console.error("Falha ao remover PDF após erro de inserção no DB:", deleteError)
-        );
-        let userMessage = `Erro ao salvar informações do TCO: ${insertError.message}`;
-        if (insertError.code === '23503' && insertError.message.includes('fkey_tco_pdfs_createdBy')) {
-            userMessage = "Erro de referência de usuário. Tente fazer login novamente.";
-        } else if (insertError.code === '42P01') { // undefined_table (should be caught by ensureTableExists)
-            userMessage = "A tabela de TCOs não foi encontrada. Contate o suporte.";
-        } else if (insertError.code === '42703') { // undefined_column
-            userMessage = `Erro de schema: coluna '${insertError.message.split('"')[1]}' não encontrada. Contate o suporte.`;
-        }
-        throw new Error(userMessage);
+            console.error("Falha ao remover PDF após erro de inserção no DB:", deleteError));
+        throw new Error(`Erro ao salvar informações do TCO: ${insertError.message}`);
       }
       
-      console.log("Metadados salvos com sucesso no DB, ID do registro:", insertData?.id);
+      console.log("Metadados salvos com sucesso no DB, ID:", insertData?.id);
       toast({ title: "TCO Registrado com Sucesso!", description: "PDF enviado e informações salvas no sistema." });
       navigate("/?tab=tco");
 
     } catch (error: any) {
       console.error("Erro geral no processo de submissão do TCO:", error);
-      // Provide more specific error feedback to the user
-      let detailedMessage = error.message || 'Erro desconhecido.';
-      if (error.message?.includes("supabaseUtils")) {
-          detailedMessage = "Ocorreu um problema ao configurar o ambiente no servidor. Tente novamente mais tarde.";
-      } else if (error.message?.includes("NetworkError")) {
-          detailedMessage = "Erro de rede. Verifique sua conexão com a internet e tente novamente.";
-      }
-
       toast({ 
         variant: "destructive", 
         title: "Erro ao Finalizar TCO", 
-        description: detailedMessage, 
-        duration: 9000 
+        description: `Ocorreu um erro: ${error.message || 'Erro desconhecido.'}`, 
+        duration: 7000 
       });
     } finally {
-      console.log("Finalizando processo de submissão.");
       setIsSubmitting(false);
     }
   };
@@ -792,6 +715,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     "Porte de drogas para consumo", "Outros"
   ];
 
+  // Condutor for display derived from valid components
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
   // --- END OF Handler functions ---
 
@@ -799,8 +723,9 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   // --- Redesigned JSX Structure using Cards ---
   return (
     <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
-      <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
+      <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate> {/* Adjusted spacing */}
 
+        {/* Card: Basic Information */}
         <Card>
           <CardHeader>
             <CardTitle>Informações Básicas</CardTitle>
@@ -810,7 +735,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
             <BasicInformationTab
               tcoNumber={tcoNumber} setTcoNumber={setTcoNumber}
               natureza={natureza} setNatureza={setNatureza}
-              autor={autor} setAutor={setAutor}
+              autor={autor} setAutor={setAutor} // Still passed, though derived from autores list
               penaDescricao={penaDescricao} naturezaOptions={naturezaOptions}
               customNatureza={customNatureza} setCustomNatureza={setCustomNatureza}
               startTime={startTime} isTimerRunning={isTimerRunning}
@@ -820,6 +745,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </CardContent>
         </Card>
 
+        {/* Card: Drug Verification (Conditional) */}
         {natureza === "Porte de drogas para consumo" && (
           <Card>
             <CardHeader>
@@ -840,6 +766,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </Card>
         )}
 
+        {/* Card: General Information */}
         <Card>
           <CardHeader>
             <CardTitle>Informações Gerais da Ocorrência</CardTitle>
@@ -866,6 +793,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </CardContent>
         </Card>
 
+        {/* Card: Pessoas Envolvidas */}
         <Card>
           <CardHeader>
             <CardTitle>Pessoas Envolvidas</CardTitle>
@@ -876,11 +804,12 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
                 vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima}
                 testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha}
                 autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor}
-                natureza={natureza}
+                natureza={natureza} // Pass nature to conditionally disable/adjust victim input
             />
           </CardContent>
         </Card>
 
+        {/* Card: Guarnicao */}
         <Card>
           <CardHeader>
             <CardTitle>Guarnição Policial</CardTitle>
@@ -895,6 +824,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </CardContent>
         </Card>
 
+        {/* Card: Historico */}
         <Card>
           <CardHeader>
             <CardTitle>Histórico e Narrativas</CardTitle>
@@ -910,18 +840,21 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
                 conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial}
                 drugSeizure={natureza === "Porte de drogas para consumo"}
                 representacao={representacao} setRepresentacao={setRepresentacao}
-                natureza={natureza}
+                natureza={natureza} // Pass nature to conditionally show/hide representation
              />
           </CardContent>
         </Card>
 
+        {/* Card: Anexos */}
         <Card>
           <CardHeader>
             <CardTitle>Anexos (Opcional)</CardTitle>
             <CardDescription>Adicione fotos ou links de vídeos relacionados à ocorrência.</CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Keep the existing grid layout for anexos inside the card content */}
             <div className="grid md:grid-cols-2 gap-6">
+               {/* Image Upload */}
                <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-blue-500 transition-colors duration-200 ease-in-out">
                    <div className="flex flex-col items-center text-center">
                        <ImageIcon className="w-12 h-12 text-blue-600 mb-2" />
@@ -964,6 +897,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
                  {imageFiles.length === 0 && ( <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p> )}
                </div>
 
+                {/* Video Links */}
                <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-green-500 transition-colors duration-200 ease-in-out">
                  <div className="flex flex-col items-center text-center">
                    <VideoIcon className="w-12 h-12 text-green-600 mb-2" />
@@ -971,12 +905,13 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
                    <p className="text-sm text-gray-500 px-4 mt-1">Adicione links para vídeos online (YouTube, Drive, etc.).</p>
                  </div>
                  <div className="flex w-full space-x-2 items-center pt-1">
+                   {/* Using ShadCN Input component for consistency */}
                    <Input
                      type="url" value={newVideoLink}
                      onChange={(e) => setNewVideoLink(e.target.value)}
                      placeholder="https://..."
                      aria-label="Link do vídeo"
-                     className="flex-1 text-sm"
+                     className="flex-1 text-sm" // Adjusted class for ShadCN Input
                    />
                    <Button type="button" onClick={handleAddVideoLink} className="bg-green-600 hover:bg-green-700 text-white shrink-0" size="icon" aria-label="Adicionar link de vídeo" disabled={!newVideoLink.trim()}>
                      <Plus className="h-5 w-5" />
@@ -1003,7 +938,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end mt-8 pt-6 border-t border-gray-300">
+        {/* Submit Button Section (Kept separate for final action clarity) */}
+        <div className="flex justify-end mt-8 pt-6 border-t border-gray-300"> {/* Added slightly more top margin */}
           <Button type="submit" disabled={isSubmitting} size="lg" className="min-w-[200px]">
             {isSubmitting ? (
               <>
@@ -1027,5 +963,3 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 };
 
 export default TCOForm;
-
---- END OF FILE TCOForm (35).tsx ---
