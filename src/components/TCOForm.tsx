@@ -578,7 +578,7 @@ const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => vo
           imageBase64Array.push({ name: file.name, data: base64Data });
         } catch (error) {
           console.error(`Erro ao converter imagem ${file.name} para base64:`, error);
-          toast({ variant: "warning", title: "Erro ao Processar Imagem", description: `Não foi possível processar a imagem ${file.name}. Ela não será incluída.` });
+          toast({ variant: "destructive", title: "Erro ao Processar Imagem", description: `Não foi possível processar a imagem ${file.name}. Ela não será incluída.` });
         }
       }
 
@@ -726,23 +726,37 @@ const TCOForm = ({ selectedTco, onClear }: { selectedTco: any; onClear: () => vo
           </CardHeader>
           <CardContent>
             <GeneralInformationTab
-                natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao}
-                isCustomNatureza={natureza === "Outros"} customNatureza={customNatureza}
-                dataFato={dataFato} setDataFato={setDataFato}
-                horaFato={horaFato} setHoraFato={setHoraFato}
-                dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro}
-                dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} // Display only
-                localFato={localFato} setLocalFato={setLocalFato}
-                endereco={endereco} setEndereco={setEndereco}
+                natureza={natureza}
+                tipificacao={tipificacao}
+                setTipificacao={setTipificacao}
+                isCustomNatureza={natureza === "Outros"}
+                customNatureza={customNatureza}
+                dataFato={dataFato}
+                setDataFato={setDataFato}
+                horaFato={horaFato}
+                setHoraFato={setHoraFato}
+                dataInicioRegistro={dataInicioRegistro}
+                horaInicioRegistro={horaInicioRegistro}
+                dataTerminoRegistro={dataTerminoRegistro}
+                horaTerminoRegistro={horaTerminoRegistro}
+                localFato={localFato}
+                setLocalFato={setLocalFato}
+                endereco={endereco}
+                setEndereco={setEndereco}
                 municipio={municipio}
-                comunicante={comunicante} setComunicante={setComunicante}
-                guarnicao={guarnicao} setGuarnicao={setGuarnicao}
-                operacao={operacao} setOperacao={setOperacao}
+                comunicante={comunicante}
+                setComunicante={setComunicante}
+                guarnicao={guarnicao}
+                setGuarnicao={setGuarnicao}
+                operacao={operacao}
+                setOperacao={setOperacao}
                 condutorNome={condutorParaDisplay?.nome || ""}
                 condutorPosto={condutorParaDisplay?.posto || ""}
                 condutorRg={condutorParaDisplay?.rg || ""}
-                juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData}
-                juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora}
+                juizadoEspecialData={juizadoEspecialData}
+                setJuizadoEspecialData={setJuizadoEspecialData}
+                juizadoEspecialHora={juizadoEspecialHora}
+                setJuizadoEspecialHora={setJuizadoEspecialHora}
             />
           </CardContent>
         </Card>

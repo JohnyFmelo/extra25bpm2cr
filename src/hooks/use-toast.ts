@@ -1,40 +1,11 @@
 
-import { useToast as useShadcnToast } from "@/components/ui/use-toast";
-import { toast as shadcnToast } from "@/components/ui/use-toast";
+import { Toast, useToast as useToastOriginal } from "@/components/ui/toast";
 
-type ToastVariant = "default" | "destructive";
+// Re-export the useToast hook without modification
+export const useToast = useToastOriginal;
 
-interface ToastProps {
-  title?: string;
-  description?: string;
-  variant?: ToastVariant;
-  duration?: number;
-  action?: React.ReactNode;
-}
+// Define toast variants explicitly
+export const toast = useToastOriginal().toast;
 
-export function useToast() {
-  const shadcnToastHook = useShadcnToast();
-  
-  // Wrapper para garantir que variantes inválidas não sejam usadas
-  const toast = (props: ToastProps) => {
-    shadcnToastHook.toast({
-      ...props,
-      // Certifique-se de que apenas variantes válidas são usadas
-      variant: props.variant === "destructive" ? "destructive" : "default"
-    });
-  };
-  
-  return {
-    ...shadcnToastHook,
-    toast
-  };
-}
-
-// Função toast global
-export const toast = (props: ToastProps) => {
-  shadcnToast({
-    ...props,
-    // Certifique-se de que apenas variantes válidas são usadas
-    variant: props.variant === "destructive" ? "destructive" : "default"
-  });
-};
+// Export the original types
+export type { Toast };
