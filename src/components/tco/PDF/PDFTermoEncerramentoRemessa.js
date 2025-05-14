@@ -1,4 +1,3 @@
-// src/components/tco/PDF/PDFTermoEncerramentoRemessa.js
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak, getDataAtualExtenso
@@ -16,7 +15,17 @@ export const addTermoEncerramentoRemessa = (doc, data) => {
     const local = data.localEncerramento || "NO QUARTEL DO 25º BATALHÃO DE POLÍCIA MILITAR 2º COMANDO REGIONAL";
     const year = new Date().getFullYear();
     const tcoRef = data.tcoRefEncerramento || `Nº ${data.tcoNumber || 'INDEFINIDO'}/25ºBPM/2ºCR/${year}`;
-    const nomeAutorMencao = autor?.nome ? `do(a) Sr(a). ${autor.nome.toUpperCase()}` : "do(a) envolvido(a) qualificado(a) nos autos";
+    
+    // Determine gender-specific prefix based on autor.sexo
+    let prefix;
+    if (autor?.sexo === "M") {
+        prefix = "do Sr.";
+    } else if (autor?.sexo === "F") {
+        prefix = "da Sra.";
+    } else {
+        prefix = "do(a) Sr(a)."; // Fallback if gender is not specified
+    }
+    const nomeAutorMencao = autor?.nome ? `${prefix} ${autor.nome.toUpperCase()}` : "do(a) envolvido(a) qualificado(a) nos autos";
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
