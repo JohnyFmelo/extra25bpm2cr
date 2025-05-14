@@ -1,4 +1,3 @@
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -366,3 +365,4 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     }
     
     return yPos;
+};
