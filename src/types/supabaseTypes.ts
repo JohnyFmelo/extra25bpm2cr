@@ -42,5 +42,5 @@ export interface Database extends OriginalDatabase {
   };
 }
 
-// Adding explicit type export for clarity
-export type { Database };
+// The Database type is already exported above via the 'export interface Database'
+// No need for additional export statements
