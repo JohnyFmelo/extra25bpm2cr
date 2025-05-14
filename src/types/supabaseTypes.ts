@@ -43,6 +43,6 @@ export interface Database extends OriginalDatabase {
   };
 }
 
-// Since we're already exporting the Database interface above with 'export interface',
-// we don't need to re-export it, so we'll remove the conflicting export statement.
+// Adding explicit type export to fix the import error while avoiding TS1205 error
+export type { Database };
 
