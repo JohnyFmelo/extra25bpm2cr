@@ -47,7 +47,7 @@ const numberToText = (num) => {
     return num >= 0 && num <= 10 ? numbers[num].toUpperCase() : num.toString();
 };
 
-const DEFAULT_FONT_NAME = "arial";
+const DEFAULT_FONT_NAME = "helvetica";
 const CELL_PADDING_X = 2;
 const CELL_PADDING_Y = 3;
 const LINE_HEIGHT_FACTOR = 1.1;
