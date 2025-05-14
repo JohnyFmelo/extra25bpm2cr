@@ -1,4 +1,6 @@
+
 import jsPDF from "jspdf";
+
 // Importa funções auxiliares e de página da subpasta PDF
 import {
     MARGIN_TOP, MARGIN_BOTTOM, MARGIN_RIGHT, getPageConstants,
