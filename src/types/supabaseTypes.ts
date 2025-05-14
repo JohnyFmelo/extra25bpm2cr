@@ -36,6 +36,10 @@ export interface Database extends GeneratedDatabase {
         ];
       };
     } & GeneratedDatabase['public']['Tables'];
+    Views: GeneratedDatabase['public']['Views'];
+    Functions: GeneratedDatabase['public']['Functions'];
+    Enums: GeneratedDatabase['public']['Enums'];
+    CompositeTypes: GeneratedDatabase['public']['CompositeTypes'];
   };
 }
 
