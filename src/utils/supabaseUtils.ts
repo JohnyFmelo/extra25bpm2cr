@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export const ensureBucketExists = async (
   bucketName: string, 
-  options: { public?: boolean; fileSizeLimit?: number } = {}
+  options: { public: boolean; fileSizeLimit?: number; allowedMimeTypes?: string[] } = { public: false }
 ): Promise<boolean> => {
   try {
     // Check if bucket exists
@@ -51,8 +51,10 @@ export const ensureBucketExists = async (
  */
 export const checkTableExists = async (tableName: string): Promise<boolean> => {
   try {
+    // Use a type assertion to work with dynamic table names
+    // This allows us to check any table without TypeScript errors
     const { error } = await supabase
-      .from(tableName)
+      .from(tableName as any)
       .select('*')
       .limit(1);
     
