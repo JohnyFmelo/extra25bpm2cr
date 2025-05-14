@@ -42,3 +42,5 @@ export interface Database extends OriginalDatabase {
   };
 }
 
+// Adding explicit type export for clarity
+export type { Database };
