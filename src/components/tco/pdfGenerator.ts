@@ -16,7 +16,7 @@ import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
-import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js'; // Corrigido o nome do arquivo
+import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 
 // Função auxiliar para adicionar imagens ao PDF
 const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; data: string }[], pageWidth: number, pageHeight: number) => {
@@ -103,9 +103,9 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             yPosition = addNewPage(doc, data);
 
             // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
-            generateHistoricoContent(doc, yPosition, Grove)
+            generateHistoricoContent(doc, yPosition, data)
                 .then(() => {
-                    // --- ADIÇÃO DOS TERMOS ---
+                    // --- ADIÇÃO DOS TER шести ---
                     if (data.autores && data.autores.length > 0) {
                         addTermoCompromisso(doc, data);
                     } else {
