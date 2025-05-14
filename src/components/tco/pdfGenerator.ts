@@ -127,28 +127,17 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Natureza 'Porte de drogas para consumo' detectada, pulando Termo de Manifestação da Vítima.");
                     }
 
+                    if (data.natureza !== "Porte de drogas para consumo") {
+                        addRequisicaoExameDrogas(doc, data);
+                    } else {
+                        console.log("Natureza 'Porte de drogas para consumo' detectada, pulando Termo de Manifestação da Vítima.");
+                    }
+
                     // TERMO DE APREENSÃO
                     if (data.apreensaoDescrição || (data.apreensoes && data.apreensoes.length > 0)) {
                         addTermoApreensao(doc, data);
                     }
 
-                    // **** INÍCIO DA LÓGICA SOLICITADA ****
-                    // REQUISIÇÃO DE EXAME EM DROGAS (CONDICIONAL, APÓS TERMO DE APREENSÃO)
-                    const naturezaDaOcorrencia = (data.natureza || "").toLowerCase();
-                    const isDrugRelated = !!(
-                        data.drogaTipo ||
-                        data.drogaNomeComum ||
-                        (typeof data.natureza === 'string' && naturezaDaOcorrencia.includes("droga")) ||
-                        (typeof data.natureza === 'string' && naturezaDaOcorrencia.includes("entorpecente"))
-                        // Adicione outras verificações específicas se necessário
-                    );
-                    
-                    if (isDrugRelated) {
-                        console.log("Natureza relacionada a drogas detectada, adicionando Requisição de Exame em Drogas.");
-                        addRequisicaoExameDrogas(doc, data); // Esta função já chama addNewPage e addStandardFooterContent
-                    } else {
-                        // console.log("Natureza não relacionada a drogas ou informações de droga ausentes, pulando Requisição de Exame em Drogas.");
-                    }
                     // **** FIM DA LÓGICA SOLICITADA ****
 
                     // TERMO DE CONSTATAÇÃO DE DROGA
