@@ -1,3 +1,4 @@
+
 // src/components/tco/PDF/PDFTermoEncerramentoRemessa.js
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
@@ -16,14 +17,17 @@ export const addTermoEncerramentoRemessa = (doc, data) => {
     const local = data.localEncerramento || "NO QUARTEL DO 25º BATALHÃO DE POLÍCIA MILITAR 2º COMANDO REGIONAL";
     const year = new Date().getFullYear();
     const tcoRef = data.tcoRefEncerramento || `Nº ${data.tcoNumber || 'INDEFINIDO'}/25ºBPM/2ºCR/${year}`;
-    const nomeAutorMencao = autor?.nome ? `do(a) Sr(a). ${autor.nome.toUpperCase()}` : "do(a) envolvido(a) qualificado(a) nos autos";
+    
+    // Aplicação da flexão de gênero conforme solicitado
+    const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'da Sra.' : 'do Sr.';
+    const nomeAutorMencao = autor?.nome ? `${generoAutor} ${autor.nome.toUpperCase()}` : "DO(A) ENVOLVIDO(A) QUALIFICADO(A) NOS AUTOS";
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
     doc.text("TERMO DE ENCERRAMENTO E REMESSA", PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 10;
 
-    const textoEncerramento = `${dataEncerramentoExtenso}, nesta cidade de ${cidadeEncerramento.toUpperCase()}, ESTADO DE MATO GROSSO, ${local.toUpperCase()}, por determinação da Autoridade Policial Militar signatária deste TCO, dou por encerrada a lavratura do presente Termo Circunstanciado de Ocorrência ${tcoRef}, instaurado em desfavor ${nomeAutorMencao}, para as providências de remessa dos autos ao Poder Judiciário competente (Juizado Especial Criminal ou Vara competente conforme o caso), por meio eletrônico ou físico conforme normativas vigentes, a quem compete deliberar sobre o fato delituoso noticiado.`;
+    const textoEncerramento = `${dataEncerramentoExtenso.toUpperCase()}, NESTA CIDADE DE ${cidadeEncerramento.toUpperCase()}, ESTADO DE MATO GROSSO, ${local.toUpperCase()}, POR DETERMINAÇÃO DA AUTORIDADE POLICIAL MILITAR SIGNATÁRIA DESTE TCO, DOU POR ENCERRADA A LAVRATURA DO PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA ${tcoRef}, INSTAURADO EM DESFAVOR ${nomeAutorMencao}, PARA AS PROVIDÊNCIAS DE REMESSA DOS AUTOS PARA APRECIAÇÃO DO NÚCLEO DE JUSTIÇA DIGITAL DOS JUIZADOS ESPECIAIS, A QUEM COMPETE DELIBERAR SOBRE O FATO DELITUOSO NOTICIADO.`;
     yPos = addWrappedText(doc, yPos, textoEncerramento, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 15;
 
