@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -17,7 +16,7 @@ import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
-import { addRequisicaoExameDrogas } from './PDFpericiadrogas.js';
+import { addRequisicaoExameDrogas } from './PDF/PDFRequisicaoExameDrogas.js'; // Corrigido o nome do arquivo
 
 // Função auxiliar para adicionar imagens ao PDF
 const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; data: string }[], pageWidth: number, pageHeight: number) => {
@@ -88,6 +87,11 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             // Clona os dados para evitar mutações inesperadas
             const data = { ...inputData };
 
+            // Normaliza campos para evitar problemas com valores indefinidos
+            data.drogaTipo = data.drogaTipo?.trim() || '';
+            data.drogaNomeComum = data.drogaNomeComum?.trim() || '';
+            data.apreensaoDescrição = data.apreensaoDescrição?.trim() || '';
+
             // Pega as constantes da página
             const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
             let yPosition;
@@ -99,7 +103,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             yPosition = addNewPage(doc, data);
 
             // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
-            generateHistoricoContent(doc, yPosition, data)
+            generateHistoricoContent(doc, yPosition, Grove)
                 .then(() => {
                     // --- ADIÇÃO DOS TERMOS ---
                     if (data.autores && data.autores.length > 0) {
@@ -114,16 +118,28 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Caso de droga detectado, pulando Termo de Manifestação da Vítima.");
                     }
 
-                    if (data.apreensaoDescrição || data.apreensoes) {
+                    // Condição mais robusta para Termo de Apreensão
+                    if (data.apreensaoDescrição || (Array.isArray(data.apreensoes) && data.apreensoes.length > 0)) {
+                        console.log("Gerando Termo de Apreensão:", { apreensaoDescrição: data.apreensaoDescrição, apreensoes: data.apreensoes });
                         addTermoApreensao(doc, data);
+                    } else {
+                        console.log("Nenhuma apreensão detectada, pulando Termo de Apreensão.");
                     }
 
+                    // Condição para Termo de Constatação de Droga
                     if (data.drogaTipo || data.drogaNomeComum) {
+                        console.log("Gerando Termo de Constatação de Droga:", { drogaTipo: data.drogaTipo, drogaNomeComum: data.drogaNomeComum });
                         addTermoConstatacaoDroga(doc, data);
+                    } else {
+                        console.log("Nenhuma droga detectada, pulando Termo de Constatação de Droga.");
                     }
 
+                    // Condição para Requisição de Exame de Drogas
                     if (data.drogaTipo || data.drogaNomeComum) {
+                        console.log("Gerando Requisição de Exame de Drogas:", { drogaTipo: data.drogaTipo, drogaNomeComum: data.drogaNomeComum });
                         addRequisicaoExameDrogas(doc, data);
+                    } else {
+                        console.log("Nenhuma droga detectada, pulando Requisição de Exame de Drogas.");
                     }
 
                     // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
