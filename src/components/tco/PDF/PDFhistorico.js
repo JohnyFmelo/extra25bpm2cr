@@ -327,33 +327,29 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
     // --- SEÇÃO 5: IDENTIFICAÇÃO DA GUARNIÇÃO ---
     yPos = addSectionTitle(doc, yPos, "IDENTIFICAÇÃO DA GUARNIÇÃO", "5", 1, data);
-    
     if (data.componentesGuarnicao && data.componentesGuarnicao.length > 0) {
         data.componentesGuarnicao.forEach((componente, index) => {
-            if (index > 0) { 
-                yPos += 10;  // Adiciona um espaço maior entre identificações
+            if (index > 0) {
+                yPos += 5;
                 yPos = checkPageBreak(doc, yPos, 5 + 50, data);
             }
-    
             yPos = addField(doc, yPos, "NOME COMPLETO", componente.nome, data);
             yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto, data);
             yPos = addField(doc, yPos, "RG PMMT", componente.rg, data);
             yPos = checkPageBreak(doc, yPos, 5, data);
-    
             const sigLineY = yPos;
-            doc.setFont("helvetica", "normal"); 
-            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal"); doc.setFontSize(12);
             doc.text("ASSINATURA:", MARGIN_LEFT, sigLineY);
             const labelWidth = doc.getTextWidth("ASSINATURA:");
             const lineStartX = MARGIN_LEFT + labelWidth + 2;
             const lineEndX = lineStartX + 80;
-            doc.setLineWidth(0.3); 
-            doc.line(lineStartX, sigLineY, lineEndX, sigLineY);
+            doc.setLineWidth(0.3); doc.line(lineStartX, sigLineY, lineEndX, sigLineY);
             yPos = sigLineY + 2;
         });
     } else {
         yPos = addWrappedText(doc, yPos, "Dados da Guarnição não informados.", MARGIN_LEFT, 12, 'italic', MAX_LINE_WIDTH, 'left', data);
         yPos += 2;
     }
-    
+
     return yPos;
+};
