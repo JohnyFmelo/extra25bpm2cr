@@ -135,8 +135,8 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     }
 
                     // Condição para Requisição de Exame de Drogas
-                    if (data.drogaTipo || data.drogaNomeComum) {
-                        console.log("Gerando Requisição de Exame de Drogas:", { drogaTipo: data.drogaTipo, drogaNomeComum: data.drogaNomeComum });
+                    export const addTermoConstatacaoDroga = (doc, data) => {
+                        console.log("Chamando addTermoConstatacaoDroga com data:", data);
                         addRequisicaoExameDrogas(doc, data);
                     } else {
                         console.log("Nenhuma droga detectada, pulando Requisição de Exame de Drogas.");
