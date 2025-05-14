@@ -1,4 +1,5 @@
 
+
 import { Database as OriginalDatabase } from "@/integrations/supabase/types";
 
 // Define o tipo para a tabela tco_pdfs
@@ -42,5 +43,6 @@ export interface Database extends OriginalDatabase {
   };
 }
 
-// Explicitly export the Database type to make it available for import
-export { Database };
+// Since we're already exporting the Database interface above with 'export interface',
+// we don't need to re-export it, so we'll remove the conflicting export statement.
+
