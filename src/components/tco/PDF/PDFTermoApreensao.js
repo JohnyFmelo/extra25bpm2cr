@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
@@ -40,7 +39,6 @@ export function formatarDataHora(dataStrInput, horaStrInput, returnObject = fals
 }
 // --- END: Potentially in pdfUtils.js or local ---
 
-
 const numberToText = (num) => {
     const numbers = [
         "ZERO", "UMA", "DUAS", "TRÊS", "QUATRO",
@@ -49,11 +47,11 @@ const numberToText = (num) => {
     return num >= 0 && num <= 10 ? numbers[num].toUpperCase() : num.toString();
 };
 
-const DEFAULT_FONT_NAME = "arial"; // Definindo a fonte padrão
+const DEFAULT_FONT_NAME = "arial";
 const CELL_PADDING_X = 2;
-const CELL_PADDING_Y = 1.5; // Reduzido de 2 para 1.5 para economizar espaço vertical
-const LINE_HEIGHT_FACTOR = 1.1; // Reduzido de 1.15 para 1.1 para economizar espaço
-const MIN_ROW_HEIGHT = 7; // Reduzido de 9 para 7 para economizar espaço vertical
+const CELL_PADDING_Y = 3; // Increased from 1.5 to 3 for more vertical space
+const LINE_HEIGHT_FACTOR = 1.1;
+const MIN_ROW_HEIGHT = 7;
 
 function getCellContentMetrics(doc, label, value, cellWidth, fontSize, valueFontStyle = "normal", isLabelBold = true) {
     const availableWidth = cellWidth - CELL_PADDING_X * 2;
@@ -124,30 +122,27 @@ function getCellContentMetrics(doc, label, value, cellWidth, fontSize, valueFont
 function renderCellText(doc, x, y, cellWidth, cellRowHeight, metrics, fontSize, valueFontStyle = "normal", isLabelBold = true, valueAlign = "left", cellVerticalAlign = "top") {
     const { labelLines, valueLines, labelHeight, valueHeight, height: totalCalculatedTextHeight, sideBySide } = metrics;
     
-    let textBlockStartY; // Y onde o bloco de texto (rótulo + valor) começa
+    let textBlockStartY;
 
     if (cellVerticalAlign === 'middle') {
-        // Centraliza o bloco de texto inteiro (totalCalculatedTextHeight) dentro do espaço útil da célula
         const usableCellHeight = cellRowHeight - 2 * CELL_PADDING_Y;
         textBlockStartY = y + CELL_PADDING_Y + (usableCellHeight - totalCalculatedTextHeight) / 2;
     } else { // 'top'
         textBlockStartY = y + CELL_PADDING_Y;
     }
-    // Garante que o texto não comece antes do padding superior da célula
     textBlockStartY = Math.max(y + CELL_PADDING_Y, textBlockStartY);
-
 
     const textContentX = x + CELL_PADDING_X;
     const availableWidth = cellWidth - CELL_PADDING_X * 2;
 
-    let currentDrawingY = textBlockStartY; // Y atual para desenhar as linhas de texto
+    let currentDrawingY = textBlockStartY;
 
     if (labelLines.length > 0) {
         doc.setFont(DEFAULT_FONT_NAME, isLabelBold ? "bold" : valueFontStyle, isLabelBold ? "bold" : "normal");
         doc.setFontSize(fontSize);
         doc.text(labelLines, textContentX, currentDrawingY, { align: 'left', lineHeightFactor: LINE_HEIGHT_FACTOR });
         if (!sideBySide) {
-            currentDrawingY += labelHeight; // Move para baixo para o valor se não for lado a lado
+            currentDrawingY += labelHeight;
         }
     }
 
@@ -156,12 +151,12 @@ function renderCellText(doc, x, y, cellWidth, cellRowHeight, metrics, fontSize, 
         doc.setFontSize(fontSize);
         
         let valueX = textContentX;
-        let valueY = currentDrawingY; // Se empilhado, começa onde o rótulo terminou; se lado a lado, mesma linha Y do rótulo
+        let valueY = currentDrawingY;
 
         if (sideBySide && labelLines.length > 0) {
-            doc.setFont(DEFAULT_FONT_NAME, isLabelBold ? "bold" : valueFontStyle, isLabelBold ? "bold" : "normal"); // Para obter a largura do rótulo
-            valueX = textContentX + doc.getTextWidth(labelLines[0]) + (labelLines.length > 0 && valueLines.length > 0 ? 1 : 0) ;
-            valueY = textBlockStartY; // Se lado a lado, o valor começa na mesma linha Y do rótulo
+            doc.setFont(DEFAULT_FONT_NAME, isLabelBold ? "bold" : valueFontStyle, isLabelBold ? "bold" : "normal");
+            valueX = textContentX + doc.getTextWidth(labelLines[0]) + (labelLines.length > 0 && valueLines.length > 0 ? 1 : 0);
+            valueY = textBlockStartY;
         }
         
         doc.text(valueLines, valueX, valueY, { 
@@ -171,7 +166,6 @@ function renderCellText(doc, x, y, cellWidth, cellRowHeight, metrics, fontSize, 
         });
     }
 }
-
 
 export function addTermoApreensao(doc, data) {
     console.log("[PDFTermoApreensao] Iniciando renderização do Termo de Apreensão");
@@ -183,7 +177,6 @@ export function addTermoApreensao(doc, data) {
     const isDroga = data.natureza && data.natureza.toLowerCase() === "porte de drogas para consumo";
     const lacreNumero = data.lacreNumero || "00000000";
 
-    // Reduzido o tamanho da fonte de 12 para 10 para melhor uso do espaço
     const TABLE_CONTENT_FONT_SIZE = 10;
 
     const colWidth = MAX_LINE_WIDTH / 3;
@@ -196,7 +189,7 @@ export function addTermoApreensao(doc, data) {
     doc.setFont(DEFAULT_FONT_NAME, "bold"); doc.setFontSize(12);
     currentY = checkPageBreak(doc, currentY, 15, data);
     doc.text(titulo.toUpperCase(), PAGE_WIDTH / 2, currentY, { align: "center" });
-    currentY += 8; // Reduzido de 10 para 8
+    currentY += 8;
 
     const cellOptionsBase = { fontSize: TABLE_CONTENT_FONT_SIZE, cellVerticalAlign: 'middle' };
 
@@ -214,7 +207,7 @@ export function addTermoApreensao(doc, data) {
 
     rowY = currentY;
     const nomePolicial = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim().toUpperCase();
-    const m21 = getCellContentMetrics(doc, "NOME DO POLICIAL", `[${nomePolicial}]`, MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
+    const m21 = getCellContentMetrics(doc, "NOME DO POLICIAL", nomePolicial, MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
     const r2H = Math.max(MIN_ROW_HEIGHT, m21.height) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r2H, data); if (currentY !== rowY) rowY = currentY;
     doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r2H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r2H, m21, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
@@ -246,7 +239,6 @@ export function addTermoApreensao(doc, data) {
     currentY = rowY + r5H;
     
     rowY = currentY;
-    // Encurtando e otimizando o endereço para caber melhor
     const enderecoValue = "AV. DR. PARANÁ, S/N° COMPLEXO DA UNIVAG, AO LADO DO NÚCLEO DE PRÁTICA JURÍDICA. BAIRRO CRISTO REI CEP 78.110-100, VG - MT".toUpperCase();
     const m61 = getCellContentMetrics(doc, "END.", enderecoValue, MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
     const r6H = Math.max(MIN_ROW_HEIGHT, m61.height) + CELL_PADDING_Y * 2;
@@ -281,58 +273,43 @@ export function addTermoApreensao(doc, data) {
         const quantidadeText = numberToText(quantidadeNum);
         const plural = quantidadeNum > 1 ? "PORÇÕES" : "PORÇÃO";
         textoApreensaoOriginal = data.drogaIsUnknown
-            ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${(data.drogaCustomDesc || "[DESCRIÇÃO]").toUpperCase()}, CONFORME FOTO EM ANEXO.`
-            : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${data.drogaNomeComum.toUpperCase()}, ${(data.drogaCustomDesc || "[DESCRIÇÃO]").toUpperCase()}, CONFORME FOTO EM ANEXO.`;
+            ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${data.drogaCustomDesc || "DESCRIÇÃO"}, CONFORME FOTO EM ANEXO.`
+            : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${data.drogaNomeComum.toUpperCase()}, ${data.drogaCustomDesc || "DESCRIÇÃO"}, CONFORME FOTO EM ANEXO.`;
     }
     
     const apreensaoFontSize = TABLE_CONTENT_FONT_SIZE;
-    let apreensaoTextDrawingY = rowY + CELL_PADDING_Y; // Onde o texto começa a ser desenhado
+    let apreensaoTextDrawingY = rowY + CELL_PADDING_Y;
     const apreensaoTextX = MARGIN_LEFT + CELL_PADDING_X;
     const apreensaoMaxWidth = MAX_LINE_WIDTH - CELL_PADDING_X * 2;
     let totalCalculatedTextHeightForDesc = 0;
 
-    if (isDroga) {
-        doc.setFont(DEFAULT_FONT_NAME, "bold"); doc.setFontSize(apreensaoFontSize);
-        const constatacaoLines = doc.splitTextToSize("CONSTAÇÃO PRELIMINAR DE DROGA".toUpperCase(), apreensaoMaxWidth);
-        totalCalculatedTextHeightForDesc += doc.getTextDimensions(constatacaoLines, {fontSize: apreensaoFontSize, lineHeightFactor: LINE_HEIGHT_FACTOR}).h + 2; // +2 para espaço
-    }
     doc.setFont(DEFAULT_FONT_NAME, "normal"); doc.setFontSize(apreensaoFontSize);
     const apreensaoDescLines = doc.splitTextToSize(`- ${textoApreensaoOriginal}`, apreensaoMaxWidth);
     totalCalculatedTextHeightForDesc += doc.getTextDimensions(apreensaoDescLines, {fontSize: apreensaoFontSize, lineHeightFactor: LINE_HEIGHT_FACTOR}).h;
     
-    // A altura da linha deve acomodar o texto e o padding superior e inferior
-    // Reduzido o fator multiplicador de 2.5 para 2 para economizar espaço
     const r9H = Math.max(MIN_ROW_HEIGHT * 2, totalCalculatedTextHeightForDesc) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r9H, data); 
-    if (currentY !== rowY) { // Page break occurred
-        rowY = currentY; 
-        apreensaoTextDrawingY = rowY + CELL_PADDING_Y; // Recalcula Y do texto na nova página
+    if (currentY !== rowY) {
+        rowY = currentY;
+        apreensaoTextDrawingY = rowY + CELL_PADDING_Y;
     }
     doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r9H);
     
-    if (isDroga) {
-        doc.setFont(DEFAULT_FONT_NAME, "bold"); doc.setFontSize(apreensaoFontSize);
-        const constatacaoLines = doc.splitTextToSize("CONSTAÇÃO PRELIMINAR DE DROGA".toUpperCase(), apreensaoMaxWidth);
-        doc.text(constatacaoLines, apreensaoTextX, apreensaoTextDrawingY, {align: 'left', lineHeightFactor: LINE_HEIGHT_FACTOR});
-        apreensaoTextDrawingY += doc.getTextDimensions(constatacaoLines, {fontSize: apreensaoFontSize, lineHeightFactor: LINE_HEIGHT_FACTOR}).h + 2; // Adiciona espaço após o título
-    }
     doc.setFont(DEFAULT_FONT_NAME, "normal"); doc.setFontSize(apreensaoFontSize);
     doc.text(apreensaoDescLines, apreensaoTextX, apreensaoTextDrawingY, {align: 'justify', lineHeightFactor: LINE_HEIGHT_FACTOR});
     currentY = rowY + r9H;
 
     rowY = currentY;
     const textoLegal = "O PRESENTE TERMO DE APREENSÃO FOI LAVRADO COM BASE NO ART. 6º, II, DO CÓDIGO DE PROCESSO PENAL, E ART. 92 DA LEI 9.099/1995.".toUpperCase();
-    // Usar 'top' para o alinhamento vertical do texto legal longo
     const m10_1 = getCellContentMetrics(doc, null, textoLegal, MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
     const r10H = Math.max(MIN_ROW_HEIGHT, m10_1.height) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r10H, data); if (currentY !== rowY) rowY = currentY;
     doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H, m10_1, TABLE_CONTENT_FONT_SIZE, "normal", false, "justify", 'top');
     currentY = rowY + r10H;
 
-    // Reduzido o espaçamento antes das assinaturas para economizar espaço vertical
-    currentY += 7; // Reduzido de 10 para 7
+    currentY += 7;
     doc.setFont(DEFAULT_FONT_NAME, "normal");
-    doc.setFontSize(10); // Reduzido de 12 para 10
+    doc.setFontSize(10);
     const autorLabel = autor?.sexo === "Feminino" ? "AUTORA DOS FATOS" : "AUTOR DOS FATOS";
     currentY = addSignatureWithNameAndRole(doc, currentY, (autor?.nome || "").toUpperCase(), autorLabel.toUpperCase(), data);
     const nomeCondutorCompleto = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim().toUpperCase();
