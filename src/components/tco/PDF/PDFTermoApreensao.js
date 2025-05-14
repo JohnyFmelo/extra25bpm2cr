@@ -49,7 +49,7 @@ const numberToText = (num) => {
 
 const DEFAULT_FONT_NAME = "helvetica";
 const CELL_PADDING_X = 2;
-const CELL_PADDING_Y = 3;
+const CELL_PADDING_Y = 4; // Increased to 4 to ensure more space from the top border
 const LINE_HEIGHT_FACTOR = 1.1;
 const MIN_ROW_HEIGHT = 7;
 
@@ -123,10 +123,10 @@ function renderCellText(doc, x, y, cellWidth, cellRowHeight, metrics, fontSize, 
     const { labelLines, valueLines, labelHeight, valueHeight, height: totalCalculatedTextHeight, sideBySide } = metrics;
     
     let textBlockStartY;
+    const usableCellHeight = cellRowHeight - 2 * CELL_PADDING_Y;
 
     if (cellVerticalAlign === 'middle') {
-        const usableCellHeight = cellRowHeight - 2 * CELL_PADDING_Y;
-        textBlockStartY = y + CELL_PADDING_Y + (usableCellHeight - totalCalculatedTextHeight) / 2;
+        textBlockStartY = y + CELL_PADDING_Y + (usableCellHeight - totalCalculatedTextHeight) / 2 + 1; // Slight downward shift by 1 unit
     } else { // 'top'
         textBlockStartY = y + CELL_PADDING_Y;
     }
@@ -284,7 +284,8 @@ export function addTermoApreensao(doc, data) {
     currentY = checkPageBreak(doc, rowY, r9H, data); 
     if (currentY !== rowY) rowY = currentY;
     doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r9H);
-    doc.text(combinedLines, apreensaoTextX, rowY + CELL_PADDING_Y, { align: 'left', lineHeightFactor: LINE_HEIGHT_FACTOR });
+    const textBlockStartYForDesc = rowY + CELL_PADDING_Y + (r9H - 2 * CELL_PADDING_Y - totalCalculatedTextHeightForDesc) / 2 + 1; // Center vertically with slight downward shift
+    doc.text(combinedLines, apreensaoTextX, textBlockStartYForDesc, { align: 'left', lineHeightFactor: LINE_HEIGHT_FACTOR });
     currentY = rowY + r9H;
 
     rowY = currentY;
