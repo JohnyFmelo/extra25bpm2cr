@@ -1,5 +1,5 @@
 
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Checks if a bucket exists in Supabase Storage and creates it if it doesn't.
@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabaseClient";
  */
 export const ensureBucketExists = async (
   bucketName: string, 
-  options: { public: boolean; fileSizeLimit?: number } = { public: true }
+  options: { public?: boolean; fileSizeLimit?: number } = {}
 ): Promise<boolean> => {
   try {
     // Check if bucket exists
@@ -29,8 +29,9 @@ export const ensureBucketExists = async (
     
     // Create the bucket if it doesn't exist
     console.log(`Criando bucket ${bucketName}...`);
-    const { error: createError } = await supabase.storage.createBucket(bucketName, {
-      public: options.public,
+    // Fix: Make sure public property is always defined, defaulting to true
+    const { error: createError } = await supabase.storage.createBucket(bucketName, { 
+      public: options.public ?? true,  // Default to true if not specified
       fileSizeLimit: options.fileSizeLimit
     });
     
@@ -54,58 +55,31 @@ export const ensureBucketExists = async (
  */
 export const checkTableExists = async (tableName: string): Promise<boolean> => {
   try {
-    // Use a safer approach - try to get the schema
-    const { data, error } = await supabase.rpc('get_schema_for_table', { 
-      table_name: tableName 
-    });
+    // Use the generic query method instead of the typed approach to check if table exists
+    const { error } = await supabase
+      .from(tableName as any)
+      .select('*', { count: 'exact', head: true })
+      .limit(1);
     
-    if (error) {
-      console.log(`Tabela ${tableName} não existe ou erro ao verificar:`, error);
+    // PostgreSQL error code for undefined_table is 42P01
+    if (error && error.code === '42P01') {
+      console.log(`Tabela ${tableName} não existe`);
       return false;
     }
     
-    if (data && data.length > 0) {
-      console.log(`Tabela ${tableName} existe`);
-      return true;
-    }
-    
-    console.log(`Tabela ${tableName} não existe`);
-    return false;
-  } catch (error) {
-    console.error(`Falha ao verificar se a tabela ${tableName} existe:`, error);
-    // Assumimos que não existe em caso de erros inesperados
-    return false;
-  }
-};
-
-/**
- * Cria a tabela tco_pdfs no Supabase se ela não existir
- */
-export const createTcoPdfsTable = async (): Promise<boolean> => {
-  try {
-    const tableExists = await checkTableExists('tco_pdfs');
-    
-    if (tableExists) {
-      console.log('Tabela tco_pdfs já existe');
-      return true;
-    }
-    
-    console.log('Criando tabela tco_pdfs...');
-    // Execute a SQL query to create the table
-    const { error } = await supabase.rpc('exec_sql', { 
-      sql: TCO_PDFS_TABLE_SQL 
-    });
-    
+    // If there's a different error, it might still exist but have other issues
     if (error) {
-      console.error('Erro ao criar tabela tco_pdfs:', error);
-      throw error;
+      console.warn(`Erro ao verificar tabela ${tableName}:`, error);
+      // We assume the table exists but has different issues (e.g., permissions)
+      return true;
     }
     
-    console.log('Tabela tco_pdfs criada com sucesso');
+    console.log(`Tabela ${tableName} existe`);
     return true;
   } catch (error) {
-    console.error('Falha ao criar tabela tco_pdfs:', error);
-    throw error;
+    console.error(`Falha ao verificar se a tabela ${tableName} existe:`, error);
+    // We'll assume it doesn't exist in case of unexpected errors
+    return false;
   }
 };
 
