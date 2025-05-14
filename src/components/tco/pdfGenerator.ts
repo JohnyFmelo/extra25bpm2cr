@@ -15,6 +15,7 @@ import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
 import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
+import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
 
@@ -119,6 +120,11 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
 
                     if (data.drogaTipo || data.drogaNomeComum) {
                         addTermoConstatacaoDroga(doc, data);
+                        
+                        // Adiciona Requisição de Exame em Drogas logo após o Termo de Constatação de Droga
+                        if (data.natureza === "Porte de drogas para consumo") {
+                            addRequisicaoExameDrogas(doc, data);
+                        }
                     }
 
                     // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
