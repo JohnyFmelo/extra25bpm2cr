@@ -49,7 +49,7 @@ const numberToText = (num) => {
 
 const DEFAULT_FONT_NAME = "helvetica";
 const CELL_PADDING_X = 2;
-const CELL_PADDING_Y = 4; // Increased to 4 to ensure more space from the top border
+const CELL_PADDING_Y = 4;
 const LINE_HEIGHT_FACTOR = 1.1;
 const MIN_ROW_HEIGHT = 7;
 
@@ -126,7 +126,8 @@ function renderCellText(doc, x, y, cellWidth, cellRowHeight, metrics, fontSize, 
     const usableCellHeight = cellRowHeight - 2 * CELL_PADDING_Y;
 
     if (cellVerticalAlign === 'middle') {
-        textBlockStartY = y + CELL_PADDING_Y + (usableCellHeight - totalCalculatedTextHeight) / 2 + 1; // Slight downward shift by 1 unit
+        // Adjusted to reduce space below by shifting text slightly upwards
+        textBlockStartY = y + CELL_PADDING_Y + (usableCellHeight - totalCalculatedTextHeight) / 2 - 1;
     } else { // 'top'
         textBlockStartY = y + CELL_PADDING_Y;
     }
@@ -186,7 +187,8 @@ export function addTermoApreensao(doc, data) {
     const lastColWidth = MAX_LINE_WIDTH - (2 * colWidth);
 
     const titulo = isDroga ? `TERMO DE APREENSÃO LACRE Nº ${lacreNumero}` : "TERMO DE APREENSÃO";
-    doc.setFont(DEFAULT_FONT_NAME, "bold"); doc.setFontSize(12);
+    doc.setFont(DEFAULT_FONT_NAME, "bold");
+    doc.setFontSize(12);
     currentY = checkPageBreak(doc, currentY, 15, data);
     doc.text(titulo.toUpperCase(), PAGE_WIDTH / 2, currentY, { align: "center" });
     currentY += 8;
@@ -276,7 +278,8 @@ export function addTermoApreensao(doc, data) {
     let totalCalculatedTextHeightForDesc = 0;
 
     const combinedText = `FICA APREENDIDO O DESCRITO ABAIXO:\n- ${textoApreensaoOriginal}`;
-    doc.setFont(DEFAULT_FONT_NAME, "normal"); doc.setFontSize(apreensaoFontSize);
+    doc.setFont(DEFAULT_FONT_NAME, "normal");
+    doc.setFontSize(apreensaoFontSize);
     const combinedLines = doc.splitTextToSize(combinedText, apreensaoMaxWidth);
     totalCalculatedTextHeightForDesc = doc.getTextDimensions(combinedLines, { fontSize: apreensaoFontSize, lineHeightFactor: LINE_HEIGHT_FACTOR }).h;
 
@@ -284,7 +287,7 @@ export function addTermoApreensao(doc, data) {
     currentY = checkPageBreak(doc, rowY, r9H, data); 
     if (currentY !== rowY) rowY = currentY;
     doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r9H);
-    const textBlockStartYForDesc = rowY + CELL_PADDING_Y + (r9H - 2 * CELL_PADDING_Y - totalCalculatedTextHeightForDesc) / 2 + 1; // Center vertically with slight downward shift
+    const textBlockStartYForDesc = rowY + CELL_PADDING_Y + (r9H - 2 * CELL_PADDING_Y - totalCalculatedTextHeightForDesc) / 2 - 1; // Adjusted to reduce space below
     doc.text(combinedLines, apreensaoTextX, textBlockStartYForDesc, { align: 'left', lineHeightFactor: LINE_HEIGHT_FACTOR });
     currentY = rowY + r9H;
 
