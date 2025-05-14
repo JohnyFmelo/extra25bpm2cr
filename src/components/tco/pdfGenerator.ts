@@ -18,7 +18,7 @@ import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
-import { addTermoCadeiaCustodia } from './PDFcadeiadecustodia';
+import { addTermoCadeiaCustodia } from './PDFpericiadrogas.js';
 
 // Função auxiliar para adicionar imagens ao PDF
 const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; data: string }[], pageWidth: number, pageHeight: number) => {
@@ -117,6 +117,10 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
 
                     if (data.apreensaoDescrição || data.apreensoes) {
                         addTermoApreensao(doc, data);
+                    }
+
+                    if (data.drogaTipo || data.drogaNomeComum) {
+                        addTermoConstatacaoDroga(doc, data);
                     }
 
                     if (data.drogaTipo || data.drogaNomeComum) {
