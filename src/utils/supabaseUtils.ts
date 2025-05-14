@@ -1,5 +1,5 @@
 
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Checks if a bucket exists in Supabase Storage and creates it if it doesn't.
@@ -54,26 +54,29 @@ export const ensureBucketExists = async (
  */
 export const checkTableExists = async (tableName: string): Promise<boolean> => {
   try {
-    // Use a safer approach - try to get the schema
-    const { data, error } = await supabase.rpc('get_schema_for_table', { 
-      table_name: tableName 
-    });
+    const { error } = await supabase
+      .from(tableName as any)
+      .select('*')
+      .limit(1);
     
-    if (error) {
-      console.log(`Tabela ${tableName} não existe ou erro ao verificar:`, error);
+    // PostgreSQL error code for undefined_table is 42P01
+    if (error && error.code === '42P01') {
+      console.log(`Tabela ${tableName} não existe`);
       return false;
     }
     
-    if (data && data.length > 0) {
-      console.log(`Tabela ${tableName} existe`);
+    // If there's a different error, it might still exist but have other issues
+    if (error) {
+      console.warn(`Erro ao verificar tabela ${tableName}:`, error);
+      // We assume the table exists but has different issues (e.g., permissions)
       return true;
     }
     
-    console.log(`Tabela ${tableName} não existe`);
-    return false;
+    console.log(`Tabela ${tableName} existe`);
+    return true;
   } catch (error) {
     console.error(`Falha ao verificar se a tabela ${tableName} existe:`, error);
-    // Assumimos que não existe em caso de erros inesperados
+    // We'll assume it doesn't exist in case of unexpected errors
     return false;
   }
 };

@@ -1,3 +1,4 @@
+
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -13,10 +14,11 @@ import { generateHistoricoContent } from './PDF/PDFhistorico.js';
 import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
 import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
-import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
+import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
+import { addTermoCadeiaCustodia } from './PDFcadeiadecustodia';
 
 // Função auxiliar para adicionar imagens ao PDF
 const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; data: string }[], pageWidth: number, pageHeight: number) => {
