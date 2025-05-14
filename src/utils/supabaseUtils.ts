@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export const ensureBucketExists = async (
   bucketName: string, 
-  options: { public?: boolean; fileSizeLimit?: number } = {}
+  options: { public: boolean; fileSizeLimit?: number } = { public: true }
 ): Promise<boolean> => {
   try {
     // Check if bucket exists
@@ -29,7 +29,10 @@ export const ensureBucketExists = async (
     
     // Create the bucket if it doesn't exist
     console.log(`Criando bucket ${bucketName}...`);
-    const { error: createError } = await supabase.storage.createBucket(bucketName, options);
+    const { error: createError } = await supabase.storage.createBucket(bucketName, {
+      public: options.public,
+      fileSizeLimit: options.fileSizeLimit
+    });
     
     if (createError) {
       console.error(`Erro ao criar bucket ${bucketName}:`, createError);
@@ -52,7 +55,7 @@ export const ensureBucketExists = async (
 export const checkTableExists = async (tableName: string): Promise<boolean> => {
   try {
     const { error } = await supabase
-      .from(tableName)
+      .from(tableName as any)
       .select('*')
       .limit(1);
     
@@ -75,6 +78,37 @@ export const checkTableExists = async (tableName: string): Promise<boolean> => {
     console.error(`Falha ao verificar se a tabela ${tableName} existe:`, error);
     // We'll assume it doesn't exist in case of unexpected errors
     return false;
+  }
+};
+
+/**
+ * Cria a tabela tco_pdfs no Supabase se ela não existir
+ */
+export const createTcoPdfsTable = async (): Promise<boolean> => {
+  try {
+    const tableExists = await checkTableExists('tco_pdfs');
+    
+    if (tableExists) {
+      console.log('Tabela tco_pdfs já existe');
+      return true;
+    }
+    
+    console.log('Criando tabela tco_pdfs...');
+    // Execute a SQL query to create the table
+    const { error } = await supabase.rpc('exec_sql', { 
+      sql: TCO_PDFS_TABLE_SQL 
+    });
+    
+    if (error) {
+      console.error('Erro ao criar tabela tco_pdfs:', error);
+      throw error;
+    }
+    
+    console.log('Tabela tco_pdfs criada com sucesso');
+    return true;
+  } catch (error) {
+    console.error('Falha ao criar tabela tco_pdfs:', error);
+    throw error;
   }
 };
 
