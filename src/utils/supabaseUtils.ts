@@ -54,29 +54,26 @@ export const ensureBucketExists = async (
  */
 export const checkTableExists = async (tableName: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from(tableName as any)
-      .select('*')
-      .limit(1);
+    // Use a safer approach - try to get the schema
+    const { data, error } = await supabase.rpc('get_schema_for_table', { 
+      table_name: tableName 
+    });
     
-    // PostgreSQL error code for undefined_table is 42P01
-    if (error && error.code === '42P01') {
-      console.log(`Tabela ${tableName} não existe`);
+    if (error) {
+      console.log(`Tabela ${tableName} não existe ou erro ao verificar:`, error);
       return false;
     }
     
-    // If there's a different error, it might still exist but have other issues
-    if (error) {
-      console.warn(`Erro ao verificar tabela ${tableName}:`, error);
-      // We assume the table exists but has different issues (e.g., permissions)
+    if (data && data.length > 0) {
+      console.log(`Tabela ${tableName} existe`);
       return true;
     }
     
-    console.log(`Tabela ${tableName} existe`);
-    return true;
+    console.log(`Tabela ${tableName} não existe`);
+    return false;
   } catch (error) {
     console.error(`Falha ao verificar se a tabela ${tableName} existe:`, error);
-    // We'll assume it doesn't exist in case of unexpected errors
+    // Assumimos que não existe em caso de erros inesperados
     return false;
   }
 };

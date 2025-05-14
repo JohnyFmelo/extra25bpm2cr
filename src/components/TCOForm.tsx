@@ -511,4 +511,27 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
         const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        if (age < 18) {
+          toast({
+            variant: "destructive", 
+            title: "Autor menor de idade",
+            description: "O autor é menor de 18 anos. Este TCO não é adequado para menores infratores."
+          });
+        }
+      }
+    }
+    newAutores[index] = { ...newAutores[index], [field]: processedValue };
+    setAutores(newAutores);
+  };
+  
+  return (
+    <div className="container mx-auto py-4">
+      {/* Component JSX goes here */}
+    </div>
+  );
+};
+
+export default TCOForm;
