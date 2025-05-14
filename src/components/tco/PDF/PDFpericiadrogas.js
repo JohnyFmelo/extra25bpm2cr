@@ -1,4 +1,3 @@
-// src/components/tco/PDF/PDFpericiadrogas.tsx
 import jsPDF from "jspdf";
 import {
     addNewPage,
@@ -6,15 +5,15 @@ import {
     MARGIN_TOP,
     MARGIN_LEFT,
     MARGIN_RIGHT,
-    LINE_HEIGHT,
-    formatDate,
-    addCenteredText,
-    wrapText,
-    getPageConstants, // Ensure this is exported from pdfUtils
-} from "./pdfUtils"; // Assuming pdfUtils.js or pdfUtils.ts is in the same PDF directory
+    formatarDataSimples,
+    addWrappedText,
+    getPageConstants,
+} from "./pdfUtils";
+
+// Constante temporária para LINE_HEIGHT
+const LINE_HEIGHT = 10 * 0.3528 * 1.2; // Aproximadamente 4.23mm para fonte tamanho 10
 
 // Helper function to convert number to text (0-10) for quantity
-// This might already exist in TCOForm or could be moved to pdfUtils if used more broadly.
 const numberToTextLocal = (numStr: string): string => {
     const num = parseInt(numStr, 10);
     if (isNaN(num)) return numStr; // Return original if not a number
@@ -26,16 +25,15 @@ const numberToTextLocal = (numStr: string): string => {
     return num >= 0 && num <= 10 ? numbers[num] : num.toString();
 };
 
-
 export const addRequisicaoExameDrogas = (doc: jsPDF, data: any) => {
     let yPos = addNewPage(doc, data); // Start new page, get initial yPos
 
-    const { PAGE_WIDTH, CONTENT_WIDTH } = getPageConstants(doc);
+    const { PAGE_WIDTH, MAX_LINE_WIDTH: CONTENT_WIDTH } = getPageConstants(doc);
 
     // Title
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    addCenteredText(doc, "REQUISIÇÃO DE EXAME EM DROGAS DE ABUSO", yPos + LINE_HEIGHT);
+    yPos = addWrappedText(doc, yPos + LINE_HEIGHT, "REQUISIÇÃO DE EXAME EM DROGAS DE ABUSO", MARGIN_LEFT, 12, "bold", CONTENT_WIDTH, 'center', data);
     yPos += LINE_HEIGHT * 3; // Increased spacing after title
 
     doc.setFontSize(10);
@@ -43,14 +41,10 @@ export const addRequisicaoExameDrogas = (doc: jsPDF, data: any) => {
 
     // Main text body
     const autorNome = data.autores && data.autores.length > 0 ? data.autores[0].nome.toUpperCase() : "[AUTOR PENDENTE]";
-    const dataFatoFormatada = data.dataFato ? formatDate(data.dataFato) : "[DATA PENDENTE]";
+    const dataFatoFormatada = data.dataFato ? formatarDataSimples(data.dataFato) : "[DATA PENDENTE]";
     
     const textBody1 = `Requisito a POLITEC, nos termos do Artigo 159 e seguintes do CPP combinado com o Artigo 69, Caput da Lei nº 9.99/95, combinado com o Artigo 48 paragrafo 2 e artigo 50 paragrafo 1º da Lei nº 11,343/2006, solicito a realização de exame químico na substância análoga a entorpecente apensado sob Lacre Nº ${data.lacreNumero || "[LACRE PENDENTE]"}, encontrado em posse do sr, autor do fato ${autorNome}, qualificado neste TCO, de natureza porte ilegal de drogas, ocorrido na data de ${dataFatoFormatada}.`;
-    const wrappedTextBody1 = wrapText(doc, textBody1, CONTENT_WIDTH);
-    wrappedTextBody1.forEach(line => {
-        doc.text(line, MARGIN_LEFT, yPos);
-        yPos += LINE_HEIGHT;
-    });
+    yPos = addWrappedText(doc, yPos, textBody1, MARGIN_LEFT, 10, "normal", CONTENT_WIDTH, 'left', data);
     yPos += LINE_HEIGHT * 0.5;
 
     // Apenso
@@ -61,51 +55,38 @@ export const addRequisicaoExameDrogas = (doc: jsPDF, data: any) => {
     const drogaNome = data.drogaNomeComum ? data.drogaNomeComum.toUpperCase() : "[SUBSTÂNCIA PENDENTE]";
     
     const apensoText = `Apenso:  - ${quantidadeNumStr} (${quantidadeText.toUpperCase()}) ${porcaoText} DE SUBSTÂNCIA ANÁLOGA A ${drogaNome}.`;
-    doc.setFont("helvetica", "bold"); // As per image, Apenso line is bold
-    doc.text(apensoText, MARGIN_LEFT, yPos);
+    doc.setFont("helvetica", "bold");
+    yPos = addWrappedText(doc, yPos, apensoText, MARGIN_LEFT, 10, "bold", CONTENT_WIDTH, 'left', data);
     yPos += LINE_HEIGHT * 2;
     doc.setFont("helvetica", "normal");
 
-
     // Questions Intro
     const questionIntroText = `Para tanto, solicito de Vossa Senhoria, que seja confeccionado o respectivo Laudo Pericial definitivo, devendo os peritos responderem aos quesitos, conforme abaixo:`;
-    const wrappedQuestionIntroText = wrapText(doc, questionIntroText, CONTENT_WIDTH);
-    wrappedQuestionIntroText.forEach(line => {
-        doc.text(line, MARGIN_LEFT, yPos);
-        yPos += LINE_HEIGHT;
-    });
+    yPos = addWrappedText(doc, yPos, questionIntroText, MARGIN_LEFT, 10, "normal", CONTENT_WIDTH, 'left', data);
     yPos += LINE_HEIGHT * 0.5;
 
     // Questions List
     const questions = [
-        "1.    Qual a natureza e características das substâncias enviadas a exame?",
+        "1.    Qual a natureza e характеристики das substâncias enviadas a exame?",
         "2.    Podem as mesmas causar dependência física/psíquicas?",
         "3.    Qual o peso das substâncias enviadas a exame?"
     ];
 
     questions.forEach(q => {
-        // Wrap text with a slightly smaller width for indentation effect if text is long
-        const wrappedQ = wrapText(doc, q, CONTENT_WIDTH - 5); 
-        wrappedQ.forEach(line => {
-            doc.text(line, MARGIN_LEFT + (line.startsWith(" ") ? 0 : 5), yPos); // Indent question text (5mm)
-            yPos += LINE_HEIGHT;
-        });
+        yPos = addWrappedText(doc, yPos, q, MARGIN_LEFT + 5, 10, "normal", CONTENT_WIDTH - 5, 'left', data);
         yPos += LINE_HEIGHT * 0.2; // Small space between questions
     });
     yPos += LINE_HEIGHT * 2;
 
-
     // Location and Date (Aligned Right)
     const localDateText = `Várzea Grande-MT, ${dataFatoFormatada}.`;
-    const localDateWidth = doc.getStringUnitWidth(localDateText) * doc.getFontSize() / doc.internal.scaleFactor;
-    doc.text(localDateText, PAGE_WIDTH - MARGIN_RIGHT - localDateWidth, yPos);
+    yPos = addWrappedText(doc, yPos, localDateText, MARGIN_LEFT, 10, "normal", CONTENT_WIDTH, 'right', data);
     yPos += LINE_HEIGHT * 3; // Space for signature line
-
 
     // Signature block
     const condutor = data.componentesGuarnicao && data.componentesGuarnicao.length > 0 ? data.componentesGuarnicao[0] : null;
     const condutorNome = condutor ? condutor.nome.toUpperCase() : "[NOME CONDUTOR PENDENTE]";
-    const condutorPosto = condutor ? condutor.posto.toUpperCase() : "[POSTO PENDENTE]"; // e.g., "2º SGT"
+    const condutorPosto = condutor ? condutor.posto.toUpperCase() : "[POSTO PENDENTE]";
     const condutorRg = condutor ? condutor.rg : "[RG PENDENTE]";
 
     const signatureLineWidth = 80; // Width of the signature line
@@ -113,13 +94,12 @@ export const addRequisicaoExameDrogas = (doc: jsPDF, data: any) => {
     doc.line(signatureLineX, yPos, signatureLineX + signatureLineWidth, yPos); // Signature line
     yPos += LINE_HEIGHT * 0.8; // Space between line and text
 
-    addCenteredText(doc, `${condutorNome} - ${condutorPosto} PM`, yPos);
+    yPos = addWrappedText(doc, yPos, `${condutorNome} - ${condutorPosto} PM`, MARGIN_LEFT, 10, "normal", CONTENT_WIDTH, 'center', data);
     yPos += LINE_HEIGHT;
-    addCenteredText(doc, `RG ${condutorRg} PMMT`, yPos);
+    yPos = addWrappedText(doc, yPos, `RG ${condutorRg} PMMT`, MARGIN_LEFT, 10, "normal", CONTENT_WIDTH, 'center', data);
     yPos += LINE_HEIGHT;
-    addCenteredText(doc, `CONDUTOR DA OCORRÊNCIA`, yPos);
+    yPos = addWrappedText(doc, yPos, `CONDUTOR DA OCORRÊNCIA`, MARGIN_LEFT, 10, "normal", CONTENT_WIDTH, 'center', data);
     yPos += LINE_HEIGHT * 3;
-
 
     // Footer table (DATA | POLITEC | ASSINATURA)
     const tableY = yPos;
@@ -145,9 +125,6 @@ export const addRequisicaoExameDrogas = (doc: jsPDF, data: any) => {
     doc.rect(MARGIN_LEFT + colWidth, tableY + tableCellHeight, colWidth, tableDataCellHeight);
     doc.rect(MARGIN_LEFT + colWidth * 2, tableY + tableCellHeight, colWidth, tableDataCellHeight);
     
-    // yPos update after table (not strictly needed if it's the last element before footer)
-    // yPos = tableY + tableCellHeight + tableDataCellHeight + LINE_HEIGHT;
-
-    // Add standard footer (page number etc.)
-    addStandardFooterContent(doc, data);
+    // Add standard footer
+    addStandardFooterContent(doc);
 };
