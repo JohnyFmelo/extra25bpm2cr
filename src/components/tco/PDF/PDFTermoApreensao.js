@@ -187,11 +187,13 @@ export function addTermoApreensao(doc, data) {
     const xCol3 = MARGIN_LEFT + 2 * colWidth;
     const lastColWidth = MAX_LINE_WIDTH - (2 * colWidth);
 
-    // Title with reduced vertical spacing
+    // Title with reduced vertical spacing - Explicitly set font to Helvetica before rendering the title
     const titulo = isDroga ? `TERMO DE APREENSÃO LACRE Nº ${lacreNumero}` : "TERMO DE APREENSÃO";
     doc.setFont(DEFAULT_FONT_NAME, "bold");
     doc.setFontSize(12);
     currentY = checkPageBreak(doc, currentY, 15, data);
+    // Force setting the font again right before text rendering to ensure it's applied
+    doc.setFont(DEFAULT_FONT_NAME, "bold");
     doc.text(titulo.toUpperCase(), PAGE_WIDTH / 2, currentY, { align: "center" });
     currentY += 6; // Reduced spacing after title
 
