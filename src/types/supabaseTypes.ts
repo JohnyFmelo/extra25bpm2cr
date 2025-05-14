@@ -1,29 +1,30 @@
 
-import { Database as OriginalDatabase } from "@/integrations/supabase/types";
+/**
+ * This file extends the Supabase database types to include our custom tables
+ * that may not be included in the auto-generated types.
+ */
 
-// Define o tipo para a tabela tco_pdfs
+import { Database as GeneratedDatabase } from "@/integrations/supabase/types";
+
+// Define our TCO PDFs table structure
 export interface TcoPdf {
-  id: string;
+  id: string; // UUID
   tcoNumber: string;
   natureza: string;
-  policiais: {
-    nome: string;
-    rg: string;
-    posto: string;
-  }[];
+  policiais: Array<{ nome: string, rg: string, posto: string }>;
   pdfPath: string;
   pdfUrl: string;
-  createdBy?: string;
+  createdBy?: string; // UUID of creator, optional as it might be null
   created_at: string;
 }
 
-// Estende a interface Database original, adicionando nossa tabela tco_pdfs
-export interface Database extends OriginalDatabase {
+// Extend the generated database types
+export interface Database extends GeneratedDatabase {
   public: {
     Tables: {
       tco_pdfs: {
         Row: TcoPdf;
-        Insert: Omit<TcoPdf, "id"> & { id?: string };
+        Insert: Omit<TcoPdf, 'id'> & { id?: string }; // Allow id to be optional for inserts
         Update: Partial<TcoPdf>;
         Relationships: [
           {
@@ -34,10 +35,13 @@ export interface Database extends OriginalDatabase {
           }
         ];
       };
-    } & OriginalDatabase['public']['Tables'];
-    Views: OriginalDatabase['public']['Views'];
-    Functions: OriginalDatabase['public']['Functions'];
-    Enums: OriginalDatabase['public']['Enums'];
-    CompositeTypes: OriginalDatabase['public']['CompositeTypes'];
+    } & GeneratedDatabase['public']['Tables'];
+    Views: GeneratedDatabase['public']['Views'];
+    Functions: GeneratedDatabase['public']['Functions'];
+    Enums: GeneratedDatabase['public']['Enums'];
+    CompositeTypes: GeneratedDatabase['public']['CompositeTypes'];
   };
 }
+
+// Utility type helper for accessing tables with proper typing
+export type Tables = Database['public']['Tables'];
