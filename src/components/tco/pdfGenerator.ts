@@ -1,12 +1,11 @@
-// src/services/pdfGenerator.ts (ou o nome do seu arquivo)
+
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
-    MARGIN_TOP, MARGIN_BOTTOM, MARGIN_RIGHT, MARGIN_LEFT, // MARGIN_LEFT assumido como disponível
-    getPageConstants,
+    MARGIN_TOP, MARGIN_BOTTOM, MARGIN_RIGHT, getPageConstants,
     addNewPage,
-    addStandardFooterContent // Assumindo que esta função adiciona conteúdo fixo do rodapé
+    addStandardFooterContent
 } from './PDF/pdfUtils.js';
 
 // Importa geradores de conteúdo da subpasta PDF
@@ -15,69 +14,64 @@ import { generateHistoricoContent } from './PDF/PDFhistorico.js';
 import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
 import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
-import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js'; // Adicionado .js para consistência, ajuste se for .ts
+import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
-// import { addTermoCadeiaCustodia } from './PDFcadeiadecustodia'; // Importação com caminho diferente, não utilizada no fluxo atual.
+import { addTermoCadeiaCustodia } from './PDFcadeiadecustodia';
 
-/**
- * Função auxiliar para adicionar imagens ao PDF.
- * NOTA: Esta função não está sendo chamada no fluxo `generatePDF` fornecido.
- * Se for necessário, chame-a no local apropriado dentro de `generatePDF`.
- */
-const addImagesToPDF = (
-    doc: jsPDF,
-    yPosition: number,
-    images: { name: string; data: string }[],
-    pageWidth: number,
-    pageHeight: number,
-    currentData: any // Para passar para addNewPage se necessário
-) => {
-    // Usa constantes de margem definidas globalmente ou passadas via getPageConstants
-    const localMarginLeft = MARGIN_LEFT || 15; // Fallback se não definido globalmente
-    const localMarginBottom = MARGIN_BOTTOM || 15; // Fallback
-
-    const maxImageWidth = pageWidth - localMarginLeft * 2;
+// Função auxiliar para adicionar imagens ao PDF
+const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; data: string }[], pageWidth: number, pageHeight: number) => {
+    const maxImageWidth = pageWidth - MARGIN_RIGHT * 2; // Largura máxima da imagem
     const maxImageHeight = 100; // Altura máxima por imagem (ajustável)
-    const marginBetweenImages = 10;
+    const marginBetweenImages = 10; // Espaço entre imagens
     let currentY = yPosition;
 
     for (const image of images) {
         try {
+            // Extrai o formato da imagem a partir do início da string base64
             const formatMatch = image.data.match(/^data:image\/(jpeg|png);base64,/);
-            const format = formatMatch ? formatMatch[1].toUpperCase() : 'JPEG';
+            const format = formatMatch ? formatMatch[1].toUpperCase() : 'JPEG'; // Default para JPEG
+
+            // Remove o prefixo "data:image/..." para obter apenas os dados base64
             const base64Data = image.data.replace(/^data:image\/[a-z]+;base64,/, '');
 
-            if (currentY + maxImageHeight + localMarginBottom > pageHeight) {
-                currentY = addNewPage(doc, currentData); // Passa 'currentData'
-                currentY = MARGIN_TOP; // Reseta a posição Y para a margem superior padrão
+            // Verifica se a posição atual ultrapassa o limite da página
+            if (currentY + maxImageHeight + MARGIN_BOTTOM > pageHeight) {
+                currentY = addNewPage(doc, {});
+                currentY = MARGIN_TOP; // Reseta a posição Y
             }
 
-            doc.addImage(base64Data, format, localMarginLeft, currentY, maxImageWidth, 0); // altura 0 para manter proporção
+            // Adiciona a imagem ao PDF
+            doc.addImage(base64Data, format, MARGIN_RIGHT, currentY, maxImageWidth, 0); // Altura 0 para manter proporção
 
+            // Obtém as dimensões reais da imagem adicionada
             const imgProps = doc.getImageProperties(base64Data);
-            const imgHeight = (imgProps.height * maxImageWidth) / imgProps.width;
+            const imgHeight = (imgProps.height * maxImageWidth) / imgProps.width; // Calcula altura proporcional
+
+            // Atualiza a posição Y
             currentY += imgHeight + marginBetweenImages;
 
+            // Adiciona o nome do arquivo como legenda
             doc.setFontSize(8);
-            doc.text(`Imagem: ${image.name}`, localMarginLeft, currentY);
-            currentY += 5;
+            doc.text(`Imagem: ${image.name}`, MARGIN_RIGHT, currentY);
+            currentY += 5; // Espaço após a legenda
         } catch (error) {
             console.error(`Erro ao adicionar imagem ${image.name}:`, error);
         }
     }
-    return currentY;
+
+    return currentY; // Retorna a nova posição Y
 };
 
 // --- Função Principal de Geração ---
 export const generatePDF = async (inputData: any): Promise<Blob> => {
     return new Promise((resolve, reject) => {
+        // Set timeout to prevent infinite processing
         const timeout = setTimeout(() => {
-            console.error("Timeout na geração do PDF atingido.");
             reject(new Error("Tempo limite excedido ao gerar PDF. Por favor, tente novamente."));
         }, 60000); // 60 segundos de timeout
-
+        
         try {
             if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
                 clearTimeout(timeout);
@@ -85,36 +79,30 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 return;
             }
 
+            // Cria a instância do jsPDF
             const doc = new jsPDF({
                 orientation: "portrait",
                 unit: "mm",
                 format: "a4",
             });
 
-            const data = { ...inputData }; // Cópia superficial dos dados
+            // Clona os dados para evitar mutações inesperadas
+            const data = { ...inputData };
 
-            // Obter constantes da página, incluindo margens
-            const { PAGE_WIDTH, PAGE_HEIGHT, MARGIN_LEFT: marginLeftFromUtils, MARGIN_BOTTOM: marginBottomFromUtils } = getPageConstants(doc);
-            let yPosition; // Posição Y inicial para o conteúdo
+            // Pega as constantes da página
+            const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
+            let yPosition;
 
             // --- PÁGINA 1: AUTUAÇÃO ---
-            // generateAutuacaoPage é responsável por sua própria página e rodapé, se houver.
             yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
 
-            // --- CONTEÚDO PRINCIPAL DO TCO (A PARTIR DA PÁGINA 2) ---
-            // Inicia uma nova página para o histórico e demais seções.
-            // addNewPage deve lidar com a configuração do rodapé (via addStandardFooterContent), exceto numeração.
-            yPosition = addNewPage(doc, data); // yPosition é resetado para MARGIN_TOP da nova página
+            // --- RESTANTE DO TCO (PÁGINAS 2+) ---
+            yPosition = addNewPage(doc, data);
 
-            // generateHistoricoContent pode ser síncrono ou assíncrono.
-            // Se for síncrono, o .then não é estritamente necessário. Mantendo a estrutura.
-            Promise.resolve(generateHistoricoContent(doc, yPosition, data))
+            // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
+            generateHistoricoContent(doc, yPosition, data)
                 .then(() => {
                     // --- ADIÇÃO DOS TERMOS ---
-                    // Cada função de termo (addTermoCompromisso, etc.) deve:
-                    // 1. Chamar addNewPage(doc, data) para garantir uma nova página.
-                    // 2. Chamar addStandardFooterContent(doc, data) ao final de seu conteúdo, se aplicável.
-
                     if (data.autores && data.autores.length > 0) {
                         addTermoCompromisso(doc, data);
                     } else {
@@ -124,29 +112,18 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     if (data.natureza !== "Porte de drogas para consumo") {
                         addTermoManifestacao(doc, data);
                     } else {
-                        console.log("Natureza 'Porte de drogas para consumo' detectada, pulando Termo de Manifestação da Vítima.");
+                        console.log("Caso de droga detectado, pulando Termo de Manifestação da Vítima.");
                     }
 
-                    if (data.natureza !== "Porte de drogas para consumo") {
-                        addRequisicaoExameDrogas(doc, data);
-                    } else {
-                        console.log("Natureza 'Porte de drogas para consumo' detectada, pulando Termo de Manifestação da Vítima.");
-                    }
-
-                    // TERMO DE APREENSÃO
-                    if (data.apreensaoDescrição || (data.apreensoes && data.apreensoes.length > 0)) {
+                    if (data.apreensaoDescrição || data.apreensoes) {
                         addTermoApreensao(doc, data);
                     }
 
-                    // **** FIM DA LÓGICA SOLICITADA ****
-
-                    // TERMO DE CONSTATAÇÃO DE DROGA
-                    // Adicionado somente se houver tipo de droga ou nome comum informado.
                     if (data.drogaTipo || data.drogaNomeComum) {
-                        addTermoConstatacaoDroga(doc, data); // Esta função também deve chamar addNewPage e addStandardFooterContent
+                        addTermoConstatacaoDroga(doc, data);
                     }
 
-                    // REQUISIÇÃO DE EXAME DE LESÃO CORPORAL
+                    // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
                     const pessoasComLaudo = [
                         ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
                         ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
@@ -155,57 +132,54 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     if (pessoasComLaudo.length > 0) {
                         pessoasComLaudo.forEach(pessoa => {
                             console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
-                            // Passa uma cópia de data com informações específicas da pessoa periciada
                             addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
                         });
                     } else {
-                        // console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
+                        console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
                     }
-                    
-                    // CADEIA DE CUSTÓDIA (se necessário)
-                    // A importação existe mas não é chamada. Se precisar, adicione a lógica condicional:
-                    // if (condicao_para_cadeia_custodia) { addTermoCadeiaCustodia(doc, data); }
 
-                    addTermoEncerramentoRemessa(doc, data); // Esta função também deve gerenciar sua página e rodapé
+                    addTermoEncerramentoRemessa(doc, data);
 
-                    // --- Finalização: Adiciona APENAS Números de Página ---
-                    // O conteúdo do rodapé (brasão, etc.) deve ser adicionado por cada função de seção
-                    // através de addStandardFooterContent chamado após addNewPage.
-                    const pageCount = doc.internal.getNumberOfPages();
+                    // --- Finalização: Adiciona Números de Página e Salva ---
+                    const pageCount = doc.internal.pages.length - 1;
                     for (let i = 1; i <= pageCount; i++) {
                         doc.setPage(i);
                         doc.setFont("helvetica", "normal");
                         doc.setFontSize(8);
-                        // Ajuste o posicionamento Y do número da página conforme necessário.
-                        // (marginBottomFromUtils / 2) ou um valor fixo podem funcionar.
-                        doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - (MARGIN_RIGHT || 15), PAGE_HEIGHT - (marginBottomFromUtils / 2 || 7.5), { align: "right" });
+                        doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
+
+                        if (i > 1) {
+                            addStandardFooterContent(doc);
+                        }
                     }
 
+                    // Opcionalmente, gera um download local
                     if (data.downloadLocal) {
                         try {
                             const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
                             const dateStr = new Date().toISOString().slice(0, 10);
                             const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
+                            
                             doc.save(fileName);
                             console.log(`PDF salvo localmente: ${fileName}`);
                         } catch (downloadError) {
                             console.error("Erro ao salvar o PDF localmente:", downloadError);
+                            // Não falha a Promise principal se o download falhar
                         }
                     }
 
+                    // Generate blob and resolve the promise
                     const pdfBlob = doc.output('blob');
                     clearTimeout(timeout);
                     resolve(pdfBlob);
                 })
                 .catch(histError => {
                     clearTimeout(timeout);
-                    console.error("Erro detalhado ao gerar seções do PDF (após histórico):", histError);
-                    reject(new Error(`Erro ao gerar seções do PDF: ${histError.message || histError}`));
+                    reject(new Error(`Erro ao gerar histórico do PDF: ${histError.message}`));
                 });
         } catch (error) {
             clearTimeout(timeout);
-            console.error("Erro detalhado na configuração inicial da geração do PDF:", error);
-            reject(new Error(`Erro na geração do PDF: ${error.message || error}`));
+            reject(new Error(`Erro na geração do PDF: ${error.message}`));
         }
     });
 };
