@@ -1,3 +1,4 @@
+
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -331,8 +332,16 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     if (data.componentesGuarnicao && data.componentesGuarnicao.length > 0) {
         data.componentesGuarnicao.forEach((componente, index) => {
             if (index > 0) { 
-                yPos += 10;  // Adiciona um espaço maior entre identificações
+                yPos += 15;  // Aumentado para 15 para criar mais espaço entre identificações
                 yPos = checkPageBreak(doc, yPos, 5 + 50, data);
+                
+                // Adicionando uma linha separadora entre os militares
+                doc.setLineWidth(0.1);
+                doc.setDrawColor(200, 200, 200);
+                doc.line(MARGIN_LEFT, yPos - 10, PAGE_WIDTH - MARGIN_RIGHT, yPos - 10);
+                doc.setDrawColor(0);
+                
+                yPos += 5; // Espaço adicional após a linha
             }
     
             yPos = addField(doc, yPos, "NOME COMPLETO", componente.nome, data);
