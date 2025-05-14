@@ -1,56 +1,31 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
-import { Switch } from "./ui/switch";
 import { cn } from "@/lib/utils";
-import { TimeSlot } from "@/types/timeSlot";
 
-interface TimeSlotDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  selectedDate: Date;
-  onAddTimeSlot: (timeSlot: TimeSlot) => void;
-  onEditTimeSlot: (timeSlot: TimeSlot) => void;
-  editingTimeSlot: TimeSlot | null;
+interface TimeSlot {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  slots: number;
+  slotsUsed: number;
 }
 
-const TimeSlotDialog = ({
-  open,
-  onOpenChange,
-  selectedDate,
-  onAddTimeSlot,
-  onEditTimeSlot,
-  editingTimeSlot,
-}: TimeSlotDialogProps) => {
-  const [timeSlot, setTimeSlot] = useState("07 às 13");
+interface TimeSlotDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedDate: Date;
+  onAddTimeSlot: (timeSlot: TimeSlot) => void;
+}
+
+const TimeSlotDialog = ({ isOpen, onClose, selectedDate, onAddTimeSlot }: TimeSlotDialogProps) => {
+  const [timeSlot, setTimeSlot] = useState("13 às 19");
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
-  const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
-  const [description, setDescription] = useState("");
-
-  useEffect(() => {
-    if (editingTimeSlot) {
-      setTimeSlot(`${editingTimeSlot.startTime} às ${editingTimeSlot.endTime}`);
-      setSelectedSlots(editingTimeSlot.slots);
-      setDescription(editingTimeSlot.description || "");
-      if (!slotOptions.includes(editingTimeSlot.slots)) {
-        setShowCustomSlots(true);
-        setCustomSlots(editingTimeSlot.slots.toString());
-      }
-    } else {
-      setTimeSlot("07 às 13");
-      setSelectedSlots(2);
-      setShowCustomSlots(false);
-      setCustomSlots("");
-      setDescription("");
-    }
-  }, [editingTimeSlot]);
 
   const slotOptions = [2, 3, 4, 5];
 
@@ -63,25 +38,19 @@ const TimeSlotDialog = ({
       startTime,
       endTime,
       slots,
-      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
-      isWeekly: useWeeklyLogic,
-      description: description.trim()
+      slotsUsed: 0
     };
     
-    if (editingTimeSlot) {
-      onEditTimeSlot(newTimeSlot);
-    } else {
-      onAddTimeSlot(newTimeSlot);
-    }
-    onOpenChange(false);
+    onAddTimeSlot(newTimeSlot);
+    onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center font-bold">
-            {format(selectedDate, "dd/MM/yy", { locale: ptBR })}
+            {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -90,10 +59,10 @@ const TimeSlotDialog = ({
               value={timeSlot}
               onChange={(e) => setTimeSlot(e.target.value)}
               className="text-center"
-              placeholder="07 às 13"
+              placeholder="13 às 19"
             />
           </div>
-          <div className="flex justify-center items-center gap-2">
+          <div className="flex justify-center gap-2">
             {slotOptions.map((slots) => (
               <Button
                 key={slots}
@@ -111,27 +80,17 @@ const TimeSlotDialog = ({
                 {slots}
               </Button>
             ))}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "w-10 h-10",
-                  showCustomSlots && "bg-black text-white hover:bg-black/90"
-                )}
-                onClick={() => setShowCustomSlots(true)}
-              >
-                +
-              </Button>
-              <Switch
-                checked={useWeeklyLogic}
-                onCheckedChange={setUseWeeklyLogic}
-                className={cn(
-                  "data-[state=checked]:bg-green-500",
-                  "data-[state=checked]:hover:bg-green-600"
-                )}
-              />
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "w-10 h-10",
+                showCustomSlots && "bg-black text-white hover:bg-black/90"
+              )}
+              onClick={() => setShowCustomSlots(true)}
+            >
+              +
+            </Button>
           </div>
           {showCustomSlots && (
             <div>
@@ -144,20 +103,12 @@ const TimeSlotDialog = ({
               />
             </div>
           )}
-          <div>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[80px]"
-              placeholder="Descrição do horário (opcional)"
-            />
-          </div>
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={onClose}>
               Cancelar
             </Button>
             <Button onClick={handleRegister}>
-              {editingTimeSlot ? "Salvar" : "Registrar"}
+              Registrar Horário
             </Button>
           </div>
         </div>

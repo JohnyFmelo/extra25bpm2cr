@@ -1,37 +1,26 @@
+import React from "react";
 import { LucideIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 interface IconCardProps {
   icon: LucideIcon;
   label: string;
+  className?: string;
   onClick?: () => void;
-  badge?: number;
 }
 
-const IconCard = ({ icon: Icon, label, onClick, badge }: IconCardProps) => {
-  const navigate = useNavigate();
-
-  const handleClick = () => {
-    if (onClick) {
-      onClick();
-    } else if (label === "Horas") {
-      navigate("/hours");
-    }
-  };
-
+const IconCard = ({ icon: Icon, label, className, onClick }: IconCardProps) => {
   return (
-    <button
-      onClick={handleClick}
-      className="relative flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all space-y-3 group hover:bg-primary hover:text-primary-foreground"
-    >
-      {badge !== undefined && badge > 0 && (
-        <span className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 bg-green-500 text-white text-xs font-bold rounded-full">
-          {badge}
-        </span>
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center p-6 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer group",
+        className
       )}
-      <Icon className="h-10 w-10 text-primary group-hover:text-primary-foreground transition-colors" />
-      <span className="text-base font-medium">{label}</span>
-    </button>
+      onClick={onClick}
+    >
+      <Icon className="w-12 h-12 text-gray-700 group-hover:text-indigo-600 transition-colors duration-300" />
+      <span className="mt-3 text-gray-600 font-medium">{label}</span>
+    </div>
   );
 };
 
