@@ -49,7 +49,7 @@ const numberToText = (num) => {
 
 const DEFAULT_FONT_NAME = "arial";
 const CELL_PADDING_X = 2;
-const CELL_PADDING_Y = 3; // Increased from 1.5 to 3 for more vertical space
+const CELL_PADDING_Y = 3;
 const LINE_HEIGHT_FACTOR = 1.1;
 const MIN_ROW_HEIGHT = 7;
 
@@ -258,13 +258,6 @@ export function addTermoApreensao(doc, data) {
     currentY = rowY + r7H;
 
     rowY = currentY;
-    const m81 = getCellContentMetrics(doc, "FICA APREENDIDO O DESCRITO ABAIXO:", "", MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE, "normal", true);
-    const r8H = Math.max(MIN_ROW_HEIGHT, m81.height) + CELL_PADDING_Y * 2;
-    currentY = checkPageBreak(doc, rowY, r8H, data); if (currentY !== rowY) rowY = currentY;
-    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r8H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r8H, m81, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
-    currentY = rowY + r8H;
-
-    rowY = currentY;
     let textoApreensaoOriginal = (data.apreensoes || "Nenhum objeto/documento descrito para apreensão.").toUpperCase();
     if (isDroga) {
         const quantidadeStr = String(data.drogaQuantidade || "01 (UMA)");
@@ -278,25 +271,21 @@ export function addTermoApreensao(doc, data) {
     }
     
     const apreensaoFontSize = TABLE_CONTENT_FONT_SIZE;
-    let apreensaoTextDrawingY = rowY + CELL_PADDING_Y;
     const apreensaoTextX = MARGIN_LEFT + CELL_PADDING_X;
     const apreensaoMaxWidth = MAX_LINE_WIDTH - CELL_PADDING_X * 2;
     let totalCalculatedTextHeightForDesc = 0;
 
+    // Combine label and description into a single text block
+    const combinedText = `FICA APREENDIDO O DESCRITO ABAIXO:\n- ${textoApreensaoOriginal}`;
     doc.setFont(DEFAULT_FONT_NAME, "normal"); doc.setFontSize(apreensaoFontSize);
-    const apreensaoDescLines = doc.splitTextToSize(`- ${textoApreensaoOriginal}`, apreensaoMaxWidth);
-    totalCalculatedTextHeightForDesc += doc.getTextDimensions(apreensaoDescLines, {fontSize: apreensaoFontSize, lineHeightFactor: LINE_HEIGHT_FACTOR}).h;
-    
+    const combinedLines = doc.splitTextToSize(combinedText, apreensaoMaxWidth);
+    totalCalculatedTextHeightForDesc = doc.getTextDimensions(combinedLines, { fontSize: apreensaoFontSize, lineHeightFactor: LINE_HEIGHT_FACTOR }).h;
+
     const r9H = Math.max(MIN_ROW_HEIGHT * 2, totalCalculatedTextHeightForDesc) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r9H, data); 
-    if (currentY !== rowY) {
-        rowY = currentY;
-        apreensaoTextDrawingY = rowY + CELL_PADDING_Y;
-    }
+    if (currentY !== rowY) rowY = currentY;
     doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r9H);
-    
-    doc.setFont(DEFAULT_FONT_NAME, "normal"); doc.setFontSize(apreensaoFontSize);
-    doc.text(apreensaoDescLines, apreensaoTextX, apreensaoTextDrawingY, {align: 'justify', lineHeightFactor: LINE_HEIGHT_FACTOR});
+    doc.text(combinedLines, apreensaoTextX, rowY + CELL_PADDING_Y, { align: 'justify', lineHeightFactor: LINE_HEIGHT_FACTOR });
     currentY = rowY + r9H;
 
     rowY = currentY;
