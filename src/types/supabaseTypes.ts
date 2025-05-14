@@ -41,3 +41,5 @@ export interface Database extends OriginalDatabase {
     CompositeTypes: OriginalDatabase['public']['CompositeTypes'];
   };
 }
+
+export type { Database };
