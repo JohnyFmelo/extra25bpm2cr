@@ -668,7 +668,13 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       console.log("Metadados para salvar no DB:", tcoMetadata);
 
       // Save metadata with timeout
-      const insertPromise = supabase.from(TABLE_NAME).insert([tcoMetadata]).select('id').single();
+      // Use type casting to avoid TypeScript errors with table that's not in the schema definition
+      const insertPromise = supabase
+        .from(TABLE_NAME as any)
+        .insert([tcoMetadata as any])
+        .select('id')
+        .single();
+        
       const dbTimeoutPromise = new Promise<any>((_, reject) => {
           setTimeout(() => reject(new Error("Tempo limite excedido ao salvar metadados no banco de dados.")), 30000); // 30 segundos
       });

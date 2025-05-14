@@ -29,7 +29,11 @@ export const ensureBucketExists = async (
     
     // Create the bucket if it doesn't exist
     console.log(`Criando bucket ${bucketName}...`);
-    const { error: createError } = await supabase.storage.createBucket(bucketName, options);
+    // Fix: Make sure public property is always defined, defaulting to true
+    const { error: createError } = await supabase.storage.createBucket(bucketName, { 
+      public: options.public ?? true,  // Default to true if not specified
+      fileSizeLimit: options.fileSizeLimit
+    });
     
     if (createError) {
       console.error(`Erro ao criar bucket ${bucketName}:`, createError);
@@ -51,9 +55,10 @@ export const ensureBucketExists = async (
  */
 export const checkTableExists = async (tableName: string): Promise<boolean> => {
   try {
+    // Use the generic query method instead of the typed approach to check if table exists
     const { error } = await supabase
-      .from(tableName)
-      .select('*')
+      .from(tableName as any)
+      .select('*', { count: 'exact', head: true })
       .limit(1);
     
     // PostgreSQL error code for undefined_table is 42P01
