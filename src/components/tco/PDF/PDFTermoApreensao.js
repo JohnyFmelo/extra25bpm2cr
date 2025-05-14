@@ -49,9 +49,11 @@ const numberToText = (num) => {
 
 const DEFAULT_FONT_NAME = "helvetica";
 const CELL_PADDING_X = 2;
-const CELL_PADDING_Y = 4; // Increased to 4 to ensure more space from the top border
+// global cell vertical padding reduced for tighter rows
+const CELL_PADDING_Y = 2; 
 const LINE_HEIGHT_FACTOR = 1.1;
-const MIN_ROW_HEIGHT = 7;
+// Minimum row height reduced for tighter rows
+const MIN_ROW_HEIGHT = 5; 
 
 function getCellContentMetrics(doc, label, value, cellWidth, fontSize, valueFontStyle = "normal", isLabelBold = true) {
     const availableWidth = cellWidth - CELL_PADDING_X * 2;
@@ -76,8 +78,8 @@ function getCellContentMetrics(doc, label, value, cellWidth, fontSize, valueFont
     if (labelLines.length === 1 && fullLabel) {
         doc.setFont(DEFAULT_FONT_NAME, isLabelBold ? "bold" : valueFontStyle, isLabelBold ? "bold" : "normal");
         const labelTextWidth = doc.getTextWidth(labelLines[0]);
-        const potentialValueWidth = availableWidth - labelTextWidth - (fullLabel && valueString ? 1 : 0);
-        if (potentialValueWidth > doc.getTextWidth(" ") * 3) {
+        const potentialValueWidth = availableWidth - labelTextWidth - (fullLabel && valueString ? 1 : 0); // 1 is approx for space character
+        if (potentialValueWidth > doc.getTextWidth(" ") * 3) { // Check if there's meaningful space for value
              valueEffectiveMaxWidth = potentialValueWidth;
         }
     }
@@ -94,24 +96,26 @@ function getCellContentMetrics(doc, label, value, cellWidth, fontSize, valueFont
         if (labelW + (fullLabel && valueString ? 1 : 0) + valueW <= availableWidth) {
             calculatedHeight = Math.max(labelHeight, valueHeight);
             sideBySide = true;
-        } else {
+        } else { // Not enough space side-by-side, stack them
             calculatedHeight = labelHeight + valueHeight;
             sideBySide = false;
+            // Re-calculate valueLines with full width if they were constrained
             if (valueEffectiveMaxWidth < availableWidth) {
                  valueLines = doc.splitTextToSize(valueString, availableWidth);
                  valueHeight = valueLines.length > 0 ? doc.getTextDimensions(valueLines, { fontSize, lineHeightFactor: LINE_HEIGHT_FACTOR }).h : 0;
                  calculatedHeight = labelHeight + valueHeight;
             }
         }
-    } else if (fullLabel) {
+    } else if (fullLabel) { // Label or value (or both) are multi-line or no label
         calculatedHeight = labelHeight + valueHeight;
         sideBySide = false;
+        // If label was multiline, value was constrained, recalculate value height with full width
         if (labelLines.length > 1 && valueEffectiveMaxWidth < availableWidth) {
             valueLines = doc.splitTextToSize(valueString, availableWidth);
             valueHeight = valueLines.length > 0 ? doc.getTextDimensions(valueLines, { fontSize, lineHeightFactor: LINE_HEIGHT_FACTOR }).h : 0;
             calculatedHeight = labelHeight + valueHeight;
         }
-    } else {
+    } else { // Only value, no label
         calculatedHeight = valueHeight;
         sideBySide = false;
     }
@@ -126,11 +130,11 @@ function renderCellText(doc, x, y, cellWidth, cellRowHeight, metrics, fontSize, 
     const usableCellHeight = cellRowHeight - 2 * CELL_PADDING_Y;
 
     if (cellVerticalAlign === 'middle') {
-        textBlockStartY = y + CELL_PADDING_Y + (usableCellHeight - totalCalculatedTextHeight) / 2 + 1; // Slight downward shift by 1 unit
+        textBlockStartY = y + CELL_PADDING_Y + (usableCellHeight - totalCalculatedTextHeight) / 2 + 1; // +1 for slight downward shift
     } else { // 'top'
         textBlockStartY = y + CELL_PADDING_Y;
     }
-    textBlockStartY = Math.max(y + CELL_PADDING_Y, textBlockStartY);
+    textBlockStartY = Math.max(y + CELL_PADDING_Y, textBlockStartY); // Ensure it doesn't go above cell top padding
 
     const textContentX = x + CELL_PADDING_X;
     const availableWidth = cellWidth - CELL_PADDING_X * 2;
@@ -154,9 +158,9 @@ function renderCellText(doc, x, y, cellWidth, cellRowHeight, metrics, fontSize, 
         let valueY = currentDrawingY;
 
         if (sideBySide && labelLines.length > 0) {
-            doc.setFont(DEFAULT_FONT_NAME, isLabelBold ? "bold" : valueFontStyle, isLabelBold ? "bold" : "normal");
-            valueX = textContentX + doc.getTextWidth(labelLines[0]) + (labelLines.length > 0 && valueLines.length > 0 ? 1 : 0);
-            valueY = textBlockStartY;
+            doc.setFont(DEFAULT_FONT_NAME, isLabelBold ? "bold" : valueFontStyle, isLabelBold ? "bold" : "normal"); // Reset font for getTextWidth
+            valueX = textContentX + doc.getTextWidth(labelLines[0]) + (labelLines.length > 0 && valueLines.length > 0 ? 1 : 0); // Approx 1 for space
+            valueY = textBlockStartY; // Align with label start Y if side-by-side
         }
         
         doc.text(valueLines, valueX, valueY, { 
@@ -187,11 +191,12 @@ export function addTermoApreensao(doc, data) {
 
     const titulo = isDroga ? `TERMO DE APREENSÃO LACRE Nº ${lacreNumero}` : "TERMO DE APREENSÃO";
     doc.setFont(DEFAULT_FONT_NAME, "bold"); doc.setFontSize(12);
-    currentY = checkPageBreak(doc, currentY, 15, data);
+    currentY = checkPageBreak(doc, currentY, 15, data); // Height for title + initial spacing
     doc.text(titulo.toUpperCase(), PAGE_WIDTH / 2, currentY, { align: "center" });
-    currentY += 8;
+    currentY += 8; // Spacing after title
 
     const cellOptionsBase = { fontSize: TABLE_CONTENT_FONT_SIZE, cellVerticalAlign: 'middle' };
+    const firstRowsCellVerticalAlign = 'top'; // For first 5 rows to be tighter to top border
 
     let rowY = currentY;
     const dataHoraObj = formatarDataHora(data.dataTerminoRegistro || data.dataFato, data.horaTerminoRegistro || data.horaFato, true);
@@ -200,9 +205,9 @@ export function addTermoApreensao(doc, data) {
     const m13 = getCellContentMetrics(doc, "LOCAL", "25º BPM", lastColWidth, TABLE_CONTENT_FONT_SIZE);
     const r1H = Math.max(MIN_ROW_HEIGHT, m11.height, m12.height, m13.height) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r1H, data); if (currentY !== rowY) rowY = currentY;
-    doc.rect(xCol1, rowY, colWidth, r1H); renderCellText(doc, xCol1, rowY, colWidth, r1H, m11, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
-    doc.rect(xCol2, rowY, colWidth, r1H); renderCellText(doc, xCol2, rowY, colWidth, r1H, m12, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
-    doc.rect(xCol3, rowY, lastColWidth, r1H); renderCellText(doc, xCol3, rowY, lastColWidth, r1H, m13, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
+    doc.rect(xCol1, rowY, colWidth, r1H); renderCellText(doc, xCol1, rowY, colWidth, r1H, m11, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", firstRowsCellVerticalAlign);
+    doc.rect(xCol2, rowY, colWidth, r1H); renderCellText(doc, xCol2, rowY, colWidth, r1H, m12, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", firstRowsCellVerticalAlign);
+    doc.rect(xCol3, rowY, lastColWidth, r1H); renderCellText(doc, xCol3, rowY, lastColWidth, r1H, m13, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", firstRowsCellVerticalAlign);
     currentY = rowY + r1H;
 
     rowY = currentY;
@@ -210,21 +215,21 @@ export function addTermoApreensao(doc, data) {
     const m21 = getCellContentMetrics(doc, "NOME DO POLICIAL", nomePolicial, MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
     const r2H = Math.max(MIN_ROW_HEIGHT, m21.height) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r2H, data); if (currentY !== rowY) rowY = currentY;
-    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r2H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r2H, m21, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
+    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r2H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r2H, m21, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", firstRowsCellVerticalAlign);
     currentY = rowY + r2H;
 
     rowY = currentY;
     const m31 = getCellContentMetrics(doc, "FILIAÇÃO PAI", (condutor?.pai || "").toUpperCase(), MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
     const r3H = Math.max(MIN_ROW_HEIGHT, m31.height) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r3H, data); if (currentY !== rowY) rowY = currentY;
-    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r3H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r3H, m31, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
+    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r3H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r3H, m31, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", firstRowsCellVerticalAlign);
     currentY = rowY + r3H;
     
     rowY = currentY;
     const m41 = getCellContentMetrics(doc, "FILIAÇÃO MÃE", (condutor?.mae || "").toUpperCase(), MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
     const r4H = Math.max(MIN_ROW_HEIGHT, m41.height) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r4H, data); if (currentY !== rowY) rowY = currentY;
-    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r4H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r4H, m41, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
+    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r4H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r4H, m41, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", firstRowsCellVerticalAlign);
     currentY = rowY + r4H;
 
     rowY = currentY;
@@ -233,11 +238,12 @@ export function addTermoApreensao(doc, data) {
     const m53 = getCellContentMetrics(doc, "CPF", condutor?.cpf || "", lastColWidth, TABLE_CONTENT_FONT_SIZE);
     const r5H = Math.max(MIN_ROW_HEIGHT, m51.height, m52.height, m53.height) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r5H, data); if (currentY !== rowY) rowY = currentY;
-    doc.rect(xCol1, rowY, colWidth, r5H); renderCellText(doc, xCol1, rowY, colWidth, r5H, m51, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
-    doc.rect(xCol2, rowY, colWidth, r5H); renderCellText(doc, xCol2, rowY, colWidth, r5H, m52, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
-    doc.rect(xCol3, rowY, lastColWidth, r5H); renderCellText(doc, xCol3, rowY, lastColWidth, r5H, m53, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
+    doc.rect(xCol1, rowY, colWidth, r5H); renderCellText(doc, xCol1, rowY, colWidth, r5H, m51, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", firstRowsCellVerticalAlign);
+    doc.rect(xCol2, rowY, colWidth, r5H); renderCellText(doc, xCol2, rowY, colWidth, r5H, m52, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", firstRowsCellVerticalAlign);
+    doc.rect(xCol3, rowY, lastColWidth, r5H); renderCellText(doc, xCol3, rowY, lastColWidth, r5H, m53, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", firstRowsCellVerticalAlign);
     currentY = rowY + r5H;
     
+    // For subsequent rows, use middle alignment as default unless specified otherwise
     rowY = currentY;
     const enderecoValue = "AV. DR. PARANÁ, S/N° COMPLEXO DA UNIVAG, AO LADO DO NÚCLEO DE PRÁTICA JURÍDICA. BAIRRO CRISTO REI CEP 78.110-100, VG - MT".toUpperCase();
     const m61 = getCellContentMetrics(doc, "END.", enderecoValue, MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
@@ -280,23 +286,31 @@ export function addTermoApreensao(doc, data) {
     const combinedLines = doc.splitTextToSize(combinedText, apreensaoMaxWidth);
     totalCalculatedTextHeightForDesc = doc.getTextDimensions(combinedLines, { fontSize: apreensaoFontSize, lineHeightFactor: LINE_HEIGHT_FACTOR }).h;
 
-    const r9H = Math.max(MIN_ROW_HEIGHT * 2, totalCalculatedTextHeightForDesc) + CELL_PADDING_Y * 2;
+    // Ensure this row has enough height for at least two lines visually, even if text is shorter
+    const r9H = Math.max(MIN_ROW_HEIGHT + (doc.getTextDimensions(" ", {fontSize: apreensaoFontSize}).h * LINE_HEIGHT_FACTOR), totalCalculatedTextHeightForDesc) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r9H, data); 
     if (currentY !== rowY) rowY = currentY;
     doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r9H);
-    const textBlockStartYForDesc = rowY + CELL_PADDING_Y + (r9H - 2 * CELL_PADDING_Y - totalCalculatedTextHeightForDesc) / 2 + 1; // Center vertically with slight downward shift
+    
+    // Calculate vertical centering for this specific block
+    const usableDescCellHeight = r9H - 2 * CELL_PADDING_Y;
+    let textBlockStartYForDesc = rowY + CELL_PADDING_Y + (usableDescCellHeight - totalCalculatedTextHeightForDesc) / 2 + 1; // +1 for slight downward shift
+    textBlockStartYForDesc = Math.max(rowY + CELL_PADDING_Y, textBlockStartYForDesc); // Ensure not above padding
+
     doc.text(combinedLines, apreensaoTextX, textBlockStartYForDesc, { align: 'left', lineHeightFactor: LINE_HEIGHT_FACTOR });
     currentY = rowY + r9H;
 
     rowY = currentY;
     const textoLegal = "O PRESENTE TERMO DE APREENSÃO FOI LAVRADO COM BASE NO ART. 6º, II, DO CÓDIGO DE PROCESSO PENAL, E ART. 92 DA LEI 9.999/1995.".toUpperCase();
+    // Metrics for text that is effectively only a 'value' (no 'label' part)
     const m10_1 = getCellContentMetrics(doc, null, textoLegal, MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
     const r10H = Math.max(MIN_ROW_HEIGHT, m10_1.height) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r10H, data); if (currentY !== rowY) rowY = currentY;
-    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H, m10_1, TABLE_CONTENT_FONT_SIZE, "normal", false, "left", cellOptionsBase.cellVerticalAlign);
+    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H); 
+    renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H, m10_1, TABLE_CONTENT_FONT_SIZE, "normal", false, "left", cellOptionsBase.cellVerticalAlign);
     currentY = rowY + r10H;
 
-    currentY += 7;
+    currentY += 5; // Reduced spacing before signatures
     doc.setFont(DEFAULT_FONT_NAME, "normal");
     doc.setFontSize(10);
     const autorLabel = autor?.sexo === "Feminino" ? "AUTORA DOS FATOS" : "AUTOR DOS FATOS";
