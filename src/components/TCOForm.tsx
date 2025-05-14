@@ -21,7 +21,7 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator"; // Assuming this returns a Blob
 // Import the Supabase client
-import { supabase } from "@/integrations/supabase/client";// Use default import
+import supabase from "@/lib/supabaseClient"; // Use default import
 
 // --- Keep Interfaces: ComponenteGuarnicao, Pessoa ---
 interface ComponenteGuarnicao {
@@ -662,19 +662,13 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         pdfPath: filePath,
         pdfUrl: downloadURL,
         createdBy: userId,
-        created_at: new Date().toISOString()
+        createdAt: new Date().toISOString()
       };
       
       console.log("Metadados para salvar no DB:", tcoMetadata);
 
       // Save metadata with timeout
-      // Use type casting to avoid TypeScript errors with table that's not in the schema definition
-      const insertPromise = supabase
-        .from(TABLE_NAME as any)
-        .insert([tcoMetadata as any])
-        .select('id')
-        .single();
-        
+      const insertPromise = supabase.from(TABLE_NAME).insert([tcoMetadata]).select('id').single();
       const dbTimeoutPromise = new Promise<any>((_, reject) => {
           setTimeout(() => reject(new Error("Tempo limite excedido ao salvar metadados no banco de dados.")), 30000); // 30 segundos
       });

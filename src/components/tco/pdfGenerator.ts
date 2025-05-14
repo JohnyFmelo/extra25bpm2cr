@@ -1,3 +1,4 @@
+
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -13,7 +14,6 @@ import { generateHistoricoContent } from './PDF/PDFhistorico.js';
 import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
 import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
-import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
@@ -102,37 +102,23 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 .then(() => {
                     // --- ADIÇÃO DOS TERMOS ---
                     if (data.autores && data.autores.length > 0) {
-                        console.log("Adicionando Termo de Compromisso...");
                         addTermoCompromisso(doc, data);
                     } else {
                         console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
                     }
 
                     if (data.natureza !== "Porte de drogas para consumo") {
-                        console.log("Adicionando Termo de Manifestação...");
                         addTermoManifestacao(doc, data);
                     } else {
                         console.log("Caso de droga detectado, pulando Termo de Manifestação da Vítima.");
                     }
 
                     if (data.apreensaoDescrição || data.apreensoes) {
-                        console.log("Adicionando Termo de Apreensão...");
                         addTermoApreensao(doc, data);
                     }
 
-                    // --- DROGA-RELATED TERMS ---
                     if (data.drogaTipo || data.drogaNomeComum) {
-                        console.log("Droga detectada. Adicionando Termo de Constatação de Droga...");
                         addTermoConstatacaoDroga(doc, data);
-                        console.log("Adicionando Requisição de Exame de Drogas...");
-                        try {
-                            addRequisicaoExameDrogas(doc, data);
-                            console.log("Requisição de Exame de Drogas adicionada com sucesso.");
-                        } catch (error) {
-                            console.error("Erro ao adicionar Requisição de Exame de Drogas:", error);
-                        }
-                    } else {
-                        console.warn("Nenhum dado de droga (drogaTipo ou drogaNomeComum) encontrado. Pulando Termo de Constatação e Requisição de Exame de Drogas.");
                     }
 
                     // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
@@ -150,7 +136,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
                     }
 
-                    console.log("Adicionando Termo de Encerramento e Remessa...");
                     addTermoEncerramentoRemessa(doc, data);
 
                     // --- Finalização: Adiciona Números de Página e Salva ---
