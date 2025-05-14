@@ -119,7 +119,7 @@ function getCellContentMetrics(doc, label, value, cellWidth, fontSize, valueFont
     return { height: calculatedHeight, labelLines, valueLines, labelHeight, valueHeight, sideBySide };
 }
 
-function renderCellText(doc, x, y, cellWidth, cellRowHeight, metrics, fontSize, valueFontStyle = "normal", isLabelBold = true, valueAlign = "left", cellVerticalAlign = "top") {
+function renderCellText(doc, x, y, cellWidth, cellRowHeight, metrics, fontSize, valueFontStyle = "normal", isLabelBold = true, valueAlign = "left", cellVerticalAlign = "middle") {
     const { labelLines, valueLines, labelHeight, valueHeight, height: totalCalculatedTextHeight, sideBySide } = metrics;
     
     let textBlockStartY;
@@ -243,7 +243,7 @@ export function addTermoApreensao(doc, data) {
     const m61 = getCellContentMetrics(doc, "END.", enderecoValue, MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
     const r6H = Math.max(MIN_ROW_HEIGHT, m61.height) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r6H, data); if (currentY !== rowY) rowY = currentY;
-    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r6H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r6H, m61, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", 'top');
+    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r6H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r6H, m61, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
     currentY = rowY + r6H;
 
     rowY = currentY;
@@ -275,7 +275,6 @@ export function addTermoApreensao(doc, data) {
     const apreensaoMaxWidth = MAX_LINE_WIDTH - CELL_PADDING_X * 2;
     let totalCalculatedTextHeightForDesc = 0;
 
-    // Combine label and description into a single text block
     const combinedText = `FICA APREENDIDO O DESCRITO ABAIXO:\n- ${textoApreensaoOriginal}`;
     doc.setFont(DEFAULT_FONT_NAME, "normal"); doc.setFontSize(apreensaoFontSize);
     const combinedLines = doc.splitTextToSize(combinedText, apreensaoMaxWidth);
@@ -285,15 +284,15 @@ export function addTermoApreensao(doc, data) {
     currentY = checkPageBreak(doc, rowY, r9H, data); 
     if (currentY !== rowY) rowY = currentY;
     doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r9H);
-    doc.text(combinedLines, apreensaoTextX, rowY + CELL_PADDING_Y, { align: 'justify', lineHeightFactor: LINE_HEIGHT_FACTOR });
+    doc.text(combinedLines, apreensaoTextX, rowY + CELL_PADDING_Y, { align: 'left', lineHeightFactor: LINE_HEIGHT_FACTOR });
     currentY = rowY + r9H;
 
     rowY = currentY;
-    const textoLegal = "O PRESENTE TERMO DE APREENSÃO FOI LAVRADO COM BASE NO ART. 6º, II, DO CÓDIGO DE PROCESSO PENAL, E ART. 92 DA LEI 9.099/1995.".toUpperCase();
+    const textoLegal = "O PRESENTE TERMO DE APREENSÃO FOI LAVRADO COM BASE NO ART. 6º, II, DO CÓDIGO DE PROCESSO PENAL, E ART. 92 DA LEI 9.999/1995.".toUpperCase();
     const m10_1 = getCellContentMetrics(doc, null, textoLegal, MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
     const r10H = Math.max(MIN_ROW_HEIGHT, m10_1.height) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r10H, data); if (currentY !== rowY) rowY = currentY;
-    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H, m10_1, TABLE_CONTENT_FONT_SIZE, "normal", false, "justify", 'top');
+    doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H, m10_1, TABLE_CONTENT_FONT_SIZE, "normal", false, "left", cellOptionsBase.cellVerticalAlign);
     currentY = rowY + r10H;
 
     currentY += 7;
