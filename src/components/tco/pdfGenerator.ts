@@ -16,7 +16,7 @@ import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
-import { addRequisicaoExameDrogas } from './PDF/PDFRequisicaoExameDrogas.js'; // Corrigido o nome do arquivo
+import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js'; // Corrigido o nome do arquivo
 
 // Função auxiliar para adicionar imagens ao PDF
 const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; data: string }[], pageWidth: number, pageHeight: number) => {
