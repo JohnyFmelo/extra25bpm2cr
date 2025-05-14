@@ -1,3 +1,4 @@
+
 import jsPDF from "jspdf";
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
@@ -50,9 +51,9 @@ const numberToText = (num) => {
 
 const DEFAULT_FONT_NAME = "arial"; // Definindo a fonte padrão
 const CELL_PADDING_X = 2;
-const CELL_PADDING_Y = 2; // Espaçamento vertical dentro da célula
-const LINE_HEIGHT_FACTOR = 1.15; // Espaçamento entre linhas do texto
-const MIN_ROW_HEIGHT = 9; // Ajustado para fonte 12pt + padding
+const CELL_PADDING_Y = 1.5; // Reduzido de 2 para 1.5 para economizar espaço vertical
+const LINE_HEIGHT_FACTOR = 1.1; // Reduzido de 1.15 para 1.1 para economizar espaço
+const MIN_ROW_HEIGHT = 7; // Reduzido de 9 para 7 para economizar espaço vertical
 
 function getCellContentMetrics(doc, label, value, cellWidth, fontSize, valueFontStyle = "normal", isLabelBold = true) {
     const availableWidth = cellWidth - CELL_PADDING_X * 2;
@@ -182,7 +183,8 @@ export function addTermoApreensao(doc, data) {
     const isDroga = data.natureza && data.natureza.toLowerCase() === "porte de drogas para consumo";
     const lacreNumero = data.lacreNumero || "00000000";
 
-    const TABLE_CONTENT_FONT_SIZE = 12;
+    // Reduzido o tamanho da fonte de 12 para 10 para melhor uso do espaço
+    const TABLE_CONTENT_FONT_SIZE = 10;
 
     const colWidth = MAX_LINE_WIDTH / 3;
     const xCol1 = MARGIN_LEFT;
@@ -194,7 +196,7 @@ export function addTermoApreensao(doc, data) {
     doc.setFont(DEFAULT_FONT_NAME, "bold"); doc.setFontSize(12);
     currentY = checkPageBreak(doc, currentY, 15, data);
     doc.text(titulo.toUpperCase(), PAGE_WIDTH / 2, currentY, { align: "center" });
-    currentY += 10;
+    currentY += 8; // Reduzido de 10 para 8
 
     const cellOptionsBase = { fontSize: TABLE_CONTENT_FONT_SIZE, cellVerticalAlign: 'middle' };
 
@@ -244,7 +246,8 @@ export function addTermoApreensao(doc, data) {
     currentY = rowY + r5H;
     
     rowY = currentY;
-    const enderecoValue = "AV. DR. PARANÁ, S/N° COMPLEXO DA UNIVAG, AO LADO DO NÚCLEO DE PRÁTICA JURÍDICA. BAIRRO CRISTO REI CEP 78.110-100, VÁRZEA GRANDE - MT".toUpperCase();
+    // Encurtando e otimizando o endereço para caber melhor
+    const enderecoValue = "AV. DR. PARANÁ, S/N° COMPLEXO DA UNIVAG, AO LADO DO NÚCLEO DE PRÁTICA JURÍDICA. BAIRRO CRISTO REI CEP 78.110-100, VG - MT".toUpperCase();
     const m61 = getCellContentMetrics(doc, "END.", enderecoValue, MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
     const r6H = Math.max(MIN_ROW_HEIGHT, m61.height) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r6H, data); if (currentY !== rowY) rowY = currentY;
@@ -298,7 +301,8 @@ export function addTermoApreensao(doc, data) {
     totalCalculatedTextHeightForDesc += doc.getTextDimensions(apreensaoDescLines, {fontSize: apreensaoFontSize, lineHeightFactor: LINE_HEIGHT_FACTOR}).h;
     
     // A altura da linha deve acomodar o texto e o padding superior e inferior
-    const r9H = Math.max(MIN_ROW_HEIGHT * 2.5, totalCalculatedTextHeightForDesc) + CELL_PADDING_Y * 2;
+    // Reduzido o fator multiplicador de 2.5 para 2 para economizar espaço
+    const r9H = Math.max(MIN_ROW_HEIGHT * 2, totalCalculatedTextHeightForDesc) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r9H, data); 
     if (currentY !== rowY) { // Page break occurred
         rowY = currentY; 
@@ -325,9 +329,10 @@ export function addTermoApreensao(doc, data) {
     doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H, m10_1, TABLE_CONTENT_FONT_SIZE, "normal", false, "justify", 'top');
     currentY = rowY + r10H;
 
-    currentY += 10;
+    // Reduzido o espaçamento antes das assinaturas para economizar espaço vertical
+    currentY += 7; // Reduzido de 10 para 7
     doc.setFont(DEFAULT_FONT_NAME, "normal");
-    doc.setFontSize(12);
+    doc.setFontSize(10); // Reduzido de 12 para 10
     const autorLabel = autor?.sexo === "Feminino" ? "AUTORA DOS FATOS" : "AUTOR DOS FATOS";
     currentY = addSignatureWithNameAndRole(doc, currentY, (autor?.nome || "").toUpperCase(), autorLabel.toUpperCase(), data);
     const nomeCondutorCompleto = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim().toUpperCase();
