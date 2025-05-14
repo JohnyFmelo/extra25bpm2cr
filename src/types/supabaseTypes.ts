@@ -1,5 +1,4 @@
 
-
 import { Database as OriginalDatabase } from "@/integrations/supabase/types";
 
 // Define o tipo para a tabela tco_pdfs
@@ -42,7 +41,4 @@ export interface Database extends OriginalDatabase {
     CompositeTypes: OriginalDatabase['public']['CompositeTypes'];
   };
 }
-
-// Adding explicit type export to fix the import error while avoiding TS1205 error
-export type { Database };
 

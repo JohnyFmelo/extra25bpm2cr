@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { Database } from '../types/supabaseTypes';
+import type { Database } from '../types/supabaseTypes';
 
 // Cria o cliente Supabase com o tipo estendido Database
 const supabase = createClient(
