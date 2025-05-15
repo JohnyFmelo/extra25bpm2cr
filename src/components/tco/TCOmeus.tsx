@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from "react";
+import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { getStorage, ref, getDownloadURL } from "firebase/storage";
+import { db } from "@/lib/firebase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Trash2, FileText, Download, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/lib/supabaseClient";
-import { deleteTCOFromSupabase } from "@/lib/supabasePdfStorage";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface TCOmeusProps {
   user: { id: string; registration?: string };
@@ -22,25 +23,28 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
 
-  // Function to fetch user's TCOs from Supabase
+  // Function to fetch user's TCOs
   const fetchUserTcos = async () => {
     if (!user.id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('tco_pdfs')
-        .select('*')
-        .eq('createdBy', user.id);
-      
-      if (error) throw error;
-      
-      setTcoList(data || []);
-    } catch (error: any) {
+      const tcoRef = collection(db, "tcos");
+      const q = query(tcoRef, where("createdBy", "==", user.id));
+      const querySnapshot = await getDocs(q);
+      const tcos: any[] = [];
+      querySnapshot.forEach(doc => {
+        tcos.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      setTcoList(tcos);
+    } catch (error) {
       console.error("Error fetching TCOs:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: `Falha ao carregar os TCOs: ${error.message}`
+        description: "Falha ao carregar os TCOs."
       });
     } finally {
       setIsLoading(false);
@@ -48,27 +52,21 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   };
 
   // Function to delete a TCO
-  const handleDeleteTco = async (tcoId: string, pdfPath: string) => {
+  const handleDeleteTco = async (tcoId: string) => {
     try {
-      const result = await deleteTCOFromSupabase(tcoId, pdfPath);
-      
-      if (!result.success) {
-        throw new Error(result.error || "Erro desconhecido");
-      }
-      
+      await deleteDoc(doc(db, "tcos", tcoId));
       setTcoList(tcoList.filter(tco => tco.id !== tcoId));
       if (selectedTco?.id === tcoId) setSelectedTco(null);
-      
       toast({
         title: "TCO Excluído",
         description: "O TCO foi removido com sucesso."
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting TCO:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: `Falha ao excluir o TCO: ${error.message}`
+        description: "Falha ao excluir o TCO."
       });
     }
   };
@@ -79,6 +77,13 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
       if (tco.pdfUrl) {
         setSelectedPdfUrl(tco.pdfUrl);
         setIsPdfDialogOpen(true);
+      } else if (tco.pdfPath) {
+        // Se tiver apenas o caminho do PDF no Storage, mas não a URL
+        const storage = getStorage();
+        const pdfRef = ref(storage, tco.pdfPath);
+        const url = await getDownloadURL(pdfRef);
+        setSelectedPdfUrl(url);
+        setIsPdfDialogOpen(true);
       } else {
         toast({
           variant: "destructive",
@@ -86,12 +91,12 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
           description: "Este TCO não possui um PDF associado."
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching PDF:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: `Falha ao carregar o PDF do TCO: ${error.message}`
+        description: "Falha ao carregar o PDF do TCO."
       });
     }
   };
@@ -99,8 +104,18 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   // Function to download PDF
   const handleDownloadPdf = async (tco: any) => {
     try {
-      if (tco.pdfUrl) {
-        window.open(tco.pdfUrl, '_blank');
+      let url = tco.pdfUrl;
+      
+      if (!url && tco.pdfPath) {
+        // Se tiver apenas o caminho do PDF no Storage, mas não a URL
+        const storage = getStorage();
+        const pdfRef = ref(storage, tco.pdfPath);
+        url = await getDownloadURL(pdfRef);
+      }
+      
+      if (url) {
+        // Abre o URL em uma nova aba para download
+        window.open(url, '_blank');
       } else {
         toast({
           variant: "destructive",
@@ -108,17 +123,17 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
           description: "Este TCO não possui um PDF para download."
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error downloading PDF:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: `Falha ao baixar o PDF do TCO: ${error.message}`
+        description: "Falha ao baixar o PDF do TCO."
       });
     }
   };
 
-  // Fetch TCOs when component mounts or user changes
+  // Fetch TCOs when component mounts
   useEffect(() => {
     fetchUserTcos();
   }, [user.id]);
@@ -153,7 +168,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
                 <TableCell className="font-medium">{tco.tcoNumber}</TableCell>
                 <TableCell>
                   {tco.createdAt
-                    ? format(new Date(tco.createdAt), "dd/MM/yyyy")
+                    ? format(new Date(tco.createdAt.seconds * 1000), "dd/MM/yyyy")
                     : "-"}
                 </TableCell>
                 <TableCell>{tco.natureza}</TableCell>
@@ -186,7 +201,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteTco(tco.id, tco.pdfPath);
+                        handleDeleteTco(tco.id);
                       }}
                       aria-label={`Excluir TCO ${tco.tcoNumber}`}
                     >
