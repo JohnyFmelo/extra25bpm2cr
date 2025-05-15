@@ -1,3 +1,4 @@
+
 import { Bell, Users, MessageSquare, Plus, ArrowLeft } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -8,7 +9,6 @@ import UsersList from "@/components/UsersList";
 import ProfileUpdateDialog from "@/components/ProfileUpdateDialog";
 import PasswordChangeDialog from "@/components/PasswordChangeDialog";
 import InformationDialog from "@/components/InformationDialog";
-import ScheduleList from "@/components/ScheduleList";
 import Messages from "@/components/Messages";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
 import { TravelManagement } from "@/components/TravelManagement";
@@ -17,6 +17,9 @@ import TCOForm from "@/components/TCOForm";
 import TCOmeus from "@/components/tco/TCOmeus";
 import { Button } from "@/components/ui/button";
 import BottomMenuBar from "@/components/BottomMenuBar";
+import { useNavigate } from "react-router-dom";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { LogOut } from "lucide-react";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -25,13 +28,18 @@ const Index = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showInformationDialog, setShowInformationDialog] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
+  const navigate = useNavigate();
 
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list"); // Controls sub-tabs in TCO section
+  
+  // States for messages in notifications section
+  const [showMessagesTab, setShowMessagesTab] = useState(false);
 
   const handleEditorClick = () => {
     setActiveTab("editor");
@@ -39,12 +47,11 @@ const Index = () => {
   const handleExtraClick = () => {
     setActiveTab("extra");
   };
-  const handleUsersClick = () => {
-    setActiveTab("users");
-  };
   const handleBackClick = () => {
     if (activeTab === "editor") {
       setActiveTab("extra");
+    } else if (showMessagesTab) {
+      setShowMessagesTab(false);
     } else {
       setActiveTab("main");
     }
@@ -52,20 +59,20 @@ const Index = () => {
   const handleSettingsClick = () => {
     setActiveTab("settings");
   };
-  const handleScheduleClick = () => {
-    setActiveTab("schedule");
-  };
-  const handleMessageClick = () => {
-    setActiveTab("messages");
-  };
-  const handleNotificationsClick = () => {
-    setActiveTab("notifications");
-  };
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
   const handleTCOClick = () => {
     setActiveTab("tco");
+  };
+  const handleNotificationsClick = () => {
+    setActiveTab("notifications");
+  };
+  
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    navigate("/login");
+    setShowLogoutDialog(false);
   };
 
   return (
@@ -76,25 +83,15 @@ const Index = () => {
             <TabsTrigger value="main">Main</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
             <TabsTrigger value="extra">Extra</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
-            <TabsTrigger value="schedule">Schedule</TabsTrigger>
-            <TabsTrigger value="messages">Messages</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="travel">Travel</TabsTrigger>
             <TabsTrigger value="tco">TCO</TabsTrigger>
           </TabsList>
 
           <TabsContent value="main">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <IconCard icon={Bell} label="Notificações" onClick={handleNotificationsClick} badge={unreadCount > 0 ? unreadCount : undefined} />
-              {user.userType === "admin" && (
-                <>
-                  <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
-                  <IconCard icon={MessageSquare} label="Recados" onClick={handleMessageClick} />
-                </>
-              )}
-              <IconCard icon={MessageSquare} label="Escala" onClick={handleScheduleClick} />
             </div>
           </TabsContent>
 
@@ -158,6 +155,25 @@ const Index = () => {
                     <h3 className="font-medium">Informações</h3>
                     <p className="text-sm text-gray-600">Visualize a estrutura funcional do sistema</p>
                   </button>
+                  {user.userType === "admin" && (
+                    <button
+                      onClick={() => setActiveTab("users")}
+                      className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <h3 className="font-medium">Usuários</h3>
+                      <p className="text-sm text-gray-600">Gerenciar usuários do sistema</p>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowLogoutDialog(true)}
+                    className="p-4 text-left bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <LogOut className="h-5 w-5 text-red-500" />
+                      <h3 className="font-medium text-red-500">Sair</h3>
+                    </div>
+                    <p className="text-sm text-red-600">Encerrar a sessão atual</p>
+                  </button>
                 </div>
               </div>
             </div>
@@ -188,50 +204,15 @@ const Index = () => {
             <div className="relative">
               <div className="absolute right-0 -top-12 mb-4">
                 <button
-                  onClick={handleBackClick}
+                  onClick={() => setActiveTab("settings")}
                   className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-                  aria-label="Voltar para home"
+                  aria-label="Voltar para configurações"
                 >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
               <div className="bg-white rounded-xl shadow-lg">
                 <UsersList />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="schedule">
-            <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
-                <button
-                  onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-                  aria-label="Voltar para home"
-                >
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-2xl font-semibold mb-6">Planejamento Semanal</h2>
-                <ScheduleList />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="messages">
-            <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
-                <button
-                  onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-                  aria-label="Voltar para home"
-                >
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="bg-white rounded-xl shadow-lg">
-                <Messages />
               </div>
             </div>
           </TabsContent>
@@ -247,9 +228,29 @@ const Index = () => {
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <div className="bg-white rounded-xl shadow-lg">
-                <NotificationsList />
-              </div>
+              
+              {!showMessagesTab ? (
+                <>
+                  <div className="bg-white rounded-xl shadow-lg">
+                    <NotificationsList />
+                  </div>
+                  
+                  {user.userType === "admin" && (
+                    <div className="fixed bottom-6 right-6 z-10">
+                      <Button
+                        onClick={() => setShowMessagesTab(true)}
+                        className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 flex items-center justify-center text-gray-50"
+                      >
+                        <Plus className="h-6 w-6" />
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="bg-white rounded-xl shadow-lg">
+                  <Messages />
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -362,6 +363,21 @@ const Index = () => {
             isAdmin={user.userType === "admin"}
           />
         )}
+        
+        <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Saída</AlertDialogTitle>
+              <AlertDialogDescription>
+                Sair do sistema?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleLogout}>Sair</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
       
       <BottomMenuBar

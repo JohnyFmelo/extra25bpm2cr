@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Clock, Calendar, MapPinned, Scale, Settings } from "lucide-react";
+import { Clock, Calendar, MapPinned, Scale, Settings, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -84,6 +84,13 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
           active={activeTab === "tco"}
         />
       )}
+      <BottomMenuItem
+        icon={<Bell className="h-6 w-6" />}
+        label="Notific."
+        onClick={() => onTabChange("notifications")}
+        active={activeTab === "notifications"}
+        badge={unreadCount > 0 ? unreadCount : undefined}
+      />
       <BottomMenuItem
         icon={<Settings className="h-6 w-6" />}
         label="Config"

@@ -1,31 +1,13 @@
 
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { LogOut, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 const TopBar = () => {
-  const navigate = useNavigate();
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
 
   const handleRefresh = () => {
     window.location.reload();
@@ -71,29 +53,7 @@ const TopBar = () => {
           <RefreshCw className="h-5 w-5" />
           <span className="sr-only">Atualizar página</span>
         </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="text-primary-foreground hover:bg-primary-light"
-          onClick={() => setShowLogoutDialog(true)}
-        >
-          <LogOut className="h-5 w-5" />
-          <span className="sr-only">Sair</span>
-        </Button>
-        <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar Saída</AlertDialogTitle>
-              <AlertDialogDescription>
-                Sair do sistema?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleLogout}>Sair</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        
         {showProfileDialog && (
           <ProfileUpdateDialog
             open={showProfileDialog}
