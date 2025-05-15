@@ -31,7 +31,7 @@ export const addTermoEncerramentoRemessa = (doc, data) => {
     yPos = addWrappedText(doc, yPos, textoEncerramento, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 15;
 
-    const nomeCondutor = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
+    const nomeCondutor = `${condutor?.nome || ""} ${condutor?.posto || ""}`.trim();
     yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutor, "CONDUTOR DA OCORRÊNCIA", data);
 
     return yPos;
