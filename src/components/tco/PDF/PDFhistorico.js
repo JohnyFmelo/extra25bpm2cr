@@ -1,3 +1,4 @@
+
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -107,7 +108,7 @@ export const createHistoricoSection = (doc, tco, options = {}) => {
                 nome: autor.nome ? autor.nome.toUpperCase() : '',
                 sexo: autor.sexo ? autor.sexo.toUpperCase() : '',
                 estadoCivil: autor.estadoCivil ? autor.estadoCivil.toUpperCase() : '',
-                profissao: autor.profissao ? autor.profississao.toUpperCase() : '',
+                profissao: autor.profissao ? autor.profissao.toUpperCase() : '',
                 endereco: autor.endereco ? autor.endereco.toUpperCase() : '',
                 naturalidade: autor.naturalidade ? autor.naturalidade.toUpperCase() : '',
                 filiacaoMae: autor.filiacaoMae ? autor.filiacaoMae.toUpperCase() : '',
@@ -371,12 +372,14 @@ export const createHistoricoSection = (doc, tco, options = {}) => {
             const qrSize = 30; // Tamanho do QR code
             let xPos = MARGIN_LEFT;
 
+            // Fix the problem: use a synchronous approach with normal loop instead of await in forEach
             for (let i = 0; i < tco.videoLinks.length; i++) {
                 const link = tco.videoLinks[i];
                 yPos = checkPageBreak(doc, yPos, qrSize + 10, tco);
 
                 try {
-                    const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
+                    // Generate QR code synchronously (removed the async/await here)
+                    const qrCodeDataUrl = QRCode.toDataURLSync(link, { width: qrSize, margin: 1 });
                     doc.addImage(qrCodeDataUrl, 'PNG', xPos, yPos, qrSize, qrSize);
                     
                     doc.setFontSize(8);
