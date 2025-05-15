@@ -1,4 +1,3 @@
-// src/components/tco/PDF/PDFTermoConstatacaoDroga.js
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak, formatarDataSimples
@@ -21,7 +20,12 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     yPos = addWrappedText(doc, yPos, textoIntro, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 5;
 
-    const qtde = data.drogaQuantidade || "01 (UMA)";
+    // Handle quantity and singular/plural
+    const qtdeNum = parseInt(data.drogaQuantidade) || 1;
+    const numberWords = ["ZERO", "UMA", "DUAS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"];
+    const qtdeText = qtdeNum <= 10 ? numberWords[qtdeNum] : qtdeNum.toString();
+    const porcaoText = qtdeNum === 1 ? "PORÇÃO" : "PORÇÕES";
+    
     const tipo = data.drogaTipo || "substância";
     const cor = data.drogaCor || "característica";
     const odor = data.drogaOdor || "característico";
@@ -30,7 +34,7 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     yPos = checkPageBreak(doc, yPos, 15, data);
     doc.setFont("helvetica", "normal"); doc.setFontSize(12);
     doc.text("-", MARGIN_LEFT, yPos);
-    const itemText = `${qtde.toUpperCase()} PORÇÃO(ÕES) DE ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}, COM CARACTERÍSTICAS SEMELHANTES AO ENTORPECENTE CONHECIDO COMO ${nomeComum.toUpperCase()}.`;
+    const itemText = `${qtdeText} ${porcaoText} DE ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}, COM CARACTERÍSTICAS SEMELHANTES AO ENTORPECENTE CONHECIDO COMO ${nomeComum.toUpperCase()}.`;
     yPos = addWrappedText(doc, yPos, itemText, MARGIN_LEFT + 4, 12, "normal", MAX_LINE_WIDTH - 4, 'left', data);
     yPos += 5;
 
@@ -38,7 +42,14 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     yPos = addWrappedText(doc, yPos, textoConclusao, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 10;
 
-    const dataAtualFormatada = formatarDataSimples(new Date());
+    // Format date as DD de MMMM de AAAA
+    const meses = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+    const hoje = new Date();
+    const dia = hoje.getDate().toString().padStart(2, '0');
+    const mes = meses[hoje.getMonth()];
+    const ano = hoje.getFullYear();
+    const dataAtualFormatada = `${dia} DE ${mes} DE ${ano}`;
+    
     const cidadeTermo = data.municipio || "VÁRZEA GRANDE";
     doc.setFont("helvetica", "normal"); doc.setFontSize(12);
     const dateText = `${cidadeTermo.toUpperCase()}-MT, ${dataAtualFormatada}.`;
