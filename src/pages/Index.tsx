@@ -14,17 +14,16 @@ import { useToast } from "@/hooks/use-toast";
 import TCOForm from "@/components/TCOForm";
 import TCOmeus from "@/components/tco/TCOmeus";
 import { Button } from "@/components/ui/button";
-import BottomMenuBar from "@/components/BottomMenuBar";
 import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { collection, query, onSnapshot, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { CalendarDays, Users as UsersIcon, Clock, MapPin, Calendar, Navigation } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import UpcomingShifts from "@/components/UpcomingShifts";
 import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
-import ActiveTrips from "@/components/ActiveTrips";
-import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
+import UpcomingTrips from "@/components/UpcomingTrips";
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
@@ -34,10 +33,7 @@ const Index = () => {
   const [showInformationDialog, setShowInformationDialog] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [hasNotifications, setHasNotifications] = useState(false);
-  const [activeTrips, setActiveTrips] = useState<any[]>([]);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
   const navigate = useNavigate();
@@ -45,6 +41,7 @@ const Index = () => {
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
+  
   useEffect(() => {
     const handleNotificationsChange = (count: number) => {
       setHasNotifications(count > 0);
@@ -62,25 +59,7 @@ const Index = () => {
       window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     };
   }, [unreadCount]);
-  useEffect(() => {
-    const today = new Date();
-    const travelsRef = collection(db, "travels");
-    const q = query(travelsRef, where("archived", "==", false));
-    const unsubscribe = onSnapshot(q, querySnapshot => {
-      const trips = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })).filter((trip: any) => {
-        const startDate = new Date(trip.startDate + "T00:00:00");
-        const endDate = new Date(trip.endDate + "T00:00:00");
-        return today <= endDate && (today < startDate && !trip.isLocked || today >= startDate && today <= endDate);
-      }).sort((a: any, b: any) => {
-        return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-      });
-      setActiveTrips(trips);
-    });
-    return () => unsubscribe();
-  }, []);
+  
   const handleRefresh = () => {
     window.location.reload();
     toast({
@@ -88,12 +67,15 @@ const Index = () => {
       description: "Recarregando dados do sistema."
     });
   };
+  
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
+  
   const handleExtraClick = () => {
     setActiveTab("extra");
   };
+  
   const handleBackClick = () => {
     if (activeTab === "editor") {
       setActiveTab("extra");
@@ -101,20 +83,25 @@ const Index = () => {
       setActiveTab("main");
     }
   };
+  
   const handleSettingsClick = () => {
     setActiveTab("settings");
   };
+  
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
+  
   const handleTCOClick = () => {
     setActiveTab("tco");
   };
+  
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
     setShowLogoutDialog(false);
   };
+  
   return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
       <div className="pt-6 px-4 sm:px-6 lg:px-8 pb-28 max-w-7xl mx-auto flex flex-col flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow">
@@ -144,14 +131,11 @@ const Index = () => {
               {/* Monthly Hours Summary */}
               <MonthlyHoursSummary />
               
-              {/* Monthly Extra Calendar */}
-              <MonthlyExtraCalendar />
-              
               {/* Upcoming Shifts */}
               <UpcomingShifts />
               
-              {/* Active Trips */}
-              <ActiveTrips trips={activeTrips} onTravelClick={handleTravelClick} />
+              {/* Upcoming Trips */}
+              <UpcomingTrips onTravelClick={handleTravelClick} />
             </div>
           </TabsContent>
 
@@ -273,7 +257,7 @@ const Index = () => {
                   </button>
                 </div>
                 <Tabs value={tcoTab} onValueChange={setTcoTab} className="space-y-6 flex flex-col flex-grow">
-                  <TabsList className="bg-white shadow-md rounded-lg p-2 grid grid-cols-2 gap-4">
+                  <TabsList className="bg-white shadow-md rounded-lg p-1 grid w-full max-w-md mx-auto grid-cols-2">
                     <TabsTrigger value="list" aria-label="Visualizar Meus TCOs" className="py-2 px-4 rounded-md text-gray-700 font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors">
                       Meus TCOs
                     </TabsTrigger>
@@ -330,8 +314,6 @@ const Index = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <BottomMenuBar activeTab={activeTab} onTabChange={tab => setActiveTab(tab)} isAdmin={user.userType === 'admin'} />
     </div>;
 };
 export default Index;

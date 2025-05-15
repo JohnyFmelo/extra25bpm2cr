@@ -3,24 +3,37 @@ import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
-import { Clock, TrendingUp, CalendarClock } from "lucide-react";
+import { Clock, TrendingUp, CalendarClock, Calendar } from "lucide-react";
 import { collection, query, onSnapshot, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import supabase from "@/lib/supabaseClient";
+import { Progress } from "@/components/ui/progress";
+
+interface LocationHours {
+  bpm: number;
+  saiop: number;
+  sinfra: number;
+  workDays: {
+    day: string;
+    location: string;
+    hours: string;
+  }[];
+}
 
 const MonthlyHoursSummary = () => {
   const [hoursData, setHoursData] = useState<{
     totalHours: string | null;
     monthlyTarget: string | null;
-    location?: {
-      bpm?: number;
-      saiop?: number;
-      sinfra?: number;
-    };
+    location: LocationHours;
   }>({
     totalHours: null,
     monthlyTarget: null,
-    location: {}
+    location: {
+      bpm: 0,
+      saiop: 0,
+      sinfra: 0,
+      workDays: []
+    }
   });
   const [isLoading, setIsLoading] = useState(true);
   
@@ -59,7 +72,7 @@ const MonthlyHoursSummary = () => {
         // Query the database
         const { data, error } = await supabase
           .from(tableName)
-          .select('Nome, "Total Geral", META')
+          .select('Nome, "Total Geral", META, "Horas 25° BPM", Saiop, Sinfra')
           .ilike('Nome', `%${userData.warName}%`);
         
         if (error) {
@@ -68,52 +81,75 @@ const MonthlyHoursSummary = () => {
           return;
         }
         
-        if (data && data.length > 0) {
-          setHoursData({
-            totalHours: data[0]['Total Geral'] || '0',
-            monthlyTarget: data[0]['META'] || '120',
-            location: {}
-          });
-        }
-        
-        // Get location breakdown from timeSlots
-        const timeSlotsCollection = collection(db, 'timeSlots');
-        const q = query(timeSlotsCollection);
-        const snapshot = await getDocs(q);
-        
         const locationHours = {
           bpm: 0,
           saiop: 0,
-          sinfra: 0
+          sinfra: 0,
+          workDays: [] as { day: string; location: string; hours: string }[]
         };
         
-        snapshot.docs.forEach(doc => {
-          const data = doc.data();
-          if (data.volunteers?.includes(userName)) {
-            // Calculate hours from time slot
-            const [startHour, startMinute] = data.start_time.split(':').map(Number);
-            let [endHour, endMinute] = data.end_time.split(':').map(Number);
-            if (endHour < startHour || (endHour === 0 && startHour > 0)) {
-              endHour += 24; // Handle midnight crossing
-            }
-            let diffHours = endHour - startHour;
-            let diffMinutes = endMinute - startMinute;
-            if (diffMinutes < 0) {
-              diffHours -= 1;
-              diffMinutes += 60;
-            }
-            const totalHours = diffHours + diffMinutes / 60;
-            
-            // Assign to location (default to bpm if not specified)
-            const location = data.location || 'bpm';
-            locationHours[location] += totalHours;
+        // Parse work days from the data
+        if (data && data.length > 0) {
+          // Parse BPM hours
+          if (data[0]['Horas 25° BPM']) {
+            const bpmDays = data[0]['Horas 25° BPM'].split('|').filter(Boolean);
+            bpmDays.forEach((day: string) => {
+              const [dayNum, hoursWithH] = day.trim().split('/');
+              if (dayNum && hoursWithH) {
+                const hours = hoursWithH.replace('h', '');
+                locationHours.bpm += parseFloat(hours);
+                locationHours.workDays.push({
+                  day: dayNum,
+                  location: 'bpm',
+                  hours
+                });
+              }
+            });
           }
-        });
-        
-        setHoursData(prev => ({
-          ...prev,
-          location: locationHours
-        }));
+          
+          // Parse SAIOP hours
+          if (data[0]['Saiop']) {
+            const saiopDays = data[0]['Saiop'].split('|').filter(Boolean);
+            saiopDays.forEach((day: string) => {
+              const [dayNum, hoursWithH] = day.trim().split('/');
+              if (dayNum && hoursWithH) {
+                const hours = hoursWithH.replace('h', '');
+                locationHours.saiop += parseFloat(hours);
+                locationHours.workDays.push({
+                  day: dayNum,
+                  location: 'saiop',
+                  hours
+                });
+              }
+            });
+          }
+          
+          // Parse SINFRA hours
+          if (data[0]['Sinfra']) {
+            const sinfraDays = data[0]['Sinfra'].split('|').filter(Boolean);
+            sinfraDays.forEach((day: string) => {
+              const [dayNum, hoursWithH] = day.trim().split('/');
+              if (dayNum && hoursWithH) {
+                const hours = hoursWithH.replace('h', '');
+                locationHours.sinfra += parseFloat(hours);
+                locationHours.workDays.push({
+                  day: dayNum,
+                  location: 'sinfra',
+                  hours
+                });
+              }
+            });
+          }
+          
+          // Sort workDays by day number
+          locationHours.workDays.sort((a, b) => parseInt(a.day) - parseInt(b.day));
+          
+          setHoursData({
+            totalHours: data[0]['Total Geral'] || '0',
+            monthlyTarget: data[0]['META'] || '120',
+            location: locationHours
+          });
+        }
         
         setIsLoading(false);
       } catch (error) {
@@ -133,8 +169,8 @@ const MonthlyHoursSummary = () => {
     return null;
   }
   
-  const totalHoursNum = parseFloat(hoursData.totalHours);
-  const targetHoursNum = hoursData.monthlyTarget ? parseFloat(hoursData.monthlyTarget) : 120;
+  const totalHoursNum = parseFloat(hoursData.totalHours.replace(',', '.'));
+  const targetHoursNum = hoursData.monthlyTarget ? parseFloat(hoursData.monthlyTarget.replace(',', '.')) : 120;
   const progressPercent = Math.min(Math.round((totalHoursNum / targetHoursNum) * 100), 100);
   
   const formatHours = (hours: number) => {
@@ -142,6 +178,11 @@ const MonthlyHoursSummary = () => {
   };
   
   const currentMonthName = format(new Date(), 'MMMM', { locale: ptBR });
+  const getLocationColor = (location: string) => {
+    if (location === 'bpm') return 'bg-purple-100 text-purple-800';
+    if (location === 'saiop') return 'bg-green-100 text-green-800';
+    return 'bg-blue-100 text-blue-800';
+  };
   
   return (
     <Card className="shadow-md hover:shadow-lg transition-all mb-8 bg-gradient-to-br from-emerald-50 to-teal-50">
@@ -159,47 +200,63 @@ const MonthlyHoursSummary = () => {
           </div>
         </div>
         
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-1">
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-600">Progresso</span>
             <span className="text-sm font-medium text-gray-700">{progressPercent}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div 
-              className={`h-2.5 rounded-full ${
-                progressPercent >= 100 ? 'bg-emerald-500' : 'bg-teal-500'
-              }`} 
-              style={{ width: `${progressPercent}%` }}
-            ></div>
-          </div>
-          <div className="flex justify-between mt-1 text-xs text-gray-500">
+          <Progress 
+            value={progressPercent} 
+            className="h-2.5 bg-gray-200" 
+            indicatorClassName={progressPercent >= 100 ? 'bg-emerald-500' : 'bg-teal-500'} 
+          />
+          <div className="flex justify-between mt-2 text-xs text-gray-500">
             <span>0h</span>
             <span>Meta: {hoursData.monthlyTarget}h</span>
           </div>
         </div>
         
-        {hoursData.location && (
-          <div className="grid grid-cols-3 gap-2 mt-3">
-            {hoursData.location.bpm > 0 && (
-              <div className="p-2 bg-purple-100 rounded-lg text-center">
-                <div className="text-xs text-purple-700 mb-1">25° BPM</div>
-                <div className="font-semibold text-purple-800">{formatHours(hoursData.location.bpm)}h</div>
-              </div>
-            )}
-            
-            {hoursData.location.saiop > 0 && (
-              <div className="p-2 bg-green-100 rounded-lg text-center">
-                <div className="text-xs text-green-700 mb-1">SAIOP</div>
-                <div className="font-semibold text-green-800">{formatHours(hoursData.location.saiop)}h</div>
-              </div>
-            )}
-            
-            {hoursData.location.sinfra > 0 && (
-              <div className="p-2 bg-blue-100 rounded-lg text-center">
-                <div className="text-xs text-blue-700 mb-1">SINFRA</div>
-                <div className="font-semibold text-blue-800">{formatHours(hoursData.location.sinfra)}h</div>
-              </div>
-            )}
+        {/* Location breakdown */}
+        <div className="grid grid-cols-3 gap-2 mt-3">
+          {hoursData.location.bpm > 0 && (
+            <div className="p-2 bg-purple-100 rounded-lg text-center">
+              <div className="text-xs text-purple-700 mb-1">25° BPM</div>
+              <div className="font-semibold text-purple-800">{formatHours(hoursData.location.bpm)}h</div>
+            </div>
+          )}
+          
+          {hoursData.location.saiop > 0 && (
+            <div className="p-2 bg-green-100 rounded-lg text-center">
+              <div className="text-xs text-green-700 mb-1">SAIOP</div>
+              <div className="font-semibold text-green-800">{formatHours(hoursData.location.saiop)}h</div>
+            </div>
+          )}
+          
+          {hoursData.location.sinfra > 0 && (
+            <div className="p-2 bg-blue-100 rounded-lg text-center">
+              <div className="text-xs text-blue-700 mb-1">SINFRA</div>
+              <div className="font-semibold text-blue-800">{formatHours(hoursData.location.sinfra)}h</div>
+            </div>
+          )}
+        </div>
+        
+        {/* Daily breakdown */}
+        {hoursData.location.workDays.length > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center mb-2">
+              <Calendar className="h-4 w-4 text-gray-600 mr-2" />
+              <h4 className="text-sm font-medium text-gray-700">Dias Trabalhados</h4>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {hoursData.location.workDays.map((day, index) => (
+                <div 
+                  key={index} 
+                  className={`px-2 py-1 rounded-md text-xs font-medium ${getLocationColor(day.location)}`}
+                >
+                  Dia {day.day}: {day.hours}h
+                </div>
+              ))}
+            </div>
           </div>
         )}
         

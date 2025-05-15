@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Clock, Calendar, MapPinned, Scale, Settings, Home } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -20,36 +20,29 @@ const BottomMenuItem: React.FC<BottomMenuItemProps> = ({
   badge,
   active = false
 }) => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <button 
-        onClick={onClick} 
-        className={cn(
-          "flex flex-col items-center justify-center py-2 px-2 relative transition-all", 
-          active 
-            ? "text-primary after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:w-1/3 after:h-0.5 after:bg-primary after:transform after:-translate-x-1/2" 
-            : "text-gray-500 hover:text-primary-light"
-        )} 
-        aria-label={label}
-      >
-        {badge !== undefined && badge > 0 && (
-          <span className="absolute -top-1 right-1 flex items-center justify-center w-4 h-4 bg-highlight text-white text-xs font-bold rounded-full">
-            {badge}
-          </span>
-        )}
-        <div className={cn(
-          "p-2 rounded-full mb-1 transition-colors", 
-          active ? "bg-primary/10" : "bg-transparent group-hover:bg-primary/5"
-        )}>
-          {icon}
-        </div>
-        <span className="text-xs font-medium">{label}</span>
-      </button>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p>{label}</p>
-    </TooltipContent>
-  </Tooltip>
+  <button 
+    onClick={onClick} 
+    className={cn(
+      "flex flex-col items-center justify-center py-2 px-2 relative transition-all", 
+      active 
+        ? "text-primary after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:w-1/3 after:h-0.5 after:bg-primary after:transform after:-translate-x-1/2" 
+        : "text-gray-500 hover:text-primary-light"
+    )} 
+    aria-label={label}
+  >
+    {badge !== undefined && badge > 0 && (
+      <span className="absolute -top-1 right-1 flex items-center justify-center w-4 h-4 bg-highlight text-white text-xs font-bold rounded-full">
+        {badge}
+      </span>
+    )}
+    <div className={cn(
+      "p-2 rounded-full mb-1 transition-colors", 
+      active ? "bg-primary/10" : "bg-transparent group-hover:bg-primary/5"
+    )}>
+      {icon}
+    </div>
+    <span className="text-xs font-medium">{label}</span>
+  </button>
 );
 
 interface BottomMenuBarProps {
@@ -64,13 +57,18 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
   isAdmin
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   
   const handleHoursClick = () => {
     navigate("/hours");
   };
   
   const handleMainClick = () => {
-    onTabChange("main");
+    if (location.pathname !== "/") {
+      navigate("/");
+    } else {
+      onTabChange("main");
+    }
   };
   
   return (
@@ -80,38 +78,66 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
           icon={<Home className="h-5 w-5" />} 
           label="Início" 
           onClick={handleMainClick} 
-          active={activeTab === "main"} 
+          active={location.pathname === "/" && activeTab === "main"} 
         />
         <BottomMenuItem 
           icon={<Clock className="h-5 w-5" />} 
           label="Horas" 
           onClick={handleHoursClick} 
-          active={false} 
+          active={location.pathname === "/hours"} 
         />
         <BottomMenuItem 
           icon={<Calendar className="h-5 w-5" />} 
           label="Extra" 
-          onClick={() => onTabChange("extra")} 
+          onClick={() => {
+            if (location.pathname !== "/") {
+              navigate("/");
+              setTimeout(() => onTabChange("extra"), 100);
+            } else {
+              onTabChange("extra");
+            }
+          }} 
           active={activeTab === "extra"} 
         />
         <BottomMenuItem 
           icon={<MapPinned className="h-5 w-5" />} 
           label="Viagens" 
-          onClick={() => onTabChange("travel")} 
+          onClick={() => {
+            if (location.pathname !== "/") {
+              navigate("/");
+              setTimeout(() => onTabChange("travel"), 100);
+            } else {
+              onTabChange("travel");
+            }
+          }} 
           active={activeTab === "travel"} 
         />
         {isAdmin && (
           <BottomMenuItem 
             icon={<Scale className="h-5 w-5" />} 
             label="TCO" 
-            onClick={() => onTabChange("tco")} 
+            onClick={() => {
+              if (location.pathname !== "/") {
+                navigate("/");
+                setTimeout(() => onTabChange("tco"), 100);
+              } else {
+                onTabChange("tco");
+              }
+            }} 
             active={activeTab === "tco"} 
           />
         )}
         <BottomMenuItem 
           icon={<Settings className="h-5 w-5" />} 
           label="Config" 
-          onClick={() => onTabChange("settings")} 
+          onClick={() => {
+            if (location.pathname !== "/") {
+              navigate("/");
+              setTimeout(() => onTabChange("settings"), 100);
+            } else {
+              onTabChange("settings");
+            }
+          }} 
           active={activeTab === "settings"} 
         />
       </div>
