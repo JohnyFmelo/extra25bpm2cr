@@ -1,3 +1,4 @@
+
 import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -459,4 +460,68 @@ const Index = () => {
 
                   <TabsContent value="form" className="flex-grow">
                     <Card className="shadow-md">
-                      <CardContent className
+                      <CardContent className="p-6">
+                        <TCOForm
+                          selectedTco={selectedTco}
+                          setSelectedTco={setSelectedTco}
+                          setTcoTab={setTcoTab}
+                        />
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Profile Update Dialog */}
+      <ProfileUpdateDialog
+        open={showProfileDialog}
+        onOpenChange={setShowProfileDialog}
+      />
+
+      {/* Password Change Dialog */}
+      <PasswordChangeDialog
+        open={showPasswordDialog}
+        onOpenChange={setShowPasswordDialog}
+      />
+
+      {/* Information Dialog */}
+      <InformationDialog
+        open={showInformationDialog}
+        onOpenChange={setShowInformationDialog}
+      />
+
+      {/* Logout confirmation dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar logout</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja sair do sistema?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogout}>
+              Sair
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <BottomMenuBar
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab)}
+        onTravelClick={handleTravelClick}
+        onExtraClick={handleExtraClick}
+        onSettingsClick={handleSettingsClick}
+        onTcoClick={handleTCOClick}
+      />
+    </div>
+  );
+};
+
+export default Index;
