@@ -91,7 +91,7 @@ export const addRequisicaoExameLesao = (doc, data) => {
     yPos += 15;
 
     yPos = addSignatureWithNameAndRole(doc, yPos, periciado.toUpperCase(), periciadoLabel, data);
-    const nomeCondutor = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
+    const nomeCondutor = `${condutor?.nome || "-"} ${condutor?.posto || ""}`.trim();
     yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutor, "CONDUTOR DA OCORRÊNCIA / REQUISITANTE", data);
 
     return yPos;
