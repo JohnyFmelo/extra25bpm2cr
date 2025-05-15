@@ -273,8 +273,8 @@ export function addTermoApreensao(doc, data) {
         const quantidadeText = numberToText(quantidadeNum);
         const plural = quantidadeNum > 1 ? "PORÇÕES" : "PORÇÃO";
         textoApreensaoOriginal = data.drogaIsUnknown
-            ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${data.drogaCustomDesc || "DESCRIÇÃO"}, CONFORME FOTO EM ANEXO.`
-            : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${data.drogaNomeComum.toUpperCase()}, ${data.drogaCustomDesc || "DESCRIÇÃO"}, CONFORME FOTO EM ANEXO.`;
+            ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${data.drogaCustomDesc || ""}, CONFORME FOTO EM ANEXO.`
+            : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${data.drogaNomeComum.toUpperCase()}, ${data.drogaCustomDesc || ""}, CONFORME FOTO EM ANEXO.`;
     }
     
     const apreensaoTextX = MARGIN_LEFT + CELL_PADDING_X;
