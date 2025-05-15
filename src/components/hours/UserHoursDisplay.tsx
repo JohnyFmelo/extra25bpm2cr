@@ -130,12 +130,7 @@ export const UserHoursDisplay = ({
     <div className="mt-6 space-y-4 my-0">
       <h2 className="text-center font-bold text-xl">{data.Nome}</h2>
       
-      <WorkedDaysCalendar
-        monthYear={getMonthYear()}
-        workedDays={allWorkedDays}
-        total={totalHours.toString()}
-        isAdmin={isAdmin}
-      />
+      <HoursDonutChart totalHours={totalHours} />
       
       {hasDiscrepancy && (
         <Alert variant="default" className="border-yellow-400 bg-[#FEF7CD] text-amber-800">
@@ -148,7 +143,13 @@ export const UserHoursDisplay = ({
         </Alert>
       )}
       
-      <HoursDonutChart totalHours={totalHours} />
+      <h3 className="font-medium text-gray-700">Dias Trabalhados</h3>
+      <WorkedDaysCalendar
+        monthYear={getMonthYear()}
+        workedDays={allWorkedDays}
+        total={totalHours.toString()}
+        isAdmin={isAdmin}
+      />
 
       <Card className="bg-blue-50 border-blue-100 shadow-sm mt-4">
         <CardContent className="p-4">

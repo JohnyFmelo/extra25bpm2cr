@@ -36,7 +36,6 @@ const NotificationsList = () => {
   } = useToast();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = currentUser.userType === "admin";
-  
   useEffect(() => {
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, snapshot => {
@@ -46,17 +45,9 @@ const NotificationsList = () => {
         readBy: doc.data().readBy || []
       }) as Notification).filter(notif => notif.type === 'all' || notif.recipientId === currentUser.id);
       setNotifications(notifs);
-      
-      // Dispatch event to notify about notifications count
-      const unreadCount = notifs.filter(n => !n.readBy.includes(currentUser.id)).length;
-      window.dispatchEvent(new CustomEvent('notificationsUpdate', { 
-        detail: { count: unreadCount } 
-      }));
     });
-    
     return () => unsubscribe();
   }, [currentUser.id]);
-  
   const handleMarkAsRead = async (notificationId: string) => {
     try {
       const notifRef = doc(db, "recados", notificationId);
@@ -72,7 +63,6 @@ const NotificationsList = () => {
       });
     }
   };
-  
   const handleDeleteNotification = async (notificationId: string) => {
     try {
       await deleteDoc(doc(db, "recados", notificationId));
@@ -90,7 +80,6 @@ const NotificationsList = () => {
       });
     }
   };
-  
   const formatDate = (timestamp: Timestamp | null) => {
     if (!timestamp) {
       return "Data desconhecida";
@@ -118,12 +107,10 @@ const NotificationsList = () => {
       return `${weekDay} ${formattedDate} às ${timeStr}`;
     }
   };
-  
   const handleContainerClick = (notification: Notification) => {
     handleMarkAsRead(notification.id);
     setExpandedId(expandedId === notification.id ? null : notification.id);
   };
-  
   const handleViewers = async (readBy: string[]) => {
     try {
       console.log("Buscando visualizadores para:", readBy);
@@ -163,7 +150,6 @@ const NotificationsList = () => {
       });
     }
   };
-  
   const handleMouseDown = (notificationId: string) => {
     if (!isAdmin) return;
     const timer = setTimeout(() => {
@@ -172,64 +158,47 @@ const NotificationsList = () => {
     }, 1000);
     setLongPressTimer(timer);
   };
-  
   const handleMouseUp = () => {
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
     }
   };
-  
   const handleDoubleClick = (notificationId: string) => {
     if (isAdmin) {
       setSelectedNotification(notificationId);
       setDeleteDialogOpen(true);
     }
   };
-  
-  if (notifications.length === 0) {
-    return null; // Don't render anything if there are no notifications
-  }
-  
   return <div className="space-y-4 p-4">
-      {notifications.map(notification => {
-        const isUnread = !notification.readBy.includes(currentUser.id);
-        const isExpanded = expandedId === notification.id;
-        return (
-          <div 
-            key={notification.id} 
-            className={cn(
-              "p-4 rounded-lg border transition-colors cursor-pointer select-none", 
-              isUnread ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
-            )}
-            onClick={() => handleContainerClick(notification)}
-            onMouseDown={() => handleMouseDown(notification.id)}
-            onMouseUp={handleMouseUp}
-            onDoubleClick={() => handleDoubleClick(notification.id)}
-          >
-            <div className="space-y-2">
-              <div className="flex justify-between items-start">
-                <div className="space-y-1 flex-1">
-                  <p className="font-medium text-slate-900">
-                    {notification.graduation} {notification.senderName}
-                    {notification.isAdmin ? " - Usuário" : " - Administrador"}
-                  </p>
-                  <p className={cn("text-sm text-gray-600 whitespace-pre-wrap", isExpanded ? "text-justify" : "line-clamp-1")}>
-                    {notification.text}
-                  </p>
-                  <p className="text-sm text-slate-900">
-                    {formatDate(notification.timestamp)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 ml-4">
-                  {isAdmin}
-                  {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+      {notifications.length === 0 ? <div className="p-4 rounded-lg border border-gray-200 bg-white text-center">
+          <p className="text-gray-600">Você ainda não possui recados.</p>
+        </div> : notifications.map(notification => {
+      const isUnread = !notification.readBy.includes(currentUser.id);
+      const isExpanded = expandedId === notification.id;
+      return <div key={notification.id} className={cn("p-4 rounded-lg border transition-colors cursor-pointer select-none", isUnread ? "bg-green-50 border-green-200" : "bg-white border-gray-200")} onClick={() => handleContainerClick(notification)} onMouseDown={() => handleMouseDown(notification.id)} onMouseUp={handleMouseUp} onDoubleClick={() => handleDoubleClick(notification.id)}>
+              <div className="space-y-2">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1 flex-1">
+                    <p className="font-medium text-slate-900">
+                      {notification.graduation} {notification.senderName}
+                      {notification.isAdmin ? " - Usuário" : " - Administrador"}
+                    </p>
+                    <p className={cn("text-sm text-gray-600 whitespace-pre-wrap", isExpanded ? "text-justify" : "line-clamp-1")}>
+                      {notification.text}
+                    </p>
+                    <p className="text-sm text-slate-900">
+                      {formatDate(notification.timestamp)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    {isAdmin}
+                    {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        );
-      })}
+            </div>;
+    })}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -257,23 +226,16 @@ const NotificationsList = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[300px] overflow-y-auto">
-            {viewers.length === 0 ? (
-              <p className="text-center text-gray-500">Nenhuma visualização ainda</p>
-            ) : (
-              <ul className="space-y-2">
-                {viewers.map((viewer, index) => (
-                  <li key={index} className="p-2 bg-gray-50 rounded">
+            {viewers.length === 0 ? <p className="text-center text-gray-500">Nenhuma visualização ainda</p> : <ul className="space-y-2">
+                {viewers.map((viewer, index) => <li key={index} className="p-2 bg-gray-50 rounded">
                     {viewer.graduation} {viewer.name}
-                  </li>
-                ))}
-              </ul>
-            )}
+                  </li>)}
+              </ul>}
           </div>
         </DialogContent>
       </Dialog>
     </div>;
 };
-
 export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -292,5 +254,4 @@ export const useNotifications = () => {
   }, [currentUser.id]);
   return unreadCount;
 };
-
 export default NotificationsList;

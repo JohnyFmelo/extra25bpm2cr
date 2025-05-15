@@ -57,7 +57,7 @@ export const WorkedDaysCalendar = ({
     return [...paddingBefore, ...days, ...paddingAfter];
   }, [monthYear]);
 
-  const getHoursForDay = (day: number): string => {
+  const getHoursForDay = (day: number) => {
     const workedDay = workedDays.find(wd => parseInt(wd.day) === day);
     return workedDay?.hours || '';
   };
@@ -75,7 +75,7 @@ export const WorkedDaysCalendar = ({
       case 'sinfra':
         return 'bg-blue-500 text-white';
       default:
-        return '';
+        return 'bg-white';
     }
   };
 
@@ -121,9 +121,6 @@ export const WorkedDaysCalendar = ({
   const totals = calculateTotalHoursByLocation();
   const [month, year] = monthYear.split('/');
   const monthYearFormatted = format(new Date(parseInt(year), parseInt(month) - 1), 'MMMM yyyy', { locale: ptBR });
-  
-  // Capitalize first letter
-  const capitalizedMonth = monthYearFormatted.charAt(0).toUpperCase() + monthYearFormatted.slice(1);
 
   const isCurrentMonth = (date: Date) => {
     const monthYearDate = parse(monthYear, 'M/yyyy', new Date());
@@ -133,7 +130,7 @@ export const WorkedDaysCalendar = ({
   return (
     <div className="rounded-xl border border-slate-200 p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">{capitalizedMonth}</h3>
+        <h3 className="text-lg font-medium capitalize">{monthYearFormatted}</h3>
       </div>
       
       <div className="grid grid-cols-7 gap-2 max-w-3xl mx-auto">
@@ -157,19 +154,18 @@ export const WorkedDaysCalendar = ({
               key={index}
               onClick={() => handleDayClick(date)}
               className={`
-                rounded-lg p-2 flex flex-col items-center justify-start
-                ${belongsToCurrentMonth ? 'min-h-[50px]' : 'bg-gray-50 text-gray-400 min-h-[50px]'}
-                ${location ? locationClasses : ''}
+                aspect-square rounded-lg p-1 flex flex-col items-center justify-start
+                ${belongsToCurrentMonth ? '' : 'bg-gray-50 text-gray-400'}
+                ${locationClasses}
                 ${isAdmin ? 'cursor-pointer hover:opacity-80' : ''}
+                text-base md:text-sm
               `}
             >
-              <span className={`text-base font-medium ${belongsToCurrentMonth && !location ? '' : ''}`}>
+              <span className={`font-medium ${belongsToCurrentMonth && !location ? '' : ''}`}>
                 {dayNum}
               </span>
               {hours && (
-                <div className="text-sm font-medium mt-1">
-                  {hours}h
-                </div>
+                <span className="font-medium">{hours}h</span>
               )}
               {annotation && (
                 <span className={`text-xs ${location ? 'text-white' : 'text-gray-600'} truncate max-w-full px-1`}>
