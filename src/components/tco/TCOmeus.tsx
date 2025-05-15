@@ -32,65 +32,88 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     try {
       console.log("Buscando TCOs para o usuário:", user.id);
       
-      // Buscar metadados dos TCOs no banco de dados
-      const { data: supaTcos, error } = await supabase
-        .from('tco_pdfs')
-        .select('*')
-        .eq('createdBy', user.id);
+      // Primeiro, tenta buscar diretamente do storage pela pasta do usuário
+      console.log("Buscando diretamente do storage na pasta:", `tcos/${user.id}/`);
       
-      if (error) {
-        console.error("Erro ao buscar do banco Supabase:", error);
-        throw error;
-      }
+      // Listar arquivos no storage
+      const { data: storageFiles, error: storageError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .list(`tcos/${user.id}/`);
       
-      console.log("TCOs encontrados no banco:", supaTcos);
-      
-      // Se não houver metadados, verifique diretamente no storage
-      if (!supaTcos || supaTcos.length === 0) {
-        console.log("Buscando diretamente do storage na pasta:", `tcos/${user.id}/`);
-        
-        // Listar arquivos no storage
-        const { data: storageFiles, error: storageError } = await supabase.storage
-          .from(BUCKET_NAME)
-          .list(`tcos/${user.id}/`);
-        
-        if (storageError) {
-          console.error("Erro ao listar arquivos do storage:", storageError);
-          throw storageError;
-        }
-        
-        console.log("Arquivos encontrados no storage:", storageFiles);
-        
-        // Converter arquivos do storage para o formato esperado
-        const filesFromStorage = storageFiles?.map(file => {
-          // Extrair informações do nome do arquivo, assumindo formato "TCO-XXXX-data.pdf"
-          const fileName = file.name;
-          const tcoNumber = fileName.split('-')[1] || "Sem número";
-          
-          return {
-            id: file.id || fileName,
-            tcoNumber: `TCO-${tcoNumber}`,
-            createdAt: new Date(file.created_at || Date.now()),
-            natureza: "Não especificada",
-            pdfPath: `tcos/${user.id}/${fileName}`,
-            source: 'storage'
-          };
-        }) || [];
-        
-        setTcoList(filesFromStorage);
+      if (storageError) {
+        console.error("Erro ao listar arquivos do storage:", storageError);
+        // Não lançar erro aqui, tentar buscar do banco
       } else {
-        // Converter dados do Supabase para o formato esperado
-        const supabaseTcos = supaTcos?.map(tco => ({
-          id: tco.id,
-          tcoNumber: tco.tcoNumber || `TCO-${tco.id.substring(0, 8)}`,
-          createdAt: new Date(tco.createdAt || tco.created_at),
-          natureza: tco.natureza || "Não especificada",
-          pdfPath: tco.pdfPath,
-          source: 'supabase'
-        })) || [];
-        
-        setTcoList(supabaseTcos);
+        console.log("Arquivos encontrados no storage:", storageFiles);
       }
+      
+      // Então tenta buscar metadados dos TCOs no banco de dados (se o usuário tiver um UUID válido)
+      let dbTcos: any[] = [];
+      
+      if (isValidUUID(user.id)) {
+        const { data: supaTcos, error } = await supabase
+          .from('tco_pdfs')
+          .select('*')
+          .eq('createdBy', user.id);
+        
+        if (error) {
+          console.error("Erro ao buscar do banco Supabase:", error);
+          // Não lançar erro aqui, apenas log
+        } else if (supaTcos && supaTcos.length > 0) {
+          console.log("TCOs encontrados no banco:", supaTcos);
+          dbTcos = supaTcos;
+        }
+      }
+      
+      // Consolidar resultados do storage e do banco de dados
+      let consolidatedTcos: any[] = [];
+      
+      // Converter arquivos do storage para o formato esperado
+      const filesFromStorage = storageFiles?.map(file => {
+        // Extrair informações do nome do arquivo, assumindo formato "TCO-XXXX-data.pdf" ou apenas TCO.pdf
+        const fileName = file.name;
+        const tcoMatch = fileName.match(/TCO-(\w+)/i);
+        const tcoNumber = tcoMatch ? tcoMatch[1] : fileName.replace(".pdf", "");
+        
+        return {
+          id: file.id || fileName,
+          tcoNumber: `TCO-${tcoNumber}`,
+          createdAt: new Date(file.created_at || Date.now()),
+          natureza: "Não especificada",
+          pdfPath: `tcos/${user.id}/${fileName}`,
+          source: 'storage'
+        };
+      }) || [];
+      
+      // Converter dados do Supabase para o formato esperado
+      const supabaseTcos = dbTcos.map(tco => ({
+        id: tco.id,
+        tcoNumber: tco.tcoNumber || `TCO-${tco.id.substring(0, 8)}`,
+        createdAt: new Date(tco.createdAt || tco.created_at),
+        natureza: tco.natureza || "Não especificada",
+        pdfPath: tco.pdfPath,
+        source: 'supabase'
+      })) || [];
+      
+      // Juntar os dois arrays e verificar duplicatas por nome de arquivo
+      consolidatedTcos = [...supabaseTcos];
+      
+      // Adicionar apenas arquivos do storage que não estão já no banco de dados
+      for (const storageTco of filesFromStorage) {
+        const isDuplicate = consolidatedTcos.some(
+          tco => tco.pdfPath === storageTco.pdfPath || tco.tcoNumber === storageTco.tcoNumber
+        );
+        
+        if (!isDuplicate) {
+          consolidatedTcos.push(storageTco);
+        }
+      }
+      
+      if (consolidatedTcos.length === 0) {
+        console.log("Nenhum TCO encontrado para o usuário");
+      }
+      
+      setTcoList(consolidatedTcos);
     } catch (error) {
       console.error("Erro ao buscar TCOs:", error);
       toast({
@@ -101,6 +124,12 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Função auxiliar para verificar se uma string é um UUID válido
+  const isValidUUID = (str: string) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
   };
 
   // Função para excluir um TCO
@@ -118,8 +147,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         }
       }
 
-      // Excluir do banco de dados Supabase se for um registro de banco
-      if (tco.source === 'supabase') {
+      // Excluir do banco de dados Supabase se for um registro de banco e tiver ID UUID
+      if (tco.source === 'supabase' && isValidUUID(tco.id)) {
         const { error } = await supabase
           .from('tco_pdfs')
           .delete()
