@@ -19,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { collection, query, onSnapshot, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CalendarDays, Users as UsersIcon, Clock, MapPin, Calendar, Navigation } from "lucide-react";
 
 const Index = () => {
@@ -42,17 +42,14 @@ const Index = () => {
   const [tcoTab, setTcoTab] = useState("list");
 
   useEffect(() => {
-    // Add listener to check for notifications
     const handleNotificationsChange = (count: number) => {
       setHasNotifications(count > 0);
     };
     
-    // Initial check
     if (unreadCount > 0) {
       setHasNotifications(true);
     }
     
-    // Add listener to the NotificationsList component
     const notificationsChangeEvent = new CustomEvent('notificationsUpdate', { detail: { count: unreadCount } });
     window.addEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     
@@ -62,7 +59,6 @@ const Index = () => {
   }, [unreadCount]);
 
   useEffect(() => {
-    // Fetch active trips (open and in-transit)
     const today = new Date();
     const travelsRef = collection(db, "travels");
     const q = query(
@@ -79,16 +75,11 @@ const Index = () => {
         .filter((trip: any) => {
           const startDate = new Date(trip.startDate + "T00:00:00");
           const endDate = new Date(trip.endDate + "T00:00:00");
-          
-          // Only keep trips that are either:
-          // 1. Open (future trips without locked status) OR
-          // 2. In-transit (current trips)
           return ((today <= endDate) && 
                  ((today < startDate && !trip.isLocked) || 
                   (today >= startDate && today <= endDate)));
         })
         .sort((a: any, b: any) => {
-          // Sort by date (soonest first)
           return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
         });
 
@@ -99,7 +90,6 @@ const Index = () => {
   }, []);
 
   const handleRefresh = () => {
-    // Reload the page to refresh data
     window.location.reload();
     toast({
       title: "Atualizando",
@@ -137,9 +127,9 @@ const Index = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#E8F1F2] flex flex-col">
-      <div className="pt-8 px-6 pb-24 max-w-7xl mx-auto flex flex-col flex-grow w-full">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8 flex flex-col flex-grow">
+    <div className="relative min-h-screen bg-gray-100 flex flex-col">
+      <div className="pt-10 px-4 sm:px-6 lg:px-8 pb-28 max-w-7xl mx-auto flex flex-col flex-grow w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow">
           <TabsList className="hidden">
             <TabsTrigger value="main">Main</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
@@ -151,57 +141,53 @@ const Index = () => {
             <TabsTrigger value="users">Users</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="main">
-            {/* Only show unread notifications */}
+          <TabsContent value="main" className="flex-grow">
             {hasNotifications && (
-              <div className="bg-white rounded-xl shadow-lg mb-6">
-                <NotificationsList showOnlyUnread={true} />
-              </div>
+              <Card className="mb-6 shadow-md hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <NotificationsList showOnlyUnread={true} />
+                </CardContent>
+              </Card>
             )}
 
-            {/* Active Trips Section */}
             {activeTrips.length > 0 && (
-              <div className="mb-6">
-                <h2 className="text-lg font-bold mb-4 text-gray-800">Viagens Ativas</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold mb-6 text-gray-900">Viagens Ativas</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {activeTrips.map((trip) => {
                     const travelStart = new Date(trip.startDate + "T00:00:00");
                     const travelEnd = new Date(trip.endDate + "T00:00:00");
                     const today = new Date();
                     const isInTransit = today >= travelStart && today <= travelEnd;
                     const isOpen = today < travelStart;
-                    
-                    // Calculate stats
                     const numDays = Math.floor((travelEnd.getTime() - travelStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
                     const dailyCount = trip.halfLastDay ? numDays - 0.5 : numDays;
-                    
+
                     return (
                       <Card 
                         key={trip.id} 
-                        className={`overflow-hidden border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 ${
-                          isInTransit 
-                            ? 'bg-gradient-to-br from-green-50 to-green-100' 
-                            : 'bg-white'
+                        className={`relative overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 ${
+                          isInTransit ? 'bg-gradient-to-br from-green-50 to-green-100' : 'bg-white'
                         }`}
                       >
                         <div className={`absolute top-0 right-0 px-3 py-1 text-xs font-medium text-white ${
-                          isInTransit ? 'bg-green-500' : 'bg-blue-500'
+                          isInTransit ? 'bg-green-600' : 'bg-blue-600'
                         } rounded-bl-lg`}>
                           {isInTransit ? 'Em Trânsito' : 'Em Aberto'}
                         </div>
                         
-                        <div className="p-4">
-                          <h3 className="text-lg font-semibold mb-2 text-blue-900">
+                        <CardContent className="p-6">
+                          <h3 className="text-xl font-semibold mb-4 text-gray-900">
                             {trip.destination}
                           </h3>
-                          <div className="space-y-2 text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-blue-500" />
+                          <div className="space-y-3 text-gray-700">
+                            <div className="flex items-center gap-3">
+                              <MapPin className="h-5 w-5 text-blue-500" />
                               <p>{trip.destination}</p>
                             </div>
                             
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-blue-500" />
+                            <div className="flex items-center gap-3">
+                              <Calendar className="h-5 w-5 text-blue-500" />
                               <p>{isInTransit ? 'Período: ' : 'Início: '} 
                                 {travelStart.toLocaleDateString()}
                                 {isInTransit && ` até ${travelEnd.toLocaleDateString()}`}
@@ -209,14 +195,14 @@ const Index = () => {
                             </div>
                             
                             {!isInTransit && (
-                              <div className="flex items-center gap-2">
-                                <UsersIcon className="h-4 w-4 text-blue-500" />
+                              <div className="flex items-center gap-3">
+                                <UsersIcon className="h-5 w-5 text-blue-500" />
                                 <p>Vagas: {trip.slots}</p>
                               </div>
                             )}
                             
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-blue-500" />
+                            <div className="flex items-center gap-3">
+                              <Clock className="h-5 w-5 text-blue-500" />
                               <p>{dailyCount.toLocaleString("pt-BR", {
                                 minimumFractionDigits: dailyCount % 1 !== 0 ? 1 : 0,
                                 maximumFractionDigits: 1
@@ -224,11 +210,11 @@ const Index = () => {
                             </div>
 
                             {isInTransit && trip.selectedVolunteers && trip.selectedVolunteers.length > 0 && (
-                              <div className="mt-2">
-                                <p className="font-medium text-sm text-blue-800">Viajantes:</p>
-                                <div className="mt-1 space-y-1">
+                              <div className="mt-4">
+                                <p className="font-medium text-sm text-gray-800">Viajantes:</p>
+                                <div className="mt-2 space-y-2">
                                   {trip.selectedVolunteers.map((volunteer: string, idx: number) => (
-                                    <div key={idx} className="text-sm bg-white/60 px-2 py-1 rounded-md">
+                                    <div key={idx} className="text-sm bg-white/80 px-3 py-1 rounded-md">
                                       {volunteer}
                                     </div>
                                   ))}
@@ -240,13 +226,13 @@ const Index = () => {
                           {isOpen && (
                             <Button 
                               onClick={() => handleTravelClick()}
-                              className="w-full mt-3 bg-blue-500 hover:bg-blue-600 text-white"
+                              className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white transition-colors"
                             >
-                              <Navigation className="h-4 w-4 mr-2" />
+                              <Navigation className="h-5 w-5 mr-2" />
                               Ver detalhes
                             </Button>
                           )}
-                        </div>
+                        </CardContent>
                       </Card>
                     );
                   })}
@@ -255,30 +241,32 @@ const Index = () => {
             )}
             
             {activeTrips.length === 0 && (
-              <div className="bg-white rounded-xl shadow-sm p-6 text-center">
-                <p className="text-gray-500">Nenhuma viagem ativa no momento.</p>
-              </div>
+              <Card className="shadow-md">
+                <CardContent className="p-6 text-center">
+                  <p className="text-gray-600">Nenhuma viagem ativa no momento.</p>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 
           <TabsContent value="extra">
             <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
+              <div className="absolute right-0 -top-14">
                 <button
                   onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700"
                   aria-label="Voltar para home"
                 >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
               {user.userType === "admin" && (
-                <div className="fixed bottom-6 right-6 z-10">
+                <div className="fixed bottom-8 right-8 z-10">
                   <Button
                     onClick={handleEditorClick}
-                    className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 flex items-center justify-center text-gray-50 bg-red-500 hover:bg-red-400"
+                    className="rounded-full w-16 h-16 shadow-xl bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors"
                   >
-                    <Plus className="h-6 w-6" />
+                    <Plus className="h-8 w-8" />
                   </Button>
                 </div>
               )}
@@ -288,82 +276,86 @@ const Index = () => {
 
           <TabsContent value="settings">
             <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
+              <div className="absolute right-0 -top-14">
                 <button
                   onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700"
                   aria-label="Voltar para home"
                 >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
-                <h2 className="text-2xl font-semibold mb-6">Configurações</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setShowProfileDialog(true)}
-                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <h3 className="font-medium">Alterar Cadastro</h3>
-                    <p className="text-sm text-gray-600">Atualize suas informações pessoais</p>
-                  </button>
-                  <button
-                    onClick={() => setShowPasswordDialog(true)}
-                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 revi rounded-lg transition-colors"
-                  >
-                    <h3 className="font-medium">Alterar Senha</h3>
-                    <p className="text-sm text-gray-600">Modifique sua senha de acesso</p>
-                  </button>
-                  <button
-                    onClick={() => setShowInformationDialog(true)}
-                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <h3 className="font-medium">Informações</h3>
-                    <p className="text-sm text-gray-600">Visualize a estrutura funcional do sistema</p>
-                  </button>
-                  <button
-                    onClick={handleRefresh}
-                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <RefreshCw className="h-5 w-5" />
-                      <h3 className="font-medium">Atualizar</h3>
-                    </div>
-                    <p className="text-sm text-gray-600">Recarregar dados do sistema</p>
-                  </button>
-                  {user.userType === "admin" && (
+              <Card className="shadow-md">
+                <CardHeader>
+                  <h2 className="text-2xl font-bold text-gray-900">Configurações</h2>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <button
-                      onClick={() => setActiveTab("users")}
+                      onClick={() => setShowProfileDialog(true)}
                       className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                      <div className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
-                        <h3 className="font-medium">Usuários</h3>
-                      </div>
-                      <p className="text-sm text-gray-600">Gerenciar usuários do sistema</p>
+                      <h3 className="font-semibold text-gray-800">Alterar Cadastro</h3>
+                      <p className="text-sm text-gray-600">Atualize suas informações pessoais</p>
                     </button>
-                  )}
-                  <button
-                    onClick={() => setShowLogoutDialog(true)}
-                    className="p-4 text-left bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <LogOut className="h-5 w-5 text-red-500" />
-                      <h3 className="font-medium text-red-500">Sair</h3>
-                    </div>
-                    <p className="text-sm text-red-600">Encerrar a sessão atual</p>
-                  </button>
-                </div>
-              </div>
+                    <button
+                      onClick={() => setShowPasswordDialog(true)}
+                      className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <h3 className="font-semibold text-gray-800">Alterar Senha</h3>
+                      <p className="text-sm text-gray-600">Modifique sua senha de acesso</p>
+                    </button>
+                    <button
+                      onClick={() => setShowInformationDialog(true)}
+                      className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <h3 className="font-semibold text-gray-800">Informações</h3>
+                      <p className="text-sm text-gray-600">Visualize a estrutura funcional do sistema</p>
+                    </button>
+                    <button
+                      onClick={handleRefresh}
+                      className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <RefreshCw className="h-5 w-5 text-gray-600" />
+                        <h3 className="font-semibold text-gray-800">Atualizar</h3>
+                      </div>
+                      <p className="text-sm text-gray-600">Recarregar dados do sistema</p>
+                    </button>
+                    {user.userType === "admin" && (
+                      <button
+                        onClick={() => setActiveTab("users")}
+                        className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Users className="h-5 w-5 text-gray-600" />
+                          <h3 className="font-semibold text-gray-800">Usuários</h3>
+                        </div>
+                        <p className="text-sm text-gray-600">Gerenciar usuários do sistema</p>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowLogoutDialog(true)}
+                      className="p-4 text-left bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <LogOut className="h-5 w-5 text-red-500" />
+                        <h3 className="font-semibold text-red-500">Sair</h3>
+                      </div>
+                      <p className="text-sm text-red-600">Encerrar a sessão atual</p>
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
           <TabsContent value="editor">
             <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
+              <div className="absolute right-0 -top-14">
                 <button
                   onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700"
                   aria-label="Voltar para aba extra"
                 >
                   <ArrowLeft className="h-6 w-6" />
@@ -381,45 +373,49 @@ const Index = () => {
 
           <TabsContent value="users">
             <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
+              <div className="absolute right-0 -top-14">
                 <button
                   onClick={() => setActiveTab("settings")}
-                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700"
                   aria-label="Voltar para configurações"
                 >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <div className="bg-white rounded-xl shadow-lg">
-                <UsersList />
-              </div>
+              <Card className="shadow-md">
+                <CardContent className="p-6">
+                  <UsersList />
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
           <TabsContent value="travel">
             <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
+              <div className="absolute right-0 -top-14">
                 <button
                   onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700"
                   aria-label="Voltar para home"
                 >
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <div className="bg-white rounded-xl shadow-lg">
-                <TravelManagement />
-              </div>
+              <Card className="shadow-md">
+                <CardContent className="p-6">
+                  <TravelManagement />
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
           <TabsContent value="tco" className="flex flex-col flex-grow">
             <div className="flex flex-col flex-grow">
               <div className="relative">
-                <div className="absolute right-0 -top-12 mb-4">
+                <div className="absolute right-0 -top-14">
                   <button
                     onClick={handleBackClick}
-                    className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
+                    className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700"
                     aria-label="Voltar para home"
                   >
                     <ArrowLeft className="h-6 w-6" />
@@ -430,105 +426,37 @@ const Index = () => {
                   onValueChange={setTcoTab}
                   className="space-y-6 flex flex-col flex-grow"
                 >
-                  <TabsList className="bg-white rounded-xl shadow-lg p-2 grid grid-cols-2 gap-2 my-0 py-0">
+                  <TabsList className="bg-white shadow-md rounded-lg p-2 grid grid-cols-2 gap-4">
                     <TabsTrigger
                       value="list"
                       aria-label="Visualizar Meus TCOs"
-                      className="py-2 rounded-lg text-gray-700 data-[state=active]:bg-primary data-[state=active]:text-white px-[8px] mx-0"
+                      className="py-2 px-4 rounded-md text-gray-700 font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors"
                     >
-                      Meus TCO's
+                      Meus TCOs
                     </TabsTrigger>
                     <TabsTrigger
                       value="form"
                       aria-label="Criar ou editar TCO"
                       onClick={() => setSelectedTco(null)}
-                      className="px-4 rounded-lg text-gray-700 data-[state=active]:bg-primary data-[state=active]:text-white my-0 py-[6px]"
+                      className="py-2 px-4 rounded-md text-gray-700 font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors"
                     >
                       Novo TCO
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent
-                    value="list"
-                    className="flex-grow"
-                  >
-                    <TCOmeus
-                      user={user}
-                      toast={toast}
-                      setSelectedTco={setSelectedTco}
-                      selectedTco={selectedTco}
-                    />
+                  <TabsContent value="list" className="flex-grow">
+                    <Card className="shadow-md">
+                      <CardContent className="p-6">
+                        <TCOmeus
+                          user={user}
+                          toast={toast}
+                          setSelectedTco={setSelectedTco}
+                          selectedTco={selectedTco}
+                        />
+                      </CardContent>
+                    </Card>
                   </TabsContent>
 
-                  <TabsContent
-                    value="form"
-                    className="bg-white rounded-xl shadow-lg p-4 flex-grow"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      {/* Espaço reservado para título ou ações adicionais, se necessário */}
-                    </div>
-                    <TCOForm
-                      selectedTco={selectedTco}
-                      onClear={() => {
-                        setSelectedTco(null);
-                        setTcoTab("list");
-                      }}
-                    />
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        {showProfileDialog && (
-          <ProfileUpdateDialog
-            open={showProfileDialog}
-            onOpenChange={setShowProfileDialog}
-            userData={user}
-          />
-        )}
-
-        {showPasswordDialog && (
-          <PasswordChangeDialog
-            open={showPasswordDialog}
-            onOpenChange={setShowPasswordDialog}
-            userId={user.id}
-            currentPassword={user.password}
-          />
-        )}
-
-        {showInformationDialog && (
-          <InformationDialog
-            open={showInformationDialog}
-            onOpenChange={setShowInformationDialog}
-            isAdmin={user.userType === "admin"}
-          />
-        )}
-        
-        <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar Saída</AlertDialogTitle>
-              <AlertDialogDescription>
-                Sair do sistema?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleLogout}>Sair</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-      
-      <BottomMenuBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        isAdmin={user.userType === "admin"}
-      />
-    </div>
-  );
-};
-
-export default Index;
+                  <TabsContent value="form" className="flex-grow">
+                    <Card className="shadow-md">
+                      <CardContent className
