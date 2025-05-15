@@ -25,6 +25,8 @@ import UpcomingShifts from "@/components/UpcomingShifts";
 import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
+import UpcomingTrips from "@/components/UpcomingTrips";
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
@@ -150,8 +152,8 @@ const Index = () => {
               {/* Upcoming Shifts */}
               <UpcomingShifts />
               
-              {/* Active Trips */}
-              <ActiveTrips trips={activeTrips} onTravelClick={handleTravelClick} />
+              {/* Upcoming Trips */}
+              <UpcomingTrips onTravelClick={handleTravelClick} />
             </div>
           </TabsContent>
 
