@@ -14,6 +14,7 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
 import supabase from "@/lib/supabaseClient";
+import { uploadPDF, saveTCOMetadata } from '@/lib/supabaseStorage';
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
@@ -349,7 +350,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     let updatedRelato = relatoPolicialTemplate;
     const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
     const gupm = formatarGuarnicao(componentesGuarnicao);
-    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "OUTROS" : natureza;
+    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA PENDENTE]" : natureza;
     const operacaoText = operacao ? `, DURANTE A ${operacao.toUpperCase()},` : "";
     updatedRelato = updatedRelato.replace("[HORÁRIO]", horaFato || "[HORÁRIO PENDENTE]").replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR', {
       timeZone: 'UTC'
@@ -684,6 +685,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
       return;
     }
+    
     const completionNow = new Date();
     const completionDate = completionNow.toISOString().split('T')[0];
     const completionTime = completionNow.toTimeString().slice(0, 5);
@@ -822,38 +824,35 @@ const TCOForm: React.FC<TCOFormProps> = ({
       };
       Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
       console.log("Dados para gerar PDF:", tcoDataParaPDF);
+      
+      // Generate the PDF
       const pdfGenerationPromise = generatePDF(tcoDataParaPDF);
       const timeoutPromise = new Promise<Blob>((_, reject) => {
         setTimeout(() => reject(new Error("Tempo limite excedido ao gerar o PDF.")), 90000);
       });
       const pdfBlob = await Promise.race([pdfGenerationPromise, timeoutPromise]);
+      
       if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
+      
       const tcoNumParaNome = tcoNumber.trim();
       const dateStr = new Date().toISOString().slice(0, 10);
       const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
       const filePath = `tcos/${userId || 'anonimo'}/${tcoNumParaNome}_${dateStr}.pdf`;
-      const BUCKET_NAME = 'tco-pdfs';
-      console.log(`Enviando arquivo para Supabase Storage: ${filePath}`);
-      const uploadPromise = supabase.storage.from(BUCKET_NAME).upload(filePath, pdfBlob, {
-        contentType: 'application/pdf',
-        upsert: true
+      
+      // Upload the PDF to Supabase Storage using our utility function
+      const { url: downloadURL, error: uploadError } = await uploadPDF(filePath, pdfBlob, {
+        tcoNumber: tcoNumParaNome,
+        natureza: displayNaturezaReal,
+        createdBy: userId || 'anonimo'
       });
-      const uploadTimeoutPromise = new Promise<any>((_, reject) => {
-        setTimeout(() => reject(new Error("Tempo limite excedido ao enviar o arquivo.")), 60000);
-      });
-      const {
-        data: uploadData,
-        error: uploadError
-      } = await Promise.race([uploadPromise, uploadTimeoutPromise]);
+      
       if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
-      console.log("Upload concluído:", uploadData);
-      const {
-        data: publicUrlData
-      } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-      const downloadURL = publicUrlData?.publicUrl || '';
+      if (!downloadURL) throw new Error("URL do arquivo não disponível após o upload.");
+      
       console.log('URL pública do arquivo:', downloadURL);
-      const TABLE_NAME = 'tco_pdfs';
+      
+      // Save metadata to Supabase database
       const tcoMetadata = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
@@ -867,28 +866,28 @@ const TCOForm: React.FC<TCOFormProps> = ({
         createdBy: userId,
         createdAt: new Date().toISOString()
       };
+      
       console.log("Metadados para salvar no DB:", tcoMetadata);
-      const insertPromise = supabase.from(TABLE_NAME).insert([tcoMetadata]).select('id').single();
-      const dbTimeoutPromise = new Promise<any>((_, reject) => {
-        setTimeout(() => reject(new Error("Tempo limite excedido ao salvar metadados no banco de dados.")), 30000);
-      });
-      const {
-        data: insertData,
-        error: insertError
-      } = await Promise.race([insertPromise, dbTimeoutPromise]);
-      if (insertError) {
-        console.error("Erro ao salvar metadados no Supabase DB:", insertError);
-        await supabase.storage.from(BUCKET_NAME).remove([filePath]).catch(deleteError => console.error("Falha ao remover PDF após erro de inserção no DB:", deleteError));
-        throw new Error(`Erro ao salvar informações do TCO: ${insertError.message}`);
+      
+      // Save metadata using our utility function
+      const { error: metadataError } = await saveTCOMetadata(tcoMetadata);
+      
+      if (metadataError) {
+        console.error("Erro ao salvar metadados no Supabase DB:", metadataError);
+        throw new Error(`Erro ao salvar informações do TCO: ${metadataError.message || metadataError}`);
       }
-      console.log("Metadados salvos com sucesso no DB, ID:", insertData?.id);
+      
+      console.log("Metadados salvos com sucesso no DB");
+      
       toast({
         title: "TCO Registrado com Sucesso!",
         description: "PDF enviado e informações salvas no sistema.",
         className: "bg-green-600 text-white border-green-700",
         duration: 5000
       });
+      
       navigate("/?tab=tco");
+      
     } catch (error: any) {
       console.error("Erro geral no processo de submissão do TCO:", error);
       toast({
