@@ -1,4 +1,3 @@
-
 import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -27,6 +26,7 @@ const Index = () => {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showInformationDialog, setShowInformationDialog] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [hasNotifications, setHasNotifications] = useState(false);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
@@ -35,6 +35,26 @@ const Index = () => {
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list"); // Controls sub-tabs in TCO section
+
+  useEffect(() => {
+    // Add listener to check for notifications
+    const handleNotificationsChange = (count: number) => {
+      setHasNotifications(count > 0);
+    };
+    
+    // Initial check
+    if (unreadCount > 0) {
+      setHasNotifications(true);
+    }
+    
+    // Add listener to the NotificationsList component
+    const notificationsChangeEvent = new CustomEvent('notificationsUpdate', { detail: { count: unreadCount } });
+    window.addEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
+    
+    return () => {
+      window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
+    };
+  }, [unreadCount]);
 
   const handleEditorClick = () => {
     setActiveTab("editor");
@@ -64,10 +84,6 @@ const Index = () => {
     navigate("/login");
     setShowLogoutDialog(false);
   };
-  
-  const handleRefresh = () => {
-    window.location.reload();
-  };
 
   return (
     <div className="relative min-h-screen bg-[#E8F1F2] flex flex-col">
@@ -85,10 +101,12 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="main">
-            {/* Display notifications directly on main page */}
-            <div className="bg-white rounded-xl shadow-lg mb-6">
-              <NotificationsList />
-            </div>
+            {/* Only show notifications if there are any */}
+            {hasNotifications && (
+              <div className="bg-white rounded-xl shadow-lg mb-6">
+                <NotificationsList />
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="extra">
@@ -139,7 +157,7 @@ const Index = () => {
                   </button>
                   <button
                     onClick={() => setShowPasswordDialog(true)}
-                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 revi rounded-lg transition-colors"
                   >
                     <h3 className="font-medium">Alterar Senha</h3>
                     <p className="text-sm text-gray-600">Modifique sua senha de acesso</p>
