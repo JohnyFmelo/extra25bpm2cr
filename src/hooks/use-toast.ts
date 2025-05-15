@@ -4,15 +4,23 @@ import { toast as sonnerToast } from "sonner";
 type ToastProps = {
   title: string;
   description?: string;
-  variant?: "default" | "destructive";
+  variant?: "default" | "destructive" | "warning";
   duration?: number;
-  className?: string; // Added className property
+  className?: string;
 };
 
-// This update adds the "warning" variant mapping to "default"
+// Updated toast function to properly display the full notification text
 export const toast = ({ title, description, variant = "default", duration, className }: ToastProps) => {
   if (variant === "destructive") {
     return sonnerToast.error(title, {
+      description,
+      duration,
+      className
+    });
+  }
+  
+  if (variant === "warning") {
+    return sonnerToast.warning(title, {
       description,
       duration,
       className
