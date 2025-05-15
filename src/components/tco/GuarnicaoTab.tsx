@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Users, UserPlus, Info, Search } from "lucide-react";
+import { Trash2, Users, UserPlus, Info, Search, UserMinus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabaseClient";
 
 // --- Funções Auxiliares ---
@@ -99,13 +100,19 @@ interface GuarnicaoTabProps {
   currentGuarnicaoList: ComponenteGuarnicao[];
   onAddPolicial: (policial: ComponenteGuarnicao) => void;
   onRemovePolicial: (index: number) => void;
+  currentApoioList: ComponenteGuarnicao[];
+  onAddApoio: (policial: ComponenteGuarnicao) => void;
+  onRemoveApoio: (index: number) => void;
 }
 
 // --- Componente GuarnicaoTab ---
 const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
   currentGuarnicaoList,
   onAddPolicial,
-  onRemovePolicial
+  onRemovePolicial,
+  currentApoioList,
+  onAddApoio,
+  onRemoveApoio
 }) => {
   const {
     toast
@@ -114,10 +121,12 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState<boolean>(false);
   const [newOfficerFormData, setNewOfficerFormData] = useState<PoliceOfficerFormData>(initialOfficerFormData);
+  const [activeTab, setActiveTab] = useState<"guarnicao" | "apoio">("guarnicao");
   
   useEffect(() => {
     console.log("[GuarnicaoTab] Prop 'currentGuarnicaoList' recebida:", currentGuarnicaoList);
-  }, [currentGuarnicaoList]);
+    console.log("[GuarnicaoTab] Prop 'currentApoioList' recebida:", currentApoioList);
+  }, [currentGuarnicaoList, currentApoioList]);
   
   const handleSearchRgpmChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = event.target.value;
@@ -136,17 +145,37 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       });
       return;
     }
-    const alreadyExists = currentGuarnicaoList.some(comp => comp.rg === rgpmToSearch);
+    
+    // Verificar duplicidade na lista atual (guarnição ou apoio)
+    const targetList = activeTab === "guarnicao" ? currentGuarnicaoList : currentApoioList;
+    const alreadyExists = targetList.some(comp => comp.rg === rgpmToSearch);
+    
+    // Verificar duplicidade na outra lista
+    const otherList = activeTab === "guarnicao" ? currentApoioList : currentGuarnicaoList;
+    const existsInOtherList = otherList.some(comp => comp.rg === rgpmToSearch);
+    
     if (alreadyExists) {
-      console.log("[GuarnicaoTab] RGPM já existe na lista (prop):", rgpmToSearch);
+      console.log(`[GuarnicaoTab] RGPM já existe na lista de ${activeTab}:`, rgpmToSearch);
       toast({
         variant: "default",
         title: "Duplicado",
-        description: "Este policial já está na guarnição."
+        description: `Este policial já está na ${activeTab === "guarnicao" ? "guarnição" : "equipe de apoio"}.`
       });
       setSearchRgpm("");
       return;
     }
+    
+    if (existsInOtherList) {
+      const confirmMessage = activeTab === "guarnicao" 
+        ? "Este policial já está na equipe de apoio. Deseja adicioná-lo também à guarnição principal?"
+        : "Este policial já está na guarnição principal. Deseja adicioná-lo também à equipe de apoio?";
+        
+      if (!window.confirm(confirmMessage)) {
+        setSearchRgpm("");
+        return;
+      }
+    }
+    
     setIsSearching(true);
     console.log("[GuarnicaoTab] Buscando no Supabase...");
     try {
@@ -181,7 +210,23 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
         };
         console.log("[GuarnicaoTab] Componente criado com telefone:", newComponente.telefone);
         console.log("[GuarnicaoTab] Policial encontrado. Chamando onAddPolicial:", newComponente);
-        onAddPolicial(newComponente);
+        if (activeTab === "guarnicao") {
+          onAddPolicial(newComponente);
+          toast({
+            title: "Adicionado à Guarnição",
+            description: `Policial ${newComponente.nome} adicionado à guarnição principal.`,
+            className: "bg-green-600 text-white border-green-700",
+            duration: 5000
+          });
+        } else {
+          onAddApoio(newComponente);
+          toast({
+            title: "Adicionado ao Apoio",
+            description: `Policial ${newComponente.nome} adicionado à equipe de apoio.`,
+            className: "bg-green-600 text-white border-green-700",
+            duration: 5000
+          });
+        }
         setSearchRgpm("");
       }
     } catch (error: any) {
@@ -195,16 +240,26 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       setIsSearching(false);
       console.log("[GuarnicaoTab] Busca finalizada.");
     }
-  }, [searchRgpm, currentGuarnicaoList, toast, onAddPolicial]);
+  }, [searchRgpm, currentGuarnicaoList, currentApoioList, toast, onAddPolicial, onAddApoio, activeTab]);
   
   const handleRemove = (index: number) => {
-    const itemToRemove = currentGuarnicaoList[index];
-    console.log("[GuarnicaoTab] Chamando onRemovePolicial para índice:", index, itemToRemove);
-    onRemovePolicial(index);
-    toast({
-      title: "Removido",
-      description: `Componente ${itemToRemove?.nome || ''} removido da guarnição.`
-    });
+    if (activeTab === "guarnicao") {
+      const itemToRemove = currentGuarnicaoList[index];
+      console.log("[GuarnicaoTab] Chamando onRemovePolicial para índice:", index, itemToRemove);
+      onRemovePolicial(index);
+      toast({
+        title: "Removido da Guarnição",
+        description: `Componente ${itemToRemove?.nome || ''} removido da guarnição principal.`
+      });
+    } else {
+      const itemToRemove = currentApoioList[index];
+      console.log("[GuarnicaoTab] Chamando onRemoveApoio para índice:", index, itemToRemove);
+      onRemoveApoio(index);
+      toast({
+        title: "Removido do Apoio",
+        description: `Componente ${itemToRemove?.nome || ''} removido da equipe de apoio.`
+      });
+    }
   };
   
   const openRegisterDialog = (e: React.MouseEvent) => {
@@ -338,52 +393,163 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
     return false;
   }, [newOfficerFormData]);
   
-  return <Card>
+  return (
+    <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
             <CardTitle className="flex items-center">
-              <Users className="mr-2 h-5 w-5" /> GUARNIÇÃO
+              <Users className="mr-2 h-5 w-5" /> GUARNIÇÃO E APOIO
             </CardTitle>
-            <CardDescription>Adicione os componentes buscando por RGPM</CardDescription>
+            <CardDescription>Adicione policiais da guarnição principal e equipes de apoio</CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={openRegisterDialog} type="button">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={openRegisterDialog} 
+            type="button"
+          >
             <UserPlus className="h-4 w-4 mr-2" /> Cadastrar/Atualizar Policial
           </Button>
         </div>
       </CardHeader>
+      
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <div className="flex gap-2 items-center">
-            <Input id="rgpmSearchInput" type="text" inputMode="numeric" placeholder="Buscar por RGPM (6 dígitos)" value={searchRgpm} onChange={handleSearchRgpmChange} disabled={isSearching} className="flex-grow" maxLength={6} onKeyDown={e => {
-            if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
-          }} />
-            <Button onClick={handleSearchAndAdd} disabled={isSearching || searchRgpm.length !== 6}>
-              {isSearching ? "Buscando..." : <><Search className="h-4 w-4 mr-1" /> Adicionar</>}
-            </Button>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Componentes da Guarnição Atual</Label>
-          {currentGuarnicaoList.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4 border rounded-md border-dashed">
-              Nenhum componente adicionado. Use a busca acima.
-            </p> : <div className="border rounded-md overflow-hidden">
-              {currentGuarnicaoList.map((componente, index) => <div key={`${componente.rg}-${index}`} className={`flex items-center justify-between p-3 ${index > 0 ? "border-t" : ""} ${index === 0 ? "bg-blue-50" : "bg-background"}`}>
-                  <div className="flex flex-col flex-grow mr-2 truncate">
-                    <span className="text-sm font-medium truncate" title={`${componente.posto} ${componente.nome} (RGPM: ${componente.rg})`}>
-                      {index === 0 && <span className="font-bold text-blue-800">(Condutor) </span>}
-                      <span>{componente.posto || "Sem Posto"}</span>{' '}
-                      <span>{componente.nome || "Sem Nome"}</span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">RGPM: {componente.rg || "Não informado"}</span>
-                  </div>
-                  <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0" onClick={() => handleRemove(index)} aria-label={`Remover ${componente.nome}`}>
-                    <Trash2 className="h-4 w-4" />
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "guarnicao" | "apoio")}>
+            <TabsList className="w-full">
+              <TabsTrigger className="w-1/2" value="guarnicao">Guarnição Principal</TabsTrigger>
+              <TabsTrigger className="w-1/2" value="apoio">Apoio</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="guarnicao" className="mt-4">
+              <div>
+                <div className="flex gap-2 items-center mb-4">
+                  <Input
+                    id="rgpmSearchInputGuarnicao"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Buscar por RGPM (6 dígitos)" 
+                    value={searchRgpm}
+                    onChange={handleSearchRgpmChange}
+                    disabled={isSearching}
+                    className="flex-grow"
+                    maxLength={6}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
+                    }}
+                  />
+                  <Button 
+                    onClick={handleSearchAndAdd} 
+                    disabled={isSearching || searchRgpm.length !== 6}
+                  >
+                    {isSearching ? "Buscando..." : <><Search className="h-4 w-4 mr-1" /> Adicionar</>}
                   </Button>
-                </div>)}
-            </div>}
+                </div>
+                
+                <Label>Componentes da Guarnição Principal</Label>
+                {currentGuarnicaoList.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4 border rounded-md border-dashed">
+                    Nenhum componente adicionado à guarnição principal. Use a busca acima.
+                  </p>
+                ) : (
+                  <div className="border rounded-md overflow-hidden">
+                    {currentGuarnicaoList.map((componente, index) => (
+                      <div 
+                        key={`${componente.rg}-${index}`} 
+                        className={`flex items-center justify-between p-3 ${index > 0 ? "border-t" : ""} ${index === 0 ? "bg-blue-50" : "bg-background"}`}
+                      >
+                        <div className="flex flex-col flex-grow mr-2 truncate">
+                          <span className="text-sm font-medium truncate" title={`${componente.posto} ${componente.nome} (RGPM: ${componente.rg})`}>
+                            {index === 0 && <span className="font-bold text-blue-800">(Condutor) </span>}
+                            <span>{componente.posto || "Sem Posto"}</span>{' '}
+                            <span>{componente.nome || "Sem Nome"}</span>
+                          </span>
+                          <span className="text-xs text-muted-foreground">RGPM: {componente.rg || "Não informado"}</span>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0"
+                          onClick={() => handleRemove(index)}
+                          aria-label={`Remover ${componente.nome}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="apoio" className="mt-4">
+              <div>
+                <div className="flex gap-2 items-center mb-4">
+                  <Input
+                    id="rgpmSearchInputApoio"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Buscar por RGPM (6 dígitos)" 
+                    value={searchRgpm}
+                    onChange={handleSearchRgpmChange}
+                    disabled={isSearching}
+                    className="flex-grow"
+                    maxLength={6}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
+                    }}
+                  />
+                  <Button 
+                    onClick={handleSearchAndAdd} 
+                    disabled={isSearching || searchRgpm.length !== 6}
+                  >
+                    {isSearching ? "Buscando..." : <><Search className="h-4 w-4 mr-1" /> Adicionar</>}
+                  </Button>
+                </div>
+                
+                <Label>Componentes da Equipe de Apoio</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Policiais de apoio serão listados no item 5.1 do PDF, mas não precisarão assinar o documento.
+                </p>
+                
+                {currentApoioList.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4 border rounded-md border-dashed">
+                    Nenhum componente adicionado ao apoio. Use a busca acima.
+                  </p>
+                ) : (
+                  <div className="border rounded-md overflow-hidden">
+                    {currentApoioList.map((componente, index) => (
+                      <div 
+                        key={`apoio-${componente.rg}-${index}`} 
+                        className="flex items-center justify-between p-3 border-t first:border-t-0 bg-emerald-50"
+                      >
+                        <div className="flex flex-col flex-grow mr-2 truncate">
+                          <span className="text-sm font-medium truncate" title={`${componente.posto} ${componente.nome} (RGPM: ${componente.rg})`}>
+                            <span>{componente.posto || "Sem Posto"}</span>{' '}
+                            <span>{componente.nome || "Sem Nome"}</span>
+                          </span>
+                          <span className="text-xs text-muted-foreground">RGPM: {componente.rg || "Não informado"}</span>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0"
+                          onClick={() => handleRemove(index)}
+                          aria-label={`Remover ${componente.nome}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </CardContent>
+      
       <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
@@ -438,6 +604,8 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>;
+    </Card>
+  );
 };
+
 export default GuarnicaoTab;

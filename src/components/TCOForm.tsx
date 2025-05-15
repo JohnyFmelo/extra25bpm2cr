@@ -19,6 +19,11 @@ interface ComponenteGuarnicao {
   rg: string;
   nome: string;
   posto: string;
+  pai?: string;
+  mae?: string;
+  naturalidade?: string;
+  cpf?: string;
+  telefone?: string;
 }
 interface Pessoa {
   nome: string;
@@ -201,6 +206,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const [apreensoes, setApreensoes] = useState("");
   const [lacreNumero, setLacreNumero] = useState("");
   const [componentesGuarnicao, setComponentesGuarnicao] = useState<ComponenteGuarnicao[]>([]);
+  const [componentesApoio, setComponentesApoio] = useState<ComponenteGuarnicao[]>([]);
   const [quantidade, setQuantidade] = useState("");
   const [substancia, setSubstancia] = useState("");
   const [cor, setCor] = useState("");
@@ -377,7 +383,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
     if (!alreadyExists) {
       setComponentesGuarnicao(prevList => {
-        const newList = prevList.length === 0 || prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto ? [novoPolicial] : [...prevList, novoPolicial];
+        const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto) ? [novoPolicial] : [...prevList, novoPolicial];
         return newList;
       });
       toast({
@@ -395,9 +401,38 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
     }
   }, [componentesGuarnicao, toast]);
+  
+  const handleAddApoioToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
+    const alreadyExists = componentesApoio.some(comp => comp.rg === novoPolicial.rg);
+    if (!alreadyExists) {
+      setComponentesApoio(prevList => {
+        const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto) ? [novoPolicial] : [...prevList, novoPolicial];
+        return newList;
+      });
+      toast({
+        title: "Adicionado ao Apoio",
+        description: `Policial ${novoPolicial.nome} adicionado à equipe de apoio.`,
+        className: "bg-green-600 text-white border-green-700",
+        duration: 5000
+      });
+    } else {
+      toast({
+        title: "Duplicado",
+        description: "Este policial já está na equipe de apoio.",
+        className: "bg-yellow-600 text-white border-yellow-700",
+        duration: 5000
+      });
+    }
+  }, [componentesApoio, toast]);
+  
   const handleRemovePolicialFromList = useCallback((indexToRemove: number) => {
     setComponentesGuarnicao(prevList => prevList.filter((_, index) => index !== indexToRemove));
   }, []);
+  
+  const handleRemoveApoioFromList = useCallback((indexToRemove: number) => {
+    setComponentesApoio(prevList => prevList.filter((_, index) => index !== indexToRemove));
+  }, []);
+  
   const handleAddVitima = () => {
     const hasOnlyPlaceholder = vitimas.length === 1 && !vitimas[0].nome && !vitimas[0].cpf || vitimas.length === 1 && vitimas[0].nome === "O ESTADO";
     if (hasOnlyPlaceholder) {
@@ -727,6 +762,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       return;
     }
     const componentesValidos = componentesGuarnicao.filter(c => c.nome?.trim() && c.rg?.trim());
+    const apoioValidos = componentesApoio.filter(c => c.nome?.trim() && c.rg?.trim());
     if (componentesValidos.length === 0) {
       toast({
         title: "Campo Obrigatório",
@@ -799,6 +835,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
         guarnicao: guarnicao.trim(),
         operacao: operacao.trim(),
         componentesGuarnicao: componentesValidos,
+        componentesApoio: apoioValidos.length > 0 ? apoioValidos : undefined,
         relatoPolicial: relatoPolicial.trim(),
         relatoAutor: relatoAutor.trim(),
         relatoTestemunha: relatoTestemunha.trim(),
@@ -961,10 +998,17 @@ const TCOForm: React.FC<TCOFormProps> = ({
         <Card>
           <CardHeader>
             <CardTitle>Guarnição Policial</CardTitle>
-            <CardDescription>Componentes da equipe que atendeu a ocorrência.</CardDescription>
+            <CardDescription>Componentes da equipe que atendeu a ocorrência e policiais de apoio.</CardDescription>
           </CardHeader>
           <CardContent>
-            <GuarnicaoTab currentGuarnicaoList={componentesGuarnicao} onAddPolicial={handleAddPolicialToList} onRemovePolicial={handleRemovePolicialFromList} />
+            <GuarnicaoTab 
+              currentGuarnicaoList={componentesGuarnicao} 
+              onAddPolicial={handleAddPolicialToList} 
+              onRemovePolicial={handleRemovePolicialFromList}
+              currentApoioList={componentesApoio}
+              onAddApoio={handleAddApoioToList}
+              onRemoveApoio={handleRemoveApoioFromList}
+            />
           </CardContent>
         </Card>
 
