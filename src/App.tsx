@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Hours from "./pages/Hours";
@@ -23,7 +23,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
   const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
+  const path = location.pathname;
+  let activeTab = "main";
+  
+  if (path === "/hours") {
+    activeTab = "hours";
+  }
   
   return (
     <div className="flex min-h-screen w-full">
@@ -33,13 +40,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           {children}
         </main>
         {user && <BottomMenuBar 
-          activeTab={window.location.pathname === "/hours" ? "hours" : "main"}
+          activeTab={activeTab}
           onTabChange={(tab) => {
-            if (tab === "main") {
-              window.location.href = "/";
-            } else if (tab === "hours") {
-              window.location.href = "/hours";
-            }
+            window.location.href = tab === "hours" ? "/hours" : "/";
           }}
           isAdmin={user.userType === 'admin'} 
         />}

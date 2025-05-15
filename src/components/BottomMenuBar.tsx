@@ -65,12 +65,14 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
 }) => {
   const navigate = useNavigate();
   
-  const handleHoursClick = () => {
-    navigate("/hours");
-  };
-  
-  const handleMainClick = () => {
-    navigate("/");
+  const handleTabClick = (tab: string) => {
+    if (tab === "main") {
+      navigate("/");
+    } else if (tab === "hours") {
+      navigate("/hours");
+    } else {
+      onTabChange(tab);
+    }
   };
   
   return (
@@ -79,39 +81,39 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
         <BottomMenuItem 
           icon={<Home className="h-5 w-5" />} 
           label="Início" 
-          onClick={handleMainClick} 
+          onClick={() => handleTabClick("main")} 
           active={activeTab === "main"} 
         />
         <BottomMenuItem 
           icon={<Clock className="h-5 w-5" />} 
           label="Horas" 
-          onClick={handleHoursClick} 
+          onClick={() => handleTabClick("hours")} 
           active={activeTab === "hours"} 
         />
         <BottomMenuItem 
           icon={<Calendar className="h-5 w-5" />} 
           label="Extra" 
-          onClick={() => onTabChange("extra")} 
+          onClick={() => handleTabClick("extra")} 
           active={activeTab === "extra"} 
         />
         <BottomMenuItem 
           icon={<MapPinned className="h-5 w-5" />} 
           label="Viagens" 
-          onClick={() => onTabChange("travel")} 
+          onClick={() => handleTabClick("travel")} 
           active={activeTab === "travel"} 
         />
         {isAdmin && (
           <BottomMenuItem 
             icon={<Scale className="h-5 w-5" />} 
             label="TCO" 
-            onClick={() => onTabChange("tco")} 
+            onClick={() => handleTabClick("tco")} 
             active={activeTab === "tco"} 
           />
         )}
         <BottomMenuItem 
           icon={<Settings className="h-5 w-5" />} 
           label="Config" 
-          onClick={() => onTabChange("settings")} 
+          onClick={() => handleTabClick("settings")} 
           active={activeTab === "settings"} 
         />
       </div>
