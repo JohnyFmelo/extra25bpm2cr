@@ -8,12 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Clock, Calendar } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+// Update interface to match Firestore document structure
 interface TimeSlot {
   id?: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  volunteers?: string[];
+  date: string;          // Changed from Date to string to match Firestore
+  start_time: string;    // Updated to match Firestore field name
+  end_time: string;      // Updated to match Firestore field name
+  volunteers?: string[]; 
   description?: string;
 }
 
@@ -60,7 +61,8 @@ const UpcomingShifts = () => {
           return dateA.getTime() - dateB.getTime();
         });
       
-      setShifts(upcomingShifts.slice(0, 3)); // Show only next 3 shifts
+      // Type assertion to ensure TypeScript knows these objects match the TimeSlot interface
+      setShifts(upcomingShifts.slice(0, 3) as TimeSlot[]); 
       setIsLoading(false);
     });
     
