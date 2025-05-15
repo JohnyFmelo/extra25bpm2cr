@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Trash2, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, Timestamp, deleteDoc, getDoc } from "firebase/firestore";
@@ -20,7 +21,11 @@ interface Notification {
   recipientId: string | null;
 }
 
-const NotificationsList = () => {
+interface NotificationsListProps {
+  showOnlyUnread?: boolean;
+}
+
+const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -40,22 +45,28 @@ const NotificationsList = () => {
   useEffect(() => {
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, snapshot => {
-      const notifs = snapshot.docs.map(doc => ({
+      const allNotifs = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         readBy: doc.data().readBy || []
       }) as Notification).filter(notif => notif.type === 'all' || notif.recipientId === currentUser.id);
-      setNotifications(notifs);
+      
+      // Filter only unread notifications if showOnlyUnread is true
+      const filteredNotifs = showOnlyUnread 
+        ? allNotifs.filter(n => !n.readBy.includes(currentUser.id))
+        : allNotifs;
+        
+      setNotifications(filteredNotifs);
       
       // Dispatch event to notify about notifications count
-      const unreadCount = notifs.filter(n => !n.readBy.includes(currentUser.id)).length;
+      const unreadCount = allNotifs.filter(n => !n.readBy.includes(currentUser.id)).length;
       window.dispatchEvent(new CustomEvent('notificationsUpdate', { 
         detail: { count: unreadCount } 
       }));
     });
     
     return () => unsubscribe();
-  }, [currentUser.id]);
+  }, [currentUser.id, showOnlyUnread]);
   
   const handleMarkAsRead = async (notificationId: string) => {
     try {

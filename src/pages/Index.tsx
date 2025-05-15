@@ -111,10 +111,10 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="main">
-            {/* Only show notifications if there are any */}
+            {/* Only show unread notifications */}
             {hasNotifications && (
               <div className="bg-white rounded-xl shadow-lg mb-6">
-                <NotificationsList />
+                <NotificationsList showOnlyUnread={true} />
               </div>
             )}
           </TabsContent>

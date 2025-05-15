@@ -1,16 +1,21 @@
 
 import { Button } from "@/components/ui/button";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, BellDot, Bell } from "lucide-react";
 import { useState } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
+import NotificationsDialog from "./NotificationsDialog";
+import { useNotifications } from "./NotificationsList";
+import Messages from "./Messages";
 
 const TopBar = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showMessagesDialog, setShowMessagesDialog] = useState(false);
+  const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
 
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  const unreadCount = useNotifications();
 
   return (
     <header className="bg-primary shadow-md">
@@ -20,6 +25,25 @@ const TopBar = () => {
             {userData.rank} {userData.warName}
           </h2>
         </div>
+        
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => setShowNotificationsDialog(true)}
+          className="text-primary-foreground hover:bg-primary-light relative"
+        >
+          {unreadCount > 0 ? (
+            <>
+              <BellDot className="h-5 w-5" />
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            </>
+          ) : (
+            <Bell className="h-5 w-5" />
+          )}
+          <span className="sr-only">Notificações</span>
+        </Button>
         
         {userData.userType === "admin" && (
           <Button 
@@ -47,6 +71,13 @@ const TopBar = () => {
             onOpenChange={setShowPasswordDialog}
             userId={userData.id}
             currentPassword={userData.password}
+          />
+        )}
+        
+        {showNotificationsDialog && (
+          <NotificationsDialog 
+            open={showNotificationsDialog}
+            onOpenChange={setShowNotificationsDialog}
           />
         )}
         
@@ -78,6 +109,3 @@ const TopBar = () => {
 };
 
 export default TopBar;
-
-// Import Messages at the top of the file, after importing other dependencies:
-import Messages from "./Messages";
