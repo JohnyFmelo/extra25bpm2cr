@@ -34,7 +34,7 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     yPos = checkPageBreak(doc, yPos, 15, data);
     doc.setFont("helvetica", "normal"); doc.setFontSize(12);
     doc.text("-", MARGIN_LEFT, yPos);
-    const itemText = `${qtdeText} ${porcaoText} DE ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}, COM CARACTERÍSTICAS SEMELHANTES AO ENTORPECENTE CONHECIDO COMO ${nomeComum.toUpperCase()}.`;
+    const itemText = `${qtdeText} ${porcaoText} DE MAATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}, E CARACTERÍSTICAS SEMELHANTES AO ENTORPECENTE CONHECIDO COMO ${nomeComum.toUpperCase()}.`;
     yPos = addWrappedText(doc, yPos, itemText, MARGIN_LEFT + 4, 12, "normal", MAX_LINE_WIDTH - 4, 'left', data);
     yPos += 5;
 
