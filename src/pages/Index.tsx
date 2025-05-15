@@ -1,5 +1,4 @@
-
-import { Clock, Calendar, Pencil, FileText, ArrowLeft, Settings, Users, Bell, MessageSquare, MapPinned, Scale, Plus } from "lucide-react";
+import { Bell, Users, MessageSquare, Plus, ArrowLeft } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -17,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import TCOForm from "@/components/TCOForm";
 import TCOmeus from "@/components/tco/TCOmeus";
 import { Button } from "@/components/ui/button";
+import BottomMenuBar from "@/components/BottomMenuBar";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -70,7 +70,7 @@ const Index = () => {
 
   return (
     <div className="relative min-h-screen bg-[#E8F1F2] flex flex-col">
-      <div className="pt-8 px-6 pb-16 max-w-7xl mx-auto flex flex-col flex-grow w-full">
+      <div className="pt-8 px-6 pb-24 max-w-7xl mx-auto flex flex-col flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8 flex flex-col flex-grow">
           <TabsList className="hidden">
             <TabsTrigger value="main">Main</TabsTrigger>
@@ -86,20 +86,15 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="main">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <IconCard icon={Clock} label="Horas" />
-              <IconCard icon={Calendar} label="Extra" onClick={handleExtraClick} />
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
               <IconCard icon={Bell} label="Notificações" onClick={handleNotificationsClick} badge={unreadCount > 0 ? unreadCount : undefined} />
               {user.userType === "admin" && (
                 <>
                   <IconCard icon={Users} label="Usuários" onClick={handleUsersClick} />
                   <IconCard icon={MessageSquare} label="Recados" onClick={handleMessageClick} />
-                  <IconCard icon={Scale} label="TCO" onClick={handleTCOClick} />
                 </>
               )}
-              <IconCard icon={FileText} label="Escala" onClick={handleScheduleClick} />
-              <IconCard icon={Settings} label="Configurações" onClick={handleSettingsClick} />
-              <IconCard icon={MapPinned} label="Viagens" onClick={handleTravelClick} />
+              <IconCard icon={MessageSquare} label="Escala" onClick={handleScheduleClick} />
             </div>
           </TabsContent>
 
@@ -368,9 +363,15 @@ const Index = () => {
           />
         )}
       </div>
+      
+      <BottomMenuBar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        unreadCount={unreadCount}
+        isAdmin={user.userType === "admin"}
+      />
     </div>
   );
 };
 
 export default Index;
-
