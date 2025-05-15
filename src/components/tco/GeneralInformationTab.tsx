@@ -1,9 +1,9 @@
-
 import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toUpperCase } from "@/lib/utils";
 
 interface GeneralInformationTabProps {
   natureza: string;
@@ -77,6 +77,10 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
       setHoraFato(now.toTimeString().slice(0, 5));
     }
   }, [horaFato, setHoraFato]);
+  
+  // The handleInputChange functions ensure we keep the values in uppercase in the PDF
+  // but we don't need to modify the inputs themselves since we're handling the uppercase
+  // conversion in the PDF generation
   
   return <Card>
       <CardHeader>

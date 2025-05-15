@@ -9,3 +9,8 @@ export function cn(...inputs: ClassValue[]) {
 export const formatToastMessage = (message: string): string => {
   return message.replace(/\n/g, ' ').trim()
 }
+
+// New helper function to convert text to uppercase with null/undefined check
+export const toUpperCase = (text: string | null | undefined): string => {
+  return text ? text.toUpperCase() : '';
+}
