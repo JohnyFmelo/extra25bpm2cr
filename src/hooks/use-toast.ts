@@ -10,12 +10,13 @@ type ToastProps = {
 };
 
 // Updated toast function to properly display the full notification text
-export const toast = ({ title, description, variant = "default", duration, className }: ToastProps) => {
+export const toast = ({ title, description, variant = "default", duration = 5000, className }: ToastProps) => {
   if (variant === "destructive") {
     return sonnerToast.error(title, {
       description,
       duration,
-      className
+      className,
+      style: { width: "100%", maxWidth: "500px" }
     });
   }
   
@@ -23,14 +24,16 @@ export const toast = ({ title, description, variant = "default", duration, class
     return sonnerToast.warning(title, {
       description,
       duration,
-      className
+      className,
+      style: { width: "100%", maxWidth: "500px" }
     });
   }
   
   return sonnerToast(title, {
     description,
     duration,
-    className
+    className,
+    style: { width: "100%", maxWidth: "500px" }
   });
 };
 
