@@ -1,2 +1,22 @@
 
 project_id = "evsfhznfnifmqlpktbdr"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+
+[db]
+port = 54322
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+
+[[storage.buckets]]
+name = "tco-pdfs"
+public = true
+file_size_limit = "10MB"
+allowed_mime_types = ["application/pdf"]
