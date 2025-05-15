@@ -48,7 +48,7 @@ export const addTermoManifestacao = (doc, data) => {
     yPos += 5;
 
     yPos = addSignatureWithNameAndRole(doc, yPos, vitima?.nome, "VÍTIMA", data);
-    const nomeCondutorManif = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
+    const nomeCondutorManif = `${condutor?.nome || ""} ${condutor?.posto || ""}`.trim();
     yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutorManif, "CONDUTOR DA OCORRENCIA", data);
 
     return yPos;
