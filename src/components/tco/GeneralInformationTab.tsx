@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 interface GeneralInformationTabProps {
   natureza: string;
   tipificacao: string;
@@ -32,11 +33,12 @@ interface GeneralInformationTabProps {
   setGuarnicao: (value: string) => void;
   operacao: string;
   setOperacao: (value: string) => void;
-  juizadoEspecialData?: string;  // Added as optional
-  setJuizadoEspecialData?: (value: string) => void;  // Added as optional
-  juizadoEspecialHora?: string;  // Added as optional
-  setJuizadoEspecialHora?: (value: string) => void;  // Added as optional
+  juizadoEspecialData?: string;
+  setJuizadoEspecialData?: (value: string) => void;
+  juizadoEspecialHora?: string;
+  setJuizadoEspecialHora?: (value: string) => void;
 }
+
 const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   natureza,
   tipificacao,
@@ -75,6 +77,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
       setHoraFato(now.toTimeString().slice(0, 5));
     }
   }, [horaFato, setHoraFato]);
+  
   return <Card>
       <CardHeader>
         <CardTitle className="flex items-center">Dados da Ocorrência</CardTitle>
@@ -101,27 +104,11 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="dataInicioRegistro">DATA DE INÍCIO DO REGISTRO</Label>
-            <Input id="dataInicioRegistro" type="date" readOnly value={dataInicioRegistro} />
-          </div>
-          <div>
-            <Label htmlFor="horaInicioRegistro">HORA DE INÍCIO</Label>
-            <Input id="horaInicioRegistro" type="time" readOnly value={horaInicioRegistro} />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="dataTerminoRegistro">DATA DE TÉRMINO DO REGISTRO</Label>
-            <Input id="dataTerminoRegistro" type="date" readOnly value={dataTerminoRegistro} />
-          </div>
-          <div>
-            <Label htmlFor="horaTerminoRegistro">HORA DE TÉRMINO</Label>
-            <Input id="horaTerminoRegistro" type="time" readOnly value={horaTerminoRegistro} />
-          </div>
-        </div>
+        {/* Hidden registration date/time fields - they exist but are not displayed to users */}
+        <input type="hidden" id="dataInicioRegistro" value={dataInicioRegistro} />
+        <input type="hidden" id="horaInicioRegistro" value={horaInicioRegistro} />
+        <input type="hidden" id="dataTerminoRegistro" value={dataTerminoRegistro} />
+        <input type="hidden" id="horaTerminoRegistro" value={horaTerminoRegistro} />
         
         <div>
           <Label htmlFor="localFato">LOCAL DO FATO</Label>
@@ -164,4 +151,5 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
       </CardContent>
     </Card>;
 };
+
 export default GeneralInformationTab;
