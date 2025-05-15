@@ -1,4 +1,3 @@
-
 import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -18,6 +17,9 @@ import { Button } from "@/components/ui/button";
 import BottomMenuBar from "@/components/BottomMenuBar";
 import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { WorkedDaysCalendar } from "@/components/hours/WorkedDaysCalendar";
+import { format } from "date-fns";
+import { fetchUserHours } from "@/services/hoursService";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -27,6 +29,9 @@ const Index = () => {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showInformationDialog, setShowInformationDialog] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [hasNotifications, setHasNotifications] = useState(false);
+  const [currentMonthHours, setCurrentMonthHours] = useState<any>(null);
+  const [isLoadingHours, setIsLoadingHours] = useState(true);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
@@ -35,6 +40,50 @@ const Index = () => {
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list"); // Controls sub-tabs in TCO section
+
+  useEffect(() => {
+    const fetchCurrentMonthData = async () => {
+      if (!user?.registration) {
+        setIsLoadingHours(false);
+        return;
+      }
+      
+      try {
+        const currentMonth = format(new Date(), 'MMMM').toLowerCase();
+        const result = await fetchUserHours(currentMonth, user.registration);
+        
+        if (result && !result.error && result.length > 0) {
+          setCurrentMonthHours(result[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching current month hours:", error);
+      } finally {
+        setIsLoadingHours(false);
+      }
+    };
+    
+    fetchCurrentMonthData();
+  }, [user?.registration]);
+
+  useEffect(() => {
+    // Add listener to check for notifications
+    const handleNotificationsChange = (count: number) => {
+      setHasNotifications(count > 0);
+    };
+    
+    // Initial check
+    if (unreadCount > 0) {
+      setHasNotifications(true);
+    }
+    
+    // Add listener to the NotificationsList component
+    const notificationsChangeEvent = new CustomEvent('notificationsUpdate', { detail: { count: unreadCount } });
+    window.addEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
+    
+    return () => {
+      window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
+    };
+  }, [unreadCount]);
 
   const handleEditorClick = () => {
     setActiveTab("editor");
@@ -65,8 +114,83 @@ const Index = () => {
     setShowLogoutDialog(false);
   };
   
-  const handleRefresh = () => {
-    window.location.reload();
+  // Format the current month/year for the calendar
+  const getCurrentMonthYear = () => {
+    const now = new Date();
+    return `${now.getMonth() + 1}/${now.getFullYear()}`;
+  };
+
+  // Transform hours data for the WorkedDaysCalendar component
+  const transformHoursData = () => {
+    if (!currentMonthHours) return { workedDays: [], total: "0" };
+    
+    const workedDays = [];
+    const daysInCurrentMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+    
+    // Add BPM hours if available
+    if (currentMonthHours["Horas 25° BPM"]) {
+      const bpmHoursRaw = currentMonthHours["Horas 25° BPM"].toString();
+      const bpmHoursArray = bpmHoursRaw.split(',');
+      
+      bpmHoursArray.forEach((hourEntry: string) => {
+        const match = hourEntry.match(/(\d+)=(\d+(?:\.\d+)?)/);
+        if (match && match.length >= 3) {
+          const day = match[1];
+          const hours = match[2];
+          
+          workedDays.push({
+            day,
+            hours,
+            location: 'bpm'
+          });
+        }
+      });
+    }
+    
+    // Add SAIOP hours if available
+    if (currentMonthHours["Saiop"]) {
+      const saiopHoursRaw = currentMonthHours["Saiop"].toString();
+      const saiopHoursArray = saiopHoursRaw.split(',');
+      
+      saiopHoursArray.forEach((hourEntry: string) => {
+        const match = hourEntry.match(/(\d+)=(\d+(?:\.\d+)?)/);
+        if (match && match.length >= 3) {
+          const day = match[1];
+          const hours = match[2];
+          
+          workedDays.push({
+            day,
+            hours,
+            location: 'saiop'
+          });
+        }
+      });
+    }
+    
+    // Add SINFRA hours if available
+    if (currentMonthHours["Sinfra"]) {
+      const sinfraHoursRaw = currentMonthHours["Sinfra"].toString();
+      const sinfraHoursArray = sinfraHoursRaw.split(',');
+      
+      sinfraHoursArray.forEach((hourEntry: string) => {
+        const match = hourEntry.match(/(\d+)=(\d+(?:\.\d+)?)/);
+        if (match && match.length >= 3) {
+          const day = match[1];
+          const hours = match[2];
+          
+          workedDays.push({
+            day,
+            hours,
+            location: 'sinfra'
+          });
+        }
+      });
+    }
+    
+    return { 
+      workedDays, 
+      total: currentMonthHours["Total Geral"] || "0" 
+    };
   };
 
   return (
@@ -85,9 +209,42 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="main">
-            {/* Display notifications directly on main page */}
+            {/* Only show notifications if there are any */}
+            {hasNotifications && (
+              <div className="bg-white rounded-xl shadow-lg mb-6">
+                <NotificationsList />
+              </div>
+            )}
+            
+            {/* Current Month Hours Calendar */}
             <div className="bg-white rounded-xl shadow-lg mb-6">
-              <NotificationsList />
+              <h2 className="text-xl font-bold p-4 border-b">Horas do Mês Atual</h2>
+              {isLoadingHours ? (
+                <div className="p-6 text-center">Carregando...</div>
+              ) : currentMonthHours ? (
+                <div className="p-4">
+                  <WorkedDaysCalendar
+                    monthYear={getCurrentMonthYear()}
+                    {...transformHoursData()}
+                    isAdmin={false}
+                  />
+                </div>
+              ) : (
+                <div className="p-6 text-center">
+                  <p className="text-gray-600">
+                    {user?.registration 
+                      ? "Nenhum registro de horas encontrado para este mês." 
+                      : "Cadastre sua matrícula para visualizar suas horas."}
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => navigate('/hours')}
+                  >
+                    Ver Detalhes
+                  </Button>
+                </div>
+              )}
             </div>
           </TabsContent>
 
