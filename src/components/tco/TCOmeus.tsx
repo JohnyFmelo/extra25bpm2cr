@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface TCOmeusProps {
   user: { id: string; registration?: string };
@@ -24,6 +25,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [tcoToDelete, setTcoToDelete] = useState<any | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Função para buscar os TCOs do usuário do Supabase
   const fetchUserTcos = async () => {
@@ -133,18 +136,26 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     return uuidRegex.test(str);
   };
 
+  // Função para confirmar exclusão de um TCO
+  const confirmDelete = (tco: any) => {
+    setTcoToDelete(tco);
+    setIsDeleteDialogOpen(true);
+  };
+
   // Função para excluir um TCO
-  const handleDeleteTco = async (tco: any) => {
+  const handleDeleteTco = async () => {
+    if (!tcoToDelete) return;
+    
     try {
       setIsDeleting(true);
       
       // Excluir do Supabase storage primeiro
-      if (tco.pdfPath) {
-        console.log("Tentando excluir arquivo:", tco.pdfPath);
+      if (tcoToDelete.pdfPath) {
+        console.log("Tentando excluir arquivo:", tcoToDelete.pdfPath);
         
         const { error: storageError, data } = await supabase.storage
           .from(BUCKET_NAME)
-          .remove([tco.pdfPath]);
+          .remove([tcoToDelete.pdfPath]);
         
         console.log("Resultado da exclusão:", data);
         
@@ -155,11 +166,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
       }
 
       // Excluir do banco de dados Supabase se for um registro de banco e tiver ID UUID
-      if (tco.source === 'supabase' && isValidUUID(tco.id)) {
+      if (tcoToDelete.source === 'supabase' && isValidUUID(tcoToDelete.id)) {
         const { error } = await supabase
           .from('tco_pdfs')
           .delete()
-          .eq('id', tco.id);
+          .eq('id', tcoToDelete.id);
         
         if (error) {
           console.error("Erro ao excluir TCO do banco de dados:", error);
@@ -167,8 +178,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         }
       }
 
-      setTcoList(tcoList.filter(item => item.id !== tco.id));
-      if (selectedTco?.id === tco.id) setSelectedTco(null);
+      setTcoList(tcoList.filter(item => item.id !== tcoToDelete.id));
+      if (selectedTco?.id === tcoToDelete.id) setSelectedTco(null);
       
       toast({
         title: "TCO Excluído",
@@ -183,6 +194,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
       });
     } finally {
       setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+      setTcoToDelete(null);
     }
   };
 
@@ -345,12 +358,12 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteTco(tco);
+                        confirmDelete(tco);
                       }}
                       disabled={isDeleting}
                       aria-label={`Excluir TCO ${tco.tcoNumber}`}
                     >
-                      <Trash2 className={`h-4 w-4 ${isDeleting ? "text-gray-400" : "text-red-500 hover:text-red-700"}`} />
+                      <Trash2 className={`h-4 w-4 text-red-500 hover:text-red-700`} />
                     </Button>
                   </div>
                 </TableCell>
@@ -360,51 +373,45 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         </Table>
       )}
 
-      {/* PDF Viewer Dialog - Enhanced version */}
+      {/* PDF Viewer Dialog - Simplified and direct */}
       <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
-        <DialogContent className="max-w-4xl h-[80vh]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-primary">Visualização do TCO</DialogTitle>
-            <DialogDescription>
-              Visualizando o documento selecionado
-            </DialogDescription>
-          </DialogHeader>
-          
+        <DialogContent className="max-w-4xl h-[80vh] p-0 overflow-hidden">
           {selectedPdfUrl ? (
-            <div className="w-full h-full min-h-[500px] rounded-lg overflow-hidden border border-gray-200 shadow-inner bg-gray-50">
-              <iframe
-                src={`${selectedPdfUrl}#toolbar=1&navpanes=1`}
-                className="w-full h-full"
-                title="PDF Viewer"
-                style={{ border: "none" }}
-              />
-            </div>
+            <iframe
+              src={selectedPdfUrl}
+              className="w-full h-full"
+              title="PDF Viewer"
+              style={{ border: "none" }}
+            />
           ) : (
             <div className="flex items-center justify-center h-full">
-              <Skeleton className="h-full w-full rounded-lg" />
+              <Skeleton className="h-full w-full" />
             </div>
           )}
-          
-          <div className="flex justify-end space-x-3 mt-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsPdfDialogOpen(false)}
-            >
-              Fechar
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => {
-                if (selectedPdfUrl) window.open(selectedPdfUrl, '_blank');
-              }}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Baixar PDF
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este TCO? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteTco}
+              disabled={isDeleting}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
