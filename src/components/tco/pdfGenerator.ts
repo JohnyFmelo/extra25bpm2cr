@@ -1,5 +1,6 @@
 
 import jsPDF from "jspdf";
+import { supabase } from "@/integrations/supabase/client";
 
 // Importa funções auxiliares e de página da subpasta PDF
 import {
@@ -175,11 +176,71 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         }
                     }
 
-                    // Opcionalmente, gera um download local
+                    // Generate blob and resolve the promise
+                    const pdfBlob = doc.output('blob');
+                    
+                    const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
+                    const dateStr = new Date().toISOString().slice(0, 10);
+                    
+                    // Upload to Supabase Storage
+                    if (!data.skipSupabaseUpload) {
+                        // Get user info for folder path
+                        const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
+                        const userId = userInfo.id || 'anonimo';
+                        
+                        const filePath = `tcos/${userId}/${tcoNumParaNome}_${dateStr}.pdf`;
+                        const BUCKET_NAME = 'tco-pdfs';
+                        
+                        console.log(`Enviando PDF para Supabase Storage: ${filePath}`);
+                        
+                        // Upload to Supabase Storage
+                        supabase.storage.from(BUCKET_NAME).upload(filePath, pdfBlob, {
+                            contentType: 'application/pdf',
+                            upsert: true
+                        })
+                        .then(response => {
+                            const { error } = response;
+                            if (error) {
+                                console.error('Erro ao fazer upload para Supabase:', error);
+                            } else {
+                                console.log('PDF enviado com sucesso para Supabase Storage:', filePath);
+                                
+                                // Get public URL
+                                supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath)
+                                    .then(urlData => {
+                                        const publicUrl = urlData.data?.publicUrl;
+                                        console.log('URL pública do PDF:', publicUrl);
+                                        
+                                        // Save metadata to database
+                                        if (publicUrl) {
+                                            const TABLE_NAME = 'tco_pdfs';
+                                            const tcoMetadata = {
+                                                tcoNumber: data.tcoNumber,
+                                                natureza: data.natureza === 'Outros' ? data.customNatureza : data.natureza,
+                                                policiais: data.componentesGuarnicao || [],
+                                                pdfPath: filePath,
+                                                pdfUrl: publicUrl,
+                                                createdBy: userId,
+                                                createdAt: new Date().toISOString()
+                                            };
+                                            
+                                            supabase.from(TABLE_NAME).insert([tcoMetadata])
+                                                .then(insertResponse => {
+                                                    if (insertResponse.error) {
+                                                        console.error('Erro ao salvar metadados no Supabase:', insertResponse.error);
+                                                    } else {
+                                                        console.log('Metadados do TCO salvos no Supabase');
+                                                    }
+                                                });
+                                        }
+                                    });
+                            }
+                        });
+                    }
+                    
+                    // Opcionalmente, gera um download local se solicitado
                     if (data.downloadLocal) {
                         try {
-                            const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
-                            const dateStr = new Date().toISOString().slice(0, 10);
                             const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
                             
                             doc.save(fileName);
@@ -189,9 +250,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                             // Não falha a Promise principal se o download falhar
                         }
                     }
-
-                    // Generate blob and resolve the promise
-                    const pdfBlob = doc.output('blob');
+                    
                     clearTimeout(timeout);
                     resolve(pdfBlob);
                 })
