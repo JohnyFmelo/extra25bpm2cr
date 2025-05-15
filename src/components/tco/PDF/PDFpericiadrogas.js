@@ -27,6 +27,12 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     const nomeAutor = autor?.nome || "[NOME NÃO INFORMADO]";
     const dataFatoStr = formatarDataSimples(data.dataFato) || "20/02/2025"; // Format like DD/MM/YYYY
 
+    // Flexão de gênero para autor/autora
+    const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'A' : 'O';
+    const autorArtigo = autor?.sexo?.toLowerCase() === 'feminino' ? 'A' : 'O';
+    const autorTermo = autor?.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR';
+    const qualificado = autor?.sexo?.toLowerCase() === 'feminino' ? 'QUALIFICADA' : 'QUALIFICADO';
+
     // Título
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
@@ -36,8 +42,7 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     // Conteúdo principal
     doc.setFont("helvetica", "normal"); doc.setFontSize(12);
     
-    const generoAutor = autor?.sexo === "Feminino" ? "A" : "O";
-    const autorTextoFragment = `D${generoAutor} ${generoAutor} AUTOR${autor?.sexo === "Feminino" ? "A" : ""} DO FATO ${nomeAutor}, QUALIFICAD${generoAutor} NESTE TCO`;
+    const autorTextoFragment = `D${generoAutor} ${autorArtigo} ${autorTermo} DO FATO ${nomeAutor}, ${qualificado} NESTE TCO`;
     
     const textoRequisicao = `REQUISITO A POLITEC, NOS TERMOS DO ARTIGO 159 E SEGUINTES DO CPP COMBINADO COM O ARTIGO 69, CAPUT DA LEI N° 9.99/95, COMBINADO COM O ARTIGO 48, §2 E ARTIGO 50, §1° DA LEI N° 11,343/2006, SOLICITO A REALIZAÇÃO DE EXAME QUÍMICO NA SUBSTÂNCIA ANÁLOGA A ENTORPECENTE APENSADO SOB LACRE N° ${lacreNumero}, ENCONTRADO EM POSSE ${autorTextoFragment}, DE NATUREZA PORTE ILEGAL DE DROGAS, OCORRIDO NA DATA DE ${dataFatoStr}.`.toUpperCase();
     

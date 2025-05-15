@@ -73,9 +73,17 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     // --- SEÇÃO 2: ENVOLVIDOS ---
     yPos = addSectionTitle(doc, yPos, "ENVOLVIDOS", "2", 1, data);
 
-    // Seção 2.1: Autor(es) - Ajusta singular/plural
+    // Seção 2.1: Autor(es) - Ajusta singular/plural e aplica flexão de gênero
     const autoresValidos = data.autores ? data.autores.filter(a => a?.nome) : [];
-    const autorTitle = autoresValidos.length === 1 ? "AUTOR DO FATO" : "AUTORES DO FATO";
+    
+    // Determina o título com base na quantidade e gênero
+    let autorTitle;
+    if (autoresValidos.length === 1) {
+        autorTitle = autoresValidos[0]?.sexo?.toLowerCase() === 'feminino' ? "AUTORA DO FATO" : "AUTOR DO FATO";
+    } else {
+        autorTitle = "AUTORES DO FATO"; // Plural para múltiplos autores, independente do gênero
+    }
+    
     yPos = addSectionTitle(doc, yPos, autorTitle, "2.1", 2, data);
     if (autoresValidos.length > 0) {
         autoresValidos.forEach((autor, index) => {
@@ -168,18 +176,22 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
     // --- SEÇÃO 3: HISTÓRICO ---
     const primeiroAutor = data.autores?.[0];
-    const primeiraVitima = vitimasValidas.length > 0 ? vitimasValidas[0] : null;
-    const primeiraTestemunha = testemunhasValidas.length > 0 ? testemunhasValidas[0] : null;
+    const primeiraVitima = data.vitimas?.find(v => v?.nome);
+    const primeiraTestemunha = data.testemunhas?.find(t => t?.nome);
 
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
     yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", "3.1", 2, data);
     yPos = addWrappedText(doc, yPos, data.relatoPolicial, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
-    yPos = addSectionTitle(doc, yPos, "RELATO DO AUTOR DO FATO", "3.2", 2, data);
+    // Aplica flexão de gênero no título do relato do autor
+    const tituloRelatoAutor = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "RELATO DA AUTORA DO FATO" : "RELATO DO AUTOR DO FATO";
+    yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, "3.2", 2, data);
     yPos = addWrappedText(doc, yPos, data.relatoAutor, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    
     if (primeiroAutor) {
-        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor?.nome, "AUTOR DO FATO", data);
+        const autorLabel = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "AUTORA DO FATO" : "AUTOR DO FATO";
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor?.nome, autorLabel, data);
     } else {
         yPos += 10;
     }

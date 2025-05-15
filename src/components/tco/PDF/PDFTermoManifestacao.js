@@ -1,3 +1,4 @@
+
 // src/components/tco/PDF/PDFTermoManifestacao.js
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
@@ -15,6 +16,10 @@ export const addTermoManifestacao = (doc, data) => {
     let yPos = addNewPage(doc, data);
     const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
     const condutor = data.componentesGuarnicao?.[0];
+    const autor = data.autores?.[0];
+    
+    // Flexão de gênero para autor do fato
+    const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR';
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
@@ -34,7 +39,7 @@ export const addTermoManifestacao = (doc, data) => {
         console.warn("Opção 'representacao' não definida ou inválida nos dados. Ambas as opções ficarão desmarcadas.");
     }
 
-    const option1Text = `${manifestacaoOption1} EXERCER O DIREITO DE REPRESENTAÇÃO OU QUEIXA CONTRA O AUTOR DO FATO, JÁ QUALIFICADO NESTE TCO/PM (FICA CIENTIFICADA QUE EM CASO DE QUEIXA-CRIME, A VÍTIMA DEVERÁ CONSTITUIR ADVOGADO).`;
+    const option1Text = `${manifestacaoOption1} EXERCER O DIREITO DE REPRESENTAÇÃO OU QUEIXA CONTRA ${generoAutor === 'AUTORA' ? 'A' : 'O'} ${generoAutor} DO FATO, JÁ QUALIFICAD${generoAutor === 'AUTORA' ? 'A' : 'O'} NESTE TCO/PM (FICA CIENTIFICADA QUE EM CASO DE QUEIXA-CRIME, A VÍTIMA DEVERÁ CONSTITUIR ADVOGADO).`;
     yPos = addWrappedText(doc, yPos, option1Text, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 5;
 

@@ -1,3 +1,4 @@
+
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak, formatarDataSimples
@@ -9,6 +10,10 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
     const condutor = data.componentesGuarnicao?.[0];
     const autor = data.autores?.[0];
+    
+    // Flexão de gênero para autor do fato
+    const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR';
+    const pronomeAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'DA' : 'DO';
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
@@ -16,7 +21,7 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     yPos += 10;
 
     const tipificacaoDroga = data.tipificacao || "PORTE DE DROGA PARA CONSUMO PESSOAL (ART. 28 DA LEI 11.343/06)";
-    const textoIntro = `EM RAZÃO DA LAVRATURA DESTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA, PELO DELITO TIPIFICADO: ${tipificacaoDroga}, FOI APREENDIDO O MATERIAL DESCRITO ABAIXO, EM PODER DO AUTOR ABAIXO ASSINADO JÁ QUALIFICADO NOS AUTOS. APÓS CIÊNCIA DAS IMPLICAÇÕES LEGAIS DO ENCARGO ASSUMIDO, FIRMOU-SE O COMPROMISSO LEGAL DE PROCEDER À ANÁLISE PRELIMINAR DOS SEGUINTES MATERIAIS:`;
+    const textoIntro = `EM RAZÃO DA LAVRATURA DESTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA, PELO DELITO TIPIFICADO: ${tipificacaoDroga}, FOI APREENDIDO O MATERIAL DESCRITO ABAIXO, EM PODER ${pronomeAutor} ${generoAutor} ABAIXO ASSINADO JÁ QUALIFICAD${autor?.sexo?.toLowerCase() === 'feminino' ? 'A' : 'O'} NOS AUTOS. APÓS CIÊNCIA DAS IMPLICAÇÕES LEGAIS DO ENCARGO ASSUMIDO, FIRMOU-SE O COMPROMISSO LEGAL DE PROCEDER À ANÁLISE PRELIMINAR DOS SEGUINTES MATERIAIS:`;
     yPos = addWrappedText(doc, yPos, textoIntro, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 5;
 
@@ -57,7 +62,7 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     doc.text(dateText, PAGE_WIDTH - MARGIN_RIGHT, yPos, { align: 'right' });
     yPos += 15;
 
-    yPos = addSignatureWithNameAndRole(doc, yPos, autor?.nome, "AUTOR DOS FATOS", data);
+    yPos = addSignatureWithNameAndRole(doc, yPos, autor?.nome, `${generoAutor} DOS FATOS`, data);
     const nomeCondutor = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
     yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutor, "CONDUTOR DA OCORRÊNCIA", data);
 

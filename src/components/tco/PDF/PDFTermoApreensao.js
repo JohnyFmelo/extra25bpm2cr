@@ -179,6 +179,9 @@ export function addTermoApreensao(doc, data) {
     const isDroga = data.natureza && data.natureza.toLowerCase() === "porte de drogas para consumo";
     const lacreNumero = data.lacreNumero || "00000000";
 
+    // Flexão de gênero para autor do fato
+    const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR';
+
     const TABLE_CONTENT_FONT_SIZE = DEFAULT_FONT_SIZE; // Use consistent font size
 
     const colWidth = MAX_LINE_WIDTH / 3;
@@ -308,8 +311,8 @@ export function addTermoApreensao(doc, data) {
     currentY += 5; // Reduzido de 7 para 5
     doc.setFont(DEFAULT_FONT_NAME, "normal");
     doc.setFontSize(10);
-    const autorLabel = autor?.sexo === "Feminino" ? "AUTORA DOS FATOS" : "AUTOR DOS FATOS";
-    currentY = addSignatureWithNameAndRole(doc, currentY, (autor?.nome || "").toUpperCase(), autorLabel.toUpperCase(), data);
+    const autorLabel = autor?.sexo?.toLowerCase() === 'feminino' ? "AUTORA DOS FATOS" : "AUTOR DOS FATOS";
+    currentY = addSignatureWithNameAndRole(doc, currentY, (autor?.nome || "").toUpperCase(), autorLabel, data);
     const nomeCondutorCompleto = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim().toUpperCase();
     currentY = addSignatureWithNameAndRole(doc, currentY, nomeCondutorCompleto, "CONDUTOR DA OCORRÊNCIA".toUpperCase(), data);
 
