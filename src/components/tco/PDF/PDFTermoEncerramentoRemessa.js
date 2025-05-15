@@ -19,7 +19,7 @@ export const addTermoEncerramentoRemessa = (doc, data) => {
     const tcoRef = data.tcoRefEncerramento || `Nº ${data.tcoNumber || 'INDEFINIDO'}/25ºBPM/2ºCR/${year}`;
     
     // Aplicação da flexão de gênero conforme solicitado
-    const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'da Sra.' : 'do Sr.';
+    const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'DA SRA.' : 'DO SR.';
     const nomeAutorMencao = autor?.nome ? `${generoAutor} ${autor.nome.toUpperCase()}` : "DO(A) ENVOLVIDO(A) QUALIFICADO(A) NOS AUTOS";
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
