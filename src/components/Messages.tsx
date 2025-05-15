@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,7 +15,11 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-const Messages = () => {
+interface MessagesProps {
+  onClose?: () => void;
+}
+
+const Messages = ({ onClose }: MessagesProps) => {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string>("all");
@@ -55,9 +60,11 @@ const Messages = () => {
         text: message.trim(),
         senderId: currentUser.id,
         senderName: currentUser.warName,
+        graduation: currentUser.rank || "",
         timestamp: serverTimestamp(),
         type: selectedUser === "all" ? "all" : "individual",
         recipientId: selectedUser === "all" ? null : selectedUser,
+        isAdmin: currentUser.userType === "admin"
       });
 
       toast({
@@ -65,6 +72,9 @@ const Messages = () => {
         description: "Recado enviado com sucesso.",
       });
       setMessage("");
+      if (onClose) {
+        onClose();
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -78,9 +88,7 @@ const Messages = () => {
   };
 
   return (
-    <div className="space-y-6 p-6 bg-white rounded-xl shadow-lg">
-      <h2 className="text-2xl font-semibold text-primary">Enviar Recado</h2>
-      
+    <div className="space-y-6 p-6">
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="recipient">Destinatário</Label>
@@ -110,14 +118,25 @@ const Messages = () => {
           />
         </div>
 
-        <Button
-          onClick={handleSendMessage}
-          disabled={isSending}
-          className="w-full"
-        >
-          <SendHorizontal className="mr-2 h-4 w-4" />
-          {selectedUser === "all" ? "Enviar para Todos" : "Enviar"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleSendMessage}
+            disabled={isSending}
+            className="flex-1"
+          >
+            <SendHorizontal className="mr-2 h-4 w-4" />
+            {selectedUser === "all" ? "Enviar para Todos" : "Enviar"}
+          </Button>
+          {onClose && (
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="w-24"
+            >
+              Fechar
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

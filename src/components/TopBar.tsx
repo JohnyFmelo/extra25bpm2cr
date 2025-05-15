@@ -1,37 +1,14 @@
 
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
-import { useState, useEffect } from "react";
+import { MessageSquare } from "lucide-react";
+import { useState } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
 
 const TopBar = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-
-  const handleRefresh = () => {
-    window.location.reload();
-  };
-
-  // Função para calcular o tempo restante até as 06:00
-  const calculateTimeToSixAM = () => {
-    const now = new Date();
-    const sixAM = new Date(now);
-    sixAM.setHours(6, 0, 0, 0);
-    if (now >= sixAM) {
-      sixAM.setDate(sixAM.getDate() + 1); // Se já passou das 06:00, agende para o próximo dia
-    }
-    return sixAM.getTime() - now.getTime();
-  };
-
-  // UseEffect para agendar a atualização às 06:00
-  useEffect(() => {
-    const timeToSixAM = calculateTimeToSixAM();
-    const timeoutId = setTimeout(handleRefresh, timeToSixAM);
-
-    // Limpar o timeout quando o componente for desmontado
-    return () => clearTimeout(timeoutId);
-  }, []);
+  const [showMessagesDialog, setShowMessagesDialog] = useState(false);
 
   const userData = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -44,15 +21,17 @@ const TopBar = () => {
           </h2>
         </div>
         
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="text-primary-foreground hover:bg-primary-light"
-          onClick={handleRefresh}
-        >
-          <RefreshCw className="h-5 w-5" />
-          <span className="sr-only">Atualizar página</span>
-        </Button>
+        {userData.userType === "admin" && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setShowMessagesDialog(prev => !prev)}
+            className="text-primary-foreground hover:bg-primary-light"
+          >
+            <MessageSquare className="h-5 w-5" />
+            <span className="sr-only">Enviar Recado</span>
+          </Button>
+        )}
         
         {showProfileDialog && (
           <ProfileUpdateDialog
@@ -70,9 +49,35 @@ const TopBar = () => {
             currentPassword={userData.password}
           />
         )}
+        
+        {showMessagesDialog && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg w-full max-w-md">
+              <div className="p-4 bg-primary rounded-t-lg">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-white">Enviar Recado</h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowMessagesDialog(false)}
+                    className="text-white hover:bg-primary-dark"
+                  >
+                    X
+                  </Button>
+                </div>
+              </div>
+              <div className="max-h-[80vh] overflow-auto">
+                <Messages onClose={() => setShowMessagesDialog(false)} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
 };
 
 export default TopBar;
+
+// Import Messages at the top of the file, after importing other dependencies:
+import Messages from "./Messages";

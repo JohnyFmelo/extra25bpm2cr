@@ -1,15 +1,14 @@
 
-import { Bell, Users, MessageSquare, Plus, ArrowLeft } from "lucide-react";
+import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UsersList from "@/components/UsersList";
 import ProfileUpdateDialog from "@/components/ProfileUpdateDialog";
 import PasswordChangeDialog from "@/components/PasswordChangeDialog";
 import InformationDialog from "@/components/InformationDialog";
-import Messages from "@/components/Messages";
 import NotificationsList, { useNotifications } from "@/components/NotificationsList";
 import { TravelManagement } from "@/components/TravelManagement";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import BottomMenuBar from "@/components/BottomMenuBar";
 import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { LogOut } from "lucide-react";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -37,9 +35,6 @@ const Index = () => {
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list"); // Controls sub-tabs in TCO section
-  
-  // States for messages in notifications section
-  const [showMessagesTab, setShowMessagesTab] = useState(false);
 
   const handleEditorClick = () => {
     setActiveTab("editor");
@@ -50,8 +45,6 @@ const Index = () => {
   const handleBackClick = () => {
     if (activeTab === "editor") {
       setActiveTab("extra");
-    } else if (showMessagesTab) {
-      setShowMessagesTab(false);
     } else {
       setActiveTab("main");
     }
@@ -65,14 +58,15 @@ const Index = () => {
   const handleTCOClick = () => {
     setActiveTab("tco");
   };
-  const handleNotificationsClick = () => {
-    setActiveTab("notifications");
-  };
   
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
     setShowLogoutDialog(false);
+  };
+  
+  const handleRefresh = () => {
+    window.location.reload();
   };
 
   return (
@@ -87,11 +81,13 @@ const Index = () => {
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="travel">Travel</TabsTrigger>
             <TabsTrigger value="tco">TCO</TabsTrigger>
+            <TabsTrigger value="users">Users</TabsTrigger>
           </TabsList>
 
           <TabsContent value="main">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <IconCard icon={Bell} label="Notificações" onClick={handleNotificationsClick} badge={unreadCount > 0 ? unreadCount : undefined} />
+            {/* Display notifications directly on main page */}
+            <div className="bg-white rounded-xl shadow-lg mb-6">
+              <NotificationsList />
             </div>
           </TabsContent>
 
@@ -155,12 +151,25 @@ const Index = () => {
                     <h3 className="font-medium">Informações</h3>
                     <p className="text-sm text-gray-600">Visualize a estrutura funcional do sistema</p>
                   </button>
+                  <button
+                    onClick={handleRefresh}
+                    className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <RefreshCw className="h-5 w-5" />
+                      <h3 className="font-medium">Atualizar</h3>
+                    </div>
+                    <p className="text-sm text-gray-600">Recarregar dados do sistema</p>
+                  </button>
                   {user.userType === "admin" && (
                     <button
                       onClick={() => setActiveTab("users")}
                       className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                      <h3 className="font-medium">Usuários</h3>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        <h3 className="font-medium">Usuários</h3>
+                      </div>
                       <p className="text-sm text-gray-600">Gerenciar usuários do sistema</p>
                     </button>
                   )}
@@ -214,43 +223,6 @@ const Index = () => {
               <div className="bg-white rounded-xl shadow-lg">
                 <UsersList />
               </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="notifications">
-            <div className="relative">
-              <div className="absolute right-0 -top-12 mb-4">
-                <button
-                  onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary"
-                  aria-label="Voltar para home"
-                >
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
-              </div>
-              
-              {!showMessagesTab ? (
-                <>
-                  <div className="bg-white rounded-xl shadow-lg">
-                    <NotificationsList />
-                  </div>
-                  
-                  {user.userType === "admin" && (
-                    <div className="fixed bottom-6 right-6 z-10">
-                      <Button
-                        onClick={() => setShowMessagesTab(true)}
-                        className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 flex items-center justify-center text-gray-50"
-                      >
-                        <Plus className="h-6 w-6" />
-                      </Button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="bg-white rounded-xl shadow-lg">
-                  <Messages />
-                </div>
-              )}
             </div>
           </TabsContent>
 
@@ -383,7 +355,6 @@ const Index = () => {
       <BottomMenuBar
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        unreadCount={unreadCount}
         isAdmin={user.userType === "admin"}
       />
     </div>
