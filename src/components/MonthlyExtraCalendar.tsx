@@ -89,10 +89,19 @@ const MonthlyExtraCalendar = () => {
     parseFloat(data["Total Geral"].replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
   
   if (loading) {
-    return <div className="animate-pulse p-4 bg-gray-100 rounded-lg">
-      <div className="h-6 bg-gray-200 rounded w-1/3 mb-2"></div>
-      <div className="h-24 bg-gray-200 rounded"></div>
-    </div>;
+    return (
+      <Card className="shadow-sm border border-gray-100 overflow-hidden">
+        <CardContent className="p-0">
+          <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 animate-pulse">
+            <div className="flex items-center mb-4">
+              <div className="h-5 w-5 rounded-full bg-gray-200 mr-2"></div>
+              <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+            </div>
+            <div className="h-24 bg-gray-200/80 rounded"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
   
   if (!data || workedDays.length === 0) {
@@ -100,19 +109,23 @@ const MonthlyExtraCalendar = () => {
   }
   
   return (
-    <Card className="shadow-md mb-8">
-      <CardContent className="p-4">
-        <div className="flex items-center mb-4">
-          <CalendarDays className="h-5 w-5 text-indigo-500 mr-2" />
-          <h2 className="text-xl font-bold text-gray-900">Extras do Mês Atual</h2>
+    <Card className="shadow-sm border border-gray-100 overflow-hidden">
+      <CardContent className="p-0">
+        <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10">
+          <div className="flex items-center mb-4">
+            <CalendarDays className="h-5 w-5 text-primary mr-2" />
+            <h2 className="text-lg font-semibold text-gray-800">Extras do Mês Atual</h2>
+          </div>
+          
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+            <WorkedDaysCalendar
+              monthYear={getCurrentMonthYear()}
+              workedDays={workedDays}
+              total={totalHours.toString()}
+              isAdmin={false}
+            />
+          </div>
         </div>
-        
-        <WorkedDaysCalendar
-          monthYear={getCurrentMonthYear()}
-          workedDays={workedDays}
-          total={totalHours.toString()}
-          isAdmin={false}
-        />
       </CardContent>
     </Card>
   );

@@ -1,36 +1,37 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 192 20% 95%;
-    --foreground: 209 54% 16%;
+    --background: 210 50% 98%;
+    --foreground: 220 20% 16%;
 
-    --card: 192 20% 95%;
-    --card-foreground: 209 54% 16%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 16%;
 
-    --popover: 192 20% 95%;
-    --popover-foreground: 209 54% 16%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 16%;
 
-    --primary: 209 54% 16%;
-    --primary-foreground: 192 20% 95%;
+    --primary: 217 89% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 201 100% 29%;
-    --secondary-foreground: 192 20% 95%;
+    --secondary: 138 47% 43%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 201 48% 38%;
-    --muted-foreground: 192 20% 95%;
+    --muted: 0 0% 46%;
+    --muted-foreground: 0 0% 100%;
 
-    --accent: 197 63% 38%;
-    --accent-foreground: 192 20% 95%;
+    --accent: 45 95% 50%;
+    --accent-foreground: 220 20% 16%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 201 48% 38%;
-    --input: 201 48% 38%;
-    --ring: 201 48% 38%;
+    --border: 220 20% 86%;
+    --input: 220 20% 86%;
+    --ring: 217 89% 50%;
 
     --radius: 0.75rem;
   }
@@ -41,7 +42,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-[#E8F1F2] text-[#13293D];
+    @apply bg-[#F5F9FD] text-[#2C2C2C];
   }
 }
 
@@ -50,5 +51,13 @@
     transition-property: all;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 300ms;
+  }
+  
+  .glass-effect {
+    @apply bg-white/80 backdrop-blur-md border border-white/20;
+  }
+  
+  .card-hover {
+    @apply transition-all hover:shadow-md hover:translate-y-[-2px];
   }
 }

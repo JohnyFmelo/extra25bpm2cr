@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -25,38 +26,38 @@ export default {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
-					DEFAULT: '#13293D',
-					light: '#247BA0',
-					dark: '#006494',
-					foreground: '#E8F1F2'
+					DEFAULT: '#1A73E8',
+					light: '#4285F4',
+					dark: '#0D47A1',
+					foreground: '#FFFFFF'
 				},
 				secondary: {
-					DEFAULT: '#006494',
-					foreground: '#E8F1F2'
+					DEFAULT: '#34A853',
+					foreground: '#FFFFFF'
 				},
 				accent: {
-					DEFAULT: '#247BA0',
-					foreground: '#E8F1F2'
+					DEFAULT: '#FBBC05',
+					foreground: '#2C2C2C'
 				},
 				highlight: {
-					DEFAULT: '#1B98E0',
-					foreground: '#E8F1F2'
+					DEFAULT: '#EA4335',
+					foreground: '#FFFFFF'
 				},
 				destructive: {
 					DEFAULT: 'hsl(var(--destructive))',
 					foreground: 'hsl(var(--destructive-foreground))'
 				},
 				muted: {
-					DEFAULT: 'hsl(var(--muted))',
-					foreground: 'hsl(var(--muted-foreground))'
+					DEFAULT: '#757575',
+					foreground: '#FFFFFF'
 				},
 				popover: {
-					DEFAULT: '#E8F1F2',
-					foreground: '#13293D'
+					DEFAULT: '#FFFFFF',
+					foreground: '#2C2C2C'
 				},
 				card: {
-					DEFAULT: '#E8F1F2',
-					foreground: '#13293D'
+					DEFAULT: '#FFFFFF',
+					foreground: '#2C2C2C'
 				}
 			},
 			borderRadius: {
@@ -72,11 +73,21 @@ export default {
 				'accordion-up': {
 					from: { height: 'var(--radix-accordion-content-height)' },
 					to: { height: '0' }
+				},
+				'fade-in': {
+					from: { opacity: '0' },
+					to: { opacity: '1' }
+				},
+				'fade-out': {
+					from: { opacity: '1' },
+					to: { opacity: '0' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.3s ease-out',
+				'fade-out': 'fade-out 0.3s ease-out'
 			}
 		}
 	},
