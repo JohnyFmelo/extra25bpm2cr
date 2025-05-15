@@ -215,7 +215,7 @@ export function addTermoApreensao(doc, data) {
     currentY = rowY + r1H;
 
     rowY = currentY;
-    const nomePolicial = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim().toUpperCase();
+    const nomePolicial = `${condutor?.nome || ""} ${condutor?.posto || ""}`.trim().toUpperCase();
     const m21 = getCellContentMetrics(doc, "NOME DO POLICIAL", nomePolicial, MAX_LINE_WIDTH, TABLE_CONTENT_FONT_SIZE);
     const r2H = Math.max(MIN_ROW_HEIGHT, m21.height) + CELL_PADDING_Y * 2;
     currentY = checkPageBreak(doc, rowY, r2H, data); if (currentY !== rowY) rowY = currentY;
