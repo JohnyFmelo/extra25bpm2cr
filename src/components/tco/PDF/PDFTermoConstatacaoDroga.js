@@ -63,7 +63,7 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     yPos += 15;
 
     yPos = addSignatureWithNameAndRole(doc, yPos, autor?.nome, `${generoAutor} DOS FATOS`, data);
-    const nomeCondutor = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
+    const nomeCondutor = `${condutor?.nome || ""} ${condutor?.posto || ""}`.trim();
     yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutor, "CONDUTOR DA OCORRÊNCIA", data);
 
     return yPos;
