@@ -1,3 +1,4 @@
+
 import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -24,6 +25,7 @@ import { CalendarDays, Users as UsersIcon, Clock, MapPin, Calendar, Navigation }
 import UpcomingShifts from "@/components/UpcomingShifts";
 import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
+import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -160,6 +162,9 @@ const Index = () => {
               
               {/* Monthly Hours Summary */}
               <MonthlyHoursSummary />
+              
+              {/* Monthly Extra Calendar */}
+              <MonthlyExtraCalendar />
               
               {/* Upcoming Shifts */}
               <UpcomingShifts />
