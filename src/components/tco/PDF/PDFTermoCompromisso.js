@@ -33,7 +33,7 @@ export const addTermoCompromisso = (doc, data) => {
     yPos += 5;
 
     yPos = addSignatureWithNameAndRole(doc, yPos, autor?.nome, `${generoAutor} DO FATO`, data);
-    const nomeCondutorComp = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
+    const nomeCondutorComp = `${condutor?.nome || ""} ${condutor?.posto || ""}`.trim();
     yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutorComp, "CONDUTOR DA OCORRENCIA", data);
 
     return yPos;
