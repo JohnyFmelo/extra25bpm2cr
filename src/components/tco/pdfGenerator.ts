@@ -18,6 +18,7 @@ import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
+import { toast } from "@/hooks/use-toast";
 
 // Função auxiliar para adicionar imagens ao PDF
 const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; data: string }[], pageWidth: number, pageHeight: number) => {
@@ -68,12 +69,22 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
     return new Promise((resolve, reject) => {
         // Set timeout to prevent infinite processing
         const timeout = setTimeout(() => {
+            toast({
+                title: "Erro ao gerar TCO",
+                description: "Tempo limite excedido. Por favor, tente novamente.",
+                variant: "destructive"
+            });
             reject(new Error("Tempo limite excedido ao gerar PDF. Por favor, tente novamente."));
         }, 60000); // 60 segundos de timeout
         
         try {
             if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
                 clearTimeout(timeout);
+                toast({
+                    title: "Erro ao gerar TCO", 
+                    description: "Dados inválidos para gerar o PDF.",
+                    variant: "destructive"
+                });
                 reject(new Error("Dados inválidos para gerar o PDF."));
                 return;
             }
@@ -92,6 +103,17 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 juizadoEspecialData: inputData.juizadoEspecialData || inputData.dataAudiencia,
                 juizadoEspecialHora: inputData.juizadoEspecialHora || inputData.horaAudiencia
             };
+
+            // Converte todos os textos do histórico para maiúsculas
+            if (data.relatoPolicial) data.relatoPolicial = data.relatoPolicial.toUpperCase();
+            if (data.relatoAutor) data.relatoAutor = data.relatoAutor.toUpperCase();
+            if (data.relatoVitima) data.relatoVitima = data.relatoVitima.toUpperCase();
+            if (data.relatoTestemunha) data.relatoTestemunha = data.relatoTestemunha.toUpperCase();
+            if (data.conclusaoPolicial) data.conclusaoPolicial = data.conclusaoPolicial.toUpperCase();
+            if (data.providencias) data.providencias = data.providencias.toUpperCase();
+            if (data.documentosAnexos) data.documentosAnexos = data.documentosAnexos.toUpperCase();
+            if (data.apreensaoDescricao) data.apreensaoDescricao = data.apreensaoDescricao.toUpperCase();
+            if (data.apreensoes) data.apreensoes = data.apreensoes.toUpperCase();
 
             // Pega as constantes da página
             const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
@@ -183,14 +205,30 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     // Generate blob and resolve the promise
                     const pdfBlob = doc.output('blob');
                     clearTimeout(timeout);
+                    toast({
+                        title: "TCO Gerado com Sucesso",
+                        description: "O documento foi gerado e está pronto para download.",
+                        variant: "success",
+                        duration: 3000
+                    });
                     resolve(pdfBlob);
                 })
                 .catch(histError => {
                     clearTimeout(timeout);
+                    toast({
+                        title: "Erro ao gerar histórico do PDF",
+                        description: histError.message,
+                        variant: "destructive"
+                    });
                     reject(new Error(`Erro ao gerar histórico do PDF: ${histError.message}`));
                 });
         } catch (error) {
             clearTimeout(timeout);
+            toast({
+                title: "Erro na geração do PDF",
+                description: error.message,
+                variant: "destructive"
+            });
             reject(new Error(`Erro na geração do PDF: ${error.message}`));
         }
     });
