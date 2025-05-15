@@ -1,3 +1,4 @@
+
 import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -55,6 +56,15 @@ const Index = () => {
       window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     };
   }, [unreadCount]);
+
+  const handleRefresh = () => {
+    // Reload the page to refresh data
+    window.location.reload();
+    toast({
+      title: "Atualizando",
+      description: "Recarregando dados do sistema.",
+    });
+  };
 
   const handleEditorClick = () => {
     setActiveTab("editor");
