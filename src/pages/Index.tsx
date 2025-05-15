@@ -20,7 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { collection, query, onSnapshot, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Card } from "@/components/ui/card";
-import { CalendarDays, Users as UsersIcon, Clock } from "lucide-react";
+import { CalendarDays, Users as UsersIcon, Clock, MapPin, Calendar, Navigation } from "lucide-react";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -79,9 +79,13 @@ const Index = () => {
         .filter((trip: any) => {
           const startDate = new Date(trip.startDate + "T00:00:00");
           const endDate = new Date(trip.endDate + "T00:00:00");
-          // Keep only open or in-transit trips
-          return (today <= endDate) && 
-                 ((today < startDate) || (today >= startDate && today <= endDate));
+          
+          // Only keep trips that are either:
+          // 1. Open (future trips without locked status) OR
+          // 2. In-transit (current trips)
+          return ((today <= endDate) && 
+                 ((today < startDate && !trip.isLocked) || 
+                  (today >= startDate && today <= endDate)));
         })
         .sort((a: any, b: any) => {
           // Sort by date (soonest first)
@@ -172,8 +176,17 @@ const Index = () => {
                     const dailyCount = trip.halfLastDay ? numDays - 0.5 : numDays;
                     
                     return (
-                      <Card key={trip.id} className={`overflow-hidden ${isInTransit ? 'bg-gradient-to-br from-green-50 to-green-100' : 'bg-white'} border border-gray-100 shadow-md`}>
-                        <div className={`absolute top-0 right-0 px-3 py-1 text-xs font-medium text-white ${isInTransit ? 'bg-green-500' : 'bg-blue-500'} rounded-bl-lg`}>
+                      <Card 
+                        key={trip.id} 
+                        className={`overflow-hidden border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 ${
+                          isInTransit 
+                            ? 'bg-gradient-to-br from-green-50 to-green-100' 
+                            : 'bg-white'
+                        }`}
+                      >
+                        <div className={`absolute top-0 right-0 px-3 py-1 text-xs font-medium text-white ${
+                          isInTransit ? 'bg-green-500' : 'bg-blue-500'
+                        } rounded-bl-lg`}>
                           {isInTransit ? 'Em Trânsito' : 'Em Aberto'}
                         </div>
                         
@@ -183,17 +196,25 @@ const Index = () => {
                           </h3>
                           <div className="space-y-2 text-gray-600">
                             <div className="flex items-center gap-2">
-                              <CalendarDays className="h-4 w-4 text-blue-500" />
-                              <p>Início: {travelStart.toLocaleDateString()}</p>
+                              <MapPin className="h-4 w-4 text-blue-500" />
+                              <p>{trip.destination}</p>
                             </div>
+                            
                             <div className="flex items-center gap-2">
-                              <CalendarDays className="h-4 w-4 text-blue-500" />
-                              <p>Fim: {travelEnd.toLocaleDateString()}</p>
+                              <Calendar className="h-4 w-4 text-blue-500" />
+                              <p>{isInTransit ? 'Período: ' : 'Início: '} 
+                                {travelStart.toLocaleDateString()}
+                                {isInTransit && ` até ${travelEnd.toLocaleDateString()}`}
+                              </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <UsersIcon className="h-4 w-4 text-blue-500" />
-                              <p>Vagas: {trip.slots}</p>
-                            </div>
+                            
+                            {!isInTransit && (
+                              <div className="flex items-center gap-2">
+                                <UsersIcon className="h-4 w-4 text-blue-500" />
+                                <p>Vagas: {trip.slots}</p>
+                              </div>
+                            )}
+                            
                             <div className="flex items-center gap-2">
                               <Clock className="h-4 w-4 text-blue-500" />
                               <p>{dailyCount.toLocaleString("pt-BR", {
@@ -201,6 +222,19 @@ const Index = () => {
                                 maximumFractionDigits: 1
                               })} diárias</p>
                             </div>
+
+                            {isInTransit && trip.selectedVolunteers && trip.selectedVolunteers.length > 0 && (
+                              <div className="mt-2">
+                                <p className="font-medium text-sm text-blue-800">Viajantes:</p>
+                                <div className="mt-1 space-y-1">
+                                  {trip.selectedVolunteers.map((volunteer: string, idx: number) => (
+                                    <div key={idx} className="text-sm bg-white/60 px-2 py-1 rounded-md">
+                                      {volunteer}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {isOpen && (
@@ -208,6 +242,7 @@ const Index = () => {
                               onClick={() => handleTravelClick()}
                               className="w-full mt-3 bg-blue-500 hover:bg-blue-600 text-white"
                             >
+                              <Navigation className="h-4 w-4 mr-2" />
                               Ver detalhes
                             </Button>
                           )}
@@ -216,6 +251,12 @@ const Index = () => {
                     );
                   })}
                 </div>
+              </div>
+            )}
+            
+            {activeTrips.length === 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-6 text-center">
+                <p className="text-gray-500">Nenhuma viagem ativa no momento.</p>
               </div>
             )}
           </TabsContent>

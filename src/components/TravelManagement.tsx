@@ -8,9 +8,10 @@ import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin } from "lucide-react";
 import { Switch } from "./ui/switch";
-import { CalendarDays, Users, Clock } from "lucide-react";
+import { CalendarDays, Users, Clock, Calendar, Navigation } from "lucide-react";
+
 interface Travel {
   id: string;
   startDate: string;
@@ -67,7 +68,14 @@ export const TravelManagement = () => {
         const travel = doc.data() as Travel;
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
-        if (today < travelStart && travel.isLocked || today >= travelStart && today <= travelEnd || today > travelEnd) {
+        
+        // Update filter to match the Index page: only count trips that are either:
+        // 1. In transit (current) OR
+        // 2. Open (future without lock) OR 
+        // 3. Past (already happened)
+        if ((today >= travelStart && today <= travelEnd) || // In transit
+            (today < travelStart && !travel.isLocked) ||    // Open without lock
+            (today > travelEnd)) {                          // Past
           const finalList = travel.selectedVolunteers && travel.selectedVolunteers.length > 0 ? travel.selectedVolunteers : travel.volunteers || [];
           finalList.forEach((volunteer: string) => {
             counts[volunteer] = (counts[volunteer] || 0) + 1;
@@ -315,7 +323,7 @@ export const TravelManagement = () => {
     }
   };
   const cbSdRanks = ["Sd", "Sd PM", "Cb", "Cb PM"];
-  const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM"];
+  const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2�� Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM"];
   const oficiaisRanks = ["2° Ten", "2° Ten PM", "1° Ten", "1° Ten PM", "Cap", "Cap PM", "Maj", "Maj PM", "Ten Cel", "Ten Cel PM", "Cel", "Cel PM"];
 
   // Nova função para extrair a patente corretamente
@@ -470,6 +478,16 @@ export const TravelManagement = () => {
         const travelEnd = new Date(travel.endDate + "T00:00:00");
         const today = new Date();
         const isLocked = travel.isLocked;
+        
+        // Skip displaying travels with "Processing diary" status
+        // Only show "em aberto" (not locked future trips) or "em transito" (current trips)
+        const isInTransit = today >= travelStart && today <= travelEnd;
+        const isOpen = today < travelStart && !isLocked;
+        
+        if (!(isInTransit || isOpen) && travel.archived) {
+          return null; // Skip rendering this trip
+        }
+        
         const sortedVolunteers = getSortedVolunteers(travel);
         const numDays = differenceInDays(travelEnd, travelStart) + 1;
         const dailyCount = travel.halfLastDay ? numDays - 0.5 : numDays;
@@ -478,16 +496,13 @@ export const TravelManagement = () => {
           maximumFractionDigits: 1
         });
         const totalCost = travel.dailyRate ? dailyCount * Number(travel.dailyRate) : 0;
+        
         let cardBg = "bg-white";
         let statusBadge = null;
         const rightPos = isAdmin ? "right-12" : "right-2";
-        if (today < travelStart) {
-          if (isLocked) {
-            statusBadge = <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
-                    Processando diária
-                  </div>;
-          } else {
-            statusBadge = <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm flex items-center gap-2`}>
+        
+        if (isOpen) {
+          statusBadge = <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm flex items-center gap-2`}>
                     Em aberto
                     <X className="h-3 w-3 ml-1" />
                     <button onClick={e => {
@@ -497,11 +512,10 @@ export const TravelManagement = () => {
                       <Info className="h-3 w-3" />
                     </button>
                   </div>;
-          }
-        } else if (today >= travelStart && today <= travelEnd) {
+        } else if (isInTransit) {
           cardBg = "bg-gradient-to-br from-green-50 to-green-100";
           statusBadge = <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm`}>
-                  Em transito
+                  Em trânsito
                 </div>;
         } else if (today > travelEnd) {
           cardBg = "bg-gradient-to-br from-gray-50 to-gray-100";
@@ -509,6 +523,7 @@ export const TravelManagement = () => {
                   Encerrada
                 </div>;
         }
+        
         return <Card key={travel.id} className={`relative overflow-hidden ${cardBg} border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 ${travel.archived ? "opacity-75" : ""}`}>
                 {statusBadge}
 
@@ -551,17 +566,23 @@ export const TravelManagement = () => {
                       </h3>
                       <div className="space-y-2 text-gray-600">
                         <div className="flex items-center gap-2">
-                          <CalendarDays className="h-4 w-4 text-blue-500" />
-                          <p>Início: {travelStart.toLocaleDateString()}</p>
+                          <MapPin className="h-4 w-4 text-blue-500" />
+                          <p>{travel.destination}</p>
                         </div>
+                        
                         <div className="flex items-center gap-2">
-                          <CalendarDays className="h-4 w-4 text-blue-500" />
-                          <p>Fim: {travelEnd.toLocaleDateString()}</p>
+                          <Calendar className="h-4 w-4 text-blue-500" />
+                          <p>{isInTransit ? 'Período: ' : 'Início: '}
+                            {travelStart.toLocaleDateString()}
+                            {isInTransit && ` até ${travelEnd.toLocaleDateString()}`}
+                          </p>
                         </div>
+                        
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4 text-blue-500" />
                           <p>Vagas: {travel.slots}</p>
                         </div>
+                        
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-blue-500" />
                           <p>{formattedCount} diárias
