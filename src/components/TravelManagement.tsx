@@ -11,7 +11,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { CalendarDays, Users, Clock, Calendar, Navigation } from "lucide-react";
-
 interface Travel {
   id: string;
   startDate: string;
@@ -68,14 +67,17 @@ export const TravelManagement = () => {
         const travel = doc.data() as Travel;
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
-        
+
         // Update filter to match the Index page: only count trips that are either:
         // 1. In transit (current) OR
         // 2. Open (future without lock) OR 
         // 3. Past (already happened)
-        if ((today >= travelStart && today <= travelEnd) || // In transit
-            (today < travelStart && !travel.isLocked) ||    // Open without lock
-            (today > travelEnd)) {                          // Past
+        if (today >= travelStart && today <= travelEnd ||
+        // In transit
+        today < travelStart && !travel.isLocked ||
+        // Open without lock
+        today > travelEnd) {
+          // Past
           const finalList = travel.selectedVolunteers && travel.selectedVolunteers.length > 0 ? travel.selectedVolunteers : travel.volunteers || [];
           finalList.forEach((volunteer: string) => {
             counts[volunteer] = (counts[volunteer] || 0) + 1;
@@ -478,16 +480,14 @@ export const TravelManagement = () => {
         const travelEnd = new Date(travel.endDate + "T00:00:00");
         const today = new Date();
         const isLocked = travel.isLocked;
-        
+
         // Skip displaying travels with "Processing diary" status
         // Only show "em aberto" (not locked future trips) or "em transito" (current trips)
         const isInTransit = today >= travelStart && today <= travelEnd;
         const isOpen = today < travelStart && !isLocked;
-        
         if (!(isInTransit || isOpen) && travel.archived) {
           return null; // Skip rendering this trip
         }
-        
         const sortedVolunteers = getSortedVolunteers(travel);
         const numDays = differenceInDays(travelEnd, travelStart) + 1;
         const dailyCount = travel.halfLastDay ? numDays - 0.5 : numDays;
@@ -496,19 +496,17 @@ export const TravelManagement = () => {
           maximumFractionDigits: 1
         });
         const totalCost = travel.dailyRate ? dailyCount * Number(travel.dailyRate) : 0;
-        
         let cardBg = "bg-white";
         let statusBadge = null;
         const rightPos = isAdmin ? "right-12" : "right-2";
-        
         if (isOpen) {
           statusBadge = <div className={`absolute top-3 ${rightPos} bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm flex items-center gap-2`}>
                     Em aberto
                     <X className="h-3 w-3 ml-1" />
                     <button onClick={e => {
-                e.stopPropagation();
-                setShowRankingRules(true);
-              }} className="hover:bg-white/20 rounded-full p-1 transition-colors">
+              e.stopPropagation();
+              setShowRankingRules(true);
+            }} className="hover:bg-white/20 rounded-full p-1 transition-colors">
                       <Info className="h-3 w-3" />
                     </button>
                   </div>;
@@ -523,7 +521,6 @@ export const TravelManagement = () => {
                   Encerrada
                 </div>;
         }
-        
         return <Card key={travel.id} className={`relative overflow-hidden ${cardBg} border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 ${travel.archived ? "opacity-75" : ""}`}>
                 {statusBadge}
 
@@ -642,7 +639,7 @@ export const TravelManagement = () => {
       })}
       </div>
 
-      {isAdmin && <Button onClick={() => setIsModalOpen(true)} className="fixed bottom-6 right-6 rounded-full p-4 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 py-[24px]">
+      {isAdmin && <Button onClick={() => setIsModalOpen(true)} className="fixed bottom-6 right-6 rounded-full p-4 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-[19px] py-[26px] my-[69px]">
           <Plus className="h-6 w-6" />
         </Button>}
 
