@@ -149,28 +149,24 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     try {
       setIsDeleting(true);
       
-      console.log("Excluindo TCO:", tcoToDelete);
-      
       // Excluir do Supabase storage primeiro
       if (tcoToDelete.pdfPath) {
-        console.log("Tentando excluir arquivo do storage:", tcoToDelete.pdfPath);
+        console.log("Tentando excluir arquivo:", tcoToDelete.pdfPath);
         
-        const { error: storageError } = await supabase.storage
+        const { error: storageError, data } = await supabase.storage
           .from(BUCKET_NAME)
           .remove([tcoToDelete.pdfPath]);
         
+        console.log("Resultado da exclusão:", data);
+        
         if (storageError) {
           console.error("Erro ao excluir arquivo do storage:", storageError);
-          // Continuar mesmo com erro para tentar excluir do banco de dados
-        } else {
-          console.log("Arquivo excluído com sucesso do storage:", tcoToDelete.pdfPath);
+          throw storageError;
         }
       }
 
       // Excluir do banco de dados Supabase se for um registro de banco e tiver ID UUID
       if (tcoToDelete.source === 'supabase' && isValidUUID(tcoToDelete.id)) {
-        console.log("Tentando excluir registro do banco de dados:", tcoToDelete.id);
-        
         const { error } = await supabase
           .from('tco_pdfs')
           .delete()
@@ -179,29 +175,16 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         if (error) {
           console.error("Erro ao excluir TCO do banco de dados:", error);
           throw error;
-        } else {
-          console.log("Registro excluído com sucesso do banco de dados:", tcoToDelete.id);
         }
       }
 
-      // Atualizar a lista local removendo o TCO excluído
       setTcoList(tcoList.filter(item => item.id !== tcoToDelete.id));
-      
-      // Se o TCO excluído estava selecionado, limpar a seleção
-      if (selectedTco?.id === tcoToDelete.id) {
-        setSelectedTco(null);
-      }
+      if (selectedTco?.id === tcoToDelete.id) setSelectedTco(null);
       
       toast({
         title: "TCO Excluído",
         description: "O TCO foi removido com sucesso."
       });
-
-      // Refetch para garantir que a lista está atualizada
-      setTimeout(() => {
-        fetchUserTcos();
-      }, 1000);
-      
     } catch (error) {
       console.error("Erro ao excluir TCO:", error);
       toast({
@@ -390,23 +373,16 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         </Table>
       )}
 
-      {/* PDF Viewer Dialog - Simplificado e direto */}
+      {/* PDF Viewer Dialog - Simplified and direct */}
       <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
-        <DialogContent className="max-w-4xl h-[80vh] p-0">
+        <DialogContent className="max-w-4xl h-[80vh] p-0 overflow-hidden">
           {selectedPdfUrl ? (
-            <object
-              data={selectedPdfUrl}
-              type="application/pdf"
+            <iframe
+              src={selectedPdfUrl}
               className="w-full h-full"
+              title="PDF Viewer"
               style={{ border: "none" }}
-            >
-              <p className="p-4 text-center">
-                Seu navegador não suporta visualização de PDF. 
-                <a href={selectedPdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline ml-2">
-                  Clique para baixar
-                </a>
-              </p>
-            </object>
+            />
           ) : (
             <div className="flex items-center justify-center h-full">
               <Skeleton className="h-full w-full" />
