@@ -1,9 +1,10 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Trash2, User, Users } from "lucide-react";
-import PersonalInfoFields from "./PersonalInfoFields"; // Certifique-se que este caminho está correto
+import PersonalInfoFields from "./PersonalInfoFields"; 
 
 interface PersonalInfo {
   nome: string;
@@ -35,7 +36,7 @@ interface PessoasEnvolvidasTabProps {
   handleAutorDetalhadoChange: (index: number, field: string, value: string) => void;
   handleAddAutor: () => void;
   handleRemoveAutor: (index: number) => void;
-  natureza: string; // Mantida caso PersonalInfoFields precise, senão pode ser removida
+  natureza: string;
 }
 
 const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
@@ -51,9 +52,10 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
   handleAutorDetalhadoChange,
   handleAddAutor,
   handleRemoveAutor,
-  // natureza // Não mais usada diretamente para lógica de abas aqui
+  natureza
 }) => {
-  // const isDrugCase = natureza === "Porte de drogas para consumo"; // Removido, pois a aba Vítimas é sempre visível
+  // Check if it's a drug consumption case
+  const isDrugCase = natureza === "Porte de drogas para consumo";
 
   return (
     <Card>
@@ -65,15 +67,18 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="autor" className="w-full">
-          <TabsList className="grid grid-cols-3 mb-6"> {/* Sempre grid-cols-3 */}
+          {/* Dynamically adjust the grid columns based on whether victims should be shown */}
+          <TabsList className={`grid ${isDrugCase ? 'grid-cols-2' : 'grid-cols-3'} mb-6`}>
             <TabsTrigger value="autor">
               <User className="mr-2 h-4 w-4" />
               Autores do Fato
             </TabsTrigger>
-            <TabsTrigger value="vitimas">
-              <User className="mr-2 h-4 w-4" />
-              Vítimas
-            </TabsTrigger>
+            {!isDrugCase && (
+              <TabsTrigger value="vitimas">
+                <User className="mr-2 h-4 w-4" />
+                Vítimas
+              </TabsTrigger>
+            )}
             <TabsTrigger value="testemunhas">
               <Users className="mr-2 h-4 w-4" />
               Testemunhas
@@ -89,7 +94,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                       <User className="mr-2 h-4 w-4" />
                       {index === 0 ? "Autor Principal" : `Autor ${index + 1}`}
                     </span>
-                    {autores.length > 1 && ( // Mostrar botão de remover apenas se houver mais de um autor
+                    {autores.length > 1 && (
                       <Button 
                         type="button" 
                         variant="ghost" 
@@ -126,51 +131,53 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
             </div>
           </TabsContent>
           
-          <TabsContent value="vitimas" className="space-y-6">
-            {vitimas.map((vitima, index) => (
-              <Card key={`vitima_${index}`} className="border-dashed">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex justify-between items-center">
-                    <span className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      {`Vítima ${vitimas.length > 1 ? index + 1 : ''}`.trim() || "Vítima"}
-                    </span>
-                    {vitimas.length > 1 && ( // Mostrar botão de remover apenas se houver mais de uma vítima
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleRemoveVitima(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PersonalInfoFields 
-                    data={vitima} 
-                    onChangeHandler={handleVitimaChange}
-                    prefix={`vitima_${index}_`}
-                    index={index}
-                    isVictim={true}
-                  />
-                </CardContent>
-              </Card>
-            ))}
-            
-            <div className="flex justify-center mt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={handleAddVitima}
-                className="w-full md:w-auto"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Adicionar Vítima
-              </Button>
-            </div>
-          </TabsContent>
+          {!isDrugCase && (
+            <TabsContent value="vitimas" className="space-y-6">
+              {vitimas.map((vitima, index) => (
+                <Card key={`vitima_${index}`} className="border-dashed">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex justify-between items-center">
+                      <span className="flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        {`Vítima ${vitimas.length > 1 ? index + 1 : ''}`.trim() || "Vítima"}
+                      </span>
+                      {vitimas.length > 1 && (
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleRemoveVitima(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <PersonalInfoFields 
+                      data={vitima} 
+                      onChangeHandler={handleVitimaChange}
+                      prefix={`vitima_${index}_`}
+                      index={index}
+                      isVictim={true}
+                    />
+                  </CardContent>
+                </Card>
+              ))}
+              
+              <div className="flex justify-center mt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleAddVitima}
+                  className="w-full md:w-auto"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Adicionar Vítima
+                </Button>
+              </div>
+            </TabsContent>
+          )}
           
           <TabsContent value="testemunhas" className="space-y-6">
             {testemunhas.map((testemunha, index) => (
@@ -181,7 +188,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                       <User className="mr-2 h-4 w-4" />
                       {`Testemunha ${testemunhas.length > 1 ? index + 1 : ''}`.trim() || "Testemunha"}
                     </span>
-                    {testemunhas.length > 1 && ( // Mostrar botão de remover apenas se houver mais de uma testemunha
+                    {testemunhas.length > 1 && (
                       <Button 
                         type="button" 
                         variant="ghost" 

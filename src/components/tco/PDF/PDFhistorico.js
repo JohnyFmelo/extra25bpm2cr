@@ -57,6 +57,7 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight) => {
 export const generateHistoricoContent = async (doc, currentY, data) => {
     let yPos = currentY;
     const { PAGE_WIDTH, MAX_LINE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
+    const isDrugCase = data.natureza === "Porte de drogas para consumo";
 
     // --- SEÇÃO 1: DADOS GERAIS ---
     yPos = addSectionTitle(doc, yPos, "DADOS GERAIS E IDENTIFICADORES DA OCORRÊNCIA", "1", 1, data);
@@ -112,35 +113,37 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 2;
     }
 
-    // Seção 2.2: Vítima(s) - Ajusta singular/plural
-    const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome) : [];
-    const vitimaTitle = vitimasValidas.length === 1 ? "VÍTIMA" : "VÍTIMAS";
-    yPos = addSectionTitle(doc, yPos, vitimaTitle, "2.2", 2, data);
-    if (vitimasValidas.length > 0) {
-        vitimasValidas.forEach((vitima, index) => {
-            if (index > 0) {
-                yPos += 3; yPos = checkPageBreak(doc, yPos, 5, data);
-                doc.setLineWidth(0.1); doc.setDrawColor(150);
-                doc.line(MARGIN_LEFT, yPos - 1, PAGE_WIDTH - MARGIN_RIGHT, yPos - 1);
-                doc.setDrawColor(0); yPos += 2;
-            }
-            yPos = addField(doc, yPos, "NOME", vitima.nome, data);
-            yPos = addField(doc, yPos, "SEXO", vitima.sexo, data);
-            yPos = addField(doc, yPos, "ESTADO CIVIL", vitima.estadoCivil, data);
-            yPos = addField(doc, yPos, "PROFISSÃO", vitima.profissao, data);
-            yPos = addField(doc, yPos, "ENDEREÇO", vitima.endereco, data);
-            yPos = addField(doc, yPos, "DATA DE NASCIMENTO", formatarDataSimples(vitima.dataNascimento), data);
-            yPos = addField(doc, yPos, "NATURALIDADE", vitima.naturalidade, data);
-            yPos = addField(doc, yPos, "FILIAÇÃO - MÃE", vitima.filiacaoMae, data);
-            yPos = addField(doc, yPos, "FILIAÇÃO - PAI", vitima.filiacaoPai, data);
-            yPos = addField(doc, yPos, "RG", vitima.rg, data);
-            yPos = addField(doc, yPos, "CPF", vitima.cpf, data);
-            yPos = addField(doc, yPos, "CELULAR", vitima.celular, data);
-            yPos = addField(doc, yPos, "E-MAIL", vitima.email, data);
-        });
-    } else {
-        yPos = addWrappedText(doc, yPos, "Nenhuma vítima informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
-        yPos += 2;
+    // Seção 2.2: Vítima(s) - Skip completely for drug cases
+    if (!isDrugCase) {
+        const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome) : [];
+        const vitimaTitle = vitimasValidas.length === 1 ? "VÍTIMA" : "VÍTIMAS";
+        yPos = addSectionTitle(doc, yPos, vitimaTitle, "2.2", 2, data);
+        if (vitimasValidas.length > 0) {
+            vitimasValidas.forEach((vitima, index) => {
+                if (index > 0) {
+                    yPos += 3; yPos = checkPageBreak(doc, yPos, 5, data);
+                    doc.setLineWidth(0.1); doc.setDrawColor(150);
+                    doc.line(MARGIN_LEFT, yPos - 1, PAGE_WIDTH - MARGIN_RIGHT, yPos - 1);
+                    doc.setDrawColor(0); yPos += 2;
+                }
+                yPos = addField(doc, yPos, "NOME", vitima.nome, data);
+                yPos = addField(doc, yPos, "SEXO", vitima.sexo, data);
+                yPos = addField(doc, yPos, "ESTADO CIVIL", vitima.estadoCivil, data);
+                yPos = addField(doc, yPos, "PROFISSÃO", vitima.profissao, data);
+                yPos = addField(doc, yPos, "ENDEREÇO", vitima.endereco, data);
+                yPos = addField(doc, yPos, "DATA DE NASCIMENTO", formatarDataSimples(vitima.dataNascimento), data);
+                yPos = addField(doc, yPos, "NATURALIDADE", vitima.naturalidade, data);
+                yPos = addField(doc, yPos, "FILIAÇÃO - MÃE", vitima.filiacaoMae, data);
+                yPos = addField(doc, yPos, "FILIAÇÃO - PAI", vitima.filiacaoPai, data);
+                yPos = addField(doc, yPos, "RG", vitima.rg, data);
+                yPos = addField(doc, yPos, "CPF", vitima.cpf, data);
+                yPos = addField(doc, yPos, "CELULAR", vitima.celular, data);
+                yPos = addField(doc, yPos, "E-MAIL", vitima.email, data);
+            });
+        } else {
+            yPos = addWrappedText(doc, yPos, "Nenhuma vítima informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
+            yPos += 2;
+        }
     }
 
     // Seção 2.3: Testemunha(s) - Ajusta singular/plural
@@ -176,7 +179,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
     // --- SEÇÃO 3: HISTÓRICO ---
     const primeiroAutor = data.autores?.[0];
-    const primeiraVitima = data.vitimas?.find(v => v?.nome);
+    const primeiraVitima = !isDrugCase ? data.vitimas?.find(v => v?.nome) : null;
     const primeiraTestemunha = data.testemunhas?.find(t => t?.nome);
 
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
@@ -196,16 +199,21 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 10;
     }
 
-    yPos = addSectionTitle(doc, yPos, "RELATO DA VÍTIMA", "3.3", 2, data);
-    const relatoVitimaText = primeiraVitima ? (data.relatoVitima || "Relato não fornecido pela vítima.") : "Nenhuma vítima identificada para fornecer relato.";
-    yPos = addWrappedText(doc, yPos, relatoVitimaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-    if (primeiraVitima) {
-        yPos = addSignatureWithNameAndRole(doc, yPos, primeiraVitima?.nome, "VÍTIMA", data);
-    } else {
-        yPos += 10;
+    // Only include victim section if it's not a drug case
+    if (!isDrugCase) {
+        yPos = addSectionTitle(doc, yPos, "RELATO DA VÍTIMA", "3.3", 2, data);
+        const relatoVitimaText = primeiraVitima ? (data.relatoVitima || "Relato não fornecido pela vítima.") : "Nenhuma vítima identificada para fornecer relato.";
+        yPos = addWrappedText(doc, yPos, relatoVitimaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+        if (primeiraVitima) {
+            yPos = addSignatureWithNameAndRole(doc, yPos, primeiraVitima?.nome, "VÍTIMA", data);
+        } else {
+            yPos += 10;
+        }
     }
 
-    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", "3.4", 2, data);
+    // Adjust section numbering for witness report based on whether victim section exists
+    const testemunhaSection = isDrugCase ? "3.3" : "3.4";
+    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", testemunhaSection, 2, data);
     let relatoTestText = "Nenhuma testemunha identificada.";
     if (primeiraTestemunha) {
         relatoTestText = data.relatoTestemunha || "Relato não fornecido pela testemunha.";
@@ -217,7 +225,9 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 10;
     }
 
-    yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", "3.5", 2, data);
+    // Adjust section numbering for conclusion based on whether victim section exists
+    const conclusaoSection = isDrugCase ? "3.4" : "3.5";
+    yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", conclusaoSection, 2, data);
     yPos = addWrappedText(doc, yPos, data.conclusaoPolicial, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 

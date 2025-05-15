@@ -7,6 +7,12 @@ import {
 
 /** Adiciona Termo de Manifestação da Vítima (em página nova) */
 export const addTermoManifestacao = (doc, data) => {
+    // Skip term for drug consumption cases or if no victims are present
+    if (data.natureza === "Porte de drogas para consumo") {
+        console.log("Caso de porte de drogas para consumo, pulando Termo de Manifestação.");
+        return null;
+    }
+    
     const vitima = data.vitimas?.find(v => v?.nome);
     if (!vitima) {
         console.warn("Nenhuma vítima com nome informado, pulando Termo de Manifestação.");
