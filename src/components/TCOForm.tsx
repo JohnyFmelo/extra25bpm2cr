@@ -14,16 +14,10 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
 import supabase from "@/lib/supabaseClient";
-import { uploadPDF, saveTCOMetadata } from '@/lib/supabaseStorage';
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
   posto: string;
-  pai?: string;
-  mae?: string;
-  naturalidade?: string;
-  cpf?: string;
-  telefone?: string;
 }
 interface Pessoa {
   nome: string;
@@ -206,7 +200,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const [apreensoes, setApreensoes] = useState("");
   const [lacreNumero, setLacreNumero] = useState("");
   const [componentesGuarnicao, setComponentesGuarnicao] = useState<ComponenteGuarnicao[]>([]);
-  const [componentesApoio, setComponentesApoio] = useState<ComponenteGuarnicao[]>([]);
   const [quantidade, setQuantidade] = useState("");
   const [substancia, setSubstancia] = useState("");
   const [cor, setCor] = useState("");
@@ -356,7 +349,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     let updatedRelato = relatoPolicialTemplate;
     const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
     const gupm = formatarGuarnicao(componentesGuarnicao);
-    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA PENDENTE]" : natureza;
+    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "OUTROS" : natureza;
     const operacaoText = operacao ? `, DURANTE A ${operacao.toUpperCase()},` : "";
     updatedRelato = updatedRelato.replace("[HORÁRIO]", horaFato || "[HORÁRIO PENDENTE]").replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR', {
       timeZone: 'UTC'
@@ -383,7 +376,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
     if (!alreadyExists) {
       setComponentesGuarnicao(prevList => {
-        const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto) ? [novoPolicial] : [...prevList, novoPolicial];
+        const newList = prevList.length === 0 || prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto ? [novoPolicial] : [...prevList, novoPolicial];
         return newList;
       });
       toast({
@@ -401,38 +394,9 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
     }
   }, [componentesGuarnicao, toast]);
-  
-  const handleAddApoioToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
-    const alreadyExists = componentesApoio.some(comp => comp.rg === novoPolicial.rg);
-    if (!alreadyExists) {
-      setComponentesApoio(prevList => {
-        const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto) ? [novoPolicial] : [...prevList, novoPolicial];
-        return newList;
-      });
-      toast({
-        title: "Adicionado ao Apoio",
-        description: `Policial ${novoPolicial.nome} adicionado à equipe de apoio.`,
-        className: "bg-green-600 text-white border-green-700",
-        duration: 5000
-      });
-    } else {
-      toast({
-        title: "Duplicado",
-        description: "Este policial já está na equipe de apoio.",
-        className: "bg-yellow-600 text-white border-yellow-700",
-        duration: 5000
-      });
-    }
-  }, [componentesApoio, toast]);
-  
   const handleRemovePolicialFromList = useCallback((indexToRemove: number) => {
     setComponentesGuarnicao(prevList => prevList.filter((_, index) => index !== indexToRemove));
   }, []);
-  
-  const handleRemoveApoioFromList = useCallback((indexToRemove: number) => {
-    setComponentesApoio(prevList => prevList.filter((_, index) => index !== indexToRemove));
-  }, []);
-  
   const handleAddVitima = () => {
     const hasOnlyPlaceholder = vitimas.length === 1 && !vitimas[0].nome && !vitimas[0].cpf || vitimas.length === 1 && vitimas[0].nome === "O ESTADO";
     if (hasOnlyPlaceholder) {
@@ -720,7 +684,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
       return;
     }
-    
     const completionNow = new Date();
     const completionDate = completionNow.toISOString().split('T')[0];
     const completionTime = completionNow.toTimeString().slice(0, 5);
@@ -762,7 +725,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
       return;
     }
     const componentesValidos = componentesGuarnicao.filter(c => c.nome?.trim() && c.rg?.trim());
-    const apoioValidos = componentesApoio.filter(c => c.nome?.trim() && c.rg?.trim());
     if (componentesValidos.length === 0) {
       toast({
         title: "Campo Obrigatório",
@@ -835,7 +797,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
         guarnicao: guarnicao.trim(),
         operacao: operacao.trim(),
         componentesGuarnicao: componentesValidos,
-        componentesApoio: apoioValidos.length > 0 ? apoioValidos : undefined,
         relatoPolicial: relatoPolicial.trim(),
         relatoAutor: relatoAutor.trim(),
         relatoTestemunha: relatoTestemunha.trim(),
@@ -861,35 +822,38 @@ const TCOForm: React.FC<TCOFormProps> = ({
       };
       Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
       console.log("Dados para gerar PDF:", tcoDataParaPDF);
-      
-      // Generate the PDF
       const pdfGenerationPromise = generatePDF(tcoDataParaPDF);
       const timeoutPromise = new Promise<Blob>((_, reject) => {
         setTimeout(() => reject(new Error("Tempo limite excedido ao gerar o PDF.")), 90000);
       });
       const pdfBlob = await Promise.race([pdfGenerationPromise, timeoutPromise]);
-      
       if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
-      
       const tcoNumParaNome = tcoNumber.trim();
       const dateStr = new Date().toISOString().slice(0, 10);
       const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
       const filePath = `tcos/${userId || 'anonimo'}/${tcoNumParaNome}_${dateStr}.pdf`;
-      
-      // Upload the PDF to Supabase Storage using our utility function
-      const { url: downloadURL, error: uploadError } = await uploadPDF(filePath, pdfBlob, {
-        tcoNumber: tcoNumParaNome,
-        natureza: displayNaturezaReal,
-        createdBy: userId || 'anonimo'
+      const BUCKET_NAME = 'tco-pdfs';
+      console.log(`Enviando arquivo para Supabase Storage: ${filePath}`);
+      const uploadPromise = supabase.storage.from(BUCKET_NAME).upload(filePath, pdfBlob, {
+        contentType: 'application/pdf',
+        upsert: true
       });
-      
+      const uploadTimeoutPromise = new Promise<any>((_, reject) => {
+        setTimeout(() => reject(new Error("Tempo limite excedido ao enviar o arquivo.")), 60000);
+      });
+      const {
+        data: uploadData,
+        error: uploadError
+      } = await Promise.race([uploadPromise, uploadTimeoutPromise]);
       if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
-      if (!downloadURL) throw new Error("URL do arquivo não disponível após o upload.");
-      
+      console.log("Upload concluído:", uploadData);
+      const {
+        data: publicUrlData
+      } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+      const downloadURL = publicUrlData?.publicUrl || '';
       console.log('URL pública do arquivo:', downloadURL);
-      
-      // Save metadata to Supabase database
+      const TABLE_NAME = 'tco_pdfs';
       const tcoMetadata = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
@@ -903,28 +867,28 @@ const TCOForm: React.FC<TCOFormProps> = ({
         createdBy: userId,
         createdAt: new Date().toISOString()
       };
-      
       console.log("Metadados para salvar no DB:", tcoMetadata);
-      
-      // Save metadata using our utility function
-      const { error: metadataError } = await saveTCOMetadata(tcoMetadata);
-      
-      if (metadataError) {
-        console.error("Erro ao salvar metadados no Supabase DB:", metadataError);
-        throw new Error(`Erro ao salvar informações do TCO: ${metadataError.message || metadataError}`);
+      const insertPromise = supabase.from(TABLE_NAME).insert([tcoMetadata]).select('id').single();
+      const dbTimeoutPromise = new Promise<any>((_, reject) => {
+        setTimeout(() => reject(new Error("Tempo limite excedido ao salvar metadados no banco de dados.")), 30000);
+      });
+      const {
+        data: insertData,
+        error: insertError
+      } = await Promise.race([insertPromise, dbTimeoutPromise]);
+      if (insertError) {
+        console.error("Erro ao salvar metadados no Supabase DB:", insertError);
+        await supabase.storage.from(BUCKET_NAME).remove([filePath]).catch(deleteError => console.error("Falha ao remover PDF após erro de inserção no DB:", deleteError));
+        throw new Error(`Erro ao salvar informações do TCO: ${insertError.message}`);
       }
-      
-      console.log("Metadados salvos com sucesso no DB");
-      
+      console.log("Metadados salvos com sucesso no DB, ID:", insertData?.id);
       toast({
         title: "TCO Registrado com Sucesso!",
         description: "PDF enviado e informações salvas no sistema.",
         className: "bg-green-600 text-white border-green-700",
         duration: 5000
       });
-      
       navigate("/?tab=tco");
-      
     } catch (error: any) {
       console.error("Erro geral no processo de submissão do TCO:", error);
       toast({
@@ -998,17 +962,10 @@ const TCOForm: React.FC<TCOFormProps> = ({
         <Card>
           <CardHeader>
             <CardTitle>Guarnição Policial</CardTitle>
-            <CardDescription>Componentes da equipe que atendeu a ocorrência e policiais de apoio.</CardDescription>
+            <CardDescription>Componentes da equipe que atendeu a ocorrência.</CardDescription>
           </CardHeader>
           <CardContent>
-            <GuarnicaoTab 
-              currentGuarnicaoList={componentesGuarnicao} 
-              onAddPolicial={handleAddPolicialToList} 
-              onRemovePolicial={handleRemovePolicialFromList}
-              currentApoioList={componentesApoio}
-              onAddApoio={handleAddApoioToList}
-              onRemoveApoio={handleRemoveApoioFromList}
-            />
+            <GuarnicaoTab currentGuarnicaoList={componentesGuarnicao} onAddPolicial={handleAddPolicialToList} onRemovePolicial={handleRemovePolicialFromList} />
           </CardContent>
         </Card>
 

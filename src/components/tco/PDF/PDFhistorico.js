@@ -1,194 +1,453 @@
-import { fontName } from "./PDFUtils";
+
+import {
+    MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
+    addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
+    checkPageBreak, addSignatureWithNameAndRole, addNewPage
+} from './pdfUtils.js';
+import QRCode from 'qrcode';
+
+// Função auxiliar para adicionar imagens (copiada ou importada)
+const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight) => {
+    const maxImageWidth = pageWidth - MARGIN_RIGHT * 2; // Largura máxima da imagem
+    const maxImageHeight = 100; // Altura máxima por imagem (ajustável)
+    const marginBetweenImages = 10; // Espaço entre imagens
+    let currentY = yPosition;
+
+    for (const image of images) {
+        try {
+            // Extrai o formato da imagem a partir do início da string base64
+            const formatMatch = image.data.match(/^data:image\/(jpeg|png);base64,/);
+            const format = formatMatch ? formatMatch[1].toUpperCase() : 'JPEG'; // Default para JPEG
+
+            // Remove o prefixo "data:image/..." para obter apenas os dados base64
+            const base64Data = image.data.replace(/^data:image\/[a-z]+;base64,/, '');
+
+            // Verifica se a posição atual ultrapassa o limite da página
+            if (currentY + maxImageHeight + 10 > pageHeight) {
+                currentY = addNewPage(doc, {});
+                currentY = 10; // Reseta a posição Y (ajuste conforme MARGIN_TOP)
+            }
+
+            // Adiciona a imagem ao PDF
+            doc.addImage(base64Data, format, MARGIN_RIGHT, currentY, maxImageWidth, 0); // Altura 0 para manter proporção
+
+            // Obtém as dimensões reais da imagem adicionada
+            const imgProps = doc.getImageProperties(base64Data);
+            const imgHeight = (imgProps.height * maxImageWidth) / imgProps.width; // Calcula altura proporcional
+
+            // Atualiza a posição Y
+            currentY += imgHeight + marginBetweenImages;
+
+            // Adiciona o nome do arquivo como legenda
+            doc.setFontSize(8);
+            doc.text(`Imagem: ${image.name}`, MARGIN_RIGHT, currentY);
+            currentY += 5; // Espaço após a legenda
+        } catch (error) {
+            console.error(`Erro ao adicionar imagem ${image.name}:`, error);
+        }
+    }
+
+    return currentY; // Retorna a nova posição Y
+};
 
 /**
- * Creates the history section of the PDF
- * @param {Object} doc - The jsPDF document object
- * @param {Object} tco - The TCO data object
- * @param {Object} options - Optional parameters
- * @returns {number} The Y position after creating the content
+ * Gera o conteúdo das seções 1 a 5 do TCO.
+ * Assume que começa após uma chamada a `addNewPage`.
+ * Retorna a posição Y final após adicionar todo o conteúdo.
  */
-export const createHistoricoSection = (doc, tco, options = {}) => {
-  const margemEsquerda = 20;
-  const margemDireita = 20;
-  const margemSuperior = 20;
-  const margemInferior = 20;
-  const espacamento = 7;
-  const espacamentoLinhas = 5;
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+export const generateHistoricoContent = async (doc, currentY, data) => {
+    let yPos = currentY;
+    const { PAGE_WIDTH, MAX_LINE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
+    const isDrugCase = data.natureza === "Porte de drogas para consumo";
 
-  doc.setFontSize(12);
-  doc.setFont(fontName, 'normal');
-  doc.setLineDash([], 0);
-  doc.lastY = doc.lastY || margemSuperior;
+    // Convert general information data to uppercase
+    const upperCaseData = {
+        ...data,
+        natureza: data.natureza ? data.natureza.toUpperCase() : '',
+        tipificacao: data.tipificacao ? data.tipificacao.toUpperCase() : '',
+        localFato: data.localFato ? data.localFato.toUpperCase() : '',
+        endereco: data.endereco ? data.endereco.toUpperCase() : '',
+        municipio: data.municipio ? data.municipio.toUpperCase() : '',
+        comunicante: data.comunicante ? data.comunicante.toUpperCase() : '',
+    };
 
-  // Seção 6 - Relato Policial
-  let secao6Y = doc.lastY + 10;
-  doc.setFont(fontName, 'bold');
-  doc.text('6. RELATO POLICIAL', margemEsquerda, secao6Y);
-  secao6Y += espacamento;
+    // --- SEÇÃO 1: DADOS GERAIS ---
+    yPos = addSectionTitle(doc, yPos, "DADOS GERAIS E IDENTIFICADORES DA OCORRÊNCIA", "1", 1, data);
+    yPos = addField(doc, yPos, "NATUREZA DA OCORRÊNCIA", upperCaseData.natureza, data);
+    yPos = addField(doc, yPos, "TIPIFICAÇÃO LEGAL", upperCaseData.tipificacao, data);
+    yPos = addField(doc, yPos, "DATA E HORA DO FATO", formatarDataHora(data.dataFato, data.horaFato), data);
+    yPos = addField(doc, yPos, "DATA E HORA DO INÍCIO DO REGISTRO", formatarDataHora(data.dataInicioRegistro, data.horaInicioRegistro), data);
+    yPos = addField(doc, yPos, "DATA E HORA DO TÉRMINO DO REGISTRO", formatarDataHora(data.dataTerminoRegistro, data.horaTerminoRegistro), data);
+    yPos = addField(doc, yPos, "LOCAL DO FATO", upperCaseData.localFato, data);
+    yPos = addField(doc, yPos, "ENDEREÇO", upperCaseData.endereco, data);
+    yPos = addField(doc, yPos, "MUNICÍPIO", upperCaseData.municipio, data);
+    yPos = addField(doc, yPos, "COMUNICANTE", upperCaseData.comunicante, data);
 
-  doc.setFont(fontName, 'normal');
-  const relatoPolicial = tco.relatoPolicial || 'Nenhum relato policial informado.';
-  const linhasRelato = doc.splitTextToSize(relatoPolicial, pageWidth - margemEsquerda - margemDireita);
-  for (const linha of linhasRelato) {
-    doc.text(linha, margemEsquerda, secao6Y);
-    secao6Y += espacamentoLinhas;
-  }
-  secao6Y += espacamento;
+    // --- SEÇÃO 2: ENVOLVIDOS ---
+    yPos = addSectionTitle(doc, yPos, "ENVOLVIDOS", "2", 1, data);
 
-  // Seção 7 - Relato do(s) Autor(es)
-  let secao7Y = secao6Y + 10;
-  doc.setFont(fontName, 'bold');
-  doc.text('7. RELATO DO(S) AUTOR(ES)', margemEsquerda, secao7Y);
-  secao7Y += espacamento;
-
-  doc.setFont(fontName, 'normal');
-  const relatoAutor = tco.relatoAutor || 'Nenhum relato do(s) autor(es) informado.';
-  const linhasRelatoAutor = doc.splitTextToSize(relatoAutor, pageWidth - margemEsquerda - margemDireita);
-  for (const linha of linhasRelatoAutor) {
-    doc.text(linha, margemEsquerda, secao7Y);
-    secao7Y += espacamentoLinhas;
-  }
-  secao7Y += espacamento;
-
-  // Seção 8 - Relato da(s) Vítima(s)
-  let secao8Y = secao7Y + 10;
-  doc.setFont(fontName, 'bold');
-  doc.text('8. RELATO DA(S) VÍTIMA(S)', margemEsquerda, secao8Y);
-  secao8Y += espacamento;
-
-  doc.setFont(fontName, 'normal');
-  const relatoVitima = tco.relatoVitima || 'Nenhum relato da(s) vítima(s) informado.';
-  const linhasRelatoVitima = doc.splitTextToSize(relatoVitima, pageWidth - margemEsquerda - margemDireita);
-  for (const linha of linhasRelatoVitima) {
-    doc.text(linha, margemEsquerda, secao8Y);
-    secao8Y += espacamentoLinhas;
-  }
-  secao8Y += espacamento;
-
-  // Seção 9 - Relato da(s) Testemunha(s)
-  let secao9Y = secao8Y + 10;
-  doc.setFont(fontName, 'bold');
-  doc.text('9. RELATO DA(S) TESTEMUNHA(S)', margemEsquerda, secao9Y);
-  secao9Y += espacamento;
-
-  doc.setFont(fontName, 'normal');
-  const relatoTestemunha = tco.relatoTestemunha || 'Nenhum relato da(s) testemunha(s) informado.';
-  const linhasRelatoTestemunha = doc.splitTextToSize(relatoTestemunha, pageWidth - margemEsquerda - margemDireita);
-  for (const linha of linhasRelatoTestemunha) {
-    doc.text(linha, margemEsquerda, secao9Y);
-    secao9Y += espacamentoLinhas;
-  }
-  secao9Y += espacamento;
-
-  // Seção 10 - Apreensões
-  let secao10Y = secao9Y + 10;
-  doc.setFont(fontName, 'bold');
-  doc.text('10. APREENSÕES', margemEsquerda, secao10Y);
-  secao10Y += espacamento;
-
-  doc.setFont(fontName, 'normal');
-  const apreensoes = tco.apreensoes || 'Nenhuma apreensão informada.';
-  const linhasApreensoes = doc.splitTextToSize(apreensoes, pageWidth - margemEsquerda - margemDireita);
-  for (const linha of linhasApreensoes) {
-    doc.text(linha, margemEsquerda, secao10Y);
-    secao10Y += espacamentoLinhas;
-  }
-  secao10Y += espacamento;
-
-  // Seção 11 - Conclusão
-  let secao11Y = secao10Y + 10;
-  doc.setFont(fontName, 'bold');
-  doc.text('11. CONCLUSÃO', margemEsquerda, secao11Y);
-  secao11Y += espacamento;
-
-  doc.setFont(fontName, 'normal');
-  const conclusaoPolicial = tco.conclusaoPolicial || 'Nenhuma conclusão informada.';
-  const linhasConclusao = doc.splitTextToSize(conclusaoPolicial, pageWidth - margemEsquerda - margemDireita);
-  for (const linha of linhasConclusao) {
-    doc.text(linha, margemEsquerda, secao11Y);
-    secao11Y += espacamentoLinhas;
-  }
-  secao11Y += espacamento;
-
-  // Seção 5 - Identificação da Guarnição
-  let secao5Y = doc.lastY + 10;
-  doc.setFont(fontName, 'bold');
-  doc.text('5. IDENTIFICAÇÃO DA GUARNIÇÃO', margemEsquerda, secao5Y);
-  secao5Y += espacamento;
-  
-  // Componentes da guarnição (servidores e assinaturas)
-  doc.setFont(fontName, 'normal');
-  const componentesGuarnicao = tco.componentesGuarnicao || [];
-  
-  // Adicionar espaço antes dos componentes
-  secao5Y += espacamentoLinhas;
-  
-  // Se não houver componentes
-  if (componentesGuarnicao.length === 0) {
-    doc.text('Não há componentes na guarnição informados.', margemEsquerda, secao5Y);
-    secao5Y += espacamento;
-  } else {
-    // Para cada componente, adicionar ao PDF
-    for (let i = 0; i < componentesGuarnicao.length; i++) {
-      const componente = componentesGuarnicao[i];
-      doc.setFont(fontName, 'bold');
-      
-      // Se for o primeiro, mostrar como Condutor
-      if (i === 0) {
-        doc.text(`Condutor: ${componente.posto} ${componente.nome} - RG PM ${componente.rg}`, margemEsquerda, secao5Y);
-      } else {
-        doc.text(`${componente.posto} ${componente.nome} - RG PM ${componente.rg}`, margemEsquerda, secao5Y);
-      }
-      
-      // Área de assinatura
-      secao5Y += espacamentoLinhas * 5;
-      doc.setLineDash([1, 1], 0);
-      doc.line(margemEsquerda, secao5Y, margemEsquerda + 150, secao5Y);
-      secao5Y += espacamentoLinhas;
-      doc.setFont(fontName, 'normal');
-      doc.text('Assinatura', margemEsquerda + 65, secao5Y);
-      secao5Y += espacamentoLinhas * 2;
+    // Seção 2.1: Autor(es) - Ajusta singular/plural e aplica flexão de gênero
+    const autoresValidos = data.autores ? data.autores.filter(a => a?.nome) : [];
+    
+    // Determina o título com base na quantidade e gênero
+    let autorTitle;
+    if (autoresValidos.length === 1) {
+        autorTitle = autoresValidos[0]?.sexo?.toLowerCase() === 'feminino' ? "AUTORA DO FATO" : "AUTOR DO FATO";
+    } else {
+        autorTitle = "AUTORES DO FATO"; // Plural para múltiplos autores, independente do gênero
     }
-  }
-  
-  // Adicionar Componentes de Apoio (seção 5.1)
-  if (tco.componentesApoio && tco.componentesApoio.length > 0) {
-    secao5Y += espacamentoLinhas;
-    doc.setFont(fontName, 'bold');
-    doc.text('5.1. POLICIAIS DE APOIO', margemEsquerda, secao5Y);
-    secao5Y += espacamentoLinhas;
     
-    doc.setFont(fontName, 'normal');
-    
-    const apoios = tco.componentesApoio.map(componente => 
-      `${componente.posto} ${componente.nome} - RG PM ${componente.rg}`
-    );
-    
-    for (const apoio of apoios) {
-      // Verificar se o texto vai ultrapassar a margem
-      if (doc.getTextDimensions(apoio).w > pageWidth - margemEsquerda - margemDireita) {
-        const linhas = doc.splitTextToSize(apoio, pageWidth - margemEsquerda - margemDireita);
-        for (const linha of linhas) {
-          doc.text(linha, margemEsquerda, secao5Y);
-          secao5Y += espacamentoLinhas;
+    yPos = addSectionTitle(doc, yPos, autorTitle, "2.1", 2, data);
+    if (autoresValidos.length > 0) {
+        autoresValidos.forEach((autor, index) => {
+            // Create uppercase version of author data
+            const upperAutor = {
+                ...autor,
+                nome: autor.nome ? autor.nome.toUpperCase() : '',
+                sexo: autor.sexo ? autor.sexo.toUpperCase() : '',
+                estadoCivil: autor.estadoCivil ? autor.estadoCivil.toUpperCase() : '',
+                profissao: autor.profissao ? autor.profissao.toUpperCase() : '',
+                endereco: autor.endereco ? autor.endereco.toUpperCase() : '',
+                naturalidade: autor.naturalidade ? autor.naturalidade.toUpperCase() : '',
+                filiacaoMae: autor.filiacaoMae ? autor.filiacaoMae.toUpperCase() : '',
+                filiacaoPai: autor.filiacaoPai ? autor.filiacaoPai.toUpperCase() : '',
+                rg: autor.rg ? autor.rg.toUpperCase() : '',
+                cpf: autor.cpf ? autor.cpf.toUpperCase() : '',
+                celular: autor.celular ? autor.celular.toUpperCase() : '',
+                email: autor.email ? autor.email.toUpperCase() : '',
+            };
+            
+            if (index > 0) {
+                yPos += 3; yPos = checkPageBreak(doc, yPos, 5, data);
+                doc.setLineWidth(0.1); doc.setDrawColor(150);
+                doc.line(MARGIN_LEFT, yPos - 1, PAGE_WIDTH - MARGIN_RIGHT, yPos - 1);
+                doc.setDrawColor(0); yPos += 2;
+            }
+            yPos = addField(doc, yPos, "NOME", upperAutor.nome, data);
+            yPos = addField(doc, yPos, "SEXO", upperAutor.sexo, data);
+            yPos = addField(doc, yPos, "ESTADO CIVIL", upperAutor.estadoCivil, data);
+            yPos = addField(doc, yPos, "PROFISSÃO", upperAutor.profissao, data);
+            yPos = addField(doc, yPos, "ENDEREÇO", upperAutor.endereco, data);
+            yPos = addField(doc, yPos, "DATA DE NASCIMENTO", formatarDataSimples(autor.dataNascimento), data);
+            yPos = addField(doc, yPos, "NATURALIDADE", upperAutor.naturalidade, data);
+            yPos = addField(doc, yPos, "FILIAÇÃO - MÃE", upperAutor.filiacaoMae, data);
+            yPos = addField(doc, yPos, "FILIAÇÃO - PAI", upperAutor.filiacaoPai, data);
+            yPos = addField(doc, yPos, "RG", upperAutor.rg, data);
+            yPos = addField(doc, yPos, "CPF", upperAutor.cpf, data);
+            yPos = addField(doc, yPos, "CELULAR", upperAutor.celular, data);
+            yPos = addField(doc, yPos, "E-MAIL", upperAutor.email, data);
+        });
+    } else {
+        yPos = addWrappedText(doc, yPos, "Nenhum autor informado.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
+        yPos += 2;
+    }
+
+    // Seção 2.2: Vítima(s) - Skip completely for drug cases
+    if (!isDrugCase) {
+        const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome) : [];
+        const vitimaTitle = vitimasValidas.length === 1 ? "VÍTIMA" : "VÍTIMAS";
+        yPos = addSectionTitle(doc, yPos, vitimaTitle, "2.2", 2, data);
+        if (vitimasValidas.length > 0) {
+            vitimasValidas.forEach((vitima, index) => {
+                // Create uppercase version of victim data
+                const upperVitima = {
+                    ...vitima,
+                    nome: vitima.nome ? vitima.nome.toUpperCase() : '',
+                    sexo: vitima.sexo ? vitima.sexo.toUpperCase() : '',
+                    estadoCivil: vitima.estadoCivil ? vitima.estadoCivil.toUpperCase() : '',
+                    profissao: vitima.profissao ? vitima.profissao.toUpperCase() : '',
+                    endereco: vitima.endereco ? vitima.endereco.toUpperCase() : '',
+                    naturalidade: vitima.naturalidade ? vitima.naturalidade.toUpperCase() : '',
+                    filiacaoMae: vitima.filiacaoMae ? vitima.filiacaoMae.toUpperCase() : '',
+                    filiacaoPai: vitima.filiacaoPai ? vitima.filiacaoPai.toUpperCase() : '',
+                    rg: vitima.rg ? vitima.rg.toUpperCase() : '',
+                    cpf: vitima.cpf ? vitima.cpf.toUpperCase() : '',
+                    celular: vitima.celular ? vitima.celular.toUpperCase() : '',
+                    email: vitima.email ? vitima.email.toUpperCase() : '',
+                };
+                
+                if (index > 0) {
+                    yPos += 3; yPos = checkPageBreak(doc, yPos, 5, data);
+                    doc.setLineWidth(0.1); doc.setDrawColor(150);
+                    doc.line(MARGIN_LEFT, yPos - 1, PAGE_WIDTH - MARGIN_RIGHT, yPos - 1);
+                    doc.setDrawColor(0); yPos += 2;
+                }
+                yPos = addField(doc, yPos, "NOME", upperVitima.nome, data);
+                yPos = addField(doc, yPos, "SEXO", upperVitima.sexo, data);
+                yPos = addField(doc, yPos, "ESTADO CIVIL", upperVitima.estadoCivil, data);
+                yPos = addField(doc, yPos, "PROFISSÃO", upperVitima.profissao, data);
+                yPos = addField(doc, yPos, "ENDEREÇO", upperVitima.endereco, data);
+                yPos = addField(doc, yPos, "DATA DE NASCIMENTO", formatarDataSimples(vitima.dataNascimento), data);
+                yPos = addField(doc, yPos, "NATURALIDADE", upperVitima.naturalidade, data);
+                yPos = addField(doc, yPos, "FILIAÇÃO - MÃE", upperVitima.filiacaoMae, data);
+                yPos = addField(doc, yPos, "FILIAÇÃO - PAI", upperVitima.filiacaoPai, data);
+                yPos = addField(doc, yPos, "RG", upperVitima.rg, data);
+                yPos = addField(doc, yPos, "CPF", upperVitima.cpf, data);
+                yPos = addField(doc, yPos, "CELULAR", upperVitima.celular, data);
+                yPos = addField(doc, yPos, "E-MAIL", upperVitima.email, data);
+            });
+        } else {
+            yPos = addWrappedText(doc, yPos, "Nenhuma vítima informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
+            yPos += 2;
         }
-      } else {
-        doc.text(apoio, margemEsquerda, secao5Y);
-        secao5Y += espacamentoLinhas;
-      }
+    }
+
+    // Seção 2.3: Testemunha(s) - Ajusta singular/plural
+    const testemunhasValidas = data.testemunhas ? data.testemunhas.filter(t => t?.nome) : [];
+    const testemunhaTitle = testemunhasValidas.length === 1 ? "TESTEMUNHA" : "TESTEMUNHAS";
+    yPos = addSectionTitle(doc, yPos, testemunhaTitle, "2.3", 2, data);
+    if (testemunhasValidas.length > 0) {
+        testemunhasValidas.forEach((testemunha, index) => {
+            // Create uppercase version of witness data
+            const upperTestemunha = {
+                ...testemunha,
+                nome: testemunha.nome ? testemunha.nome.toUpperCase() : '',
+                sexo: testemunha.sexo ? testemunha.sexo.toUpperCase() : '',
+                estadoCivil: testemunha.estadoCivil ? testemunha.estadoCivil.toUpperCase() : '',
+                profissao: testemunha.profissao ? testemunha.profissao.toUpperCase() : '',
+                endereco: testemunha.endereco ? testemunha.endereco.toUpperCase() : '',
+                naturalidade: testemunha.naturalidade ? testemunha.naturalidade.toUpperCase() : '',
+                filiacaoMae: testemunha.filiacaoMae ? testemunha.filiacaoMae.toUpperCase() : '',
+                filiacaoPai: testemunha.filiacaoPai ? testemunha.filiacaoPai.toUpperCase() : '',
+                rg: testemunha.rg ? testemunha.rg.toUpperCase() : '',
+                cpf: testemunha.cpf ? testemunha.cpf.toUpperCase() : '',
+                celular: testemunha.celular ? testemunha.celular.toUpperCase() : '',
+                email: testemunha.email ? testemunha.email.toUpperCase() : '',
+            };
+            
+            if (index > 0) {
+                yPos += 3; yPos = checkPageBreak(doc, yPos, 5, data);
+                doc.setLineWidth(0.1); doc.setDrawColor(150);
+                doc.line(MARGIN_LEFT, yPos - 1, PAGE_WIDTH - MARGIN_RIGHT, yPos - 1);
+                doc.setDrawColor(0); yPos += 2;
+            }
+            yPos = addField(doc, yPos, "NOME", upperTestemunha.nome, data);
+            yPos = addField(doc, yPos, "SEXO", upperTestemunha.sexo, data);
+            yPos = addField(doc, yPos, "ESTADO CIVIL", upperTestemunha.estadoCivil, data);
+            yPos = addField(doc, yPos, "PROFISSÃO", upperTestemunha.profissao, data);
+            yPos = addField(doc, yPos, "ENDEREÇO", upperTestemunha.endereco, data);
+            yPos = addField(doc, yPos, "DATA DE NASCIMENTO", formatarDataSimples(testemunha.dataNascimento), data);
+            yPos = addField(doc, yPos, "NATURALIDADE", upperTestemunha.naturalidade, data);
+            yPos = addField(doc, yPos, "FILIAÇÃO - MÃE", upperTestemunha.filiacaoMae, data);
+            yPos = addField(doc, yPos, "FILIAÇÃO - PAI", upperTestemunha.filiacaoPai, data);
+            yPos = addField(doc, yPos, "RG", upperTestemunha.rg, data);
+            yPos = addField(doc, yPos, "CPF", upperTestemunha.cpf, data);
+            yPos = addField(doc, yPos, "CELULAR", upperTestemunha.celular, data);
+            yPos = addField(doc, yPos, "E-MAIL", upperTestemunha.email, data);
+        });
+    } else {
+        yPos = addWrappedText(doc, yPos, "Nenhuma testemunha informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
+        yPos += 2;
+    }
+
+    // --- SEÇÃO 3: HISTÓRICO ---
+    const primeiroAutor = data.autores?.[0];
+    const primeiraVitima = !isDrugCase ? data.vitimas?.find(v => v?.nome) : null;
+    const primeiraTestemunha = data.testemunhas?.find(t => t?.nome);
+
+    yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
+    yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", "3.1", 2, data);
+    yPos = addWrappedText(doc, yPos, data.relatoPolicial, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos += 2;
+
+    // Aplica flexão de gênero no título do relato do autor
+    const tituloRelatoAutor = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "RELATO DA AUTORA DO FATO" : "RELATO DO AUTOR DO FATO";
+    yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, "3.2", 2, data);
+    yPos = addWrappedText(doc, yPos, data.relatoAutor, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    
+    if (primeiroAutor) {
+        const autorLabel = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "AUTORA DO FATO" : "AUTOR DO FATO";
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor?.nome, autorLabel, data);
+    } else {
+        yPos += 10;
+    }
+
+    // Only include victim section if it's not a drug case
+    if (!isDrugCase) {
+        yPos = addSectionTitle(doc, yPos, "RELATO DA VÍTIMA", "3.3", 2, data);
+        const relatoVitimaText = primeiraVitima ? (data.relatoVitima || "Relato não fornecido pela vítima.") : "Nenhuma vítima identificada para fornecer relato.";
+        yPos = addWrappedText(doc, yPos, relatoVitimaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+        if (primeiraVitima) {
+            yPos = addSignatureWithNameAndRole(doc, yPos, primeiraVitima?.nome, "VÍTIMA", data);
+        } else {
+            yPos += 10;
+        }
+    }
+
+    // Adjust section numbering for witness report based on whether victim section exists
+    const testemunhaSection = isDrugCase ? "3.3" : "3.4";
+    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", testemunhaSection, 2, data);
+    let relatoTestText = "Nenhuma testemunha identificada.";
+    if (primeiraTestemunha) {
+        relatoTestText = data.relatoTestemunha || "Relato não fornecido pela testemunha.";
+    }
+    yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    if (primeiraTestemunha) {
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiraTestemunha?.nome, "TESTEMUNHA", data);
+    } else {
+        yPos += 10;
+    }
+
+    // Adjust section numbering for conclusion based on whether victim section exists
+    const conclusaoSection = isDrugCase ? "3.4" : "3.5";
+    yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", conclusaoSection, 2, data);
+    yPos = addWrappedText(doc, yPos, data.conclusaoPolicial, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos += 2;
+
+    // --- SEÇÃO 4: PROVIDÊNCIAS E ANEXOS ---
+    yPos = addSectionTitle(doc, yPos, "PROVIDÊNCIAS", "4", 1, data);
+    yPos = addWrappedText(doc, yPos, data.providencias || "Não informado.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos += 2;
+
+    yPos = addSectionTitle(doc, yPos, "DOCUMENTOS ANEXOS", "4.1", 2, data);
+    yPos = addWrappedText(doc, yPos, data.documentosAnexos || "Nenhum.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
+    yPos += 2;
+
+    yPos = addSectionTitle(doc, yPos, "DESCRIÇÃO DOS OBJETOS/DOCUMENTOS APREENDIDOS", "4.2", 2, data);
+    yPos = addWrappedText(doc, yPos, data.apreensaoDescricao || data.apreensoes || "Nenhum.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
+    yPos += 2;
+
+    // --- SEÇÃO 4.3: FOTOS E/OU VÍDEOS ---
+    const hasPhotos = data.objetosApreendidos && data.objetosApreendidos.length > 0;
+    const hasVideos = data.videoLinks && data.videoLinks.length > 0;
+    const hasImages = data.imageBase64 && data.imageBase64.length > 0;
+    let sectionTitle = "FOTOS E VÍDEOS";
+    if (hasPhotos && !hasVideos && !hasImages) {
+        sectionTitle = "FOTOS";
+    } else if (!hasPhotos && hasVideos && !hasImages) {
+        sectionTitle = "VÍDEOS";
+    } else if (!hasPhotos && !hasVideos && hasImages) {
+        sectionTitle = "IMAGENS ADICIONAIS";
+    } else if (hasImages && (hasPhotos || hasVideos)) {
+        sectionTitle = "FOTOS, VÍDEOS E IMAGENS ADICIONAIS";
+    }
+
+    if (hasPhotos || hasVideos || hasImages) {
+        yPos = addSectionTitle(doc, yPos, sectionTitle, "4.3", 2, data);
+
+        // Adicionar Fotos (data.objetosApreendidos)
+        if (hasPhotos) {
+            const photoWidth = 50; // Largura de cada foto
+            const photoHeight = 50; // Altura de cada foto
+            let xPos = MARGIN_LEFT;
+
+            for (let i = 0; i < data.objetosApreendidos.length; i++) {
+                const photo = data.objetosApreendidos[i];
+                yPos = checkPageBreak(doc, yPos, photoHeight + 5, data);
+
+                try {
+                    let imageData = photo;
+                    if (photo instanceof File) {
+                        imageData = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(photo);
+                        });
+                    }
+                    doc.addImage(imageData, 'JPEG', xPos, yPos, photoWidth, photoHeight);
+                    xPos += photoWidth + 5; // Espaço entre fotos
+
+                    if (xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += photoHeight + 5;
+                    }
+                } catch (error) {
+                    console.error(`Erro ao adicionar foto ${i + 1}:`, error);
+                    doc.text(`[Erro ao carregar foto ${i + 1}]`, xPos, yPos + 5);
+                    xPos += photoWidth + 5;
+                    if (xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += photoHeight + 5;
+                    }
+                }
+            }
+            yPos = xPos !== MARGIN_LEFT ? yPos + photoHeight + 5 : yPos; // Ajusta yPos após as fotos
+        }
+
+        // Adicionar QR Codes para os links de vídeos
+        if (hasVideos) {
+            const qrSize = 30; // Tamanho do QR code
+            let xPos = MARGIN_LEFT;
+
+            for (let i = 0; i < data.videoLinks.length; i++) {
+                const link = data.videoLinks[i];
+                yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
+
+                try {
+                    const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
+                    doc.addImage(qrCodeDataUrl, 'PNG', xPos, yPos, qrSize, qrSize);
+                    
+                    doc.setFontSize(8);
+                    doc.text(`Vídeo ${i + 1}`, xPos, yPos + qrSize + 5);
+                    xPos += qrSize + 10;
+
+                    if (xPos + qrSize > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += qrSize + 10;
+                    }
+                } catch (error) {
+                    console.error(`Erro ao gerar QR code para o vídeo ${i + 1}:`, error);
+                    doc.text(`[Erro ao gerar QR code para vídeo ${i + 1}]`, xPos, yPos + 5);
+                    xPos += qrSize + 10;
+                    if (xPos + qrSize > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += qrSize + 10;
+                    }
+                }
+            }
+            yPos = xPos !== MARGIN_LEFT ? yPos + qrSize + 10 : yPos;
+        }
+
+        // Adicionar Imagens de data.imageBase64
+        if (hasImages) {
+            yPos = checkPageBreak(doc, yPos, 100, data); // Reserva espaço para imagens
+            yPos = addImagesToPDF(doc, yPos, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT);
+        }
+    } else {
+        yPos = addSectionTitle(doc, yPos, "FOTOS E VÍDEOS", "4.3", 2, data);
+        yPos = addWrappedText(doc, yPos, "Nenhuma foto, vídeo ou imagem adicional anexada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
+        yPos += 2;
+    }
+
+    // --- SEÇÃO 5: IDENTIFICAÇÃO DA GUARNIÇÃO ---
+    yPos = addSectionTitle(doc, yPos, "IDENTIFICAÇÃO DA GUARNIÇÃO", "5", 1, data);
+    
+    if (data.componentesGuarnicao && data.componentesGuarnicao.length > 0) {
+        data.componentesGuarnicao.forEach((componente, index) => {
+            if (index > 0) { 
+                yPos += 15;  // Aumentado para 15 para criar mais espaço entre identificações
+                yPos = checkPageBreak(doc, yPos, 5 + 50, data);
+                
+                // Adicionando uma linha separadora entre os militares
+                doc.setLineWidth(0.1);
+                doc.setDrawColor(200, 200, 200);
+                doc.line(MARGIN_LEFT, yPos - 10, PAGE_WIDTH - MARGIN_RIGHT, yPos - 10);
+                doc.setDrawColor(0);
+                
+                yPos += 5; // Espaço adicional após a linha
+            }
+    
+            yPos = addField(doc, yPos, "NOME COMPLETO", componente.nome, data);
+            yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto, data);
+            yPos = addField(doc, yPos, "RG PMMT", componente.rg, data);
+            yPos = checkPageBreak(doc, yPos, 5, data);
+    
+            const sigLineY = yPos;
+            doc.setFont("helvetica", "normal"); 
+            doc.setFontSize(12);
+            doc.text("ASSINATURA:", MARGIN_LEFT, sigLineY);
+            const labelWidth = doc.getTextWidth("ASSINATURA:");
+            const lineStartX = MARGIN_LEFT + labelWidth + 2;
+            const lineEndX = lineStartX + 80;
+            doc.setLineWidth(0.3); 
+            doc.line(lineStartX, sigLineY, lineEndX, sigLineY);
+            yPos = sigLineY + 2;
+        });
+    } else {
+        yPos = addWrappedText(doc, yPos, "Dados da Guarnição não informados.", MARGIN_LEFT, 12, 'italic', MAX_LINE_WIDTH, 'left', data);
+        yPos += 2;
     }
     
-    secao5Y += espacamentoLinhas;
-  }
-
-  // Verificar se há espaço para continuar na página atual
-  if (secao5Y > pageHeight - margemInferior - 15) {
-    doc.addPage();
-    secao5Y = margemSuperior;
-  }
-  
-  doc.lastY = secao11Y;
-  return doc.lastY;
+    return yPos;
 };

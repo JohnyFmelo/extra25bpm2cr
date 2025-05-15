@@ -1,13 +1,13 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Users, UserPlus, Info, Search, UserMinus } from "lucide-react";
+import { Trash2, Users, UserPlus, Info, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabaseClient";
+import { motion } from "framer-motion";
 
 // --- Funções Auxiliares ---
 const somenteNumeros = (value: string | null | undefined): string => {
@@ -100,33 +100,33 @@ interface GuarnicaoTabProps {
   currentGuarnicaoList: ComponenteGuarnicao[];
   onAddPolicial: (policial: ComponenteGuarnicao) => void;
   onRemovePolicial: (index: number) => void;
-  currentApoioList: ComponenteGuarnicao[];
-  onAddApoio: (policial: ComponenteGuarnicao) => void;
-  onRemoveApoio: (index: number) => void;
 }
+
+const listVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.07 } }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+};
 
 // --- Componente GuarnicaoTab ---
 const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
   currentGuarnicaoList,
   onAddPolicial,
-  onRemovePolicial,
-  currentApoioList,
-  onAddApoio,
-  onRemoveApoio
+  onRemovePolicial
 }) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [searchRgpm, setSearchRgpm] = useState<string>("");
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState<boolean>(false);
   const [newOfficerFormData, setNewOfficerFormData] = useState<PoliceOfficerFormData>(initialOfficerFormData);
-  const [activeTab, setActiveTab] = useState<"guarnicao" | "apoio">("guarnicao");
   
   useEffect(() => {
     console.log("[GuarnicaoTab] Prop 'currentGuarnicaoList' recebida:", currentGuarnicaoList);
-    console.log("[GuarnicaoTab] Prop 'currentApoioList' recebida:", currentApoioList);
-  }, [currentGuarnicaoList, currentApoioList]);
+  }, [currentGuarnicaoList]);
   
   const handleSearchRgpmChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = event.target.value;
@@ -145,37 +145,17 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       });
       return;
     }
-    
-    // Verificar duplicidade na lista atual (guarnição ou apoio)
-    const targetList = activeTab === "guarnicao" ? currentGuarnicaoList : currentApoioList;
-    const alreadyExists = targetList.some(comp => comp.rg === rgpmToSearch);
-    
-    // Verificar duplicidade na outra lista
-    const otherList = activeTab === "guarnicao" ? currentApoioList : currentGuarnicaoList;
-    const existsInOtherList = otherList.some(comp => comp.rg === rgpmToSearch);
-    
+    const alreadyExists = currentGuarnicaoList.some(comp => comp.rg === rgpmToSearch);
     if (alreadyExists) {
-      console.log(`[GuarnicaoTab] RGPM já existe na lista de ${activeTab}:`, rgpmToSearch);
+      console.log("[GuarnicaoTab] RGPM já existe na lista (prop):", rgpmToSearch);
       toast({
         variant: "default",
         title: "Duplicado",
-        description: `Este policial já está na ${activeTab === "guarnicao" ? "guarnição" : "equipe de apoio"}.`
+        description: "Este policial já está na guarnição."
       });
       setSearchRgpm("");
       return;
     }
-    
-    if (existsInOtherList) {
-      const confirmMessage = activeTab === "guarnicao" 
-        ? "Este policial já está na equipe de apoio. Deseja adicioná-lo também à guarnição principal?"
-        : "Este policial já está na guarnição principal. Deseja adicioná-lo também à equipe de apoio?";
-        
-      if (!window.confirm(confirmMessage)) {
-        setSearchRgpm("");
-        return;
-      }
-    }
-    
     setIsSearching(true);
     console.log("[GuarnicaoTab] Buscando no Supabase...");
     try {
@@ -210,23 +190,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
         };
         console.log("[GuarnicaoTab] Componente criado com telefone:", newComponente.telefone);
         console.log("[GuarnicaoTab] Policial encontrado. Chamando onAddPolicial:", newComponente);
-        if (activeTab === "guarnicao") {
-          onAddPolicial(newComponente);
-          toast({
-            title: "Adicionado à Guarnição",
-            description: `Policial ${newComponente.nome} adicionado à guarnição principal.`,
-            className: "bg-green-600 text-white border-green-700",
-            duration: 5000
-          });
-        } else {
-          onAddApoio(newComponente);
-          toast({
-            title: "Adicionado ao Apoio",
-            description: `Policial ${newComponente.nome} adicionado à equipe de apoio.`,
-            className: "bg-green-600 text-white border-green-700",
-            duration: 5000
-          });
-        }
+        onAddPolicial(newComponente);
         setSearchRgpm("");
       }
     } catch (error: any) {
@@ -240,26 +204,16 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       setIsSearching(false);
       console.log("[GuarnicaoTab] Busca finalizada.");
     }
-  }, [searchRgpm, currentGuarnicaoList, currentApoioList, toast, onAddPolicial, onAddApoio, activeTab]);
+  }, [searchRgpm, currentGuarnicaoList, toast, onAddPolicial]);
   
   const handleRemove = (index: number) => {
-    if (activeTab === "guarnicao") {
-      const itemToRemove = currentGuarnicaoList[index];
-      console.log("[GuarnicaoTab] Chamando onRemovePolicial para índice:", index, itemToRemove);
-      onRemovePolicial(index);
-      toast({
-        title: "Removido da Guarnição",
-        description: `Componente ${itemToRemove?.nome || ''} removido da guarnição principal.`
-      });
-    } else {
-      const itemToRemove = currentApoioList[index];
-      console.log("[GuarnicaoTab] Chamando onRemoveApoio para índice:", index, itemToRemove);
-      onRemoveApoio(index);
-      toast({
-        title: "Removido do Apoio",
-        description: `Componente ${itemToRemove?.nome || ''} removido da equipe de apoio.`
-      });
-    }
+    const itemToRemove = currentGuarnicaoList[index];
+    console.log("[GuarnicaoTab] Chamando onRemovePolicial para índice:", index, itemToRemove);
+    onRemovePolicial(index);
+    toast({
+      title: "Removido",
+      description: `Componente ${itemToRemove?.nome || ''} removido da guarnição.`
+    });
   };
   
   const openRegisterDialog = (e: React.MouseEvent) => {
@@ -394,20 +348,21 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
   }, [newOfficerFormData]);
   
   return (
-    <Card>
-      <CardHeader>
+    <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
+      <CardHeader className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20">
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle className="flex items-center">
-              <Users className="mr-2 h-5 w-5" /> GUARNIÇÃO E APOIO
+            <CardTitle className="flex items-center text-green-700 dark:text-green-300">
+              <Users className="mr-2 h-5 w-5" /> GUARNIÇÃO
             </CardTitle>
-            <CardDescription>Adicione policiais da guarnição principal e equipes de apoio</CardDescription>
+            <CardDescription>Adicione os componentes buscando por RGPM</CardDescription>
           </div>
           <Button 
             variant="outline" 
             size="sm" 
             onClick={openRegisterDialog} 
             type="button"
+            className="bg-green-100 text-green-700 border-green-300 hover:bg-green-200 hover:text-green-800 transition-colors duration-200"
           >
             <UserPlus className="h-4 w-4 mr-2" /> Cadastrar/Atualizar Policial
           </Button>
@@ -416,191 +371,223 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "guarnicao" | "apoio")}>
-            <TabsList className="w-full">
-              <TabsTrigger className="w-1/2" value="guarnicao">Guarnição Principal</TabsTrigger>
-              <TabsTrigger className="w-1/2" value="apoio">Apoio</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="guarnicao" className="mt-4">
-              <div>
-                <div className="flex gap-2 items-center mb-4">
-                  <Input
-                    id="rgpmSearchInputGuarnicao"
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="Buscar por RGPM (6 dígitos)" 
-                    value={searchRgpm}
-                    onChange={handleSearchRgpmChange}
-                    disabled={isSearching}
-                    className="flex-grow"
-                    maxLength={6}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
-                    }}
-                  />
-                  <Button 
-                    onClick={handleSearchAndAdd} 
-                    disabled={isSearching || searchRgpm.length !== 6}
-                  >
-                    {isSearching ? "Buscando..." : <><Search className="h-4 w-4 mr-1" /> Adicionar</>}
-                  </Button>
-                </div>
-                
-                <Label>Componentes da Guarnição Principal</Label>
-                {currentGuarnicaoList.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4 border rounded-md border-dashed">
-                    Nenhum componente adicionado à guarnição principal. Use a busca acima.
-                  </p>
-                ) : (
-                  <div className="border rounded-md overflow-hidden">
-                    {currentGuarnicaoList.map((componente, index) => (
-                      <div 
-                        key={`${componente.rg}-${index}`} 
-                        className={`flex items-center justify-between p-3 ${index > 0 ? "border-t" : ""} ${index === 0 ? "bg-blue-50" : "bg-background"}`}
-                      >
-                        <div className="flex flex-col flex-grow mr-2 truncate">
-                          <span className="text-sm font-medium truncate" title={`${componente.posto} ${componente.nome} (RGPM: ${componente.rg})`}>
-                            {index === 0 && <span className="font-bold text-blue-800">(Condutor) </span>}
-                            <span>{componente.posto || "Sem Posto"}</span>{' '}
-                            <span>{componente.nome || "Sem Nome"}</span>
-                          </span>
-                          <span className="text-xs text-muted-foreground">RGPM: {componente.rg || "Não informado"}</span>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0"
-                          onClick={() => handleRemove(index)}
-                          aria-label={`Remover ${componente.nome}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
+          <div className="flex gap-2 items-center">
+            <div className="relative flex-grow">
+              <Input 
+                id="rgpmSearchInput" 
+                type="text" 
+                inputMode="numeric" 
+                placeholder="Buscar por RGPM (6 dígitos)" 
+                value={searchRgpm} 
+                onChange={handleSearchRgpmChange} 
+                disabled={isSearching} 
+                className="pr-10 border-green-300 focus:border-green-500 focus:ring-green-500 transition-all duration-200" 
+                maxLength={6} 
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
+                }}
+              />
+              {searchRgpm.length > 0 && (
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-400">
+                  {searchRgpm.length}/6
+                </span>
+              )}
+            </div>
+            <Button 
+              onClick={handleSearchAndAdd} 
+              disabled={isSearching || searchRgpm.length !== 6}
+              className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
+            >
+              {isSearching ? "Buscando..." : <><Search className="h-4 w-4 mr-1" /> Adicionar</>}
+            </Button>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label className="text-green-700 font-medium">Componentes da Guarnição Atual</Label>
+          
+          {currentGuarnicaoList.length === 0 ? (
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              className="text-sm text-muted-foreground text-center py-8 border-2 rounded-md border-dashed border-green-200 bg-green-50/50"
+            >
+              <Users className="h-10 w-10 mx-auto mb-2 text-green-300" />
+              <p>Nenhum componente adicionado. Use a busca acima.</p>
+            </motion.div>
+          ) : (
+            <motion.div 
+              className="border rounded-md overflow-hidden shadow-sm"
+              variants={listVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {currentGuarnicaoList.map((componente, index) => (
+                <motion.div 
+                  key={`${componente.rg}-${index}`} 
+                  variants={itemVariants}
+                  className={`flex items-center justify-between p-3 ${index > 0 ? "border-t" : ""} 
+                    ${index === 0 ? "bg-blue-50 hover:bg-blue-100" : "bg-background hover:bg-gray-50"} 
+                    transition-colors duration-200`}
+                  layoutId={`officer-${componente.rg}-${index}`}
+                >
+                  <div className="flex flex-col flex-grow mr-2 truncate">
+                    <span className="text-sm font-medium truncate" title={`${componente.posto} ${componente.nome} (RGPM: ${componente.rg})`}>
+                      {index === 0 && <span className="font-bold text-blue-800">(Condutor) </span>}
+                      <span>{componente.posto || "Sem Posto"}</span>{' '}
+                      <span>{componente.nome || "Sem Nome"}</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">RGPM: {componente.rg || "Não informado"}</span>
                   </div>
-                )}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="apoio" className="mt-4">
-              <div>
-                <div className="flex gap-2 items-center mb-4">
-                  <Input
-                    id="rgpmSearchInputApoio"
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="Buscar por RGPM (6 dígitos)" 
-                    value={searchRgpm}
-                    onChange={handleSearchRgpmChange}
-                    disabled={isSearching}
-                    className="flex-grow"
-                    maxLength={6}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
-                    }}
-                  />
                   <Button 
-                    onClick={handleSearchAndAdd} 
-                    disabled={isSearching || searchRgpm.length !== 6}
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-red-400 hover:text-red-600 hover:bg-red-100 h-8 w-8 flex-shrink-0 transition-colors duration-200" 
+                    onClick={() => handleRemove(index)} 
+                    aria-label={`Remover ${componente.nome}`}
                   >
-                    {isSearching ? "Buscando..." : <><Search className="h-4 w-4 mr-1" /> Adicionar</>}
+                    <Trash2 className="h-4 w-4" />
                   </Button>
-                </div>
-                
-                <Label>Componentes da Equipe de Apoio</Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Policiais de apoio serão listados no item 5.1 do PDF, mas não precisarão assinar o documento.
-                </p>
-                
-                {currentApoioList.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4 border rounded-md border-dashed">
-                    Nenhum componente adicionado ao apoio. Use a busca acima.
-                  </p>
-                ) : (
-                  <div className="border rounded-md overflow-hidden">
-                    {currentApoioList.map((componente, index) => (
-                      <div 
-                        key={`apoio-${componente.rg}-${index}`} 
-                        className="flex items-center justify-between p-3 border-t first:border-t-0 bg-emerald-50"
-                      >
-                        <div className="flex flex-col flex-grow mr-2 truncate">
-                          <span className="text-sm font-medium truncate" title={`${componente.posto} ${componente.nome} (RGPM: ${componente.rg})`}>
-                            <span>{componente.posto || "Sem Posto"}</span>{' '}
-                            <span>{componente.nome || "Sem Nome"}</span>
-                          </span>
-                          <span className="text-xs text-muted-foreground">RGPM: {componente.rg || "Não informado"}</span>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0"
-                          onClick={() => handleRemove(index)}
-                          aria-label={`Remover ${componente.nome}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
         </div>
       </CardContent>
       
       <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle>Cadastrar ou Atualizar Policial</DialogTitle>
+            <DialogTitle className="text-green-700">Cadastrar ou Atualizar Policial</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-3 px-[5px] py-0 my-0">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="dlg-rgpm">RGPM (6 dígitos) * <Info className="inline h-3 w-3 text-muted-foreground ml-1" aria-label="Usado para buscar e identificar o policial" /></Label>
-                <Input id="dlg-rgpm" value={newOfficerFormData.rgpm} onChange={e => handleRegisterInputChange("rgpm", e.target.value)} placeholder="000000" required inputMode="numeric" maxLength={6} />
+                <Label htmlFor="dlg-rgpm" className="flex items-center text-green-700">
+                  RGPM (6 dígitos) * 
+                  <Info className="inline h-3 w-3 text-muted-foreground ml-1" aria-label="Usado para buscar e identificar o policial" />
+                </Label>
+                <Input 
+                  id="dlg-rgpm" 
+                  value={newOfficerFormData.rgpm} 
+                  onChange={e => handleRegisterInputChange("rgpm", e.target.value)} 
+                  placeholder="000000" 
+                  required 
+                  inputMode="numeric" 
+                  maxLength={6}
+                  className="border-green-200 focus:border-green-500 focus:ring-green-500" 
+                />
               </div>
               <div>
-                <Label htmlFor="dlg-graduacao">Graduação *</Label>
-                <select id="dlg-graduacao" value={newOfficerFormData.graduacao} onChange={e => handleRegisterInputChange("graduacao", e.target.value)} required className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                <Label htmlFor="dlg-graduacao" className="text-green-700">Graduação *</Label>
+                <select 
+                  id="dlg-graduacao" 
+                  value={newOfficerFormData.graduacao} 
+                  onChange={e => handleRegisterInputChange("graduacao", e.target.value)} 
+                  required 
+                  className="block w-full rounded-md border border-green-200 bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-green-500"
+                >
                   <option value="">Selecione...</option>
                   {graduacoes.map(grad => <option key={grad} value={grad}>{grad}</option>)}
                 </select>
               </div>
             </div>
+            
             <div>
-              <Label htmlFor="dlg-nome">Nome Completo *</Label>
-              <Input id="dlg-nome" value={newOfficerFormData.nome} onChange={e => handleRegisterInputChange("nome", e.target.value)} placeholder="Nome completo" required />
+              <Label htmlFor="dlg-nome" className="text-green-700">Nome Completo *</Label>
+              <Input 
+                id="dlg-nome" 
+                value={newOfficerFormData.nome} 
+                onChange={e => handleRegisterInputChange("nome", e.target.value)} 
+                placeholder="Nome completo" 
+                required
+                className="border-green-200 focus:border-green-500 focus:ring-green-500" 
+              />
             </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="dlg-cpf">CPF *</Label>
-                <Input id="dlg-cpf" value={newOfficerFormData.cpf} onChange={e => handleRegisterInputChange("cpf", e.target.value)} placeholder="000.000.000-00" required inputMode="numeric" maxLength={14} />
+                <Label htmlFor="dlg-cpf" className="text-green-700">CPF *</Label>
+                <Input 
+                  id="dlg-cpf" 
+                  value={newOfficerFormData.cpf} 
+                  onChange={e => handleRegisterInputChange("cpf", e.target.value)} 
+                  placeholder="000.000.000-00" 
+                  required 
+                  inputMode="numeric" 
+                  maxLength={14}
+                  className="border-green-200 focus:border-green-500 focus:ring-green-500" 
+                />
               </div>
               <div>
-                <Label htmlFor="dlg-telefone">Telefone (com DDD) *</Label>
-                <Input id="dlg-telefone" value={newOfficerFormData.telefone} onChange={e => handleRegisterInputChange("telefone", e.target.value)} placeholder="(00) 00000-0000" required inputMode="tel" maxLength={15} />
+                <Label htmlFor="dlg-telefone" className="text-green-700">Telefone (com DDD) *</Label>
+                <Input 
+                  id="dlg-telefone" 
+                  value={newOfficerFormData.telefone} 
+                  onChange={e => handleRegisterInputChange("telefone", e.target.value)} 
+                  placeholder="(00) 00000-0000" 
+                  required 
+                  inputMode="tel" 
+                  maxLength={15} 
+                  className="border-green-200 focus:border-green-500 focus:ring-green-500"
+                />
               </div>
             </div>
+            
             <div>
-              <Label htmlFor="dlg-naturalidade">Naturalidade (Cidade/UF) *</Label>
-              <Input id="dlg-naturalidade" value={newOfficerFormData.naturalidade} onChange={e => handleRegisterInputChange("naturalidade", e.target.value)} placeholder="Ex: Cuiabá/MT" required />
+              <Label htmlFor="dlg-naturalidade" className="text-green-700">Naturalidade (Cidade/UF) *</Label>
+              <Input 
+                id="dlg-naturalidade" 
+                value={newOfficerFormData.naturalidade} 
+                onChange={e => handleRegisterInputChange("naturalidade", e.target.value)} 
+                placeholder="Ex: Cuiabá/MT" 
+                required
+                className="border-green-200 focus:border-green-500 focus:ring-green-500" 
+              />
             </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="dlg-pai">Nome do Pai *</Label>
-                <Input id="dlg-pai" value={newOfficerFormData.pai} onChange={e => handleRegisterInputChange("pai", e.target.value)} required placeholder="Nome completo do pai" />
+                <Label htmlFor="dlg-pai" className="text-green-700">Nome do Pai *</Label>
+                <Input 
+                  id="dlg-pai" 
+                  value={newOfficerFormData.pai} 
+                  onChange={e => handleRegisterInputChange("pai", e.target.value)} 
+                  required 
+                  placeholder="Nome completo do pai"
+                  className="border-green-200 focus:border-green-500 focus:ring-green-500" 
+                />
               </div>
               <div>
-                <Label htmlFor="dlg-mae">Nome da Mãe *</Label>
-                <Input id="dlg-mae" value={newOfficerFormData.mae} onChange={e => handleRegisterInputChange("mae", e.target.value)} required placeholder="Nome completo da mãe" />
+                <Label htmlFor="dlg-mae" className="text-green-700">Nome da Mãe *</Label>
+                <Input 
+                  id="dlg-mae" 
+                  value={newOfficerFormData.mae} 
+                  onChange={e => handleRegisterInputChange("mae", e.target.value)} 
+                  required 
+                  placeholder="Nome completo da mãe"
+                  className="border-green-200 focus:border-green-500 focus:ring-green-500" 
+                />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeRegisterDialog} type="button"> Cancelar </Button>
-            <Button onClick={handleSaveNewOfficer} disabled={isSaveDisabled()} type="button"> Salvar no Banco </Button>
+            <Button 
+              variant="outline" 
+              onClick={closeRegisterDialog} 
+              type="button"
+              className="border-gray-300"
+            > 
+              Cancelar 
+            </Button>
+            <Button 
+              onClick={handleSaveNewOfficer} 
+              disabled={isSaveDisabled()} 
+              type="button"
+              className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
+            > 
+              Salvar no Banco 
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
