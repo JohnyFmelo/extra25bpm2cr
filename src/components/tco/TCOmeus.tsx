@@ -1,7 +1,5 @@
 
 import React, { useState, useEffect } from "react";
-import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Trash2, FileText, Download, Eye } from "lucide-react";
@@ -25,29 +23,16 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
 
-  // Function to fetch user's TCOs from both Firebase and Supabase
+  // Function to fetch user's TCOs from Supabase only
   const fetchUserTcos = async () => {
     if (!user.id) return;
     setIsLoading(true);
     try {
-      // Fetch from Firebase
-      const tcoRef = collection(db, "tcos");
-      const q = query(tcoRef, where("createdBy", "==", user.id));
-      const querySnapshot = await getDocs(q);
-      const firebaseTcos: any[] = [];
-      querySnapshot.forEach(doc => {
-        firebaseTcos.push({
-          id: doc.id,
-          source: 'firebase',
-          ...doc.data()
-        });
-      });
-
       // Fetch from Supabase
       const { data: supaTcos, error } = await supabase
         .from('tco_pdfs')
         .select('*')
-        .eq('userId', user.id);
+        .eq('createdBy', user.id);
       
       if (error) {
         console.error("Error fetching from Supabase:", error);
@@ -58,14 +43,13 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
       const supabaseTcos = supaTcos?.map(tco => ({
         id: tco.id,
         tcoNumber: tco.tcoNumber || `TCO-${tco.id.substring(0, 8)}`,
-        createdAt: new Date(tco.created_at),
+        createdAt: new Date(tco.created_at || tco.createdAt),
         natureza: tco.natureza || "Não especificada",
-        pdfPath: tco.file_path,
+        pdfPath: tco.pdfPath || tco.file_path,
         source: 'supabase'
       })) || [];
       
-      // Combine both sources
-      setTcoList([...firebaseTcos, ...supabaseTcos]);
+      setTcoList(supabaseTcos);
     } catch (error) {
       console.error("Error fetching TCOs:", error);
       toast({
@@ -81,32 +65,27 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   // Function to delete a TCO
   const handleDeleteTco = async (tco: any) => {
     try {
-      if (tco.source === 'firebase') {
-        // Delete from Firebase
-        await deleteDoc(doc(db, "tcos", tco.id));
-      } else if (tco.source === 'supabase') {
-        // Delete from Supabase storage first
-        if (tco.pdfPath) {
-          const { error: storageError } = await supabase.storage
-            .from(BUCKET_NAME)
-            .remove([tco.pdfPath]);
-          
-          if (storageError) {
-            console.error("Error deleting file from storage:", storageError);
-            throw storageError;
-          }
-        }
-
-        // Delete from Supabase database
-        const { error } = await supabase
-          .from('tco_pdfs')
-          .delete()
-          .eq('id', tco.id);
+      // Delete from Supabase storage first
+      if (tco.pdfPath) {
+        const { error: storageError } = await supabase.storage
+          .from(BUCKET_NAME)
+          .remove([tco.pdfPath]);
         
-        if (error) {
-          console.error("Error deleting TCO from database:", error);
-          throw error;
+        if (storageError) {
+          console.error("Error deleting file from storage:", storageError);
+          throw storageError;
         }
+      }
+
+      // Delete from Supabase database
+      const { error } = await supabase
+        .from('tco_pdfs')
+        .delete()
+        .eq('id', tco.id);
+      
+      if (error) {
+        console.error("Error deleting TCO from database:", error);
+        throw error;
       }
 
       setTcoList(tcoList.filter(item => item.id !== tco.id));
@@ -129,22 +108,19 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   // Function to view PDF
   const handleViewPdf = async (tco: any) => {
     try {
-      let url = null;
-      
-      if (tco.source === 'firebase' && tco.pdfUrl) {
-        url = tco.pdfUrl;
-      } else if (tco.source === 'supabase' && tco.pdfPath) {
+      if (tco.pdfPath) {
         // Get public URL from Supabase
         const { data } = await supabase.storage
           .from(BUCKET_NAME)
           .getPublicUrl(tco.pdfPath);
         
-        url = data?.publicUrl;
-      }
-      
-      if (url) {
-        setSelectedPdfUrl(url);
-        setIsPdfDialogOpen(true);
+        const url = data?.publicUrl;
+        if (url) {
+          setSelectedPdfUrl(url);
+          setIsPdfDialogOpen(true);
+        } else {
+          throw new Error("URL não encontrada");
+        }
       } else {
         toast({
           variant: "destructive",
@@ -165,22 +141,19 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   // Function to download PDF
   const handleDownloadPdf = async (tco: any) => {
     try {
-      let url = null;
-      
-      if (tco.source === 'firebase' && tco.pdfUrl) {
-        url = tco.pdfUrl;
-      } else if (tco.source === 'supabase' && tco.pdfPath) {
+      if (tco.pdfPath) {
         // Get public URL from Supabase
         const { data } = await supabase.storage
           .from(BUCKET_NAME)
           .getPublicUrl(tco.pdfPath);
         
-        url = data?.publicUrl;
-      }
-      
-      if (url) {
-        // Abre o URL em uma nova aba para download
-        window.open(url, '_blank');
+        const url = data?.publicUrl;
+        if (url) {
+          // Abre o URL em uma nova aba para download
+          window.open(url, '_blank');
+        } else {
+          throw new Error("URL não encontrada");
+        }
       } else {
         toast({
           variant: "destructive",
@@ -227,14 +200,13 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
               <TableHead className="bg-slate-400">Número</TableHead>
               <TableHead className="bg-slate-400">Data</TableHead>
               <TableHead className="bg-slate-400">Natureza</TableHead>
-              <TableHead className="bg-slate-400">Origem</TableHead>
               <TableHead className="bg-slate-400">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {tcoList.map((tco) => (
               <TableRow
-                key={`${tco.source}-${tco.id}`}
+                key={tco.id}
                 aria-selected={selectedTco?.id === tco.id}
                 className={`cursor-pointer ${selectedTco?.id === tco.id ? "bg-primary/10" : ""}`}
                 onClick={() => setSelectedTco(tco)}
@@ -245,13 +217,12 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
                     ? format(
                         tco.createdAt instanceof Date 
                           ? tco.createdAt 
-                          : new Date(tco.createdAt.seconds * 1000), 
+                          : new Date(tco.createdAt), 
                         "dd/MM/yyyy"
                       )
                     : "-"}
                 </TableCell>
                 <TableCell>{tco.natureza}</TableCell>
-                <TableCell>{tco.source === 'firebase' ? 'Firebase' : 'Supabase'}</TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">
                     <Button
