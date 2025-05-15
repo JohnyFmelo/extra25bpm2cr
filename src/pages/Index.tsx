@@ -1,4 +1,3 @@
-
 import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -26,7 +25,6 @@ import UpcomingShifts from "@/components/UpcomingShifts";
 import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
@@ -37,7 +35,9 @@ const Index = () => {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [hasNotifications, setHasNotifications] = useState(false);
   const [activeTrips, setActiveTrips] = useState<any[]>([]);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
   const navigate = useNavigate();
@@ -45,63 +45,49 @@ const Index = () => {
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
-
   useEffect(() => {
     const handleNotificationsChange = (count: number) => {
       setHasNotifications(count > 0);
     };
-    
     if (unreadCount > 0) {
       setHasNotifications(true);
     }
-    
-    const notificationsChangeEvent = new CustomEvent('notificationsUpdate', { detail: { count: unreadCount } });
+    const notificationsChangeEvent = new CustomEvent('notificationsUpdate', {
+      detail: {
+        count: unreadCount
+      }
+    });
     window.addEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
-    
     return () => {
       window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     };
   }, [unreadCount]);
-
   useEffect(() => {
     const today = new Date();
     const travelsRef = collection(db, "travels");
-    const q = query(
-      travelsRef,
-      where("archived", "==", false)
-    );
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const trips = querySnapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        .filter((trip: any) => {
-          const startDate = new Date(trip.startDate + "T00:00:00");
-          const endDate = new Date(trip.endDate + "T00:00:00");
-          return ((today <= endDate) && 
-                 ((today < startDate && !trip.isLocked) || 
-                  (today >= startDate && today <= endDate)));
-        })
-        .sort((a: any, b: any) => {
-          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-        });
-
+    const q = query(travelsRef, where("archived", "==", false));
+    const unsubscribe = onSnapshot(q, querySnapshot => {
+      const trips = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })).filter((trip: any) => {
+        const startDate = new Date(trip.startDate + "T00:00:00");
+        const endDate = new Date(trip.endDate + "T00:00:00");
+        return today <= endDate && (today < startDate && !trip.isLocked || today >= startDate && today <= endDate);
+      }).sort((a: any, b: any) => {
+        return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      });
       setActiveTrips(trips);
     });
-
     return () => unsubscribe();
   }, []);
-
   const handleRefresh = () => {
     window.location.reload();
     toast({
       title: "Atualizando",
-      description: "Recarregando dados do sistema.",
+      description: "Recarregando dados do sistema."
     });
   };
-
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
@@ -124,15 +110,12 @@ const Index = () => {
   const handleTCOClick = () => {
     setActiveTab("tco");
   };
-  
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
     setShowLogoutDialog(false);
   };
-
-  return (
-    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
+  return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
       <div className="pt-6 px-4 sm:px-6 lg:px-8 pb-28 max-w-7xl mx-auto flex flex-col flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow">
           <TabsList className="hidden">
@@ -148,8 +131,7 @@ const Index = () => {
 
           <TabsContent value="main" className="flex-grow">
             <div className="space-y-8">
-              {hasNotifications && (
-                <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
+              {hasNotifications && <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
                   <CardContent className="p-6">
                     <div className="flex items-center mb-2">
                       <CalendarDays className="h-5 w-5 text-amber-500 mr-2" />
@@ -157,8 +139,7 @@ const Index = () => {
                     </div>
                     <NotificationsList showOnlyUnread={true} />
                   </CardContent>
-                </Card>
-              )}
+                </Card>}
               
               {/* Monthly Hours Summary */}
               <MonthlyHoursSummary />
@@ -170,34 +151,22 @@ const Index = () => {
               <UpcomingShifts />
               
               {/* Active Trips */}
-              <ActiveTrips 
-                trips={activeTrips}
-                onTravelClick={handleTravelClick}
-              />
+              <ActiveTrips trips={activeTrips} onTravelClick={handleTravelClick} />
             </div>
           </TabsContent>
 
           <TabsContent value="extra">
             <div className="relative">
               <div className="absolute right-0 -top-14">
-                <button
-                  onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700"
-                  aria-label="Voltar para home"
-                >
+                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para home">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              {user.userType === "admin" && (
-                <div className="fixed bottom-8 right-8 z-10">
-                  <Button
-                    onClick={handleEditorClick}
-                    className="rounded-full w-16 h-16 shadow-xl bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors"
-                  >
+              {user.userType === "admin" && <div className="fixed bottom-8 right-8 z-10">
+                  <Button onClick={handleEditorClick} className="rounded-full w-16 h-16 shadow-xl bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors py-0 my-[53px]">
                     <Plus className="h-8 w-8" />
                   </Button>
-                </div>
-              )}
+                </div>}
               <TimeSlotsList />
             </div>
           </TabsContent>
@@ -205,11 +174,7 @@ const Index = () => {
           <TabsContent value="settings">
             <div className="relative">
               <div className="absolute right-0 -top-14">
-                <button
-                  onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700"
-                  aria-label="Voltar para home"
-                >
+                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para home">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
@@ -219,53 +184,33 @@ const Index = () => {
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <button
-                      onClick={() => setShowProfileDialog(true)}
-                      className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
+                    <button onClick={() => setShowProfileDialog(true)} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
                       <h3 className="font-semibold text-gray-800">Alterar Cadastro</h3>
                       <p className="text-sm text-gray-600">Atualize suas informações pessoais</p>
                     </button>
-                    <button
-                      onClick={() => setShowPasswordDialog(true)}
-                      className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
+                    <button onClick={() => setShowPasswordDialog(true)} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
                       <h3 className="font-semibold text-gray-800">Alterar Senha</h3>
                       <p className="text-sm text-gray-600">Modifique sua senha de acesso</p>
                     </button>
-                    <button
-                      onClick={() => setShowInformationDialog(true)}
-                      className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
+                    <button onClick={() => setShowInformationDialog(true)} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
                       <h3 className="font-semibold text-gray-800">Informações</h3>
                       <p className="text-sm text-gray-600">Visualize a estrutura funcional do sistema</p>
                     </button>
-                    <button
-                      onClick={handleRefresh}
-                      className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
+                    <button onClick={handleRefresh} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
                       <div className="flex items-center gap-3">
                         <RefreshCw className="h-5 w-5 text-gray-600" />
                         <h3 className="font-semibold text-gray-800">Atualizar</h3>
                       </div>
                       <p className="text-sm text-gray-600">Recarregar dados do sistema</p>
                     </button>
-                    {user.userType === "admin" && (
-                      <button
-                        onClick={() => setActiveTab("users")}
-                        className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                      >
+                    {user.userType === "admin" && <button onClick={() => setActiveTab("users")} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
                         <div className="flex items-center gap-3">
                           <Users className="h-5 w-5 text-gray-600" />
                           <h3 className="font-semibold text-gray-800">Usuários</h3>
                         </div>
                         <p className="text-sm text-gray-600">Gerenciar usuários do sistema</p>
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setShowLogoutDialog(true)}
-                      className="p-4 text-left bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-                    >
+                      </button>}
+                    <button onClick={() => setShowLogoutDialog(true)} className="p-4 text-left bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                       <div className="flex items-center gap-3">
                         <LogOut className="h-5 w-5 text-red-500" />
                         <h3 className="font-semibold text-red-500">Sair</h3>
@@ -281,32 +226,18 @@ const Index = () => {
           <TabsContent value="editor">
             <div className="relative">
               <div className="absolute right-0 -top-14">
-                <button
-                  onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700"
-                  aria-label="Voltar para aba extra"
-                >
+                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para aba extra">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <WeeklyCalendar
-                isLocked={isLocked}
-                onLockChange={setIsLocked}
-                currentDate={currentDate}
-                onDateChange={setCurrentDate}
-                showControls={true}
-              />
+              <WeeklyCalendar isLocked={isLocked} onLockChange={setIsLocked} currentDate={currentDate} onDateChange={setCurrentDate} showControls={true} />
             </div>
           </TabsContent>
 
           <TabsContent value="users">
             <div className="relative">
               <div className="absolute right-0 -top-14">
-                <button
-                  onClick={() => setActiveTab("settings")}
-                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700"
-                  aria-label="Voltar para configurações"
-                >
+                <button onClick={() => setActiveTab("settings")} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para configurações">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
@@ -321,11 +252,7 @@ const Index = () => {
           <TabsContent value="travel">
             <div className="relative">
               <div className="absolute right-0 -top-14">
-                <button
-                  onClick={handleBackClick}
-                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700"
-                  aria-label="Voltar para home"
-                >
+                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para home">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
@@ -341,33 +268,16 @@ const Index = () => {
             <div className="flex flex-col flex-grow">
               <div className="relative">
                 <div className="absolute right-0 -top-14">
-                  <button
-                    onClick={handleBackClick}
-                    className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700"
-                    aria-label="Voltar para home"
-                  >
+                  <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para home">
                     <ArrowLeft className="h-6 w-6" />
                   </button>
                 </div>
-                <Tabs
-                  value={tcoTab}
-                  onValueChange={setTcoTab}
-                  className="space-y-6 flex flex-col flex-grow"
-                >
+                <Tabs value={tcoTab} onValueChange={setTcoTab} className="space-y-6 flex flex-col flex-grow">
                   <TabsList className="bg-white shadow-md rounded-lg p-2 grid grid-cols-2 gap-4">
-                    <TabsTrigger
-                      value="list"
-                      aria-label="Visualizar Meus TCOs"
-                      className="py-2 px-4 rounded-md text-gray-700 font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors"
-                    >
+                    <TabsTrigger value="list" aria-label="Visualizar Meus TCOs" className="py-2 px-4 rounded-md text-gray-700 font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors">
                       Meus TCOs
                     </TabsTrigger>
-                    <TabsTrigger
-                      value="form"
-                      aria-label="Criar ou editar TCO"
-                      onClick={() => setSelectedTco(null)}
-                      className="py-2 px-4 rounded-md text-gray-700 font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors"
-                    >
+                    <TabsTrigger value="form" aria-label="Criar ou editar TCO" onClick={() => setSelectedTco(null)} className="py-2 px-4 rounded-md text-gray-700 font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors">
                       Novo TCO
                     </TabsTrigger>
                   </TabsList>
@@ -375,12 +285,7 @@ const Index = () => {
                   <TabsContent value="list" className="flex-grow">
                     <Card className="shadow-md">
                       <CardContent className="p-6">
-                        <TCOmeus
-                          user={user}
-                          toast={toast}
-                          setSelectedTco={setSelectedTco}
-                          selectedTco={selectedTco}
-                        />
+                        <TCOmeus user={user} toast={toast} setSelectedTco={setSelectedTco} selectedTco={selectedTco} />
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -388,9 +293,7 @@ const Index = () => {
                   <TabsContent value="form" className="flex-grow">
                     <Card className="shadow-md">
                       <CardContent className="p-6">
-                        <TCOForm
-                          selectedTco={selectedTco}
-                        />
+                        <TCOForm selectedTco={selectedTco} />
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -402,26 +305,13 @@ const Index = () => {
       </div>
 
       {/* Profile Update Dialog */}
-      <ProfileUpdateDialog
-        open={showProfileDialog}
-        onOpenChange={setShowProfileDialog}
-        userData={user}
-      />
+      <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={user} />
 
       {/* Password Change Dialog */}
-      <PasswordChangeDialog
-        open={showPasswordDialog}
-        onOpenChange={setShowPasswordDialog}
-        userId={user.id || ''}
-        currentPassword=""
-      />
+      <PasswordChangeDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} userId={user.id || ''} currentPassword="" />
 
       {/* Information Dialog */}
-      <InformationDialog
-        open={showInformationDialog}
-        onOpenChange={setShowInformationDialog}
-        isAdmin={user.userType === 'admin'}
-      />
+      <InformationDialog open={showInformationDialog} onOpenChange={setShowInformationDialog} isAdmin={user.userType === 'admin'} />
 
       {/* Logout confirmation dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
@@ -441,13 +331,7 @@ const Index = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <BottomMenuBar
-        activeTab={activeTab}
-        onTabChange={(tab) => setActiveTab(tab)}
-        isAdmin={user.userType === 'admin'}
-      />
-    </div>
-  );
+      <BottomMenuBar activeTab={activeTab} onTabChange={tab => setActiveTab(tab)} isAdmin={user.userType === 'admin'} />
+    </div>;
 };
-
 export default Index;
