@@ -32,7 +32,7 @@ export const addTermoEncerramentoRemessa = (doc, data) => {
     yPos += 15;
 
     const nomeCondutor = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
-    yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutor, "POLICIAL MILITAR RESPONSÁVEL PELA LAVRATURA", data);
+    yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutor, "CONDUTOR DA OCORRÊNCIA", data);
 
     return yPos;
 };
