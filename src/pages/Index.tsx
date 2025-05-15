@@ -1,4 +1,3 @@
-
 import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -463,8 +462,6 @@ const Index = () => {
                       <CardContent className="p-6">
                         <TCOForm
                           selectedTco={selectedTco}
-                          setSelectedTco={setSelectedTco}
-                          setTcoTab={setTcoTab}
                         />
                       </CardContent>
                     </Card>
@@ -480,18 +477,22 @@ const Index = () => {
       <ProfileUpdateDialog
         open={showProfileDialog}
         onOpenChange={setShowProfileDialog}
+        userData={user}
       />
 
       {/* Password Change Dialog */}
       <PasswordChangeDialog
         open={showPasswordDialog}
         onOpenChange={setShowPasswordDialog}
+        userId={user.id || ''}
+        currentPassword=""
       />
 
       {/* Information Dialog */}
       <InformationDialog
         open={showInformationDialog}
         onOpenChange={setShowInformationDialog}
+        isAdmin={user.userType === 'admin'}
       />
 
       {/* Logout confirmation dialog */}
@@ -515,10 +516,6 @@ const Index = () => {
       <BottomMenuBar
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
-        onTravelClick={handleTravelClick}
-        onExtraClick={handleExtraClick}
-        onSettingsClick={handleSettingsClick}
-        onTcoClick={handleTCOClick}
       />
     </div>
   );
