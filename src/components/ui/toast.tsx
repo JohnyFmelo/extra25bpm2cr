@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -28,11 +27,11 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "border bg-white text-black dark:bg-gray-800 dark:text-white",
+        default: "border bg-white text-black",
         destructive:
-          "destructive group border-destructive bg-red-600 text-white dark:bg-red-900 dark:text-white",
+          "destructive group border-destructive bg-red-100 text-black",
         warning:
-          "warning group border-yellow-500 bg-yellow-600 text-white dark:bg-yellow-700 dark:text-white",
+          "warning group border-yellow-500 bg-yellow-100 text-black",
       },
     },
     defaultVariants: {
@@ -95,7 +94,7 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn("text-sm font-semibold", className)}
+    className={cn("text-sm font-semibold text-black", className)}
     {...props}
   />
 ))
@@ -107,7 +106,7 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("text-sm opacity-100 whitespace-pre-wrap break-words", className)}
+    className={cn("text-sm opacity-100 whitespace-pre-wrap break-words text-black", className)}
     {...props}
   />
 ))

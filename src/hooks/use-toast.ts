@@ -9,7 +9,7 @@ type ToastProps = {
   className?: string;
 };
 
-// Updated toast function to properly display the full notification text with higher contrast
+// Updated toast function to use black text for all notifications for better visibility
 export const toast = ({ title, description, variant = "default", duration = 5000, className }: ToastProps) => {
   if (variant === "destructive") {
     return sonnerToast.error(title, {
@@ -19,8 +19,8 @@ export const toast = ({ title, description, variant = "default", duration = 5000
       style: { 
         width: "100%", 
         maxWidth: "500px",
-        color: "white",
-        backgroundColor: "#dc2626", // red-600
+        color: "black", // Changed to black for better visibility
+        backgroundColor: "#ffd7d7", // Lighter red background
         borderColor: "#ef4444", // red-500
         boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
       }
@@ -36,7 +36,7 @@ export const toast = ({ title, description, variant = "default", duration = 5000
         width: "100%", 
         maxWidth: "500px",
         color: "black",
-        backgroundColor: "#fbbf24", // yellow-400
+        backgroundColor: "#ffeeb3", // Lighter yellow background
         borderColor: "#f59e0b", // yellow-500
         boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
       }
