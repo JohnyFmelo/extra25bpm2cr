@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2, FileText, Download, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -23,6 +23,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Função para buscar os TCOs do usuário do Supabase
   const fetchUserTcos = async () => {
@@ -135,11 +136,17 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   // Função para excluir um TCO
   const handleDeleteTco = async (tco: any) => {
     try {
+      setIsDeleting(true);
+      
       // Excluir do Supabase storage primeiro
       if (tco.pdfPath) {
-        const { error: storageError } = await supabase.storage
+        console.log("Tentando excluir arquivo:", tco.pdfPath);
+        
+        const { error: storageError, data } = await supabase.storage
           .from(BUCKET_NAME)
           .remove([tco.pdfPath]);
+        
+        console.log("Resultado da exclusão:", data);
         
         if (storageError) {
           console.error("Erro ao excluir arquivo do storage:", storageError);
@@ -174,6 +181,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         title: "Erro",
         description: "Falha ao excluir o TCO."
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -338,9 +347,10 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
                         e.stopPropagation();
                         handleDeleteTco(tco);
                       }}
+                      disabled={isDeleting}
                       aria-label={`Excluir TCO ${tco.tcoNumber}`}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className={`h-4 w-4 ${isDeleting ? "text-gray-400" : "text-red-500 hover:text-red-700"}`} />
                     </Button>
                   </div>
                 </TableCell>
@@ -350,22 +360,32 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         </Table>
       )}
 
-      {/* PDF Viewer Dialog */}
+      {/* PDF Viewer Dialog - Enhanced version */}
       <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
         <DialogContent className="max-w-4xl h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Visualização do TCO</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-primary">Visualização do TCO</DialogTitle>
+            <DialogDescription>
+              Visualizando o documento selecionado
+            </DialogDescription>
           </DialogHeader>
-          {selectedPdfUrl && (
-            <div className="w-full h-full min-h-[500px] overflow-hidden">
+          
+          {selectedPdfUrl ? (
+            <div className="w-full h-full min-h-[500px] rounded-lg overflow-hidden border border-gray-200 shadow-inner bg-gray-50">
               <iframe
-                src={`${selectedPdfUrl}#toolbar=0`}
+                src={`${selectedPdfUrl}#toolbar=1&navpanes=1`}
                 className="w-full h-full"
                 title="PDF Viewer"
+                style={{ border: "none" }}
               />
             </div>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <Skeleton className="h-full w-full rounded-lg" />
+            </div>
           )}
-          <div className="flex justify-end space-x-2 mt-4">
+          
+          <div className="flex justify-end space-x-3 mt-2">
             <Button
               variant="outline"
               onClick={() => setIsPdfDialogOpen(false)}
@@ -377,6 +397,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
               onClick={() => {
                 if (selectedPdfUrl) window.open(selectedPdfUrl, '_blank');
               }}
+              className="bg-primary hover:bg-primary/90"
             >
               <Download className="mr-2 h-4 w-4" />
               Baixar PDF
