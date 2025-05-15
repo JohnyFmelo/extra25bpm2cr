@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
-import { motion } from "framer-motion";
 
 // --- Funções Auxiliares ---
 const somenteNumeros = (value: string | null | undefined): string => {
@@ -102,23 +101,15 @@ interface GuarnicaoTabProps {
   onRemovePolicial: (index: number) => void;
 }
 
-const listVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.07 } }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
-};
-
 // --- Componente GuarnicaoTab ---
 const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
   currentGuarnicaoList,
   onAddPolicial,
   onRemovePolicial
 }) => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [searchRgpm, setSearchRgpm] = useState<string>("");
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState<boolean>(false);
@@ -347,90 +338,37 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
     return false;
   }, [newOfficerFormData]);
   
-  return (
-    <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
-      <CardHeader className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20">
+  return <Card>
+      <CardHeader>
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle className="flex items-center text-green-700 dark:text-green-300">
+            <CardTitle className="flex items-center">
               <Users className="mr-2 h-5 w-5" /> GUARNIÇÃO
             </CardTitle>
             <CardDescription>Adicione os componentes buscando por RGPM</CardDescription>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={openRegisterDialog} 
-            type="button"
-            className="bg-green-100 text-green-700 border-green-300 hover:bg-green-200 hover:text-green-800 transition-colors duration-200"
-          >
+          <Button variant="outline" size="sm" onClick={openRegisterDialog} type="button">
             <UserPlus className="h-4 w-4 mr-2" /> Cadastrar/Atualizar Policial
           </Button>
         </div>
       </CardHeader>
-      
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <div className="flex gap-2 items-center">
-            <div className="relative flex-grow">
-              <Input 
-                id="rgpmSearchInput" 
-                type="text" 
-                inputMode="numeric" 
-                placeholder="Buscar por RGPM (6 dígitos)" 
-                value={searchRgpm} 
-                onChange={handleSearchRgpmChange} 
-                disabled={isSearching} 
-                className="pr-10 border-green-300 focus:border-green-500 focus:ring-green-500 transition-all duration-200" 
-                maxLength={6} 
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
-                }}
-              />
-              {searchRgpm.length > 0 && (
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-400">
-                  {searchRgpm.length}/6
-                </span>
-              )}
-            </div>
-            <Button 
-              onClick={handleSearchAndAdd} 
-              disabled={isSearching || searchRgpm.length !== 6}
-              className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
-            >
+            <Input id="rgpmSearchInput" type="text" inputMode="numeric" placeholder="Buscar por RGPM (6 dígitos)" value={searchRgpm} onChange={handleSearchRgpmChange} disabled={isSearching} className="flex-grow" maxLength={6} onKeyDown={e => {
+            if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
+          }} />
+            <Button onClick={handleSearchAndAdd} disabled={isSearching || searchRgpm.length !== 6}>
               {isSearching ? "Buscando..." : <><Search className="h-4 w-4 mr-1" /> Adicionar</>}
             </Button>
           </div>
         </div>
-        
         <div className="space-y-2">
-          <Label className="text-green-700 font-medium">Componentes da Guarnição Atual</Label>
-          
-          {currentGuarnicaoList.length === 0 ? (
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              className="text-sm text-muted-foreground text-center py-8 border-2 rounded-md border-dashed border-green-200 bg-green-50/50"
-            >
-              <Users className="h-10 w-10 mx-auto mb-2 text-green-300" />
-              <p>Nenhum componente adicionado. Use a busca acima.</p>
-            </motion.div>
-          ) : (
-            <motion.div 
-              className="border rounded-md overflow-hidden shadow-sm"
-              variants={listVariants}
-              initial="hidden"
-              animate="visible"
-            >
-              {currentGuarnicaoList.map((componente, index) => (
-                <motion.div 
-                  key={`${componente.rg}-${index}`} 
-                  variants={itemVariants}
-                  className={`flex items-center justify-between p-3 ${index > 0 ? "border-t" : ""} 
-                    ${index === 0 ? "bg-blue-50 hover:bg-blue-100" : "bg-background hover:bg-gray-50"} 
-                    transition-colors duration-200`}
-                  layoutId={`officer-${componente.rg}-${index}`}
-                >
+          <Label>Componentes da Guarnição Atual</Label>
+          {currentGuarnicaoList.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4 border rounded-md border-dashed">
+              Nenhum componente adicionado. Use a busca acima.
+            </p> : <div className="border rounded-md overflow-hidden">
+              {currentGuarnicaoList.map((componente, index) => <div key={`${componente.rg}-${index}`} className={`flex items-center justify-between p-3 ${index > 0 ? "border-t" : ""} ${index === 0 ? "bg-blue-50" : "bg-background"}`}>
                   <div className="flex flex-col flex-grow mr-2 truncate">
                     <span className="text-sm font-medium truncate" title={`${componente.posto} ${componente.nome} (RGPM: ${componente.rg})`}>
                       {index === 0 && <span className="font-bold text-blue-800">(Condutor) </span>}
@@ -439,160 +377,67 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
                     </span>
                     <span className="text-xs text-muted-foreground">RGPM: {componente.rg || "Não informado"}</span>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-red-400 hover:text-red-600 hover:bg-red-100 h-8 w-8 flex-shrink-0 transition-colors duration-200" 
-                    onClick={() => handleRemove(index)} 
-                    aria-label={`Remover ${componente.nome}`}
-                  >
+                  <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0" onClick={() => handleRemove(index)} aria-label={`Remover ${componente.nome}`}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
+                </div>)}
+            </div>}
         </div>
       </CardContent>
-      
       <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle className="text-green-700">Cadastrar ou Atualizar Policial</DialogTitle>
+            <DialogTitle>Cadastrar ou Atualizar Policial</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-3 px-[5px] py-0 my-0">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="dlg-rgpm" className="flex items-center text-green-700">
-                  RGPM (6 dígitos) * 
-                  <Info className="inline h-3 w-3 text-muted-foreground ml-1" aria-label="Usado para buscar e identificar o policial" />
-                </Label>
-                <Input 
-                  id="dlg-rgpm" 
-                  value={newOfficerFormData.rgpm} 
-                  onChange={e => handleRegisterInputChange("rgpm", e.target.value)} 
-                  placeholder="000000" 
-                  required 
-                  inputMode="numeric" 
-                  maxLength={6}
-                  className="border-green-200 focus:border-green-500 focus:ring-green-500" 
-                />
+                <Label htmlFor="dlg-rgpm">RGPM (6 dígitos) * <Info className="inline h-3 w-3 text-muted-foreground ml-1" aria-label="Usado para buscar e identificar o policial" /></Label>
+                <Input id="dlg-rgpm" value={newOfficerFormData.rgpm} onChange={e => handleRegisterInputChange("rgpm", e.target.value)} placeholder="000000" required inputMode="numeric" maxLength={6} />
               </div>
               <div>
-                <Label htmlFor="dlg-graduacao" className="text-green-700">Graduação *</Label>
-                <select 
-                  id="dlg-graduacao" 
-                  value={newOfficerFormData.graduacao} 
-                  onChange={e => handleRegisterInputChange("graduacao", e.target.value)} 
-                  required 
-                  className="block w-full rounded-md border border-green-200 bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-green-500"
-                >
+                <Label htmlFor="dlg-graduacao">Graduação *</Label>
+                <select id="dlg-graduacao" value={newOfficerFormData.graduacao} onChange={e => handleRegisterInputChange("graduacao", e.target.value)} required className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                   <option value="">Selecione...</option>
                   {graduacoes.map(grad => <option key={grad} value={grad}>{grad}</option>)}
                 </select>
               </div>
             </div>
-            
             <div>
-              <Label htmlFor="dlg-nome" className="text-green-700">Nome Completo *</Label>
-              <Input 
-                id="dlg-nome" 
-                value={newOfficerFormData.nome} 
-                onChange={e => handleRegisterInputChange("nome", e.target.value)} 
-                placeholder="Nome completo" 
-                required
-                className="border-green-200 focus:border-green-500 focus:ring-green-500" 
-              />
+              <Label htmlFor="dlg-nome">Nome Completo *</Label>
+              <Input id="dlg-nome" value={newOfficerFormData.nome} onChange={e => handleRegisterInputChange("nome", e.target.value)} placeholder="Nome completo" required />
             </div>
-            
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="dlg-cpf" className="text-green-700">CPF *</Label>
-                <Input 
-                  id="dlg-cpf" 
-                  value={newOfficerFormData.cpf} 
-                  onChange={e => handleRegisterInputChange("cpf", e.target.value)} 
-                  placeholder="000.000.000-00" 
-                  required 
-                  inputMode="numeric" 
-                  maxLength={14}
-                  className="border-green-200 focus:border-green-500 focus:ring-green-500" 
-                />
+                <Label htmlFor="dlg-cpf">CPF *</Label>
+                <Input id="dlg-cpf" value={newOfficerFormData.cpf} onChange={e => handleRegisterInputChange("cpf", e.target.value)} placeholder="000.000.000-00" required inputMode="numeric" maxLength={14} />
               </div>
               <div>
-                <Label htmlFor="dlg-telefone" className="text-green-700">Telefone (com DDD) *</Label>
-                <Input 
-                  id="dlg-telefone" 
-                  value={newOfficerFormData.telefone} 
-                  onChange={e => handleRegisterInputChange("telefone", e.target.value)} 
-                  placeholder="(00) 00000-0000" 
-                  required 
-                  inputMode="tel" 
-                  maxLength={15} 
-                  className="border-green-200 focus:border-green-500 focus:ring-green-500"
-                />
+                <Label htmlFor="dlg-telefone">Telefone (com DDD) *</Label>
+                <Input id="dlg-telefone" value={newOfficerFormData.telefone} onChange={e => handleRegisterInputChange("telefone", e.target.value)} placeholder="(00) 00000-0000" required inputMode="tel" maxLength={15} />
               </div>
             </div>
-            
             <div>
-              <Label htmlFor="dlg-naturalidade" className="text-green-700">Naturalidade (Cidade/UF) *</Label>
-              <Input 
-                id="dlg-naturalidade" 
-                value={newOfficerFormData.naturalidade} 
-                onChange={e => handleRegisterInputChange("naturalidade", e.target.value)} 
-                placeholder="Ex: Cuiabá/MT" 
-                required
-                className="border-green-200 focus:border-green-500 focus:ring-green-500" 
-              />
+              <Label htmlFor="dlg-naturalidade">Naturalidade (Cidade/UF) *</Label>
+              <Input id="dlg-naturalidade" value={newOfficerFormData.naturalidade} onChange={e => handleRegisterInputChange("naturalidade", e.target.value)} placeholder="Ex: Cuiabá/MT" required />
             </div>
-            
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="dlg-pai" className="text-green-700">Nome do Pai *</Label>
-                <Input 
-                  id="dlg-pai" 
-                  value={newOfficerFormData.pai} 
-                  onChange={e => handleRegisterInputChange("pai", e.target.value)} 
-                  required 
-                  placeholder="Nome completo do pai"
-                  className="border-green-200 focus:border-green-500 focus:ring-green-500" 
-                />
+                <Label htmlFor="dlg-pai">Nome do Pai *</Label>
+                <Input id="dlg-pai" value={newOfficerFormData.pai} onChange={e => handleRegisterInputChange("pai", e.target.value)} required placeholder="Nome completo do pai" />
               </div>
               <div>
-                <Label htmlFor="dlg-mae" className="text-green-700">Nome da Mãe *</Label>
-                <Input 
-                  id="dlg-mae" 
-                  value={newOfficerFormData.mae} 
-                  onChange={e => handleRegisterInputChange("mae", e.target.value)} 
-                  required 
-                  placeholder="Nome completo da mãe"
-                  className="border-green-200 focus:border-green-500 focus:ring-green-500" 
-                />
+                <Label htmlFor="dlg-mae">Nome da Mãe *</Label>
+                <Input id="dlg-mae" value={newOfficerFormData.mae} onChange={e => handleRegisterInputChange("mae", e.target.value)} required placeholder="Nome completo da mãe" />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={closeRegisterDialog} 
-              type="button"
-              className="border-gray-300"
-            > 
-              Cancelar 
-            </Button>
-            <Button 
-              onClick={handleSaveNewOfficer} 
-              disabled={isSaveDisabled()} 
-              type="button"
-              className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
-            > 
-              Salvar no Banco 
-            </Button>
+            <Button variant="outline" onClick={closeRegisterDialog} type="button"> Cancelar </Button>
+            <Button onClick={handleSaveNewOfficer} disabled={isSaveDisabled()} type="button"> Salvar no Banco </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
-  );
+    </Card>;
 };
-
 export default GuarnicaoTab;
