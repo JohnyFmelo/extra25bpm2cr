@@ -41,6 +41,70 @@ export async function uploadPDF(filePath: string, fileBlob: Blob, metadata?: Rec
 }
 
 /**
+ * Deletes a PDF file from Supabase Storage
+ * @param filePath The path of the file to be deleted
+ */
+export async function deletePDF(filePath: string): Promise<{
+  success: boolean;
+  error: Error | null;
+}> {
+  try {
+    console.log('Deleting PDF from storage:', filePath);
+    
+    // Delete the file from Supabase Storage
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .remove([filePath]);
+
+    if (error) {
+      console.error('Error deleting PDF from storage:', error);
+      return { success: false, error };
+    }
+
+    console.log('PDF deleted successfully from storage:', data);
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Exception deleting PDF:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error : new Error(String(error)) 
+    };
+  }
+}
+
+/**
+ * Deletes TCO metadata from Supabase database
+ * @param tcoId The ID of the TCO to delete
+ */
+export async function deleteTCOMetadata(tcoId: string): Promise<{
+  success: boolean;
+  error: Error | null;
+}> {
+  try {
+    console.log('Deleting TCO metadata from database, ID:', tcoId);
+    
+    const { error } = await supabase
+      .from('tco_pdfs')
+      .delete()
+      .eq('id', tcoId);
+
+    if (error) {
+      console.error('Error deleting TCO metadata from database:', error);
+      return { success: false, error };
+    }
+
+    console.log('TCO metadata deleted successfully from database');
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Exception deleting TCO metadata:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error : new Error(String(error)) 
+    };
+  }
+}
+
+/**
  * Saves TCO metadata to Supabase database
  * @param tcoMetadata The metadata to save
  */

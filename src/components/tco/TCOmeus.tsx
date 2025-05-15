@@ -1,14 +1,14 @@
-
 import React, { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Trash2, FileText, Download, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { deletePDF, deleteTCOMetadata } from "@/lib/supabaseStorage";
 
 interface TCOmeusProps {
   user: { id: string; registration?: string };
@@ -148,36 +148,46 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     
     try {
       setIsDeleting(true);
+      console.log("Iniciando exclusão do TCO:", tcoToDelete);
       
-      // Excluir do Supabase storage primeiro
+      // Primeiro excluir o arquivo do storage
       if (tcoToDelete.pdfPath) {
-        console.log("Tentando excluir arquivo:", tcoToDelete.pdfPath);
-        
-        const { error: storageError, data } = await supabase.storage
-          .from(BUCKET_NAME)
-          .remove([tcoToDelete.pdfPath]);
-        
-        console.log("Resultado da exclusão:", data);
+        console.log("Excluindo arquivo do storage:", tcoToDelete.pdfPath);
+        const { success: storageSuccess, error: storageError } = await deletePDF(tcoToDelete.pdfPath);
         
         if (storageError) {
           console.error("Erro ao excluir arquivo do storage:", storageError);
-          throw storageError;
+          // Não interromper o processo se falhar no storage
         }
       }
 
-      // Excluir do banco de dados Supabase se for um registro de banco e tiver ID UUID
+      // Em seguida, excluir do banco de dados se for um registro existente
       if (tcoToDelete.source === 'supabase' && isValidUUID(tcoToDelete.id)) {
-        const { error } = await supabase
-          .from('tco_pdfs')
-          .delete()
-          .eq('id', tcoToDelete.id);
+        console.log("Excluindo registro do banco de dados, ID:", tcoToDelete.id);
+        const { success: dbSuccess, error: dbError } = await deleteTCOMetadata(tcoToDelete.id);
         
-        if (error) {
-          console.error("Erro ao excluir TCO do banco de dados:", error);
-          throw error;
+        if (dbError) {
+          console.error("Erro ao excluir TCO do banco de dados:", dbError);
+          throw dbError;
+        }
+      } else {
+        console.log("Registro não encontrado no banco ou ID inválido:", tcoToDelete.id);
+        
+        // Tentativa alternativa: excluir diretamente da tabela usando o caminho do PDF
+        if (tcoToDelete.pdfPath) {
+          console.log("Tentando excluir pelo caminho do PDF:", tcoToDelete.pdfPath);
+          const { error } = await supabase
+            .from('tco_pdfs')
+            .delete()
+            .eq('pdfPath', tcoToDelete.pdfPath);
+          
+          if (error) {
+            console.log("Erro ao excluir pelo caminho (pode ser normal se não existir no banco):", error);
+          }
         }
       }
 
+      // Atualizar a interface após exclusão
       setTcoList(tcoList.filter(item => item.id !== tcoToDelete.id));
       if (selectedTco?.id === tcoToDelete.id) setSelectedTco(null);
       
@@ -185,12 +195,14 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         title: "TCO Excluído",
         description: "O TCO foi removido com sucesso."
       });
+      
+      console.log("TCO excluído com sucesso");
     } catch (error) {
-      console.error("Erro ao excluir TCO:", error);
+      console.error("Erro no processo de exclusão do TCO:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Falha ao excluir o TCO."
+        description: "Falha ao excluir o TCO. Tente novamente."
       });
     } finally {
       setIsDeleting(false);
