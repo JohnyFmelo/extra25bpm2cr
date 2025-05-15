@@ -90,7 +90,7 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     yPos += 15;
 
     // Adiciona a assinatura
-    const nomeCondutorCompleto = (`${condutor?.posto || ""} ${condutor?.nome || ""}`.trim()).toUpperCase();
+    const nomeCondutorCompleto = (`${condutor?.nome || ""} ${condutor?.posto || ""}`.trim()).toUpperCase();
     yPos = checkPageBreak(doc, yPos, 20, data);
     const linhaAssinaturaWidth = 100;
     doc.setLineWidth(0.3);
