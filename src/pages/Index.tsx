@@ -114,6 +114,15 @@ const Index = () => {
     setShowLogoutDialog(false);
   };
   
+  // Add the missing handleRefresh function
+  const handleRefresh = () => {
+    window.location.reload();
+    toast({
+      title: "Atualizando",
+      description: "Os dados estão sendo recarregados.",
+    });
+  };
+
   // Format the current month/year for the calendar
   const getCurrentMonthYear = () => {
     const now = new Date();
