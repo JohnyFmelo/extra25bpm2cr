@@ -70,7 +70,7 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
   };
   
   const handleMainClick = () => {
-    onTabChange("main");
+    navigate("/");
   };
   
   return (
@@ -86,7 +86,7 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
           icon={<Clock className="h-5 w-5" />} 
           label="Horas" 
           onClick={handleHoursClick} 
-          active={false} 
+          active={activeTab === "hours"} 
         />
         <BottomMenuItem 
           icon={<Calendar className="h-5 w-5" />} 

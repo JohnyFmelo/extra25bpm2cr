@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Hours from "./pages/Hours";
 import TopBar from "./components/TopBar";
+import BottomMenuBar from "./components/BottomMenuBar";
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -22,13 +23,26 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
+  const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
+  
   return (
     <div className="flex min-h-screen w-full">
       <div className="flex-1 flex flex-col">
         <TopBar />
-        <main className="flex-1">
+        <main className="flex-1 pb-28">
           {children}
         </main>
+        {user && <BottomMenuBar 
+          activeTab={window.location.pathname === "/hours" ? "hours" : "main"}
+          onTabChange={(tab) => {
+            if (tab === "main") {
+              window.location.href = "/";
+            } else if (tab === "hours") {
+              window.location.href = "/hours";
+            }
+          }}
+          isAdmin={user.userType === 'admin'} 
+        />}
       </div>
     </div>
   );
