@@ -113,10 +113,13 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
                     }
 
-                    if (data.natureza !== "Porte de drogas para consumo") {
+                    // Corrigindo a lógica para incluir o Termo de Manifestação
+                    // Verifica se NÃO é um caso de droga para consumo OU se tem vítimas informadas
+                    if ((data.natureza !== "Porte de drogas para consumo") && (data.vitimas && data.vitimas.length > 0)) {
+                        console.log("Adicionando Termo de Manifestação da Vítima");
                         addTermoManifestacao(doc, data);
                     } else {
-                        console.log("Caso de droga detectado, pulando Termo de Manifestação da Vítima.");
+                        console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível ou sem vítimas.");
                     }
 
                     if (data.apreensaoDescrição || data.apreensoes) {
