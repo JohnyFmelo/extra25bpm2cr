@@ -20,7 +20,7 @@ export function Toaster() {
             <div className="grid gap-1 w-full overflow-hidden">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (
-                <ToastDescription className="whitespace-pre-wrap break-words max-w-full">{description}</ToastDescription>
+                <ToastDescription className="whitespace-pre-wrap break-words max-w-full font-medium">{description}</ToastDescription>
               )}
             </div>
             {action}
