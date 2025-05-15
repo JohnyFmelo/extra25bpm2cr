@@ -65,14 +65,12 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
 }) => {
   const navigate = useNavigate();
   
-  const handleTabClick = (tab: string) => {
-    if (tab === "main") {
-      navigate("/");
-    } else if (tab === "hours") {
-      navigate("/hours");
-    } else {
-      onTabChange(tab);
-    }
+  const handleHoursClick = () => {
+    navigate("/hours");
+  };
+  
+  const handleMainClick = () => {
+    onTabChange("main");
   };
   
   return (
@@ -81,39 +79,39 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
         <BottomMenuItem 
           icon={<Home className="h-5 w-5" />} 
           label="Início" 
-          onClick={() => handleTabClick("main")} 
+          onClick={handleMainClick} 
           active={activeTab === "main"} 
         />
         <BottomMenuItem 
           icon={<Clock className="h-5 w-5" />} 
           label="Horas" 
-          onClick={() => handleTabClick("hours")} 
-          active={activeTab === "hours"} 
+          onClick={handleHoursClick} 
+          active={false} 
         />
         <BottomMenuItem 
           icon={<Calendar className="h-5 w-5" />} 
           label="Extra" 
-          onClick={() => handleTabClick("extra")} 
+          onClick={() => onTabChange("extra")} 
           active={activeTab === "extra"} 
         />
         <BottomMenuItem 
           icon={<MapPinned className="h-5 w-5" />} 
           label="Viagens" 
-          onClick={() => handleTabClick("travel")} 
+          onClick={() => onTabChange("travel")} 
           active={activeTab === "travel"} 
         />
         {isAdmin && (
           <BottomMenuItem 
             icon={<Scale className="h-5 w-5" />} 
             label="TCO" 
-            onClick={() => handleTabClick("tco")} 
+            onClick={() => onTabChange("tco")} 
             active={activeTab === "tco"} 
           />
         )}
         <BottomMenuItem 
           icon={<Settings className="h-5 w-5" />} 
           label="Config" 
-          onClick={() => handleTabClick("settings")} 
+          onClick={() => onTabChange("settings")} 
           active={activeTab === "settings"} 
         />
       </div>
