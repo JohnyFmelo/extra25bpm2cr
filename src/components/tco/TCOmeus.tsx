@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TCOmeusProps {
   user: { id: string; registration?: string };
@@ -23,35 +24,75 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
 
-  // Function to fetch user's TCOs from Supabase only
+  // Função para buscar os TCOs do usuário do Supabase
   const fetchUserTcos = async () => {
     if (!user.id) return;
     setIsLoading(true);
+    
     try {
-      // Fetch from Supabase
+      console.log("Buscando TCOs para o usuário:", user.id);
+      
+      // Buscar metadados dos TCOs no banco de dados
       const { data: supaTcos, error } = await supabase
         .from('tco_pdfs')
         .select('*')
         .eq('createdBy', user.id);
       
       if (error) {
-        console.error("Error fetching from Supabase:", error);
+        console.error("Erro ao buscar do banco Supabase:", error);
         throw error;
       }
-
-      // Convert Supabase data to match format
-      const supabaseTcos = supaTcos?.map(tco => ({
-        id: tco.id,
-        tcoNumber: tco.tcoNumber || `TCO-${tco.id.substring(0, 8)}`,
-        createdAt: new Date(tco.created_at || tco.createdAt),
-        natureza: tco.natureza || "Não especificada",
-        pdfPath: tco.pdfPath || tco.file_path,
-        source: 'supabase'
-      })) || [];
       
-      setTcoList(supabaseTcos);
+      console.log("TCOs encontrados no banco:", supaTcos);
+      
+      // Se não houver metadados, verifique diretamente no storage
+      if (!supaTcos || supaTcos.length === 0) {
+        console.log("Buscando diretamente do storage na pasta:", `tcos/${user.id}/`);
+        
+        // Listar arquivos no storage
+        const { data: storageFiles, error: storageError } = await supabase.storage
+          .from(BUCKET_NAME)
+          .list(`tcos/${user.id}/`);
+        
+        if (storageError) {
+          console.error("Erro ao listar arquivos do storage:", storageError);
+          throw storageError;
+        }
+        
+        console.log("Arquivos encontrados no storage:", storageFiles);
+        
+        // Converter arquivos do storage para o formato esperado
+        const filesFromStorage = storageFiles?.map(file => {
+          // Extrair informações do nome do arquivo, assumindo formato "TCO-XXXX-data.pdf"
+          const fileName = file.name;
+          const tcoNumber = fileName.split('-')[1] || "Sem número";
+          
+          return {
+            id: file.id || fileName,
+            tcoNumber: `TCO-${tcoNumber}`,
+            createdAt: new Date(file.created_at || Date.now()),
+            natureza: "Não especificada",
+            pdfPath: `tcos/${user.id}/${fileName}`,
+            source: 'storage'
+          };
+        }) || [];
+        
+        setTcoList(filesFromStorage);
+      } else {
+        // Converter dados do Supabase para o formato esperado
+        const supabaseTcos = supaTcos?.map(tco => ({
+          id: tco.id,
+          tcoNumber: tco.tcoNumber || `TCO-${tco.id.substring(0, 8)}`,
+          createdAt: new Date(tco.createdAt || tco.created_at),
+          natureza: tco.natureza || "Não especificada",
+          pdfPath: tco.pdfPath,
+          source: 'supabase'
+        })) || [];
+        
+        setTcoList(supabaseTcos);
+      }
     } catch (error) {
-      console.error("Error fetching TCOs:", error);
+      console.error("Erro ao buscar TCOs:", error);
       toast({
         variant: "destructive",
         title: "Erro",
@@ -62,30 +103,32 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     }
   };
 
-  // Function to delete a TCO
+  // Função para excluir um TCO
   const handleDeleteTco = async (tco: any) => {
     try {
-      // Delete from Supabase storage first
+      // Excluir do Supabase storage primeiro
       if (tco.pdfPath) {
         const { error: storageError } = await supabase.storage
           .from(BUCKET_NAME)
           .remove([tco.pdfPath]);
         
         if (storageError) {
-          console.error("Error deleting file from storage:", storageError);
+          console.error("Erro ao excluir arquivo do storage:", storageError);
           throw storageError;
         }
       }
 
-      // Delete from Supabase database
-      const { error } = await supabase
-        .from('tco_pdfs')
-        .delete()
-        .eq('id', tco.id);
-      
-      if (error) {
-        console.error("Error deleting TCO from database:", error);
-        throw error;
+      // Excluir do banco de dados Supabase se for um registro de banco
+      if (tco.source === 'supabase') {
+        const { error } = await supabase
+          .from('tco_pdfs')
+          .delete()
+          .eq('id', tco.id);
+        
+        if (error) {
+          console.error("Erro ao excluir TCO do banco de dados:", error);
+          throw error;
+        }
       }
 
       setTcoList(tcoList.filter(item => item.id !== tco.id));
@@ -96,7 +139,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         description: "O TCO foi removido com sucesso."
       });
     } catch (error) {
-      console.error("Error deleting TCO:", error);
+      console.error("Erro ao excluir TCO:", error);
       toast({
         variant: "destructive",
         title: "Erro",
@@ -105,16 +148,20 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     }
   };
 
-  // Function to view PDF
+  // Função para visualizar PDF
   const handleViewPdf = async (tco: any) => {
     try {
       if (tco.pdfPath) {
-        // Get public URL from Supabase
+        console.log("Obtendo URL público para o arquivo:", tco.pdfPath);
+        
+        // Obter URL público do Supabase
         const { data } = await supabase.storage
           .from(BUCKET_NAME)
           .getPublicUrl(tco.pdfPath);
         
         const url = data?.publicUrl;
+        console.log("URL público obtido:", url);
+        
         if (url) {
           setSelectedPdfUrl(url);
           setIsPdfDialogOpen(true);
@@ -129,7 +176,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         });
       }
     } catch (error) {
-      console.error("Error fetching PDF:", error);
+      console.error("Erro ao buscar PDF:", error);
       toast({
         variant: "destructive",
         title: "Erro",
@@ -138,16 +185,20 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     }
   };
 
-  // Function to download PDF
+  // Função para baixar PDF
   const handleDownloadPdf = async (tco: any) => {
     try {
       if (tco.pdfPath) {
-        // Get public URL from Supabase
+        console.log("Obtendo URL para download:", tco.pdfPath);
+        
+        // Obter URL público do Supabase
         const { data } = await supabase.storage
           .from(BUCKET_NAME)
           .getPublicUrl(tco.pdfPath);
         
         const url = data?.publicUrl;
+        console.log("URL para download:", url);
+        
         if (url) {
           // Abre o URL em uma nova aba para download
           window.open(url, '_blank');
@@ -162,7 +213,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         });
       }
     } catch (error) {
-      console.error("Error downloading PDF:", error);
+      console.error("Erro ao baixar PDF:", error);
       toast({
         variant: "destructive",
         title: "Erro",
@@ -171,7 +222,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     }
   };
 
-  // Fetch TCOs when component mounts
+  // Buscar TCOs quando o componente é montado
   useEffect(() => {
     fetchUserTcos();
   }, [user.id]);
@@ -190,7 +241,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         </Button>
       </div>
       {isLoading ? (
-        <p className="text-center py-8">Carregando TCOs...</p>
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
       ) : tcoList.length === 0 ? (
         <p className="text-center py-8 text-gray-500">Nenhum TCO encontrado</p>
       ) : (
