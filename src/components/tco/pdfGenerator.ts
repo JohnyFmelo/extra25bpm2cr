@@ -86,7 +86,12 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             });
 
             // Clona os dados para evitar mutações inesperadas
-            const data = { ...inputData };
+            const data = { 
+                ...inputData,
+                // Garantir que os dados do juizado estão disponíveis para o termo de compromisso
+                juizadoEspecialData: inputData.juizadoEspecialData || inputData.dataAudiencia,
+                juizadoEspecialHora: inputData.juizadoEspecialHora || inputData.horaAudiencia
+            };
 
             // Pega as constantes da página
             const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
