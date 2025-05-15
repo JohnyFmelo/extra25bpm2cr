@@ -1,4 +1,3 @@
-
 import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -18,6 +17,10 @@ import { Button } from "@/components/ui/button";
 import BottomMenuBar from "@/components/BottomMenuBar";
 import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { collection, query, onSnapshot, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Card } from "@/components/ui/card";
+import { CalendarDays, Users as UsersIcon, Clock } from "lucide-react";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -28,6 +31,7 @@ const Index = () => {
   const [showInformationDialog, setShowInformationDialog] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [hasNotifications, setHasNotifications] = useState(false);
+  const [activeTrips, setActiveTrips] = useState<any[]>([]);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
@@ -35,7 +39,7 @@ const Index = () => {
 
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
-  const [tcoTab, setTcoTab] = useState("list"); // Controls sub-tabs in TCO section
+  const [tcoTab, setTcoTab] = useState("list");
 
   useEffect(() => {
     // Add listener to check for notifications
@@ -56,6 +60,39 @@ const Index = () => {
       window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     };
   }, [unreadCount]);
+
+  useEffect(() => {
+    // Fetch active trips (open and in-transit)
+    const today = new Date();
+    const travelsRef = collection(db, "travels");
+    const q = query(
+      travelsRef,
+      where("archived", "==", false)
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const trips = querySnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter((trip: any) => {
+          const startDate = new Date(trip.startDate + "T00:00:00");
+          const endDate = new Date(trip.endDate + "T00:00:00");
+          // Keep only open or in-transit trips
+          return (today <= endDate) && 
+                 ((today < startDate) || (today >= startDate && today <= endDate));
+        })
+        .sort((a: any, b: any) => {
+          // Sort by date (soonest first)
+          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+        });
+
+      setActiveTrips(trips);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleRefresh = () => {
     // Reload the page to refresh data
@@ -115,6 +152,70 @@ const Index = () => {
             {hasNotifications && (
               <div className="bg-white rounded-xl shadow-lg mb-6">
                 <NotificationsList showOnlyUnread={true} />
+              </div>
+            )}
+
+            {/* Active Trips Section */}
+            {activeTrips.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-lg font-bold mb-4 text-gray-800">Viagens Ativas</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {activeTrips.map((trip) => {
+                    const travelStart = new Date(trip.startDate + "T00:00:00");
+                    const travelEnd = new Date(trip.endDate + "T00:00:00");
+                    const today = new Date();
+                    const isInTransit = today >= travelStart && today <= travelEnd;
+                    const isOpen = today < travelStart;
+                    
+                    // Calculate stats
+                    const numDays = Math.floor((travelEnd.getTime() - travelStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                    const dailyCount = trip.halfLastDay ? numDays - 0.5 : numDays;
+                    
+                    return (
+                      <Card key={trip.id} className={`overflow-hidden ${isInTransit ? 'bg-gradient-to-br from-green-50 to-green-100' : 'bg-white'} border border-gray-100 shadow-md`}>
+                        <div className={`absolute top-0 right-0 px-3 py-1 text-xs font-medium text-white ${isInTransit ? 'bg-green-500' : 'bg-blue-500'} rounded-bl-lg`}>
+                          {isInTransit ? 'Em Trânsito' : 'Em Aberto'}
+                        </div>
+                        
+                        <div className="p-4">
+                          <h3 className="text-lg font-semibold mb-2 text-blue-900">
+                            {trip.destination}
+                          </h3>
+                          <div className="space-y-2 text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <CalendarDays className="h-4 w-4 text-blue-500" />
+                              <p>Início: {travelStart.toLocaleDateString()}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <CalendarDays className="h-4 w-4 text-blue-500" />
+                              <p>Fim: {travelEnd.toLocaleDateString()}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <UsersIcon className="h-4 w-4 text-blue-500" />
+                              <p>Vagas: {trip.slots}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-blue-500" />
+                              <p>{dailyCount.toLocaleString("pt-BR", {
+                                minimumFractionDigits: dailyCount % 1 !== 0 ? 1 : 0,
+                                maximumFractionDigits: 1
+                              })} diárias</p>
+                            </div>
+                          </div>
+
+                          {isOpen && (
+                            <Button 
+                              onClick={() => handleTravelClick()}
+                              className="w-full mt-3 bg-blue-500 hover:bg-blue-600 text-white"
+                            >
+                              Ver detalhes
+                            </Button>
+                          )}
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </TabsContent>
