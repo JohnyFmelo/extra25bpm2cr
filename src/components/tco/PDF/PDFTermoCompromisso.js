@@ -2,7 +2,8 @@
 // src/components/tco/PDF/PDFTermoCompromisso.js
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
-    addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak
+    addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak,
+    formatarDataSimples
 } from './pdfUtils.js';
 
 /** Adiciona Termo de Compromisso de Comparecimento (em página nova) */
@@ -17,8 +18,8 @@ export const addTermoCompromisso = (doc, data) => {
     doc.text("TERMO DE COMPROMISSO DE COMPARECIMENTO", PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 10;
 
-    // Obter data e horário das informações básicas
-    const dataAudiencia = data.juizadoEspecialData || "___/___/______";
+    // Obter data e horário das informações básicas e formatar a data para DD/MM/YYYY
+    const dataAudiencia = data.juizadoEspecialData ? formatarDataSimples(data.juizadoEspecialData) : "___/___/______";
     const horaAudiencia = data.juizadoEspecialHora || "__:__";
 
     const termoCompText = `POR ESTE INSTRUMENTO, EU, AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, ASSUMO, NOS TERMOS DO PARÁGRAFO ÚNICO DO ART. 69 DA LEI Nº 9.099/95, O COMPROMISSO DE COMPARECER NO JUIZADO ESPECIAL CRIMINAL DE VÁRZEA GRANDE EM ${dataAudiencia}, ÀS ${horaAudiencia}, EM VIRTUDE DOS FATOS REGISTRADOS NO TERMO CIRCUNSTANCIADO DE OCORRÊNCIA ACIMA REFERENCIADO, CONFORME NOTIFICADO ABAIXO. FICO CIENTE DE QUE, A CONCORDÂNCIA EM COMPARECER AO JUIZADO ESPECIAL CRIMINAL NÃO IMPLICA CONFISSÃO DE QUALQUER NATUREZA, ADMISSÃO DE CULPA OU ANUÊNCIA ÀS DECLARAÇÕES DA PARTE CONTRÁRIA E QUE O NÃO COMPARECIMENTO NO DIA E HORA AJUSTADOS NESTE TERMO SUJEITARÁ ÀS MEDIDAS PREVISTAS NA LEI Nº 9.099/95. FICO CIENTE, TAMBÉM, QUE DEVEREI COMPARECER ACOMPANHADO DE ADVOGADO E QUE NA AUSÊNCIA DESTE SERÁ NOMEADO UM DEFENSOR PÚBLICO.`;
