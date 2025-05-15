@@ -21,6 +21,9 @@ import { collection, query, onSnapshot, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CalendarDays, Users as UsersIcon, Clock, MapPin, Calendar, Navigation } from "lucide-react";
+import UpcomingShifts from "@/components/UpcomingShifts";
+import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
+import ActiveTrips from "@/components/ActiveTrips";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
@@ -127,8 +130,8 @@ const Index = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-gray-100 flex flex-col">
-      <div className="pt-10 px-4 sm:px-6 lg:px-8 pb-28 max-w-7xl mx-auto flex flex-col flex-grow w-full">
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
+      <div className="pt-6 px-4 sm:px-6 lg:px-8 pb-28 max-w-7xl mx-auto flex flex-col flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow">
           <TabsList className="hidden">
             <TabsTrigger value="main">Main</TabsTrigger>
@@ -142,111 +145,31 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="main" className="flex-grow">
-            {hasNotifications && (
-              <Card className="mb-6 shadow-md hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <NotificationsList showOnlyUnread={true} />
-                </CardContent>
-              </Card>
-            )}
-
-            {activeTrips.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold mb-6 text-gray-900">Viagens Ativas</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {activeTrips.map((trip) => {
-                    const travelStart = new Date(trip.startDate + "T00:00:00");
-                    const travelEnd = new Date(trip.endDate + "T00:00:00");
-                    const today = new Date();
-                    const isInTransit = today >= travelStart && today <= travelEnd;
-                    const isOpen = today < travelStart;
-                    const numDays = Math.floor((travelEnd.getTime() - travelStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                    const dailyCount = trip.halfLastDay ? numDays - 0.5 : numDays;
-
-                    return (
-                      <Card 
-                        key={trip.id} 
-                        className={`relative overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 ${
-                          isInTransit ? 'bg-gradient-to-br from-green-50 to-green-100' : 'bg-white'
-                        }`}
-                      >
-                        <div className={`absolute top-0 right-0 px-3 py-1 text-xs font-medium text-white ${
-                          isInTransit ? 'bg-green-600' : 'bg-blue-600'
-                        } rounded-bl-lg`}>
-                          {isInTransit ? 'Em Trânsito' : 'Em Aberto'}
-                        </div>
-                        
-                        <CardContent className="p-6">
-                          <h3 className="text-xl font-semibold mb-4 text-gray-900">
-                            {trip.destination}
-                          </h3>
-                          <div className="space-y-3 text-gray-700">
-                            <div className="flex items-center gap-3">
-                              <MapPin className="h-5 w-5 text-blue-500" />
-                              <p>{trip.destination}</p>
-                            </div>
-                            
-                            <div className="flex items-center gap-3">
-                              <Calendar className="h-5 w-5 text-blue-500" />
-                              <p>{isInTransit ? 'Período: ' : 'Início: '} 
-                                {travelStart.toLocaleDateString()}
-                                {isInTransit && ` até ${travelEnd.toLocaleDateString()}`}
-                              </p>
-                            </div>
-                            
-                            {!isInTransit && (
-                              <div className="flex items-center gap-3">
-                                <UsersIcon className="h-5 w-5 text-blue-500" />
-                                <p>Vagas: {trip.slots}</p>
-                              </div>
-                            )}
-                            
-                            <div className="flex items-center gap-3">
-                              <Clock className="h-5 w-5 text-blue-500" />
-                              <p>{dailyCount.toLocaleString("pt-BR", {
-                                minimumFractionDigits: dailyCount % 1 !== 0 ? 1 : 0,
-                                maximumFractionDigits: 1
-                              })} diárias</p>
-                            </div>
-
-                            {isInTransit && trip.selectedVolunteers && trip.selectedVolunteers.length > 0 && (
-                              <div className="mt-4">
-                                <p className="font-medium text-sm text-gray-800">Viajantes:</p>
-                                <div className="mt-2 space-y-2">
-                                  {trip.selectedVolunteers.map((volunteer: string, idx: number) => (
-                                    <div key={idx} className="text-sm bg-white/80 px-3 py-1 rounded-md">
-                                      {volunteer}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {isOpen && (
-                            <Button 
-                              onClick={() => handleTravelClick()}
-                              className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-                            >
-                              <Navigation className="h-5 w-5 mr-2" />
-                              Ver detalhes
-                            </Button>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            
-            {activeTrips.length === 0 && (
-              <Card className="shadow-md">
-                <CardContent className="p-6 text-center">
-                  <p className="text-gray-600">Nenhuma viagem ativa no momento.</p>
-                </CardContent>
-              </Card>
-            )}
+            <div className="space-y-8">
+              {hasNotifications && (
+                <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
+                  <CardContent className="p-6">
+                    <div className="flex items-center mb-2">
+                      <CalendarDays className="h-5 w-5 text-amber-500 mr-2" />
+                      <h3 className="text-lg font-semibold text-gray-800">Notificações</h3>
+                    </div>
+                    <NotificationsList showOnlyUnread={true} />
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Monthly Hours Summary */}
+              <MonthlyHoursSummary />
+              
+              {/* Upcoming Shifts */}
+              <UpcomingShifts />
+              
+              {/* Active Trips */}
+              <ActiveTrips 
+                trips={activeTrips}
+                onTravelClick={handleTravelClick}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="extra">
@@ -516,6 +439,7 @@ const Index = () => {
       <BottomMenuBar
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
+        isAdmin={user.userType === 'admin'}
       />
     </div>
   );
