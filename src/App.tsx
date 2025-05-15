@@ -9,7 +9,6 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Hours from "./pages/Hours";
 import TopBar from "./components/TopBar";
-import BottomMenuBar from "./components/BottomMenuBar";
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -23,9 +22,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const [activeTab, setActiveTab] = React.useState("main");
-
   return (
     <div className="flex min-h-screen w-full">
       <div className="flex-1 flex flex-col">
@@ -33,7 +29,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         <main className="flex-1">
           {children}
         </main>
-        <BottomMenuBar activeTab={activeTab} onTabChange={setActiveTab} isAdmin={user.userType === 'admin'} />
       </div>
     </div>
   );
