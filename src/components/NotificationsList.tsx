@@ -7,10 +7,11 @@ import { cn } from "@/lib/utils";
 import { useToast } from "./ui/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
 interface Notification {
   id: string;
   text: string;
-  timestamp: Timestamp;
+  timestamp: Timestamp | null;
   senderName: string;
   graduation: string;
   isAdmin: boolean;
@@ -18,6 +19,7 @@ interface Notification {
   type: 'all' | 'individual';
   recipientId: string | null;
 }
+
 const NotificationsList = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -78,7 +80,11 @@ const NotificationsList = () => {
       });
     }
   };
-  const formatDate = (timestamp: Timestamp) => {
+  const formatDate = (timestamp: Timestamp | null) => {
+    if (!timestamp) {
+      return "Data desconhecida";
+    }
+    
     const date = timestamp.toDate();
     const now = new Date();
     const yesterday = new Date(now);
@@ -89,6 +95,7 @@ const NotificationsList = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+    
     if (isToday) {
       return `Hoje às ${timeStr}`;
     } else if (isYesterday) {
