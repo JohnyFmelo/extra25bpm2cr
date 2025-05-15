@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { format, parseISO, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -16,21 +17,27 @@ interface TimeSlot {
   volunteers?: string[];
   description?: string;
 }
+
 const UpcomingShifts = () => {
   const [shifts, setShifts] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
+  
   useEffect(() => {
     if (!volunteerName) {
       setIsLoading(false);
       return;
     }
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    
     const timeSlotsCollection = collection(db, 'timeSlots');
     const q = query(timeSlotsCollection);
+    
     const unsubscribe = onSnapshot(q, snapshot => {
       const upcomingShifts = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -54,13 +61,16 @@ const UpcomingShifts = () => {
       setShifts(upcomingShifts.slice(0, 3) as TimeSlot[]);
       setIsLoading(false);
     });
+    
     return () => unsubscribe();
   }, [volunteerName]);
+  
   const formatDateLabel = (dateString: string) => {
     const date = parseISO(dateString);
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
+    
     if (format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')) {
       return 'Hoje';
     } else if (format(date, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd')) {
@@ -73,16 +83,21 @@ const UpcomingShifts = () => {
       }).slice(1);
     }
   };
+  
   if (isLoading) {
     return <div className="text-center p-4">Carregando próximos serviços...</div>;
   }
+  
   if (shifts.length === 0) {
     return null;
   }
-  return <div className="mb-8">
+  
+  return (
+    <div className="mb-8">
       <h2 className="text-2xl font-bold mb-4 text-gray-900">Próximas extraordinárias</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {shifts.map(shift => <TooltipProvider key={shift.id}>
+        {shifts.map(shift => (
+          <TooltipProvider key={shift.id}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Card className="shadow-md hover:shadow-lg transition-all bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -106,9 +121,11 @@ const UpcomingShifts = () => {
                       </span>
                     </div>
                     
-                    {shift.description && <div className="mt-2 text-sm text-gray-600 italic">
+                    {shift.description && (
+                      <div className="mt-2 text-sm text-gray-600 italic">
                         {shift.description}
-                      </div>}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TooltipTrigger>
@@ -116,8 +133,11 @@ const UpcomingShifts = () => {
                 <p>Serviço extra agendado</p>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>)}
+          </TooltipProvider>
+        ))}
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default UpcomingShifts;
