@@ -685,7 +685,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
       return;
     }
-    
     const completionNow = new Date();
     const completionDate = completionNow.toISOString().split('T')[0];
     const completionTime = completionNow.toTimeString().slice(0, 5);
@@ -824,34 +823,33 @@ const TCOForm: React.FC<TCOFormProps> = ({
       };
       Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
       console.log("Dados para gerar PDF:", tcoDataParaPDF);
-      
+
       // Generate the PDF
       const pdfGenerationPromise = generatePDF(tcoDataParaPDF);
       const timeoutPromise = new Promise<Blob>((_, reject) => {
         setTimeout(() => reject(new Error("Tempo limite excedido ao gerar o PDF.")), 90000);
       });
       const pdfBlob = await Promise.race([pdfGenerationPromise, timeoutPromise]);
-      
       if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
-      
       const tcoNumParaNome = tcoNumber.trim();
       const dateStr = new Date().toISOString().slice(0, 10);
       const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
       const filePath = `tcos/${userId || 'anonimo'}/${tcoNumParaNome}_${dateStr}.pdf`;
-      
+
       // Upload the PDF to Supabase Storage using our utility function
-      const { url: downloadURL, error: uploadError } = await uploadPDF(filePath, pdfBlob, {
+      const {
+        url: downloadURL,
+        error: uploadError
+      } = await uploadPDF(filePath, pdfBlob, {
         tcoNumber: tcoNumParaNome,
         natureza: displayNaturezaReal,
         createdBy: userId || 'anonimo'
       });
-      
       if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
       if (!downloadURL) throw new Error("URL do arquivo não disponível após o upload.");
-      
       console.log('URL pública do arquivo:', downloadURL);
-      
+
       // Save metadata to Supabase database
       const tcoMetadata = {
         tcoNumber: tcoNumber.trim(),
@@ -866,28 +864,24 @@ const TCOForm: React.FC<TCOFormProps> = ({
         createdBy: userId,
         createdAt: new Date().toISOString()
       };
-      
       console.log("Metadados para salvar no DB:", tcoMetadata);
-      
+
       // Save metadata using our utility function
-      const { error: metadataError } = await saveTCOMetadata(tcoMetadata);
-      
+      const {
+        error: metadataError
+      } = await saveTCOMetadata(tcoMetadata);
       if (metadataError) {
         console.error("Erro ao salvar metadados no Supabase DB:", metadataError);
         throw new Error(`Erro ao salvar informações do TCO: ${metadataError.message || metadataError}`);
       }
-      
       console.log("Metadados salvos com sucesso no DB");
-      
       toast({
         title: "TCO Registrado com Sucesso!",
         description: "PDF enviado e informações salvas no sistema.",
         className: "bg-green-600 text-white border-green-700",
         duration: 5000
       });
-      
       navigate("/?tab=tco");
-      
     } catch (error: any) {
       console.error("Erro geral no processo de submissão do TCO:", error);
       toast({
@@ -923,7 +917,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
         <Card>
           
-          <CardContent>
+          <CardContent className="">
             <BasicInformationTab tcoNumber={tcoNumber} setTcoNumber={setTcoNumber} natureza={natureza} setNatureza={setNatureza} autor={autor} setAutor={setAutor} penaDescricao={penaDescricao} naturezaOptions={naturezaOptions} customNatureza={customNatureza} setCustomNatureza={setCustomNatureza} startTime={startTime} isTimerRunning={isTimerRunning} juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData} juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora} />
           </CardContent>
         </Card>
