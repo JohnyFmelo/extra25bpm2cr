@@ -78,6 +78,16 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 return;
             }
 
+            // Validar data e hora da audiência no juizado especial
+            const juizadoData = inputData.juizadoEspecialData || inputData.dataAudiencia;
+            const juizadoHora = inputData.juizadoEspecialHora || inputData.horaAudiencia;
+
+            if (!juizadoData || !juizadoHora) {
+                clearTimeout(timeout);
+                reject(new Error("É necessário informar a data e hora de apresentação no Juizado Especial."));
+                return;
+            }
+
             // Cria a instância do jsPDF
             const doc = new jsPDF({
                 orientation: "portrait",
@@ -89,8 +99,8 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             const data = { 
                 ...inputData,
                 // Garantir que os dados do juizado estão disponíveis para o termo de compromisso
-                juizadoEspecialData: inputData.juizadoEspecialData || inputData.dataAudiencia,
-                juizadoEspecialHora: inputData.juizadoEspecialHora || inputData.horaAudiencia
+                juizadoEspecialData: juizadoData,
+                juizadoEspecialHora: juizadoHora
             };
 
             // Pega as constantes da página
