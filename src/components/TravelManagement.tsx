@@ -639,7 +639,7 @@ export const TravelManagement = () => {
       })}
       </div>
 
-      {isAdmin && <Button onClick={() => setIsModalOpen(true)} className="fixed bottom-6 right-6 rounded-full p-4 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-[19px] py-[26px] my-[69px]">
+      {isAdmin && <Button onClick={() => setIsModalOpen(true)} className="fixed bottom-6 right-6 rounded-full p-4 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 py-[26px] my-[69px] mx-0 px-[18px]">
           <Plus className="h-6 w-6" />
         </Button>}
 
