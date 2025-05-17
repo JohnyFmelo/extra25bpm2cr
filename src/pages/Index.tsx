@@ -115,7 +115,7 @@ const Index = () => {
     navigate("/login");
     setShowLogoutDialog(false);
   };
-  return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
+  return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col mx-[13px] my-[4px] px-0">
       <div className="pt-6 px-4 sm:px-6 lg:px-8 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[22px] mx-[15px]">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow">
           <TabsList className="hidden">
@@ -260,7 +260,7 @@ const Index = () => {
             <div className="flex flex-col flex-grow">
               <div className="relative">
                 <div className="absolute right-0 -top-14">
-                  <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para home">
+                  <button onClick={handleBackClick} aria-label="Voltar para home" className="p-2 rounded-full hover:bg-gray-200 transition-colors text-blue-600">
                     <ArrowLeft className="h-6 w-6" />
                   </button>
                 </div>
