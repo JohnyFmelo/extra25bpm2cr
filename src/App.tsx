@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Hours from "./pages/Hours";
@@ -21,6 +21,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Layout component to handle common layout elements
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex min-h-screen w-full">
@@ -31,6 +32,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         </main>
       </div>
     </div>
+  );
+};
+
+// Route-specific wrapper that can pass location state to components
+const IndexWrapper = () => {
+  const location = useLocation();
+  const activeTab = location.state?.activeTab || 'main';
+  
+  return (
+    <Layout>
+      <Index initialActiveTab={activeTab} />
+    </Layout>
   );
 };
 
@@ -57,9 +70,7 @@ const App = () => {
                 path="/" 
                 element={
                   <ProtectedRoute>
-                    <Layout>
-                      <Index />
-                    </Layout>
+                    <IndexWrapper />
                   </ProtectedRoute>
                 } 
               />

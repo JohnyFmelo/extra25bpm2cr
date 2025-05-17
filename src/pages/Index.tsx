@@ -25,8 +25,13 @@ import UpcomingShifts from "@/components/UpcomingShifts";
 import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
-const Index = () => {
-  const [activeTab, setActiveTab] = useState("main");
+
+interface IndexProps {
+  initialActiveTab?: string;
+}
+
+const Index = ({ initialActiveTab = "main" }: IndexProps) => {
+  const [activeTab, setActiveTab] = useState(initialActiveTab);
   const [isLocked, setIsLocked] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showProfileDialog, setShowProfileDialog] = useState(false);
@@ -115,6 +120,19 @@ const Index = () => {
     navigate("/login");
     setShowLogoutDialog(false);
   };
+  const handleTabChange = (tab: string) => {
+    if (tab === 'hours') {
+      navigate('/hours');
+    } else {
+      setActiveTab(tab);
+    }
+  };
+  useEffect(() => {
+    // Update activeTab when initialActiveTab prop changes
+    if (initialActiveTab && initialActiveTab !== activeTab) {
+      setActiveTab(initialActiveTab);
+    }
+  }, [initialActiveTab]);
   return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col mx-[13px] my-[4px] px-0">
       <div className="pt-6 sm:px-6 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[22px] lg:px-0 mx-0 px-[2px]">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow px-0">
@@ -316,7 +334,8 @@ const Index = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <BottomMenuBar activeTab={activeTab} onTabChange={tab => setActiveTab(tab)} isAdmin={user.userType === 'admin'} />
+      <BottomMenuBar activeTab={activeTab} onTabChange={handleTabChange} isAdmin={user?.userType === 'admin'} />
     </div>;
 };
+
 export default Index;

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -196,8 +197,12 @@ const Hours = () => {
   const handleTabChange = (tab: string) => {
     if (tab === 'main') {
       navigate('/');
-    } else {
+    } else if (tab === 'hours') {
+      // Already on hours page, just update the tab
       setActiveTab(tab);
+    } else {
+      // For other tabs, navigate to home with the tab as state
+      navigate('/', { state: { activeTab: tab } });
     }
   };
 
