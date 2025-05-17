@@ -474,7 +474,7 @@ export const TravelManagement = () => {
           </Card>
         </div>}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 px-0 mx-0">
         {travels.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()).map(travel => {
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
