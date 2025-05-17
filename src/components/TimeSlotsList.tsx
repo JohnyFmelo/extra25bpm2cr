@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
 import supabase from "@/lib/supabaseClient";
-
 interface TimeSlot {
   id?: string;
   date: string;
@@ -24,14 +23,12 @@ interface TimeSlot {
   volunteers?: string[];
   description?: string;
 }
-
 interface GroupedTimeSlots {
   [key: string]: {
     slots: TimeSlot[];
     dailyCost: number;
   };
 }
-
 const TimeSlotLimitControl = ({
   slotLimit,
   onUpdateLimit,
@@ -106,7 +103,6 @@ const TimeSlotLimitControl = ({
         </div>}
     </div>;
 };
-
 const getMilitaryRankWeight = (rank: string): number => {
   const rankWeights: {
     [key: string]: number;
@@ -139,7 +135,6 @@ const getMilitaryRankWeight = (rank: string): number => {
   };
   return rankWeights[rank] || 0;
 };
-
 const getRankCategory = (rank: string): {
   category: string;
   hourlyRate: number;
@@ -164,7 +159,6 @@ const getRankCategory = (rank: string): {
     hourlyRate: 0
   };
 };
-
 const getVolunteerRank = (volunteerFullName: string): string => {
   const parts = volunteerFullName.split(" ");
   if (parts.length >= 2 && (parts[1] === "Sgt" || parts[1] === "Ten")) {
@@ -172,25 +166,26 @@ const getVolunteerRank = (volunteerFullName: string): string => {
   }
   return parts[0];
 };
-
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   }).format(value).replace("R$", "R$ ");
 };
-
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [slotLimit, setSlotLimit] = useState<number>(0);
-  const [volunteerHours, setVolunteerHours] = useState<{[key: string]: string}>({});
-  const { toast } = useToast();
+  const [volunteerHours, setVolunteerHours] = useState<{
+    [key: string]: string;
+  }>({});
+  const {
+    toast
+  } = useToast();
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
   const isAdmin = userData?.userType === 'admin';
-  
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);
@@ -206,61 +201,42 @@ const TimeSlotsList = () => {
     const totalHours = diffHours + diffMinutes / 60;
     return `${totalHours}`;
   };
-
   const fetchVolunteerHours = async () => {
     if (!isAdmin) return;
-    
     try {
-      const currentMonth = format(new Date(), 'MMMM', { locale: ptBR }).toUpperCase();
-      
-      type TableName = "JANEIRO" | "FEVEREIRO" | "MARCO" | "ABRIL" | "MAIO" | "JUNHO" | 
-                       "JULHO" | "AGOSTO" | "SETEMBRO" | "OUTUBRO" | "NOVEMBRO" | "DEZEMBRO" | "ESCALA";
-                    
+      const currentMonth = format(new Date(), 'MMMM', {
+        locale: ptBR
+      }).toUpperCase();
+      type TableName = "JANEIRO" | "FEVEREIRO" | "MARCO" | "ABRIL" | "MAIO" | "JUNHO" | "JULHO" | "AGOSTO" | "SETEMBRO" | "OUTUBRO" | "NOVEMBRO" | "DEZEMBRO" | "ESCALA";
       let tableName: TableName;
-                    
-      if (currentMonth === 'JANEIRO') tableName = "JANEIRO";
-      else if (currentMonth === 'FEVEREIRO') tableName = "FEVEREIRO";
-      else if (currentMonth === 'MARÇO') tableName = "MARCO";
-      else if (currentMonth === 'ABRIL') tableName = "ABRIL";
-      else if (currentMonth === 'MAIO') tableName = "MAIO";
-      else if (currentMonth === 'JUNHO') tableName = "JUNHO";
-      else if (currentMonth === 'JULHO') tableName = "JULHO";
-      else if (currentMonth === 'AGOSTO') tableName = "AGOSTO";
-      else if (currentMonth === 'SETEMBRO') tableName = "SETEMBRO";
-      else if (currentMonth === 'OUTUBRO') tableName = "OUTUBRO";
-      else if (currentMonth === 'NOVEMBRO') tableName = "NOVEMBRO";
-      else tableName = "DEZEMBRO";
-      
-      const { data, error } = await supabase
-        .from(tableName)
-        .select('Nome, "Total Geral"');
-      
+      if (currentMonth === 'JANEIRO') tableName = "JANEIRO";else if (currentMonth === 'FEVEREIRO') tableName = "FEVEREIRO";else if (currentMonth === 'MARÇO') tableName = "MARCO";else if (currentMonth === 'ABRIL') tableName = "ABRIL";else if (currentMonth === 'MAIO') tableName = "MAIO";else if (currentMonth === 'JUNHO') tableName = "JUNHO";else if (currentMonth === 'JULHO') tableName = "JULHO";else if (currentMonth === 'AGOSTO') tableName = "AGOSTO";else if (currentMonth === 'SETEMBRO') tableName = "SETEMBRO";else if (currentMonth === 'OUTUBRO') tableName = "OUTUBRO";else if (currentMonth === 'NOVEMBRO') tableName = "NOVEMBRO";else tableName = "DEZEMBRO";
+      const {
+        data,
+        error
+      } = await supabase.from(tableName).select('Nome, "Total Geral"');
       if (error) {
         console.error('Error fetching volunteer hours:', error);
         return;
       }
-      
-      const hoursMap: {[key: string]: string} = {};
-      
+      const hoursMap: {
+        [key: string]: string;
+      } = {};
       if (data) {
         data.forEach(row => {
           if (row && typeof row === 'object' && 'Nome' in row && 'Total Geral' in row) {
             const nome = row.Nome as string;
             const totalGeral = row['Total Geral'] as string;
-            
             if (nome && totalGeral) {
               hoursMap[nome.trim()] = totalGeral;
             }
           }
         });
       }
-      
       setVolunteerHours(hoursMap);
     } catch (error) {
       console.error('Error in fetchVolunteerHours:', error);
     }
   };
-
   useEffect(() => {
     const fetchSlotLimit = async () => {
       try {
@@ -306,7 +282,6 @@ const TimeSlotsList = () => {
     }
     return () => unsubscribe();
   }, [toast, isAdmin]);
-
   const handleVolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
       toast({
@@ -362,7 +337,6 @@ const TimeSlotsList = () => {
       });
     }
   };
-
   const handleUnvolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
       toast({
@@ -399,7 +373,6 @@ const TimeSlotsList = () => {
       });
     }
   };
-
   const handleUpdateSlotLimit = async (limit: number) => {
     if (isNaN(limit) || limit < 0) {
       toast({
@@ -427,7 +400,6 @@ const TimeSlotsList = () => {
       });
     }
   };
-
   const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
     return slots.reduce((groups: GroupedTimeSlots, slot) => {
       const date = slot.date;
@@ -441,21 +413,19 @@ const TimeSlotsList = () => {
       return groups;
     }, {});
   };
-
   const isVolunteered = (timeSlot: TimeSlot) => {
     return timeSlot.volunteers?.includes(volunteerName);
   };
-
   const isSlotFull = (timeSlot: TimeSlot) => {
     return timeSlot.slots_used === timeSlot.total_slots;
   };
-
   const formatDateHeader = (date: string) => {
-    const dayOfWeek = format(parseISO(date), "eee", { locale: ptBR });
+    const dayOfWeek = format(parseISO(date), "eee", {
+      locale: ptBR
+    });
     const truncatedDay = dayOfWeek.substring(0, 3);
     return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}-${format(parseISO(date), "dd/MM/yy")}`;
   };
-
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
     const userDataString = localStorage.getItem('user');
     const userData = userDataString ? JSON.parse(userDataString) : null;
@@ -476,13 +446,11 @@ const TimeSlotsList = () => {
     const isVolunteeredForDate = slotsForDate.some(s => s.volunteers?.includes(volunteerName));
     return !isVolunteeredForDate;
   };
-
   const canVolunteerForSlot = (slot: TimeSlot) => {
     if (isAdmin) return true;
     const userSlotCount = timeSlots.reduce((count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
     return userSlotCount < slotLimit;
   };
-
   const sortVolunteers = (volunteers: string[]) => {
     if (!volunteers) return [];
     return volunteers.sort((a, b) => {
@@ -491,7 +459,6 @@ const TimeSlotsList = () => {
       return getMilitaryRankWeight(rankB) - getMilitaryRankWeight(rankA);
     });
   };
-
   const [calculatedGroupedTimeSlots, setCalculatedGroupedTimeSlots] = useState<GroupedTimeSlots>({});
   useEffect(() => {
     const grouped = groupTimeSlotsByDate(timeSlots);
@@ -519,13 +486,11 @@ const TimeSlotsList = () => {
     setCalculatedGroupedTimeSlots(grouped);
     setTotalCostSummary(totalCostCounter);
   }, [timeSlots]);
-
   const userSlotCount = timeSlots.reduce((count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
   const [volunteerToRemove, setVolunteerToRemove] = useState<{
     name: string;
     timeSlot: TimeSlot;
   } | null>(null);
-
   const handleRemoveVolunteer = async (timeSlot: TimeSlot, volunteerName: string) => {
     try {
       const updatedSlot = {
@@ -554,7 +519,6 @@ const TimeSlotsList = () => {
       });
     }
   };
-
   const [totalCostSummary, setTotalCostSummary] = useState<{
     "Cb/Sd": number;
     "St/Sgt": number;
@@ -566,63 +530,54 @@ const TimeSlotsList = () => {
     "Oficiais": 0,
     "Total Geral": 0
   });
-
   const today = new Date();
   const tomorrow = addDays(today, 1);
   let weeklyCost = 0;
   let weeklyCostDates: string[] = [];
-
   if (calculatedGroupedTimeSlots) {
-    Object.entries(calculatedGroupedTimeSlots)
-      .filter(([date]) => {
-        const slotDate = parseISO(date);
-        const isWeeklyDate = isAfter(slotDate, tomorrow) || format(slotDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
-        if (isWeeklyDate) {
-          weeklyCostDates.push(date);
-        }
-        return isWeeklyDate;
-      })
-      .forEach(([, groupedData]) => {
-        weeklyCost += groupedData.dailyCost;
-      });
+    Object.entries(calculatedGroupedTimeSlots).filter(([date]) => {
+      const slotDate = parseISO(date);
+      const isWeeklyDate = isAfter(slotDate, tomorrow) || format(slotDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
+      if (isWeeklyDate) {
+        weeklyCostDates.push(date);
+      }
+      return isWeeklyDate;
+    }).forEach(([, groupedData]) => {
+      weeklyCost += groupedData.dailyCost;
+    });
   }
-
   const formatWeeklyDateRange = () => {
     if (weeklyCostDates.length === 0) return "";
     const sortedDates = weeklyCostDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-    const startDate = format(parseISO(sortedDates[0]), "eee", { locale: ptBR }).substring(0, 3).toUpperCase();
-    const endDate = format(parseISO(sortedDates[sortedDates.length - 1]), "eee", { locale: ptBR }).substring(0, 3).toUpperCase();
+    const startDate = format(parseISO(sortedDates[0]), "eee", {
+      locale: ptBR
+    }).substring(0, 3).toUpperCase();
+    const endDate = format(parseISO(sortedDates[sortedDates.length - 1]), "eee", {
+      locale: ptBR
+    }).substring(0, 3).toUpperCase();
     return `${startDate}-${endDate}`;
   };
-
   const weeklyDateRangeText = formatWeeklyDateRange();
-
   if (isLoading) {
     return <div className="p-4">Carregando horários...</div>;
   }
-
   const getVolunteerHours = (volunteerName: string) => {
     if (volunteerHours[volunteerName]) {
       return volunteerHours[volunteerName];
     }
-    
     const volunteerNameParts = volunteerName.split(' ');
     const warName = volunteerNameParts.slice(1).join(' ');
-    
     for (const key in volunteerHours) {
       if (key.includes(warName)) {
         return volunteerHours[key];
       }
     }
-    
     return null;
   };
-
-  return <div className="space-y-6 p-4">
+  return <div className="space-y-6 p-4 py-0 my-0">
       <TimeSlotLimitControl slotLimit={slotLimit} onUpdateLimit={handleUpdateSlotLimit} userSlotCount={userSlotCount} isAdmin={isAdmin} />
 
-      {isAdmin && totalCostSummary["Total Geral"] > 0 &&
-        <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
+      {isAdmin && totalCostSummary["Total Geral"] > 0 && <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
           <h2 className="font-semibold text-gray-900 mb-4">Resumo de Custos Totais</h2>
           <div className="space-y-2">
             <p><strong>Cb/Sd:</strong> {formatCurrency(totalCostSummary["Cb/Sd"])}</p>
@@ -631,22 +586,21 @@ const TimeSlotsList = () => {
             <p className="font-semibold text-green-500"><strong>Total Geral:</strong> {formatCurrency(totalCostSummary["Total Geral"])}</p>
             {weeklyCost > 0 && <p className="font-semibold text-blue-500"><strong>Custo da Semana ({weeklyDateRangeText}):</strong> {formatCurrency(weeklyCost)}</p>}
           </div>
-        </div>
-      }
+        </div>}
 
       {Object.entries(calculatedGroupedTimeSlots).sort().map(([date, groupedData]) => {
-        const {
-          slots,
-          dailyCost
-        } = groupedData;
-        const isDatePast = isPast(parseISO(date));
-        const isCollapsed = isDatePast;
-        const sortedSlots = [...slots].sort((a, b) => {
-          const timeA = a.start_time;
-          const timeB = b.start_time;
-          return timeA.localeCompare(timeB);
-        });
-        return <div key={date} className="bg-white rounded-lg shadow-sm">
+      const {
+        slots,
+        dailyCost
+      } = groupedData;
+      const isDatePast = isPast(parseISO(date));
+      const isCollapsed = isDatePast;
+      const sortedSlots = [...slots].sort((a, b) => {
+        const timeA = a.start_time;
+        const timeB = b.start_time;
+        return timeA.localeCompare(timeB);
+      });
+      return <div key={date} className="bg-white rounded-lg shadow-sm">
             <div className="p-4 md:p-5">
               <div className="flex flex-col items-center">
                 <div className="flex items-center justify-between w-full mb-2">
@@ -655,8 +609,7 @@ const TimeSlotsList = () => {
                     <h3 className="font-medium text-lg text-gray-800">
                       {formatDateHeader(date)}
                     </h3>
-                    {isAdmin && dailyCost > 0 &&
-                      <span className="text-green-600 font-semibold text-base">{formatCurrency(dailyCost)}</span>}
+                    {isAdmin && dailyCost > 0 && <span className="text-green-600 font-semibold text-base">{formatCurrency(dailyCost)}</span>}
                   </div>
                   <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
                     {isDatePast ? "Extra" : "Extra"}
@@ -665,8 +618,7 @@ const TimeSlotsList = () => {
               </div>
 
               {!isCollapsed && <div className="space-y-3 mt-4">
-                  {sortedSlots.map((slot, idx) => (
-                    <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                  {sortedSlots.map((slot, idx) => <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
                       <div className="flex flex-col space-y-3">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
@@ -675,11 +627,9 @@ const TimeSlotsList = () => {
                               {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}-{calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)}h
                             </p>
                           </div>
-                          {slot.description && (
-                            <span className="text-gray-700 ml-2 max-w-[200px] truncate">
+                          {slot.description && <span className="text-gray-700 ml-2 max-w-[200px] truncate">
                               {slot.description}
-                            </span>
-                          )}
+                            </span>}
                         </div>
                         
                         <div className="flex items-center justify-between">
@@ -691,64 +641,38 @@ const TimeSlotsList = () => {
                         </div>
                       </div>
                       
-                      {slot.volunteers && slot.volunteers.length > 0 && (
-                        <div className="pt-3 border-t border-gray-200">
+                      {slot.volunteers && slot.volunteers.length > 0 && <div className="pt-3 border-t border-gray-200">
                           <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
                           <div className="space-y-1">
-                            {sortVolunteers(slot.volunteers).map((volunteer, index) => (
-                              <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
+                            {sortVolunteers(slot.volunteers).map((volunteer, index) => <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
                                 <div className="flex items-center">
                                   <span>{volunteer}</span>
-                                  {isAdmin && getVolunteerHours(volunteer) && (
-                                    <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                                  {isAdmin && getVolunteerHours(volunteer) && <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
                                       {getVolunteerHours(volunteer)}h
-                                    </span>
-                                  )}
+                                    </span>}
                                 </div>
-                                {isAdmin && (
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({
-                                    name: volunteer,
-                                    timeSlot: slot
-                                  })}>
+                                {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({
+                      name: volunteer,
+                      timeSlot: slot
+                    })}>
                                     <X className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            ))}
+                                  </Button>}
+                              </div>)}
                           </div>
-                        </div>
-                      )}
+                        </div>}
                       
                       <div className="pt-2">
-                        {shouldShowVolunteerButton(slot) && (
-                          isVolunteered(slot) ? (
-                            <Button 
-                              onClick={() => handleUnvolunteer(slot)} 
-                              variant="destructive" 
-                              size="sm" 
-                              className="w-full shadow-sm hover:shadow"
-                            >
+                        {shouldShowVolunteerButton(slot) && (isVolunteered(slot) ? <Button onClick={() => handleUnvolunteer(slot)} variant="destructive" size="sm" className="w-full shadow-sm hover:shadow">
                               Desmarcar
-                            </Button>
-                          ) : (
-                            !isSlotFull(slot) && canVolunteerForSlot(slot) && (
-                              <Button 
-                                onClick={() => handleVolunteer(slot)} 
-                                className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow w-full" 
-                                size="sm"
-                              >
+                            </Button> : !isSlotFull(slot) && canVolunteerForSlot(slot) && <Button onClick={() => handleVolunteer(slot)} className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow w-full" size="sm">
                                 Voluntário
-                              </Button>
-                            )
-                          )
-                        )}
+                              </Button>)}
                       </div>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>}
             </div>
           </div>;
-      })}
+    })}
 
       <AlertDialog open={!!volunteerToRemove} onOpenChange={() => setVolunteerToRemove(null)}>
         <AlertDialogContent>
@@ -773,5 +697,4 @@ const TimeSlotsList = () => {
       </AlertDialog>
     </div>;
 };
-
 export default TimeSlotsList;
