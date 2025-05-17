@@ -166,7 +166,7 @@ const Index = () => {
           <TabsContent value="settings">
             <div className="relative">
               <div className="absolute right-0 -top-14">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para home">
+                <button onClick={handleBackClick} aria-label="Voltar para home" className="p-2 rounded-full hover:bg-gray-200 transition-colors text-blue-600">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
