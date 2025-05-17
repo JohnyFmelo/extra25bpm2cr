@@ -105,12 +105,7 @@ const TimeSlotDialog = ({
               </DialogTitle>
             </div>
             <p className="text-center text-white/80 text-sm">
-              {editingTimeSlot ? "Editar horário de atendimento" : "Novo 
-              
-              
-              
-              
-              horário de Jornada Extraordinária"}
+              {editingTimeSlot ? "Editar horário de atendimento" : "Novo horário de Jornada Extraordinária"}
             </p>
           </div>
         </DialogHeader>
