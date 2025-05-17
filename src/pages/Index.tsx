@@ -265,7 +265,7 @@ const Index = () => {
                   </button>
                 </div>
                 <Tabs value={tcoTab} onValueChange={setTcoTab} className="space-y-6 flex flex-col flex-grow">
-                  <TabsList className="bg-white shadow-md rounded-lg p-4 flex justify-center gap-4 py-[24px] px-[6px]">
+                  <TabsList className="shadow-md rounded-lg p-4 flex justify-center gap-4 py-[24px] px-[6px] bg-gray-100">
                     <TabsTrigger value="list" aria-label="Visualizar Meus TCOs" className="flex-1 py-3 px-4 rounded-md text-gray-800 font-medium bg-gray-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors text-center">
                       Meus TCOs
                     </TabsTrigger>
