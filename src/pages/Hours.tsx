@@ -9,7 +9,7 @@ import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import BottomMenuBar from "@/components/BottomMenuBar";
+
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
@@ -197,30 +197,11 @@ const Hours = () => {
     const year = new Date().getFullYear();
     return `${month}/${year}`;
   };
-  const handleTabChange = (tab: string) => {
-    if (tab === 'main') {
-      navigate('/');
-    } else if (tab === 'hours') {
-      // Already on hours page, just update the tab
-      setActiveTab(tab);
-    } else {
-      // For other tabs, navigate to home with the tab as state
-      navigate('/', {
-        state: {
-          activeTab: tab
-        }
-      });
-    }
-  };
   return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col mx-[13px] my-[4px] px-0">
       <div className="pt-6 px-4 sm:px-6 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[22px] lg:px-[23px] mx-[2px]">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow">
+        <Tabs value={activeTab} className="space-y-6 flex flex-col flex-grow">
           <TabsList className="hidden">
             <TabsTrigger value="hours">Hours</TabsTrigger>
-            <TabsTrigger value="extra">Extra</TabsTrigger>
-            <TabsTrigger value="travel">Travel</TabsTrigger>
-            <TabsTrigger value="tco">TCO</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="hours" className="flex-grow">
@@ -293,36 +274,10 @@ const Hours = () => {
                 </TabsContent>}
             </Tabs>
           </TabsContent>
-
-          {/* Placeholder TabsContent for other tabs to prevent navigation issues */}
-          <TabsContent value="extra" className="flex-grow">
-            <div className="text-center p-6">
-              <p className="text-gray-600">Funcionalidade Extra não implementada nesta página.</p>
-              <Button onClick={() => navigate('/')} className="mt-4">Voltar para Home</Button>
-            </div>
-          </TabsContent>
-          <TabsContent value="travel" className="flex-grow">
-            <div className="text-center p-6">
-              <p className="text-gray-600">Funcionalidade Viagens não implementada nesta página.</p>
-              <Button onClick={() => navigate('/')} className="mt-4">Voltar para Home</Button>
-            </div>
-          </TabsContent>
-          <TabsContent value="tco" className="flex-grow">
-            <div className="text-center p-6">
-              <p className="text-gray-600">Funcionalidade TCO não implementada nesta página.</p>
-              <Button onClick={() => navigate('/')} className="mt-4">Voltar para Home</Button>
-            </div>
-          </TabsContent>
-          <TabsContent value="settings" className="flex-grow">
-            <div className="text-center p-6">
-              <p className="text-gray-600">Funcionalidade Configurações não implementada nesta página.</p>
-              <Button onClick={() => navigate('/')} className="mt-4">Voltar para Home</Button>
-            </div>
-          </TabsContent>
         </Tabs>
       </div>
-
-      <BottomMenuBar activeTab={activeTab} onTabChange={handleTabChange} isAdmin={userData?.userType === 'admin'} />
-    </div>;
+    </div>
+  );
 };
+
 export default Hours;

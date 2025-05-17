@@ -68,8 +68,14 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   
-  const isCurrentPage = (path: string): boolean => {
-    return location.pathname === path;
+  const handleTabChange = (tab: string) => {
+    if (tab === 'hours') {
+      navigate('/hours');
+    } else if (location.pathname !== '/') {
+      navigate('/', { state: { activeTab: tab } });
+    } else {
+      onTabChange(tab);
+    }
   };
   
   return (
@@ -77,45 +83,39 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
       <BottomMenuItem 
         icon={<Home className="h-5 w-5" />} 
         label="Início" 
-        onClick={() => onTabChange("main")} 
-        active={activeTab === "main" || isCurrentPage("/")} 
+        onClick={() => handleTabChange("main")} 
+        active={activeTab === "main"} 
       />
       <BottomMenuItem 
         icon={<Clock className="h-5 w-5" />} 
         label="Horas" 
-        onClick={() => {
-          if (isCurrentPage("/hours")) {
-            onTabChange("hours");
-          } else {
-            navigate("/hours");
-          }
-        }} 
-        active={activeTab === "hours" || isCurrentPage("/hours")} 
+        onClick={() => handleTabChange("hours")} 
+        active={activeTab === "hours" || location.pathname === "/hours"} 
       />
       <BottomMenuItem 
         icon={<Calendar className="h-5 w-5" />} 
         label="Extra" 
-        onClick={() => onTabChange("extra")} 
+        onClick={() => handleTabChange("extra")} 
         active={activeTab === "extra"} 
       />
       <BottomMenuItem 
         icon={<MapPinned className="h-5 w-5" />} 
         label="Viagens" 
-        onClick={() => onTabChange("travel")} 
+        onClick={() => handleTabChange("travel")} 
         active={activeTab === "travel"} 
       />
       {isAdmin && (
         <BottomMenuItem 
           icon={<Scale className="h-5 w-5" />} 
           label="TCO" 
-          onClick={() => onTabChange("tco")} 
+          onClick={() => handleTabChange("tco")} 
           active={activeTab === "tco"} 
         />
       )}
       <BottomMenuItem 
         icon={<Settings className="h-5 w-5" />} 
         label="Config" 
-        onClick={() => onTabChange("settings")} 
+        onClick={() => handleTabChange("settings")} 
         active={activeTab === "settings"} 
       />
     </div>
