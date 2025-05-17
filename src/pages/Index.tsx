@@ -25,6 +25,7 @@ import UpcomingShifts from "@/components/UpcomingShifts";
 import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState("main");
   const [isLocked, setIsLocked] = useState(false);
@@ -35,9 +36,7 @@ const Index = () => {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [hasNotifications, setHasNotifications] = useState(false);
   const [activeTrips, setActiveTrips] = useState<any[]>([]);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
   const navigate = useNavigate();
@@ -45,6 +44,7 @@ const Index = () => {
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
+
   useEffect(() => {
     const handleNotificationsChange = (count: number) => {
       setHasNotifications(count > 0);
@@ -53,15 +53,14 @@ const Index = () => {
       setHasNotifications(true);
     }
     const notificationsChangeEvent = new CustomEvent('notificationsUpdate', {
-      detail: {
-        count: unreadCount
-      }
+      detail: { count: unreadCount }
     });
     window.addEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     return () => {
       window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     };
   }, [unreadCount]);
+
   useEffect(() => {
     const today = new Date();
     const travelsRef = collection(db, "travels");
@@ -81,6 +80,7 @@ const Index = () => {
     });
     return () => unsubscribe();
   }, []);
+
   const handleRefresh = () => {
     window.location.reload();
     toast({
@@ -88,12 +88,15 @@ const Index = () => {
       description: "Recarregando dados do sistema."
     });
   };
+
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
+
   const handleExtraClick = () => {
     setActiveTab("extra");
   };
+
   const handleBackClick = () => {
     if (activeTab === "editor") {
       setActiveTab("extra");
@@ -101,21 +104,27 @@ const Index = () => {
       setActiveTab("main");
     }
   };
+
   const handleSettingsClick = () => {
     setActiveTab("settings");
   };
+
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
+
   const handleTCOClick = () => {
     setActiveTab("tco");
   };
+
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
     setShowLogoutDialog(false);
   };
-  return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
+
+  return (
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
       <div className="pt-6 px-4 sm:px-6 lg:px-8 pb-28 max-w-7xl mx-auto flex flex-col flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow">
           <TabsList className="hidden">
@@ -131,7 +140,8 @@ const Index = () => {
 
           <TabsContent value="main" className="flex-grow">
             <div className="space-y-8">
-              {hasNotifications && <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
+              {hasNotifications && (
+                <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
                   <CardContent className="p-6">
                     <div className="flex items-center mb-2">
                       <CalendarDays className="h-5 w-5 text-amber-500 mr-2" />
@@ -139,18 +149,11 @@ const Index = () => {
                     </div>
                     <NotificationsList showOnlyUnread={true} />
                   </CardContent>
-                </Card>}
-              
-              {/* Monthly Hours Summary */}
+                </Card>
+              )}
               <MonthlyHoursSummary />
-              
-              {/* Monthly Extra Calendar */}
               <MonthlyExtraCalendar />
-              
-              {/* Upcoming Shifts */}
               <UpcomingShifts />
-              
-              {/* Active Trips */}
               <ActiveTrips trips={activeTrips} onTravelClick={handleTravelClick} />
             </div>
           </TabsContent>
@@ -162,11 +165,13 @@ const Index = () => {
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              {user.userType === "admin" && <div className="fixed bottom-8 right-8 z-10">
+              {user.userType === "admin" && (
+                <div className="fixed bottom-8 right-8 z-10">
                   <Button onClick={handleEditorClick} className="rounded-full w-16 h-16 shadow-xl bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors py-0 my-[53px]">
                     <Plus className="h-8 w-8" />
                   </Button>
-                </div>}
+                </div>
+              )}
               <TimeSlotsList />
             </div>
           </TabsContent>
@@ -203,13 +208,15 @@ const Index = () => {
                       </div>
                       <p className="text-sm text-gray-600">Recarregar dados do sistema</p>
                     </button>
-                    {user.userType === "admin" && <button onClick={() => setActiveTab("users")} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                    {user.userType === "admin" && (
+                      <button onClick={() => setActiveTab("users")} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
                         <div className="flex items-center gap-3">
                           <Users className="h-5 w-5 text-gray-600" />
                           <h3 className="font-semibold text-gray-800">Usuários</h3>
                         </div>
                         <p className="text-sm text-gray-600">Gerenciar usuários do sistema</p>
-                      </button>}
+                      </button>
+                    )}
                     <button onClick={() => setShowLogoutDialog(true)} className="p-4 text-left bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                       <div className="flex items-center gap-3">
                         <LogOut className="h-5 w-5 text-red-500" />
@@ -273,11 +280,20 @@ const Index = () => {
                   </button>
                 </div>
                 <Tabs value={tcoTab} onValueChange={setTcoTab} className="space-y-6 flex flex-col flex-grow">
-                  <TabsList className="bg-white shadow-md rounded-lg p-2 grid grid-cols-2 gap-4">
-                    <TabsTrigger value="list" aria-label="Visualizar Meus TCOs" className="py-2 px-4 rounded-md text-gray-700 font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors">
+                  <TabsList className="bg-white shadow-md rounded-lg p-4 flex justify-center gap-4">
+                    <TabsTrigger 
+                      value="list" 
+                      aria-label="Visualizar Meus TCOs" 
+                      className="flex-1 py-3 px-4 rounded-md text-gray-800 font-medium bg-gray-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors text-center"
+                    >
                       Meus TCOs
                     </TabsTrigger>
-                    <TabsTrigger value="form" aria-label="Criar ou editar TCO" onClick={() => setSelectedTco(null)} className="py-2 px-4 rounded-md text-gray-700 font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors">
+                    <TabsTrigger 
+                      value="form" 
+                      aria-label="Criar ou editar TCO" 
+                      onClick={() => setSelectedTco(null)} 
+                      className="flex-1 py-3 px-4 rounded-md text-gray-800 font-medium bg-gray-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors text-center"
+                    >
                       Novo TCO
                     </TabsTrigger>
                   </TabsList>
@@ -304,16 +320,9 @@ const Index = () => {
         </Tabs>
       </div>
 
-      {/* Profile Update Dialog */}
       <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={user} />
-
-      {/* Password Change Dialog */}
       <PasswordChangeDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} userId={user.id || ''} currentPassword="" />
-
-      {/* Information Dialog */}
       <InformationDialog open={showInformationDialog} onOpenChange={setShowInformationDialog} isAdmin={user.userType === 'admin'} />
-
-      {/* Logout confirmation dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -332,6 +341,8 @@ const Index = () => {
       </AlertDialog>
 
       <BottomMenuBar activeTab={activeTab} onTabChange={tab => setActiveTab(tab)} isAdmin={user.userType === 'admin'} />
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
