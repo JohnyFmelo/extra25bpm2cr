@@ -116,7 +116,7 @@ const Index = () => {
     setShowLogoutDialog(false);
   };
   return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
-      <div className="pt-6 px-4 sm:px-6 lg:px-8 pb-28 max-w-7xl mx-auto flex flex-col flex-grow w-full my-[22px]">
+      <div className="pt-6 px-4 sm:px-6 lg:px-8 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[22px] mx-[15px]">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow">
           <TabsList className="hidden">
             <TabsTrigger value="main">Main</TabsTrigger>
