@@ -249,7 +249,7 @@ const Index = () => {
                 </button>
               </div>
               <Card className="shadow-md">
-                <CardContent className="p-6">
+                <CardContent className="p-6 px-[3px]">
                   <TravelManagement />
                 </CardContent>
               </Card>
