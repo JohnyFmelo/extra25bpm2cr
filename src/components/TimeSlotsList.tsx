@@ -574,7 +574,7 @@ const TimeSlotsList = () => {
     }
     return null;
   };
-  return <div className="space-y-6 p-4 py-0 my-0">
+  return <div className="space-y-6 p-4 py-0 my-0 px-0">
       <TimeSlotLimitControl slotLimit={slotLimit} onUpdateLimit={handleUpdateSlotLimit} userSlotCount={userSlotCount} isAdmin={isAdmin} />
 
       {isAdmin && totalCostSummary["Total Geral"] > 0 && <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
@@ -601,7 +601,7 @@ const TimeSlotsList = () => {
         return timeA.localeCompare(timeB);
       });
       return <div key={date} className="bg-white rounded-lg shadow-sm">
-            <div className="p-4 md:p-5">
+            <div className="p-4 md:p-5 px-[5px]">
               <div className="flex flex-col items-center">
                 <div className="flex items-center justify-between w-full mb-2">
                   <div className="flex items-center gap-2">
