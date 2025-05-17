@@ -1,14 +1,15 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Switch } from "./ui/switch";
+import { Clock, Calendar, Users, RefreshCw, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeSlot } from "@/types/timeSlot";
+import { Label } from "./ui/label";
 
 interface TimeSlotDialogProps {
   open: boolean;
@@ -27,36 +28,44 @@ const TimeSlotDialog = ({
   onEditTimeSlot,
   editingTimeSlot,
 }: TimeSlotDialogProps) => {
-  const [timeSlot, setTimeSlot] = useState("07 às 13");
+  const [startTime, setStartTime] = useState("07:00");
+  const [endTime, setEndTime] = useState("13:00");
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
 
+  const slotOptions = [2, 3, 4, 5];
+
+  // Reset ou preencher os campos quando o diálogo abrir
   useEffect(() => {
     if (editingTimeSlot) {
-      setTimeSlot(`${editingTimeSlot.startTime} às ${editingTimeSlot.endTime}`);
+      setStartTime(editingTimeSlot.startTime);
+      setEndTime(editingTimeSlot.endTime);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
+      } else {
+        setShowCustomSlots(false);
       }
+      setUseWeeklyLogic(false); // Não permitir editar como semanal
     } else {
-      setTimeSlot("07 às 13");
+      // Valores padrão para novo registro
+      setStartTime("07:00");
+      setEndTime("13:00");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
+      setUseWeeklyLogic(false);
     }
-  }, [editingTimeSlot]);
-
-  const slotOptions = [2, 3, 4, 5];
+  }, [editingTimeSlot, open]);
 
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
-    const [startTime, endTime] = timeSlot.split(" às ");
     
     const newTimeSlot: TimeSlot = {
       date: selectedDate,
@@ -76,53 +85,133 @@ const TimeSlotDialog = ({
     onOpenChange(false);
   };
 
+  const isButtonDisabled = () => {
+    if (showCustomSlots) {
+      const numSlots = parseInt(customSlots);
+      return isNaN(numSlots) || numSlots <= 0;
+    }
+    return false;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-center font-bold">
-            {format(selectedDate, "dd/MM/yy", { locale: ptBR })}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div>
-            <Input
-              value={timeSlot}
-              onChange={(e) => setTimeSlot(e.target.value)}
-              className="text-center"
-              placeholder="07 às 13"
-            />
+          <div className="bg-gradient-to-r from-green-500 to-green-600 -mx-6 -mt-6 p-6 mb-4 rounded-t-lg text-white">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Calendar className="h-5 w-5" />
+              <DialogTitle className="font-bold text-lg">
+                {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+              </DialogTitle>
+            </div>
+            <p className="text-center text-white/80 text-sm">
+              {editingTimeSlot ? "Editar horário de atendimento" : "Novo horário de atendimento"}
+            </p>
           </div>
-          <div className="flex justify-center items-center gap-2">
-            {slotOptions.map((slots) => (
+        </DialogHeader>
+
+        <div className="space-y-5 py-2">
+          {/* Horário de início e fim */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Clock className="h-4 w-4 text-green-500" />
+              Horário
+            </Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-500">Início</Label>
+                <Input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="text-center"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-500">Fim</Label>
+                <Input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="text-center"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Número de vagas */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Users className="h-4 w-4 text-green-500" />
+              Número de vagas
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {slotOptions.map((slots) => (
+                <Button
+                  key={slots}
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "flex-1 min-w-10 h-10 border-gray-200",
+                    selectedSlots === slots && !showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                  )}
+                  onClick={() => {
+                    setSelectedSlots(slots);
+                    setShowCustomSlots(false);
+                  }}
+                >
+                  {slots}
+                </Button>
+              ))}
               <Button
-                key={slots}
                 variant="outline"
                 size="sm"
                 className={cn(
-                  "w-10 h-10",
-                  selectedSlots === slots && !showCustomSlots && "bg-black text-white hover:bg-black/90"
-                )}
-                onClick={() => {
-                  setSelectedSlots(slots);
-                  setShowCustomSlots(false);
-                }}
-              >
-                {slots}
-              </Button>
-            ))}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "w-10 h-10",
-                  showCustomSlots && "bg-black text-white hover:bg-black/90"
+                  "flex-1 min-w-10 h-10 border-gray-200",
+                  showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
                 )}
                 onClick={() => setShowCustomSlots(true)}
               >
-                +
+                Outro
               </Button>
+            </div>
+
+            {showCustomSlots && (
+              <div className="pt-2">
+                <Input
+                  type="number"
+                  value={customSlots}
+                  onChange={(e) => setCustomSlots(e.target.value)}
+                  className="text-center"
+                  placeholder="Número personalizado de vagas"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Descrição */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <FileText className="h-4 w-4 text-green-500" />
+              Descrição (opcional)
+            </Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="min-h-[80px] resize-none"
+              placeholder="Ex: Consulta de rotina, retorno, etc."
+            />
+          </div>
+
+          {/* Opção para criar horários semanais - apenas para novos horários */}
+          {!editingTimeSlot && (
+            <div className="flex items-center justify-between gap-2 pt-2 pb-1">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 text-green-500" />
+                <Label className="text-sm font-medium text-gray-700">
+                  Aplicar para toda a semana
+                </Label>
+              </div>
               <Switch
                 checked={useWeeklyLogic}
                 onCheckedChange={setUseWeeklyLogic}
@@ -132,35 +221,25 @@ const TimeSlotDialog = ({
                 )}
               />
             </div>
-          </div>
-          {showCustomSlots && (
-            <div>
-              <Input
-                type="number"
-                value={customSlots}
-                onChange={(e) => setCustomSlots(e.target.value)}
-                className="text-center"
-                placeholder="Número de vagas"
-              />
-            </div>
           )}
-          <div>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[80px]"
-              placeholder="Descrição do horário (opcional)"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleRegister}>
-              {editingTimeSlot ? "Salvar" : "Registrar"}
-            </Button>
-          </div>
         </div>
+
+        <DialogFooter className="flex justify-end gap-2 pt-4 border-t">
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            className="text-gray-700 border-gray-300"
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleRegister}
+            disabled={isButtonDisabled()}
+            className="bg-green-500 hover:bg-green-600 text-white"
+          >
+            {editingTimeSlot ? "Salvar alterações" : "Registrar horário"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
