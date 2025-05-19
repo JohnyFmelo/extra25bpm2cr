@@ -34,6 +34,10 @@ create policy "Allow authenticated users to upload objects"
   on storage.objects for insert to authenticated
   with check (bucket_id = 'tco-pdfs');
 
+create policy "Allow authenticated users to delete their storage objects"
+  on storage.objects for delete to authenticated
+  using (bucket_id = 'tco-pdfs');
+
 create policy "Allow public read access to tco-pdfs objects"
   on storage.objects for select to anon
   using (bucket_id = 'tco-pdfs');
@@ -42,10 +46,6 @@ create policy "Allow authenticated users to update their own objects"
   on storage.objects for update to authenticated
   using (bucket_id = 'tco-pdfs' and auth.uid() = owner)
   with check (bucket_id = 'tco-pdfs' and auth.uid() = owner);
-
-create policy "Allow authenticated users to delete their own objects"
-  on storage.objects for delete to authenticated
-  using (bucket_id = 'tco-pdfs' and auth.uid() = owner);
 
 -- Policies for tco_pdfs table
 create policy "Allow authenticated users to view their own TCOs"
@@ -103,4 +103,3 @@ drop trigger if exists on_tco_delete on public.tco_pdfs;
 create trigger on_tco_delete
   after delete on public.tco_pdfs
   for each row execute procedure handle_storage_update();
-
