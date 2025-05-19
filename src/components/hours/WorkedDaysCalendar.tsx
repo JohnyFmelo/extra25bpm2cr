@@ -1,7 +1,11 @@
+
 import { useMemo, useState } from 'react';
 import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DateAnnotationDialog } from './DateAnnotationDialog';
+import { CalendarHeader } from './CalendarHeader';
+import { CalendarGrid } from './CalendarGrid';
+import { CalendarFooter } from './CalendarFooter';
 
 interface WorkedDay {
   day: string;
@@ -32,10 +36,12 @@ export const WorkedDaysCalendar = ({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isAnnotationDialogOpen, setIsAnnotationDialogOpen] = useState(false);
   
+  // Parse the monthYear string to create a date object
+  const [month, year] = monthYear.split('/');
+  const monthYearDate = new Date(parseInt(year), parseInt(month) - 1);
+  
   const calendarDays = useMemo(() => {
-    // Parse the monthYear string to create an actual date object
-    const [month, year] = monthYear.split('/');
-    const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+    const startDate = startOfMonth(monthYearDate);
     const endDate = endOfMonth(startDate);
     
     const days = eachDayOfInterval({
@@ -63,28 +69,6 @@ export const WorkedDaysCalendar = ({
     
     return [...paddingBefore, ...days, ...paddingAfter];
   }, [monthYear]);
-  
-  const getHoursForDay = (day: number) => {
-    const workedDay = workedDays.find(wd => parseInt(wd.day) === day);
-    return workedDay?.hours || '';
-  };
-  
-  const getLocationForDay = (day: number) => {
-    return workedDays.find(wd => parseInt(wd.day) === day)?.location;
-  };
-  
-  const getLocationColor = (location: string | undefined) => {
-    switch (location) {
-      case 'bpm':
-        return 'bg-purple-600 text-white';
-      case 'saiop':
-        return 'bg-green-500 text-white';
-      case 'sinfra':
-        return 'bg-blue-500 text-white';
-      default:
-        return 'bg-white';
-    }
-  };
   
   const calculateTotalHoursByLocation = () => {
     const totals = {
@@ -126,86 +110,31 @@ export const WorkedDaysCalendar = ({
     }
   };
   
-  const totals = calculateTotalHoursByLocation();
-  
-  const [month, year] = monthYear.split('/');
-  const monthYearFormatted = format(new Date(parseInt(year), parseInt(month) - 1), 'MMMM yyyy', {
-    locale: ptBR
-  });
-  
-  const isCurrentMonth = (date: Date) => {
-    const monthYearDate = parse(monthYear, 'M/yyyy', new Date());
-    return date.getMonth() === monthYearDate.getMonth() && date.getFullYear() === monthYearDate.getFullYear();
-  };
+  const locationHours = calculateTotalHoursByLocation();
   
   return (
-    <div className={`bg-white rounded-lg shadow-sm border ${className}`}>
-      <div className="px-4 py-3 border-b">
-        <h3 className="text-lg font-medium text-gray-800 capitalize">{monthYearFormatted}</h3>
-      </div>
+    <div className={`overflow-hidden rounded-lg shadow-sm border ${className}`}>
+      {/* Calendar Header */}
+      <CalendarHeader monthYear={monthYear} />
       
-      <div className="grid grid-cols-7 border-b">
-        {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => (
-          <div key={day} className="py-2 text-center text-sm font-medium text-gray-600">
-            {day}
-          </div>
-        ))}
-      </div>
+      {/* Calendar Grid */}
+      <CalendarGrid 
+        calendarDays={calendarDays}
+        workedDays={workedDays}
+        selectedDate={selectedDate}
+        handleDayClick={handleDayClick}
+        annotations={annotations}
+        monthYearDate={monthYearDate}
+        isAdmin={isAdmin}
+      />
       
-      <div className="grid grid-cols-7">
-        {calendarDays.map((date, i) => {
-          const dayNumber = date.getDate();
-          const hours = isCurrentMonth(date) ? getHoursForDay(dayNumber) : '';
-          const location = isCurrentMonth(date) ? getLocationForDay(dayNumber) : undefined;
-          const locationColor = getLocationColor(location);
-          
-          const dateKey = format(date, 'yyyy-MM-dd');
-          const hasAnnotation = annotations[dateKey];
-          
-          return (
-            <div
-              key={i}
-              onClick={() => handleDayClick(date)}
-              className={`border p-1 h-16 cursor-pointer relative ${
-                isCurrentMonth(date) ? 'bg-white' : 'bg-gray-50 text-gray-400'
-              } ${hasAnnotation ? 'ring-1 ring-blue-300' : ''}`}
-            >
-              <div className="flex justify-between">
-                <span className={`text-sm ${isCurrentMonth(date) ? 'text-gray-700' : 'text-gray-400'}`}>
-                  {dayNumber}
-                </span>
-                
-                {hasAnnotation && (
-                  <div className="w-2 h-2 rounded-full bg-blue-500" title={annotations[dateKey]}></div>
-                )}
-              </div>
-              
-              {hours && (
-                <div className={`mt-1 text-xs rounded px-1 py-0.5 text-center ${locationColor}`}>
-                  {hours}h
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {/* Calendar Footer */}
+      <CalendarFooter 
+        total={total} 
+        locationHours={locationHours}
+      />
       
-      <div className="p-3 border-t">
-        <div className="flex justify-between text-sm">
-          <span>Total:</span>
-          <span className="font-medium">{total}</span>
-        </div>
-        
-        <div className="mt-2 space-y-1 text-xs">
-          {Object.entries(totals).filter(([_, value]) => value > 0).map(([location, hours]) => (
-            <div key={location} className="flex justify-between">
-              <span className="uppercase">{location}:</span>
-              <span>{hours}h</span>
-            </div>
-          ))}
-        </div>
-      </div>
-      
+      {/* Date Annotation Dialog */}
       <DateAnnotationDialog
         open={isAnnotationDialogOpen}
         onOpenChange={setIsAnnotationDialogOpen}
