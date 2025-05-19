@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react';
-import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, parse } from 'date-fns';
+import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, parse, isWeekend } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DateAnnotationDialog } from './DateAnnotationDialog';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Calendar } from 'lucide-react';
 
 interface WorkedDay {
   day: string;
@@ -25,6 +24,12 @@ type Annotations = {
   [key: string]: string;
 };
 
+const locationInfo = {
+  bpm: { name: '25° BPM', color: 'bg-purple-600', lightColor: 'bg-purple-100', textColor: 'text-purple-800', hoverColor: 'hover:bg-purple-200' },
+  saiop: { name: 'SAIOP', color: 'bg-green-500', lightColor: 'bg-green-100', textColor: 'text-green-800', hoverColor: 'hover:bg-green-200' },
+  sinfra: { name: 'SINFRA', color: 'bg-blue-500', lightColor: 'bg-blue-100', textColor: 'text-blue-800', hoverColor: 'hover:bg-blue-200' }
+};
+
 export const WorkedDaysCalendar = ({
   className,
   monthYear,
@@ -37,7 +42,7 @@ export const WorkedDaysCalendar = ({
   const [isAnnotationDialogOpen, setIsAnnotationDialogOpen] = useState(false);
 
   const calendarDays = useMemo(() => {
-    // Parse the monthYear string to create an actual date object
+    // Parse the monthYear string to create a date object
     const [month, year] = monthYear.split('/');
     const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
     const endDate = endOfMonth(startDate);
@@ -69,32 +74,17 @@ export const WorkedDaysCalendar = ({
     return workedDays.find(wd => parseInt(wd.day) === day)?.location;
   };
 
-  const getLocationColor = (location: string | undefined) => {
-    switch (location) {
-      case 'bpm':
-        return 'bg-purple-600 text-white';
-      case 'saiop':
-        return 'bg-green-500 text-white';
-      case 'sinfra':
-        return 'bg-blue-500 text-white';
-      default:
-        return 'bg-white';
+  const getDateStyles = (date: Date, location: string | undefined, belongsToCurrentMonth: boolean) => {
+    if (!belongsToCurrentMonth) {
+      return 'bg-gray-50 text-gray-300 opacity-60';
     }
-  };
-
-  const calculateTotalHoursByLocation = () => {
-    const totals = {
-      bpm: 0,
-      saiop: 0,
-      sinfra: 0
-    };
-
-    workedDays.forEach(day => {
-      const hours = parseFloat(day.hours) || 0;
-      totals[day.location] += hours;
-    });
-
-    return totals;
+    
+    if (!location) {
+      return isWeekend(date) ? 'bg-gray-50 text-gray-500' : 'bg-white text-gray-700 border-gray-200';
+    }
+    
+    const info = locationInfo[location as keyof typeof locationInfo];
+    return `${info.lightColor} ${info.textColor} border-${location}-300`;
   };
 
   const handleDayClick = (date: Date) => {
@@ -121,84 +111,128 @@ export const WorkedDaysCalendar = ({
     }
   };
 
-  const totals = calculateTotalHoursByLocation();
+  // Calculate totals by location
+  const totals = useMemo(() => {
+    const result = {
+      bpm: 0,
+      saiop: 0,
+      sinfra: 0,
+      total: 0
+    };
+
+    workedDays.forEach(day => {
+      const hours = parseFloat(day.hours) || 0;
+      result[day.location] += hours;
+      result.total += hours;
+    });
+
+    return result;
+  }, [workedDays]);
+
   const [month, year] = monthYear.split('/');
-  const monthYearFormatted = format(new Date(parseInt(year), parseInt(month) - 1), 'MMMM yyyy', { locale: ptBR });
+  const monthYearDate = new Date(parseInt(year), parseInt(month) - 1);
+  const monthYearFormatted = format(monthYearDate, 'MMMM yyyy', { locale: ptBR });
 
   const isCurrentMonth = (date: Date) => {
-    const monthYearDate = parse(monthYear, 'M/yyyy', new Date());
     return date.getMonth() === monthYearDate.getMonth() && date.getFullYear() === monthYearDate.getFullYear();
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium capitalize">{monthYearFormatted}</h3>
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+        <div className="flex items-center gap-3">
+          <Calendar className="h-5 w-5 text-slate-500" />
+          <h3 className="text-lg font-medium capitalize text-slate-800">{monthYearFormatted}</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 px-2 py-1">
+            Total: {totals.total}h
+          </Badge>
+        </div>
       </div>
       
-      <div className="grid grid-cols-7 gap-2 max-w-3xl mx-auto">
-        {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => (
-          <div key={day} className="text-center text-sm font-medium text-gray-500">
-            {day}
-          </div>
-        ))}
-        
-        {calendarDays.map((date, index) => {
-          const dayNum = date.getDate();
-          const belongsToCurrentMonth = isCurrentMonth(date);
-          const location = belongsToCurrentMonth ? getLocationForDay(dayNum) : undefined;
-          const hours = belongsToCurrentMonth ? getHoursForDay(dayNum) : '';
-          const locationClasses = getLocationColor(location);
-          const dateKey = format(date, 'yyyy-MM-dd');
-          const annotation = annotations[dateKey];
+      {/* Calendar grid */}
+      <div className="p-4">
+        <div className="grid grid-cols-7 gap-1 max-w-3xl mx-auto">
+          {/* Day headers */}
+          {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => (
+            <div key={day} className="text-center text-xs font-medium text-slate-500 py-2">
+              {day}
+            </div>
+          ))}
+          
+          {/* Calendar days */}
+          {calendarDays.map((date, index) => {
+            const dayNum = date.getDate();
+            const belongsToCurrentMonth = isCurrentMonth(date);
+            const location = belongsToCurrentMonth ? getLocationForDay(dayNum) : undefined;
+            const hours = belongsToCurrentMonth ? getHoursForDay(dayNum) : '';
+            const dateKey = format(date, 'yyyy-MM-dd');
+            const annotation = annotations[dateKey];
+            const dayStyles = getDateStyles(date, location, belongsToCurrentMonth);
+            const isToday = format(new Date(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+            
+            return (
+              <div
+                key={index}
+                onClick={() => handleDayClick(date)}
+                className={`
+                  aspect-square rounded-lg border flex flex-col relative
+                  ${dayStyles}
+                  ${location && isAdmin ? locationInfo[location as keyof typeof locationInfo].hoverColor : 'hover:bg-slate-50'}
+                  ${isAdmin ? 'cursor-pointer' : ''}
+                  transition-colors duration-150 ease-in-out
+                `}
+              >
+                {/* Day number */}
+                <div className={`absolute top-1 left-1.5 flex items-center justify-center font-medium text-xs
+                  ${isToday ? 'bg-blue-500 text-white rounded-full w-5 h-5' : ''}
+                `}>
+                  {dayNum}
+                </div>
+                
+                {/* Hours */}
+                {hours && (
+                  <div className="absolute top-1 right-1.5 font-medium text-xs">
+                    {hours}h
+                  </div>
+                )}
+                
+                {/* Location */}
+                {location && belongsToCurrentMonth && (
+                  <div className="flex-grow flex items-center justify-center">
+                    <span className="text-xs font-medium">{locationInfo[location as keyof typeof locationInfo].name}</span>
+                  </div>
+                )}
+                
+                {/* Annotation */}
+                {annotation && (
+                  <div className="absolute bottom-1 left-0 right-0 px-1">
+                    <span className="text-xs truncate block text-center">
+                      {annotation}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Location legend */}
+      <div className="flex flex-wrap gap-4 p-4 border-t border-slate-200 bg-slate-50">
+        {Object.entries(locationInfo).map(([key, info]) => {
+          const locationTotal = totals[key as keyof typeof totals];
+          if (locationTotal <= 0) return null;
           
           return (
-            <div
-              key={index}
-              onClick={() => handleDayClick(date)}
-              className={`
-                aspect-square rounded-lg p-1 flex flex-col items-center justify-start
-                ${belongsToCurrentMonth ? '' : 'bg-gray-50 text-gray-400'}
-                ${locationClasses}
-                ${isAdmin ? 'cursor-pointer hover:opacity-80' : ''}
-                text-base md:text-sm
-              `}
-            >
-              <span className={`font-medium ${belongsToCurrentMonth && !location ? '' : ''}`}>
-                {dayNum}
-              </span>
-              {hours && (
-                <span className="font-medium">{hours}h</span>
-              )}
-              {annotation && (
-                <span className={`text-xs ${location ? 'text-white' : 'text-gray-600'} truncate max-w-full px-1`}>
-                  {annotation}
-                </span>
-              )}
+            <div key={key} className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded ${info.color}`}></div>
+              <span className="text-sm text-slate-700">{info.name}: <span className="font-medium">{locationTotal}h</span></span>
             </div>
           );
         })}
-      </div>
-
-      <div className="flex flex-wrap gap-4 pt-2 border-t border-gray-200">
-        {totals.bpm > 0 && (
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-purple-600"></div>
-            <span className="text-sm text-gray-600">25° BPM: {totals.bpm}h</span>
-          </div>
-        )}
-        {totals.saiop > 0 && (
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-green-500"></div>
-            <span className="text-sm text-gray-600">SAIOP: {totals.saiop}h</span>
-          </div>
-        )}
-        {totals.sinfra > 0 && (
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-blue-500"></div>
-            <span className="text-sm text-gray-600">SINFRA: {totals.sinfra}h</span>
-          </div>
-        )}
       </div>
 
       <DateAnnotationDialog
