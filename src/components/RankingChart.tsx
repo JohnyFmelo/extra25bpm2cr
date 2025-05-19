@@ -122,9 +122,9 @@ const RankingChart = () => {
           </Tabs>
         </div>
       </CardHeader>
-      <CardContent className="p-6 overflow-y-auto" style={{
+      <CardContent style={{
       maxHeight: '80vh'
-    }}>
+    }} className="p-6 overflow-y-auto px-0 py-0">
         {loading ? <div className="flex justify-center items-center" style={{
         height: chartHeight
       }}>
