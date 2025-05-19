@@ -294,7 +294,7 @@ const Index = ({
 
                   <TabsContent value="list" className="flex-grow">
                     <Card className="shadow-md">
-                      <CardContent className="p-6">
+                      <CardContent className="p-6 px-[9px]">
                         <TCOmeus user={user} toast={toast} setSelectedTco={setSelectedTco} selectedTco={selectedTco} />
                       </CardContent>
                     </Card>
