@@ -307,7 +307,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             <Table role="grid" className="min-w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="bg-slate-100 text-gray-700 font-semibold">Número</TableHead>
+                  <TableHead className="bg-slate-100 text-gray-700 font-semibold">Nº</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold">Data</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold">Natureza</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold text-right pr-4">Ações</TableHead>
