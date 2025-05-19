@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Hours from "./pages/Hours";
 import TopBar from "./components/TopBar";
+import BottomMenuBar from "./components/BottomMenuBar";
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -23,14 +24,20 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Layout component to handle common layout elements
 const Layout = ({ children }: { children: React.ReactNode }) => {
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
   return (
-    <div className="flex min-h-screen w-full">
-      <div className="flex-1 flex flex-col">
-        <TopBar />
-        <main className="flex-1">
-          {children}
-        </main>
-      </div>
+    <div className="flex min-h-screen flex-col">
+      <TopBar />
+      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {children}
+      </main>
+      <BottomMenuBar 
+        activeTab={useLocation().pathname === "/" ? "main" : 
+                 useLocation().pathname === "/hours" ? "hours" : ""}
+        onTabChange={(tab) => {}}
+        isAdmin={user?.userType === 'admin'} 
+      />
     </div>
   );
 };

@@ -44,6 +44,9 @@
   body {
     @apply bg-[#F5F9FD] text-[#2C2C2C];
   }
+  #root {
+    @apply flex flex-col min-h-screen;
+  }
 }
 
 @layer utilities {
@@ -59,5 +62,9 @@
   
   .card-hover {
     @apply transition-all hover:shadow-md hover:translate-y-[-2px];
+  }
+  
+  .center-container {
+    @apply w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8;
   }
 }
