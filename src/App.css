@@ -48,16 +48,24 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 1rem;
+  padding-bottom: 80px; /* Add bottom padding to ensure content doesn't get hidden by menu bar */
 }
 
 @media (min-width: 640px) {
   .content-container {
     padding: 0 2rem;
+    padding-bottom: 80px;
   }
 }
 
 @media (min-width: 1024px) {
   .content-container {
     padding: 0 4rem;
+    padding-bottom: 80px;
   }
+}
+
+/* Add styles to ensure content is visible above the menu */
+.bottom-menu-spacing {
+  margin-bottom: 70px; /* Adjust based on menu bar height */
 }

@@ -85,6 +85,8 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
     onTabChange(tab);
   };
   
+  // Calculate the height of the bottom menu bar to use as a CSS variable
+  // This will be used to add padding to the bottom of the content
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] border-t border-gray-100 flex justify-center z-40">
       <div className="flex justify-around items-center w-full max-w-5xl mx-auto rounded-t-xl py-[6px]">

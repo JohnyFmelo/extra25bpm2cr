@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -203,8 +204,8 @@ const Hours = () => {
   };
   
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col mx-[13px] my-[4px] px-0">
-      <div className="pt-6 px-4 sm:px-6 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[22px] lg:px-[23px] mx-[2px]">
+    <div className="bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
+      <div className="pb-2 flex flex-col flex-grow w-full">
         <Tabs defaultValue="hours" className="space-y-6 flex flex-col flex-grow">
           <TabsList className="hidden">
             <TabsTrigger value="hours">Hours</TabsTrigger>
@@ -230,7 +231,7 @@ const Hours = () => {
               </TabsList>
 
               <TabsContent value="individual" className="flex-grow">
-                <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
                   <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
                   <div className="space-y-4">
                     <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
@@ -252,7 +253,7 @@ const Hours = () => {
               </TabsContent>
 
               {userData?.userType === 'admin' && <TabsContent value="general" className="flex-grow">
-                  <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
                     <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
                     <div className="space-y-4">
                       <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />

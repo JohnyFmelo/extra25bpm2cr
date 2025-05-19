@@ -33,7 +33,7 @@ const Layout = ({ children, activeTab, onTabChange }: {
   return (
     <div className="flex min-h-screen flex-col">
       <TopBar />
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-2 mb-20">
         {children}
       </main>
       <BottomMenuBar 

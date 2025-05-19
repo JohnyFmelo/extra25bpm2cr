@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -112,7 +113,7 @@ const ScheduleList = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-4 mb-16">
       {Object.entries(groupedTimeSlots).sort().map(([date, slots]) => (
         <div key={date} className="space-y-4">
           <h3 className="font-medium text-lg">
