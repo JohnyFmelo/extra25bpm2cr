@@ -610,7 +610,7 @@ export const TravelManagement = () => {
                                 }}>
                               <div className="flex items-center gap-2 overflow-hidden">
                                 {(vol.isSelected || (vol.isManual && !isLocked)) && <div className={`w-2 h-2 rounded-full shrink-0 ${vol.isSelected ? 'bg-green-500' : 'bg-yellow-500'}`}></div>}
-                                <span className={`truncate ${vol.isSelected ? "font-medium text-green-800" : vol.isManual && !isLocked ? "font-medium text-yellow-800" : "text-gray-800"}`}>
+                                <span className={`truncate ${vol.isSelected ? "font-medium text-green-800" : vol.isManual && !isLocked ? 'font-medium text-yellow-800' : "text-gray-800"}`}>
                                   {vol.fullName}
                                 </span>
                               </div>
@@ -722,6 +722,13 @@ export const TravelManagement = () => {
         onOpenChange={setAddVolunteerDialogOpen}
         travelId={selectedTravelId}
         currentVolunteers={travels.find(t => t.id === selectedTravelId)?.volunteers || []}
+        onVolunteersAdded={() => {
+          // Refresh the travel data if needed
+          toast({
+            title: "Sucesso",
+            description: "Voluntários adicionados com sucesso!"
+          });
+        }}
       />
     </>;
 };
