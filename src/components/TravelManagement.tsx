@@ -97,10 +97,11 @@ export const TravelManagement = () => {
   useEffect(() => {
     const q = query(collection(db, "travels"));
     const unsubscribe = onSnapshot(q, querySnapshot => {
+      // Fix type conversion issue here - map the data correctly to the Travel interface
       const travelsData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Travel;
+      })) as Travel[]; // Cast as an array of Travel objects
       setTravels(travelsData);
     });
     return () => unsubscribe();
@@ -371,7 +372,6 @@ export const TravelManagement = () => {
     return displayList;
   };
 
-
   const toggleExpansion = (travelId: string) => {
     setExpandedTravels(prev => prev.includes(travelId) ? prev.filter(id => id !== travelId) : [...prev, travelId]);
   };
@@ -488,7 +488,7 @@ export const TravelManagement = () => {
                       </div>;
               } else {
                 // Mantém a cor de fundo padrão (bg-white) para cards de viagens futuras e abertas
-                statusBadge = <div className={`absolute top-3 ${rightPosStatus} bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm flex items-center gap-1 whitespace-nowrap`}>
+                statusBadge = <div className={`absolute top-3 ${rightPosStatus} bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm whitespace-nowrap`}>
                         Em aberto
                         <button onClick={e => { e.stopPropagation(); setShowRankingRules(true); }} className="hover:bg-white/20 rounded-full p-0.5 transition-colors">
                           <Info className="h-3 w-3" />
