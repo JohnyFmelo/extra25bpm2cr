@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, Trash, Calendar, Info, AlertTriangle } from "lucide-react"; // Adicionado Info e AlertTriangle
+import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, Trash, Calendar } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
@@ -28,6 +28,7 @@ const WeeklyCalendar = ({
   isLocked = false,
   onLockChange
 }: WeeklyCalendarProps) => {
+  // Estado
   const [internalCurrentDate, setInternalCurrentDate] = useState(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -38,16 +39,19 @@ const WeeklyCalendar = ({
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const { toast } = useToast();
   
+  // Valores derivados
   const currentDateValue = externalCurrentDate !== undefined ? externalCurrentDate : internalCurrentDate;
-  // Ajuste para nomes mais curtos e consistentes para mobile e desktop.
-  const weekDays = ["TER", "QUA", "QUI", "SEX", "SÁB", "DOM", "SEG"]; 
+  const weekDays = ["Ter", "Qua", "Qui", "Sex", "Sáb", "Dom", "Seg"];
+  const fullWeekDays = [" Ter ", " Qua ", " Qui ", " Sex ", " Sáb ", "Dom", " Seg "];
   const currentMonth = format(currentDateValue, "MMMM yyyy", { locale: ptBR });
   const isMobile = useIsMobile();
 
+  // Efeitos
   useEffect(() => {
     fetchTimeSlots();
   }, []);
 
+  // Funções auxiliares
   const hasTimeSlotsForDate = (date: Date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     return timeSlots.some(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
@@ -59,17 +63,12 @@ const WeeklyCalendar = ({
 
   const getTimeSlotsForDate = (date: Date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
-    return timeSlots.filter(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime)); // Ordenar por hora de início
+    return timeSlots.filter(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
   };
 
   const getCurrentWeekTimeSlots = () => {
     const startDate = new Date(currentDateValue);
-    // Ajuste para iniciar a semana na Terça-feira
-    const dayOfWeek = startDate.getDay(); // 0 (Dom) - 6 (Sáb)
-    const daysToSubtract = (dayOfWeek === 0) ? 5 : (dayOfWeek === 1) ? 6 : (dayOfWeek - 2);
-    startDate.setDate(currentDateValue.getDate() - daysToSubtract);
-
+    startDate.setDate(currentDateValue.getDate() - currentDateValue.getDay() + 2);
 
     const weekSlots = [];
     for (let i = 0; i < 7; i++) {
@@ -89,24 +88,14 @@ const WeeklyCalendar = ({
   const getDaysOfWeek = () => {
     const days = [];
     const startDate = new Date(currentDateValue);
-    const currentDay = startDate.getDay(); // 0 (Dom) - 6 (Sáb)
-    
-    // Queremos Terça como o primeiro dia da semana visualizada
-    // Se hoje é Dom (0), subtrai 5 dias para chegar na Terça passada.
-    // Se hoje é Seg (1), subtrai 6 dias para chegar na Terça passada.
-    // Se hoje é Ter (2), subtrai 0 dias.
-    // Se hoje é Qua (3), subtrai 1 dia.
-    // ...
-    // Se hoje é Sáb (6), subtrai 4 dias.
-    // (currentDay + 7 - 2) % 7  -> (currentDay + 5) % 7 funciona.
-    const daysToSubtract = (currentDay + 5) % 7; 
+    const currentDay = startDate.getDay();
+    const daysToSubtract = (currentDay + 5) % 7;
     startDate.setDate(currentDateValue.getDate() - daysToSubtract);
-
     for (let i = 0; i < 7; i++) {
       const currentDateInWeek = new Date(startDate);
       currentDateInWeek.setDate(startDate.getDate() + i);
       days.push({
-        dayName: weekDays[i], // Usar o array ajustado
+        dayName: isMobile ? weekDays[i] : fullWeekDays[i],
         date: currentDateInWeek.getDate(),
         fullDate: currentDateInWeek,
         isToday: currentDateInWeek.toDateString() === new Date().toDateString(),
@@ -116,6 +105,7 @@ const WeeklyCalendar = ({
     return days;
   };
 
+  // Manipuladores de eventos
   const handlePreviousWeek = () => {
     const newDate = subWeeks(currentDateValue, 1);
     if (onDateChange) {
@@ -137,6 +127,7 @@ const WeeklyCalendar = ({
   };
 
   const handleDayClick = (date: Date) => {
+    console.log('Dia selecionado:', date);
     setSelectedDate(date);
     setShowAllWeekSlots(false);
   };
@@ -150,29 +141,22 @@ const WeeklyCalendar = ({
 
   const handleEyeClick = () => {
     setShowAllWeekSlots(prev => !prev);
-    if (!showAllWeekSlots) { // Se estava false e vai para true
-      setSelectedDate(null); // Limpa a seleção do dia
-    }
+    setSelectedDate(null);
   };
 
   const handleEditClick = (timeSlot: TimeSlot) => {
     setEditingTimeSlot(timeSlot);
-    // Garante que selectedDate está definido para o TimeSlotDialog se necessário
-    if (!selectedDate || format(selectedDate, 'yyyy-MM-dd') !== format(timeSlot.date, 'yyyy-MM-dd')) {
-      setSelectedDate(timeSlot.date);
-    }
     setIsDialogOpen(true);
   };
 
+  // Operações de dados
   const fetchTimeSlots = async () => {
     try {
       setIsLoading(true);
       const data = await dataOperations.fetch();
+      console.log('Fetched data:', data);
       if (!Array.isArray(data)) {
-        console.warn('Fetched data is not an array:', data);
-        setTimeSlots([]); // Define como array vazio para evitar erros
-        // throw new Error('Invalid data format'); // Opcional: lançar erro se preferir
-        return;
+        throw new Error('Invalid data format');
       }
       const formattedSlots = data.map((slot: any) => ({
         id: slot.id,
@@ -220,7 +204,6 @@ const WeeklyCalendar = ({
 
   const handleTimeSlotAdd = async (timeSlot: TimeSlot) => {
     try {
-      setIsLoading(true);
       if (timeSlot.isWeekly) {
         const startDate = timeSlot.date;
         const promises = [];
@@ -241,6 +224,7 @@ const WeeklyCalendar = ({
         if (hasError) {
           throw new Error('Failed to insert some time slots');
         }
+        await fetchTimeSlots();
         toast({
           title: "Sucesso",
           description: "Horários semanais adicionados com sucesso!"
@@ -258,12 +242,12 @@ const WeeklyCalendar = ({
         if (!result.success) {
           throw new Error('Failed to insert time slot');
         }
+        await fetchTimeSlots();
         toast({
           title: "Sucesso",
           description: "Horário adicionado com sucesso!"
         });
       }
-      await fetchTimeSlots(); // Atualiza a lista após adicionar
     } catch (error) {
       console.error('Erro ao adicionar horário:', error);
       toast({
@@ -271,15 +255,12 @@ const WeeklyCalendar = ({
         description: "Não foi possível adicionar o horário.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleTimeSlotEdit = async (updatedTimeSlot: TimeSlot) => {
     if (!editingTimeSlot) return;
     try {
-      setIsLoading(true);
       const result = await dataOperations.update({
         date: format(updatedTimeSlot.date, 'yyyy-MM-dd'),
         start_time: formatTimeForDB(updatedTimeSlot.startTime),
@@ -309,14 +290,12 @@ const WeeklyCalendar = ({
         description: "Não foi possível atualizar o horário.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleDeleteTimeSlot = async (timeSlot: TimeSlot) => {
     try {
-      setIsLoading(true);
+      console.log('Deleting time slot:', timeSlot);
       const result = await dataOperations.delete({
         date: format(timeSlot.date, 'yyyy-MM-dd'),
         start_time: formatTimeForDB(timeSlot.startTime),
@@ -337,8 +316,6 @@ const WeeklyCalendar = ({
         description: "Não foi possível excluir o horário.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -347,84 +324,28 @@ const WeeklyCalendar = ({
     setShowDeleteAlert(false);
   };
 
+  // Renderização
   const daysOfWeek = getDaysOfWeek();
   const weekTimeSlots = getCurrentWeekTimeSlots();
   
-  const renderTimeSlotItem = (slot: TimeSlot, index: number, showEditButton: boolean) => (
-    <div 
-      key={slot.id || `${format(slot.date, 'yyyy-MM-dd')}-${slot.startTime}-${index}`} 
-      className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:shadow-md hover:border-green-300 transition-all duration-200 ease-in-out bg-white"
-    >
-      <div className="flex-1 min-w-0"> {/* Garante que o texto quebra se necessário */}
-        <div className="font-medium text-gray-800 truncate">
-          {slot.startTime} - {slot.endTime}
-          {slot.description && (
-            <span className="ml-2 text-sm text-gray-500 italic">| {slot.description}</span>
-          )}
-        </div>
-        <div className="text-xs text-gray-500 mt-1 flex items-center">
-          <span className={cn(
-            "inline-block w-2.5 h-2.5 rounded-full mr-1.5 shrink-0", // shrink-0 para não encolher o ponto
-            slot.slotsUsed >= slot.slots ? "bg-red-500" : 
-            slot.slotsUsed > slot.slots / 2 ? "bg-yellow-500" : "bg-green-500"
-          )}></span>
-          {slot.slotsUsed}/{slot.slots} vagas
-        </div>
-      </div>
-      <div className="flex gap-1 sm:gap-2 ml-2 shrink-0"> {/* ml-2 para dar espaço, shrink-0 para não encolher botões */}
-        {showEditButton && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 text-gray-500 hover:text-blue-600 hover:bg-blue-50" 
-            onClick={() => handleEditClick(slot)}
-            disabled={isLocked || isLoading}
-            aria-label="Editar horário"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-        )}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50" 
-          onClick={() => handleDeleteTimeSlot(slot)}
-          disabled={isLocked || isLoading}
-          aria-label="Excluir horário"
-        >
-          <Trash className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-
-  const renderEmptyState = (message: string, subMessage?: string) => (
-    <div className="text-center py-10 px-4 text-gray-500 flex flex-col items-center">
-      <Calendar className="h-12 w-12 mb-3 text-gray-400" />
-      <p className="text-md font-medium">{message}</p>
-      {subMessage && <p className="text-sm mt-1">{subMessage}</p>}
-    </div>
-  );
-
   return (
-    <div className={cn("bg-gray-50 rounded-xl shadow-lg overflow-hidden", className)}>
+    <div className={cn("bg-white rounded-xl shadow-md overflow-hidden", className)}>
       {/* Cabeçalho do calendário */}
       <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 text-white">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
-            <Calendar className="h-5 w-5 mr-2 opacity-90" />
-            <h2 className="text-lg md:text-xl font-semibold capitalize tracking-tight">{currentMonth}</h2>
+            <Calendar className="h-5 w-5 mr-2" />
+            <h2 className="text-lg md:text-xl font-semibold capitalize">{currentMonth}</h2>
           </div>
           
           {showControls && (
-            <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex gap-2">
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-8 w-8 md:h-9 md:w-9 bg-white/20 hover:bg-white/30 text-white rounded-full" 
+                className="h-8 w-8 md:h-9 md:w-9 bg-white/20 hover:bg-white/30 text-white" 
                 onClick={handlePlusClick} 
-                disabled={!selectedDate || isLocked || isLoading}
-                aria-label="Adicionar novo horário para data selecionada"
+                disabled={!selectedDate || isLocked}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -432,22 +353,19 @@ const WeeklyCalendar = ({
                 variant="ghost" 
                 size="icon" 
                 className={cn(
-                  "h-8 w-8 md:h-9 md:w-9 bg-white/20 hover:bg-white/30 text-white rounded-full", 
-                  showAllWeekSlots && "bg-white/40 ring-2 ring-white/50"
+                  "h-8 w-8 md:h-9 md:w-9 bg-white/20 hover:bg-white/30 text-white", 
+                  showAllWeekSlots && "bg-white/40"
                 )} 
                 onClick={handleEyeClick}
-                disabled={isLoading}
-                aria-label={showAllWeekSlots ? "Mostrar horários do dia selecionado" : "Mostrar horários da semana toda"}
               >
                 <Eye className="h-4 w-4" />
               </Button>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-8 w-8 md:h-9 md:w-9 bg-white/20 hover:bg-white/30 text-white rounded-full" 
+                className="h-8 w-8 md:h-9 md:w-9 bg-white/20 hover:bg-white/30 text-white" 
                 onClick={() => setShowDeleteAlert(true)} 
-                disabled={isLocked || isLoading || timeSlots.length === 0} // Desabilitar se não houver horários
-                aria-label="Excluir todos os horários"
+                disabled={isLocked}
               >
                 <Trash className="h-4 w-4" />
               </Button>
@@ -457,14 +375,14 @@ const WeeklyCalendar = ({
       </div>
 
       {/* Navegação semanal e dias */}
-      <div className="p-3 sm:p-4">
+      <div className="p-4">
         <div className="flex justify-between items-center mb-4">
           <Button 
             variant="outline" 
             size="sm" 
-            className="h-9 text-gray-700 border-gray-300 hover:bg-gray-100" 
+            className="h-8 text-gray-600 border-gray-300" 
             onClick={handlePreviousWeek} 
-            disabled={isLocked || isLoading}
+            disabled={isLocked}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Anterior
@@ -472,9 +390,9 @@ const WeeklyCalendar = ({
           <Button 
             variant="outline" 
             size="sm" 
-            className="h-9 text-gray-700 border-gray-300 hover:bg-gray-100" 
+            className="h-8 text-gray-600 border-gray-300" 
             onClick={handleNextWeek} 
-            disabled={isLocked || isLoading}
+            disabled={isLocked}
           >
             Próxima
             <ChevronRight className="h-4 w-4 ml-1" />
@@ -482,107 +400,160 @@ const WeeklyCalendar = ({
         </div>
 
         {/* Grade dos dias da semana */}
-        <div className="grid grid-cols-7 gap-1 md:gap-1.5 mb-4">
-          {daysOfWeek.map((day, index) => {
-            const isSelected = selectedDate?.toDateString() === day.fullDate.toDateString();
-            return (
-              <div 
-                key={index} 
-                className={cn(
-                  "flex flex-col items-center justify-center p-1.5 md:p-2 rounded-lg transition-all duration-150 ease-in-out cursor-pointer min-h-[60px] md:min-h-[70px]",
-                  "hover:bg-green-50",
-                  isSelected && "bg-green-100 ring-2 ring-green-500 shadow-md",
-                  !isSelected && day.isToday && "bg-green-50 ring-1 ring-green-300",
-                  day.hasTimeSlots && !isSelected && "relative after:absolute after:bottom-1.5 after:left-1/2 after:-translate-x-1/2 after:w-1.5 after:h-1.5 after:bg-green-500 after:rounded-full"
-                )} 
-                onClick={() => handleDayClick(day.fullDate)}
-                role="button"
-                aria-pressed={isSelected}
-                aria-label={`Selecionar dia ${day.date}, ${day.dayName}`}
-              >
-                <span className={cn(
-                  "text-[10px] md:text-xs font-medium uppercase",
-                  isSelected ? "text-green-700" : "text-gray-500",
-                  day.isToday && !isSelected && "text-green-600"
-                )}>
-                  {day.dayName}
-                </span>
-                <span className={cn(
-                  "text-lg md:text-xl font-medium mt-0.5",
-                  isSelected ? "text-green-700 font-bold" : "text-gray-700",
-                  day.isToday && !isSelected && "text-green-600 font-semibold"
-                )}>
-                  {day.date}
-                </span>
-                {isSelected && day.hasTimeSlots && ( // Bolinha para dia selecionado com horários, mais centralizada
-                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-green-500 rounded-full"></span>
-                )}
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-7 gap-1 md:gap-2 mb-4">
+          {daysOfWeek.map((day, index) => (
+            <div 
+              key={index} 
+              className={cn(
+                "flex flex-col items-center p-2 md:p-3 rounded-lg transition-all cursor-pointer",
+                day.isToday && "border-2 border-green-500",
+                selectedDate?.toDateString() === day.fullDate.toDateString() && "bg-gray-100",
+                day.hasTimeSlots && "relative after:absolute after:bottom-1 after:w-1.5 after:h-1.5 after:bg-green-500 after:rounded-full",
+                "hover:bg-gray-50"
+              )} 
+              onClick={() => handleDayClick(day.fullDate)}
+            >
+              <span className="text-xs md:text-sm text-gray-500">{day.dayName}</span>
+              <span className={cn(
+                "text-base md:text-lg font-medium mt-1",
+                day.isToday && "text-green-600"
+              )}>
+                {day.date}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
       
       {/* Exibição de horários */}
-      <div className="px-3 sm:px-4 pb-4 min-h-[200px] bg-white pt-4 rounded-b-lg">
+      <div className="px-4 pb-4">
         {isLoading ? (
-          <div className="flex justify-center items-center py-10 text-gray-500">
-            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Carregando horários...
-          </div>
+          <div className="flex justify-center py-8 text-gray-500">Carregando horários...</div>
         ) : showAllWeekSlots ? (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {weekTimeSlots.length > 0 ? (
               weekTimeSlots.map(({ date, slots }) => (
                 <div key={format(date, 'yyyy-MM-dd')} className="space-y-2">
-                  <h3 className="font-semibold text-md text-green-700 bg-green-50 p-2.5 rounded-md sticky top-0 z-10 shadow-sm">
+                  <h3 className="font-medium text-gray-700 bg-gray-50 p-2 rounded">
                     {format(date, "EEEE, dd 'de' MMMM", { locale: ptBR })}
                   </h3>
-                  <div className="space-y-2 pt-1">
-                    {slots.map((slot, index) => renderTimeSlotItem(slot, index, false))} {/* Sem botão de editar na visão semanal */}
+                  <div className="space-y-2">
+                    {slots.map((slot, index) => (
+                      <div 
+                        key={slot.id || index} 
+                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-green-200 hover:bg-green-50/30 transition-colors"
+                      >
+                        <div>
+                          <div className="font-medium text-gray-800">
+                            {slot.startTime} às {slot.endTime}
+                            {slot.description && (
+                              <span className="ml-2 text-gray-600">| {slot.description}</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1 flex items-center">
+                            <span className={cn(
+                              "inline-block w-2 h-2 rounded-full mr-2",
+                              slot.slotsUsed >= slot.slots ? "bg-red-500" : 
+                              slot.slotsUsed > slot.slots / 2 ? "bg-yellow-500" : "bg-green-500"
+                            )}></span>
+                            {slot.slotsUsed}/{slot.slots} vagas preenchidas
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50" 
+                            onClick={() => handleDeleteTimeSlot(slot)}
+                            disabled={isLocked}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))
             ) : (
-              renderEmptyState("Nenhum horário disponível nesta semana.")
+              <div className="text-center py-8 text-gray-500">
+                Nenhum horário disponível nesta semana
+              </div>
             )}
           </div>
         ) : selectedDate ? (
-          <div className="space-y-3">
-            <h3 className="font-semibold text-md text-green-700 bg-green-50 p-2.5 rounded-md sticky top-0 z-10 shadow-sm">
-              Horários para {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+          <div className="space-y-2">
+            <h3 className="font-medium text-gray-700 bg-gray-50 p-2 rounded mb-3">
+              {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
             </h3>
             
             {getTimeSlotsForDate(selectedDate).length > 0 ? (
-              <div className="space-y-2 pt-1">
-                {getTimeSlotsForDate(selectedDate).map((slot, index) => renderTimeSlotItem(slot, index, true))}
-              </div>
+              getTimeSlotsForDate(selectedDate).map((slot, index) => (
+                <div 
+                  key={slot.id || index} 
+                  className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-green-200 hover:bg-green-50/30 transition-colors"
+                >
+                  <div>
+                    <div className="font-medium text-gray-800">
+                      {slot.startTime} às {slot.endTime}
+                      {slot.description && (
+                        <span className="ml-2 text-gray-600">| {slot.description}</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1 flex items-center">
+                      <span className={cn(
+                        "inline-block w-2 h-2 rounded-full mr-2",
+                        slot.slotsUsed >= slot.slots ? "bg-red-500" : 
+                        slot.slotsUsed > slot.slots / 2 ? "bg-yellow-500" : "bg-green-500"
+                      )}></span>
+                      {slot.slotsUsed}/{slot.slots} vagas preenchidas
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-gray-500 hover:text-blue-500 hover:bg-blue-50" 
+                      onClick={() => handleEditClick(slot)}
+                      disabled={isLocked}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-gray-500 hover:text-red-500 hover:bg-red-50" 
+                      onClick={() => handleDeleteTimeSlot(slot)}
+                      disabled={isLocked}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))
             ) : (
-              renderEmptyState("Nenhum horário disponível para esta data.")
+              <div className="text-center py-8 text-gray-500">
+                Nenhum horário disponível nesta data
+              </div>
             )}
 
             {!isLocked && (
-              <div className="mt-6 flex justify-center border-t border-gray-200 pt-4">
+              <div className="mt-4 flex justify-center">
                 <Button
-                  size="md" // Um pouco maior
-                  className="bg-green-500 hover:bg-green-600 text-white shadow-md hover:shadow-lg transition-shadow"
+                  size="sm"
+                  className="bg-green-500 hover:bg-green-600 text-white"
                   onClick={handlePlusClick}
-                  disabled={isLoading}
                 >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Adicionar Horário
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar horário
                 </Button>
               </div>
             )}
           </div>
         ) : (
-          renderEmptyState(
-            "Selecione uma data no calendário",
-            "Ou clique no ícone do olho para ver todos os horários da semana."
-          )
+          <div className="text-center py-8 text-gray-500">
+            Selecione uma data para ver ou adicionar horários
+          </div>
         )}
       </div>
 
@@ -590,22 +561,18 @@ const WeeklyCalendar = ({
       <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <div className="flex items-center">
-              <AlertTriangle className="h-6 w-6 mr-2 text-red-500" />
-              <AlertDialogTitle>Excluir todos os horários</AlertDialogTitle>
-            </div>
-            <AlertDialogDescription className="pt-2">
-              Tem certeza que deseja excluir TODOS os horários cadastrados? Esta ação não pode ser desfeita e removerá permanentemente todos os dados de agendamento.
+            <AlertDialogTitle>Excluir todos os horários</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir todos os horários? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleClearAllTimeSlots}
               className="bg-red-500 hover:bg-red-600"
-              disabled={isLoading}
             >
-              {isLoading ? "Excluindo..." : "Confirmar Exclusão"}
+              Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -622,7 +589,6 @@ const WeeklyCalendar = ({
           onAddTimeSlot={handleTimeSlotAdd} 
           onEditTimeSlot={handleTimeSlotEdit} 
           editingTimeSlot={editingTimeSlot} 
-          isLoading={isLoading} // Passar isLoading para o dialog
         />
       )}
     </div>
