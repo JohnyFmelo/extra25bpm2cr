@@ -338,7 +338,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
             <CardDescription>Adicione os componentes buscando por RGPM</CardDescription>
           </div>
           <Button variant="outline" size="sm" onClick={openRegisterDialog} type="button">
-            <UserPlus className="h-4 w-4 mr-2" /> Cadastrar/Atualizar Policial
+            <UserPlus className="h-4 w-4 mr-2" /> 
           </Button>
         </div>
       </CardHeader>
