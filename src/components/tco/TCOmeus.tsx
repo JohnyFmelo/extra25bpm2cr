@@ -24,30 +24,37 @@ interface TCOmeusProps {
 
 const BUCKET_NAME = 'tco-pdfs';
 
-// Função auxiliar para extrair o número de exibição do TCO
+// Função auxiliar para extrair e formatar o número de exibição do TCO
 const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): string => {
   if (!fullTcoNumber) return "-";
 
+  let numberPart = "";
+
   // Padrão: TCO-NUMERO_OPCIONAL_EXTRA ou TCO-NUMERO-OPCIONAL_EXTRA
   // Queremos extrair NUMERO.
-  // NUMERO é definido como os caracteres após "TCO-" até o primeiro "_" ou "-".
   const match = fullTcoNumber.match(/^TCO-([^_ -]+)/i);
   if (match && match[1]) {
-    return match[1];
+    numberPart = match[1];
+  } else if (fullTcoNumber.toUpperCase().startsWith("TCO-")) {
+    // Fallback: se o tcoNumber for apenas "TCO-X" ou "TCO-XX"
+    numberPart = fullTcoNumber.substring(4);
+  } else {
+    // Se não corresponder a nenhum padrão TCO, retorna o original (improvável se os dados estiverem corretos)
+    return fullTcoNumber;
   }
 
-  // Fallback: Se começar com "TCO-" mas não casar com o padrão acima
-  // (ex: "TCO-12345" sem underscore ou hífen após a parte numérica),
-  // então retorna tudo após "TCO-".
-  if (fullTcoNumber.toUpperCase().startsWith("TCO-")) {
-    const numberPart = fullTcoNumber.substring(4);
-    if (numberPart) return numberPart; // Retorna se não for uma string vazia
+  // Tenta converter para número e formatar com zero à esquerda
+  if (numberPart) {
+    const num = parseInt(numberPart, 10);
+    if (!isNaN(num)) {
+      return String(num).padStart(2, '0'); // Garante 2 dígitos com zero à esquerda
+    }
+    return numberPart; // Retorna a parte extraída se não for um número puro (ex: "A1")
   }
   
-  // Se não houver prefixo "TCO-" ou outro padrão específico, retorna a string original.
-  // Este caso idealmente não deve acontecer se tco.tcoNumber for sempre formado corretamente.
-  return fullTcoNumber; 
+  return "-"; // Se numberPart ficou vazio
 };
+
 
 const TCOmeus: React.FC<TCOmeusProps> = ({
   user,
@@ -69,17 +76,14 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     if (!user.id) return;
     setIsLoading(true);
     try {
-      console.log("Buscando TCOs para o usuário:", user.id);
-      console.log("Buscando diretamente do storage na pasta:", `tcos/${user.id}/`);
       const {
         data: storageFiles,
         error: storageError
       } = await supabase.storage.from(BUCKET_NAME).list(`tcos/${user.id}/`);
       if (storageError) {
         console.error("Erro ao listar arquivos do storage:", storageError);
-      } else {
-        console.log("Arquivos encontrados no storage:", storageFiles);
       }
+      
       let dbTcos: any[] = [];
       if (isValidUUID(user.id)) {
         const {
@@ -89,21 +93,16 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         if (error) {
           console.error("Erro ao buscar do banco Supabase:", error);
         } else if (supaTcos && supaTcos.length > 0) {
-          console.log("TCOs encontrados no banco:", supaTcos);
           dbTcos = supaTcos;
         }
       }
+      
       let consolidatedTcos: any[] = [];
       const filesFromStorage = storageFiles?.map(file => {
         const fileName = file.name;
-        // Regex para capturar a parte do número/identificador do TCO do nome do arquivo
-        // Ex: "TCO-NUMERO_RESTO.pdf" -> captura "NUMERO_RESTO"
-        // Ex: "TCO-NUMERO-RESTO.pdf" -> captura "NUMERO" (pois \w+ não inclui '-')
-        const tcoMatch = fileName.match(/TCO-([\w.-]+)/i); // Modificado para incluir '.' e '-'
+        const tcoMatch = fileName.match(/TCO-([\w.-]+)/i);
         let tcoIdentifierPart = tcoMatch ? tcoMatch[1] : fileName.replace(/\.pdf$/i, "");
         
-        // Se o nome do arquivo não começar com "TCO-", tcoIdentifierPart será o nome do arquivo sem .pdf
-        // Nesse caso, garantimos que o tcoNumber final comece com "TCO-"
         let finalTcoNumber = tcoIdentifierPart;
         if (!tcoIdentifierPart.toUpperCase().startsWith("TCO-")) {
             finalTcoNumber = `TCO-${tcoIdentifierPart}`;
@@ -111,13 +110,14 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
 
         return {
           id: file.id || fileName,
-          tcoNumber: finalTcoNumber,
+          tcoNumber: finalTcoNumber, // Ex: TCO-2_2025-05-19 ou TCO-002_etc
           createdAt: new Date(file.created_at || Date.now()),
-          natureza: "Não especificada", // Você pode querer extrair isso do nome do arquivo também se disponível
+          natureza: "Não especificada", 
           pdfPath: `tcos/${user.id}/${fileName}`,
           source: 'storage'
         };
       }) || [];
+      
       const supabaseTcos = dbTcos.map(tco => ({
         id: tco.id,
         tcoNumber: tco.tcoNumber || `TCO-${tco.id.substring(0, 8)}`,
@@ -126,6 +126,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         pdfPath: tco.pdfPath,
         source: 'supabase'
       })) || [];
+      
       consolidatedTcos = [...supabaseTcos];
       for (const storageTco of filesFromStorage) {
         const isDuplicate = consolidatedTcos.some(tco => tco.pdfPath === storageTco.pdfPath || tco.tcoNumber === storageTco.tcoNumber);
@@ -135,9 +136,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       }
 
       consolidatedTcos.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      if (consolidatedTcos.length === 0) {
-        console.log("Nenhum TCO encontrado para o usuário");
-      }
       setTcoList(consolidatedTcos);
     } catch (error) {
       console.error("Erro ao buscar TCOs:", error);
@@ -162,9 +160,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     if (!tcoToDelete) return;
     try {
       setIsDeleting(true);
-      console.log("Iniciando exclusão do TCO:", tcoToDelete);
       if (tcoToDelete.pdfPath) {
-        console.log("Excluindo arquivo do storage:", tcoToDelete.pdfPath);
         const {
           error: storageError
         } = await deletePDF(tcoToDelete.pdfPath);
@@ -173,7 +169,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         }
       }
       if (tcoToDelete.source === 'supabase' && isValidUUID(tcoToDelete.id)) {
-        console.log("Excluindo registro do banco de dados, ID:", tcoToDelete.id);
         const {
           error: dbError
         } = await deleteTCOMetadata(tcoToDelete.id);
@@ -182,9 +177,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           throw dbError;
         }
       } else {
-        console.log("Registro não encontrado no banco ou ID inválido:", tcoToDelete.id);
         if (tcoToDelete.pdfPath) {
-          console.log("Tentando excluir pelo caminho do PDF:", tcoToDelete.pdfPath);
           const {
             error
           } = await supabase.from('tco_pdfs').delete().eq('pdfPath', tcoToDelete.pdfPath);
@@ -199,7 +192,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         title: "TCO Excluído",
         description: "O TCO foi removido com sucesso."
       });
-      console.log("TCO excluído com sucesso");
     } catch (error) {
       console.error("Erro no processo de exclusão do TCO:", error);
       toast({
@@ -215,23 +207,21 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   };
   const handleViewPdf = async (tco: any) => {
     try {
-      setPdfLoading(true); // Inicia o loading do PDF
+      setPdfLoading(true); 
       if (tco.pdfPath) {
-        console.log("Obtendo URL público para o arquivo:", tco.pdfPath);
         const {
           data
         } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(tco.pdfPath);
         const url = data?.publicUrl;
-        console.log("URL público obtido:", url);
         if (url) {
           setSelectedPdfUrl(url);
           setIsPdfDialogOpen(true);
         } else {
-          setPdfLoading(false); // Para o loading se URL não for encontrada
+          setPdfLoading(false); 
           throw new Error("URL não encontrada");
         }
       } else {
-        setPdfLoading(false); // Para o loading se não houver PDF
+        setPdfLoading(false); 
         toast({
           variant: "destructive",
           title: "PDF não encontrado",
@@ -239,7 +229,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         });
       }
     } catch (error) {
-      setPdfLoading(false); // Para o loading em caso de erro
+      setPdfLoading(false); 
       console.error("Erro ao buscar PDF:", error);
       toast({
         variant: "destructive",
@@ -247,17 +237,14 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         description: "Falha ao carregar o PDF do TCO."
       });
     } 
-    // Não coloque setPdfLoading(false) aqui se o iframe tiver onLoad
   };
   const handleDownloadPdf = async (tco: any) => {
     try {
       if (tco.pdfPath) {
-        console.log("Obtendo URL para download:", tco.pdfPath);
         const {
           data
         } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(tco.pdfPath);
         const url = data?.publicUrl;
-        console.log("URL para download:", url);
         if (url) {
           window.open(url, '_blank');
         } else {
@@ -282,6 +269,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   useEffect(() => {
     fetchUserTcos();
   }, [user.id]);
+
   return <div className="bg-white rounded-xl shadow-lg p-6 flex-grow overflow-hidden flex flex-col px-[14px]">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-800">Meus TCOs</h2>
@@ -307,27 +295,28 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             <Table role="grid" className="min-w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="bg-slate-100 text-gray-700 font-semibold">Nº</TableHead>
-                  <TableHead className="bg-slate-100 text-gray-700 font-semibold">Data</TableHead>
-                  <TableHead className="bg-slate-100 text-gray-700 font-semibold">Natureza</TableHead>
-                  <TableHead className="bg-slate-100 text-gray-700 font-semibold text-right pr-4">Ações</TableHead>
+                  {/* Modificação: Adicionada classe de largura para a coluna Número */}
+                  <TableHead className="bg-slate-100 text-gray-700 font-semibold w-[120px] px-3">Número</TableHead>
+                  <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">Data</TableHead>
+                  <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">Natureza</TableHead>
+                  <TableHead className="bg-slate-100 text-gray-700 font-semibold text-right pr-4 px-3">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tcoList.map(tco => <TableRow key={tco.id} aria-selected={selectedTco?.id === tco.id} className={`cursor-pointer transition-colors hover:bg-slate-50 ${selectedTco?.id === tco.id ? "bg-primary/10" : ""}`} onClick={() => setSelectedTco(tco)}>
-                    <TableCell className="font-medium">
+                    {/* Modificação: Adicionado padding também na célula para consistência */}
+                    <TableCell className="font-medium px-3">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 px-2 py-0.5">
-                          {/* Modificação aqui para usar a função de extração */}
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 px-2 py-0.5 text-sm">
                           {extractTcoDisplayNumber(tco.tcoNumber)}
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-3">
                       {tco.createdAt ? format(tco.createdAt instanceof Date ? tco.createdAt : new Date(tco.createdAt), "dd/MM/yyyy") : "-"}
                     </TableCell>
-                    <TableCell>{tco.natureza || "Não especificada"}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="px-3">{tco.natureza || "Não especificada"}</TableCell>
+                    <TableCell className="text-right px-3 pr-4">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={e => e.stopPropagation()} aria-label={`Ações para TCO ${tco.tcoNumber}`} className="h-8 w-8 rounded-full hover:bg-gray-100">
@@ -373,8 +362,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       <Dialog open={isPdfDialogOpen} onOpenChange={(open) => {
         setIsPdfDialogOpen(open);
         if (!open) {
-          setSelectedPdfUrl(null); // Limpa a URL ao fechar
-          setPdfLoading(false); // Reseta o estado de loading do PDF
+          setSelectedPdfUrl(null); 
+          setPdfLoading(false); 
         }
       }}>
         <DialogContent className="max-w-5xl h-[90vh] p-0 overflow-hidden rounded-lg">
@@ -385,7 +374,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             </Button>
           </DialogHeader>
           
-          <div className="h-[calc(100%-57px)] overflow-hidden bg-gray-100"> {/* Ajuste de altura e bg */}
+          <div className="h-[calc(100%-57px)] overflow-hidden bg-gray-100">
             {pdfLoading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-75 z-20">
                 <svg className="animate-spin h-8 w-8 text-blue-600 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -398,18 +387,18 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             {selectedPdfUrl ? (
               <iframe 
                 src={selectedPdfUrl} 
-                className={`w-full h-full ${pdfLoading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}`} // Transição suave
+                className={`w-full h-full ${pdfLoading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}`}
                 title="PDF Viewer" 
                 style={{ border: "none" }} 
-                onLoad={() => setPdfLoading(false)} // Para o loading quando o iframe carregar
-                onError={() => { // Lida com erro no carregamento do iframe
+                onLoad={() => setPdfLoading(false)} 
+                onError={() => { 
                   setPdfLoading(false);
                   toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar o PDF."});
-                  setSelectedPdfUrl(null); // Limpa URL para evitar iframe quebrado
+                  setSelectedPdfUrl(null); 
                 }}
               />
             ) : (
-              !pdfLoading && // Só mostra se não estiver carregando
+              !pdfLoading && 
               <div className="flex items-center justify-center h-full">
                 <p className="text-gray-500">Selecione um TCO para visualizar o PDF.</p>
               </div>
