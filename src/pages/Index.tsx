@@ -269,7 +269,7 @@ const Index = ({
                 </button>
               </div>
               <Card className="shadow-md">
-                <CardContent className="p-6 my-0 mx-0 py-0 px-[9px]">
+                <CardContent className="p-6 my-0 mx-0 px-[9px] py-[13px]">
                   <Tabs value={travelTab} onValueChange={setTravelTab} className="w-full">
                     <TabsList className="w-full mb-6 justify-between py-[20px] my-[11px]">
                       <TabsTrigger value="trips" className="flex-1">Viagens</TabsTrigger>
