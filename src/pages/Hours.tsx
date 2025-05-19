@@ -213,7 +213,7 @@ const Hours = () => {
     }
   };
   return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col mx-[13px] my-[4px] px-0">
-      <div className="pt-3 px-4 sm:px-6 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[0px] lg:px-[23px] mx-[2px]">
+      <div className="pt-3 px-4 sm:px-6 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[0px] lg:px-[23px] mx-[2px] py-[-50px]">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow px-0 py-[-50px]">
           <TabsList className="hidden">
             <TabsTrigger value="hours">Hours</TabsTrigger>
