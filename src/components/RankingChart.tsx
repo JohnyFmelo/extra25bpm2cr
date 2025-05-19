@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "./ui/card";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { ChartContainer } from "./ui/chart";
 import { Bar, BarChart, CartesianGrid, Legend, Tooltip, XAxis, YAxis } from "recharts";
-import { collection, query, getDocs, orderBy } from "firebase/firestore"; // Removido 'limit' se não for usado para buscar TODOS os dados para o ranking
+import { collection, query, getDocs, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const RankingChart = () => {
@@ -16,8 +16,6 @@ const RankingChart = () => {
       setLoading(true);
       try {
         const travelsRef = collection(db, "travels");
-        // Se você quiser o ranking com base em TODOS os dados, remova o 'limit'.
-        // Se for intencional pegar apenas as viagens mais recentes para o ranking, mantenha ou ajuste o limit.
         const q = query(travelsRef, orderBy("startDate", "desc"));
         const querySnapshot = await getDocs(q);
 
@@ -30,41 +28,31 @@ const RankingChart = () => {
             travelData.volunteers.forEach((volunteerData: any) => {
               let volunteerName: string | undefined;
 
-              // *** AJUSTE PRINCIPAL AQUI ***
-              // Tente determinar o nome do voluntário.
-              // Cenário 1: volunteerData é uma string (o próprio nome)
               if (typeof volunteerData === 'string') {
                 volunteerName = volunteerData;
-              }
-              // Cenário 2: volunteerData é um objeto com uma propriedade 'name'
-              else if (volunteerData && typeof volunteerData.name === 'string') {
+              } else if (volunteerData && typeof volunteerData.name === 'string') {
                 volunteerName = volunteerData.name;
-              }
-              // Cenário 3: volunteerData é um objeto com uma propriedade 'nome' (exemplo alternativo)
-              else if (volunteerData && typeof volunteerData.nome === 'string') {
+              } else if (volunteerData && typeof volunteerData.nome === 'string') { // Exemplo alternativo
                 volunteerName = volunteerData.nome;
               }
-              // Adicione mais 'else if' se a estrutura for outra
+              // Adicione mais 'else if' se a estrutura dos seus dados for outra
 
-              if (volunteerName && volunteerName.trim() !== "") { // Garante que o nome não seja vazio
-                // Track allowances (days)
+              if (volunteerName && volunteerName.trim() !== "") {
                 const startDate = new Date(travelData.startDate);
                 const endDate = new Date(travelData.endDate);
-                // Garante que as datas são válidas antes de calcular
+
                 if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate >= startDate) {
                   const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)) + 1;
-
                   const currentAllowances = userAllowancesMap.get(volunteerName) || 0;
                   userAllowancesMap.set(volunteerName, currentAllowances + days);
                 } else {
-                  console.warn(`Datas inválidas para a viagem ${doc.id} do voluntário ${volunteerName}`);
+                  // console.warn(`Datas inválidas para a viagem ${doc.id} do voluntário ${volunteerName}`);
                 }
 
-                // Track trips count
                 const currentTrips = userTripsMap.get(volunteerName) || 0;
                 userTripsMap.set(volunteerName, currentTrips + 1);
               } else {
-                // console.warn("Voluntário sem nome ou com nome inválido encontrado na viagem:", doc.id, "Dados do voluntário:", volunteerData);
+                // console.warn("Voluntário sem nome ou com nome inválido encontrado na viagem:", doc.id, "Dados:", volunteerData);
               }
             });
           }
@@ -74,18 +62,23 @@ const RankingChart = () => {
 
         if (rankingType === "allowances") {
           chartData = Array.from(userAllowancesMap.entries())
-            .map(([name, value]) => ({ name, value })) // 'name' já é a string do nome
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 10); // Pega o Top 10
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value); // REMOVIDO .slice(0, 10)
+            // Se quiser manter uma ordenação, mas exibir todos, mantenha o .sort()
+            // Se não precisar de ordenação específica e quiser todos, pode remover o .sort() também,
+            // mas geralmente é bom ter uma ordenação (por valor ou por nome).
         } else { // rankingType === "trips"
           chartData = Array.from(userTripsMap.entries())
-            .map(([name, value]) => ({ name, value })) // 'name' já é a string do nome
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 10); // Pega o Top 10
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value); // REMOVIDO .slice(0, 10)
         }
 
+        // Filtra nomes vazios ou undefined caso ainda existam por algum motivo
+        chartData = chartData.filter(item => item.name && item.name.trim() !== "");
+
         setData(chartData);
-      } catch (error) {
+      } catch (error)
+{
         console.error("Error fetching ranking data:", error);
       } finally {
         setLoading(false);
@@ -93,7 +86,7 @@ const RankingChart = () => {
     };
 
     fetchRankingData();
-  }, [rankingType]); // A dependência `db` não é necessária aqui, pois `db` em si não muda.
+  }, [rankingType]);
 
   return (
     <Card className="shadow-md">
@@ -110,38 +103,38 @@ const RankingChart = () => {
       </CardHeader>
       <CardContent className="p-6">
         {loading ? (
-          <div className="flex justify-center items-center h-80">
+          <div className="flex justify-center items-center h-96"> {/* Aumentei altura para loading/sem dados */}
             <span className="text-gray-500">Carregando dados...</span>
           </div>
         ) : data.length === 0 ? (
-          <div className="flex justify-center items-center h-80">
+          <div className="flex justify-center items-center h-96">
             <span className="text-gray-500">Nenhum dado para exibir no ranking.</span>
           </div>
         ) : (
-          <ChartContainer className="h-80" config={{}}>
+          // Se houver muitos dados, o ChartContainer pode precisar de uma altura maior
+          // ou você pode querer adicionar uma rolagem ao CardContent.
+          <ChartContainer className="h-[600px]" config={{}}> {/* Aumentei altura para mais dados */}
             <BarChart
               data={data}
               layout="vertical"
               margin={{
                 top: 10,
                 right: 30,
-                left: 120, // Aumentei um pouco para nomes mais longos
+                left: 150, // Aumentei ainda mais para nomes potencialmente longos
                 bottom: 20,
               }}
             >
               <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-              <XAxis type="number" />
+              <XAxis type="number" allowDecimals={false} />
               <YAxis
                 type="category"
-                dataKey="name" // Crucial: deve corresponder à propriedade 'name' no seu chartData
-                tick={{ fontSize: 12, fill: '#333' }} // Ajuste de cor para melhor leitura
-                width={110} // Aumentei um pouco
-                interval={0} // Garante que todos os ticks sejam mostrados se couberem
+                dataKey="name"
+                tick={{ fontSize: 10, fill: '#333' }} // Diminuí um pouco a fonte se houver muitos nomes
+                width={140} // Ajuste conforme necessário
+                interval={0} // Tenta mostrar todos os ticks
               />
               <Tooltip
-                formatter={(value, name, props) => {
-                  // props.payload.name é o nome do viajante
-                  // value é o número de diárias/viagens
+                formatter={(value: number, name, props) => {
                   return [
                     `${value} ${rankingType === "allowances" ? "diárias" : "viagens"}`,
                     `Viajante: ${props.payload.name}`
@@ -153,8 +146,7 @@ const RankingChart = () => {
                 dataKey="value"
                 fill={rankingType === "allowances" ? "#4f46e5" : "#10b981"}
                 radius={[0, 4, 4, 0]}
-                barSize={20}
-                // A legenda já pega o nome da série automaticamente, mas pode ser explícito
+                barSize={15} // Pode diminuir o tamanho da barra se houver muitas
                 name={rankingType === "allowances" ? "Total de Diárias" : "Total de Viagens"}
               />
               <Legend formatter={(value) => <span style={{ color: '#333' }}>{value}</span>} />
