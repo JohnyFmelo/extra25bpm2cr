@@ -11,6 +11,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { CalendarDays, Users, Clock, Calendar, Navigation } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+
 interface Travel {
   id: string;
   startDate: string;
@@ -47,6 +51,9 @@ export const TravelManagement = () => {
   const [selectedVolunteers, setSelectedVolunteers] = useState<{
     [travelId: string]: string[];
   }>({});
+  const [isAddVolunteerDialogOpen, setIsAddVolunteerDialogOpen] = useState(false);
+  const [currentTravelId, setCurrentTravelId] = useState<string | null>(null);
+  const [volunteerName, setVolunteerName] = useState("");
   const {
     toast
   } = useToast();
@@ -455,6 +462,58 @@ export const TravelManagement = () => {
       }
     }
   };
+  const handleAddVolunteer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentTravelId || !volunteerName.trim()) return;
+    
+    try {
+      const travelRef = doc(db, "travels", currentTravelId);
+      const travelSnap = await getDoc(travelRef);
+      
+      if (travelSnap.exists()) {
+        const travelData = travelSnap.data() as Travel;
+        const currentVolunteers = Array.isArray(travelData.volunteers) ? travelData.volunteers : [];
+        
+        // Check if volunteer already exists
+        if (currentVolunteers.includes(volunteerName)) {
+          toast({
+            title: "Aviso",
+            description: "Este voluntário já está na lista.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Add volunteer to the list
+        const updatedVolunteers = [...currentVolunteers, volunteerName];
+        await updateDoc(travelRef, {
+          volunteers: updatedVolunteers
+        });
+        
+        toast({
+          title: "Sucesso",
+          description: "Voluntário adicionado com sucesso!"
+        });
+        
+        // Reset form and close dialog
+        setVolunteerName("");
+        setIsAddVolunteerDialogOpen(false);
+      }
+    } catch (error) {
+      console.error("Error adding volunteer:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar voluntário.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openAddVolunteerDialog = (travelId: string) => {
+    setCurrentTravelId(travelId);
+    setIsAddVolunteerDialogOpen(true);
+  };
+
   return <>
       {showRankingRules && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <Card className="p-6 bg-white shadow-xl max-w-md w-full relative border border-gray-100">
@@ -597,7 +656,22 @@ export const TravelManagement = () => {
                     </div>
 
                     {sortedVolunteers.length > 0 && <div className="pt-3 border-t border-gray-200">
-                        <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntários:</h4>
+                        <h4 className="font-medium text-sm text-gray-700 mb-2 flex justify-between items-center">
+                          <span>Voluntários:</span>
+                          {isAdmin && !travel.isLocked && 
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 w-7 p-0 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-800"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openAddVolunteerDialog(travel.id);
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          }
+                        </h4>
                         <div className="space-y-2">
                           {sortedVolunteers.map(vol => <div key={vol.fullName} className={`text-sm p-2 rounded-lg flex justify-between items-center ${vol.isSelected ? 'bg-green-50 border border-green-200' : vol.isManual ? 'bg-blue-100 border border-blue-200' : 'bg-gray-50 border border-gray-200'}`} onDoubleClick={() => {
                     if (isAdmin && !travel.isLocked) {
@@ -642,6 +716,37 @@ export const TravelManagement = () => {
       {isAdmin && <Button onClick={() => setIsModalOpen(true)} className="fixed bottom-6 right-6 rounded-full p-4 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] text-base py-[26px]">
           <Plus className="h-6 w-6" />
         </Button>}
+
+      {/* Add Volunteer Dialog */}
+      <Dialog open={isAddVolunteerDialogOpen} onOpenChange={setIsAddVolunteerDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adicionar Voluntário Manualmente</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddVolunteer} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="volunteerName">Nome do Voluntário</Label>
+              <div className="flex gap-2">
+                <Input 
+                  id="volunteerName" 
+                  placeholder="Patente Nome de Guerra" 
+                  value={volunteerName} 
+                  onChange={(e) => setVolunteerName(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                Formato: "Patente Nome de Guerra" (Ex: Cap Silva, Sd Santos)
+              </p>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsAddVolunteerDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Adicionar</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {isModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <Card className="p-6 bg-white shadow-lg max-w-lg w-full relative">
