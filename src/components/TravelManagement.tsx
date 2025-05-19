@@ -8,10 +8,10 @@ import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin, UserPlus } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { CalendarDays, Users, Clock, Calendar, Navigation } from "lucide-react";
-import UserSelectionDialog from "./UserSelectionDialog";
+import AddVolunteerDialog from "./AddVolunteerDialog";
 
 interface Travel {
   id: string;
@@ -27,7 +27,6 @@ interface Travel {
   archived: boolean;
   isLocked?: boolean;
 }
-
 export const TravelManagement = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -50,12 +49,11 @@ export const TravelManagement = () => {
   const [selectedVolunteers, setSelectedVolunteers] = useState<{
     [travelId: string]: string[];
   }>({});
-  const [isUserSelectionDialogOpen, setIsUserSelectionDialogOpen] = useState(false);
-  const [currentTravelId, setCurrentTravelId] = useState<string | null>(null);
+  const [addVolunteerDialogOpen, setAddVolunteerDialogOpen] = useState(false);
+  const [selectedTravelId, setSelectedTravelId] = useState<string>("");
 
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
 
@@ -462,45 +460,9 @@ export const TravelManagement = () => {
       }
     }
   };
-  const handleAddVolunteersManually = (travelId: string) => {
-    setCurrentTravelId(travelId);
-    setIsUserSelectionDialogOpen(true);
-  };
-
-  const handleVolunteersSelected = async (selectedUsers: string[]) => {
-    if (!currentTravelId) return;
-    
-    try {
-      const travelRef = doc(db, "travels", currentTravelId);
-      const travelSnap = await getDoc(travelRef);
-      
-      if (!travelSnap.exists()) {
-        throw new Error("Viagem não encontrada");
-      }
-      
-      const travelData = travelSnap.data() as Travel;
-      const currentVolunteers = Array.isArray(travelData.volunteers) ? travelData.volunteers : [];
-      
-      // Add new volunteers (that aren't already in the list)
-      const newVolunteers = selectedUsers.filter(user => !currentVolunteers.includes(user));
-      const updatedVolunteers = [...currentVolunteers, ...newVolunteers];
-      
-      await updateDoc(travelRef, {
-        volunteers: updatedVolunteers
-      });
-      
-      toast({
-        title: "Sucesso",
-        description: `${newVolunteers.length} voluntários adicionados à viagem.`
-      });
-    } catch (error) {
-      console.error("Error adding volunteers:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao adicionar voluntários.",
-        variant: "destructive"
-      });
-    }
+  const handleOpenAddVolunteerDialog = (travelId: string) => {
+    setSelectedTravelId(travelId);
+    setAddVolunteerDialogOpen(true);
   };
 
   return <>
@@ -644,32 +606,30 @@ export const TravelManagement = () => {
                       </div>
                     </div>
 
-                    {sortedVolunteers.length > 0 && <div className="pt-3 border-t border-gray-200">
-                        <div className="flex items-center justify-between mb-2">
+                    {sortedVolunteers.length > 0 && <div className="pt-3 border-t border-gray-200 relative">
+                        <div className="flex justify-between items-center mb-2">
                           <h4 className="font-medium text-sm text-gray-700">Voluntários:</h4>
-                          
-                          {/* Add the "+" icon button here */}
                           {isAdmin && !travel.isLocked && (
                             <Button 
-                              variant="ghost" 
+                              variant="outline" 
                               size="sm" 
-                              className="h-6 w-6 p-1 rounded-full hover:bg-blue-50 text-blue-600"
+                              className="h-7 px-2 text-xs"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleAddVolunteersManually(travel.id);
+                                handleOpenAddVolunteerDialog(travel.id);
                               }}
                             >
-                              <Plus className="h-4 w-4" />
+                              <UserPlus className="h-3.5 w-3.5 mr-1" />
+                              Adicionar
                             </Button>
                           )}
                         </div>
-                        
                         <div className="space-y-2">
                           {sortedVolunteers.map(vol => <div key={vol.fullName} className={`text-sm p-2 rounded-lg flex justify-between items-center ${vol.isSelected ? 'bg-green-50 border border-green-200' : vol.isManual ? 'bg-blue-100 border border-blue-200' : 'bg-gray-50 border border-gray-200'}`} onDoubleClick={() => {
-                    if (isAdmin && !travel.isLocked) {
-                      handleManualVolunteerSelection(travel.id, vol.fullName, travel.slots);
-                    }
-                  }}>
+                            if (isAdmin && !travel.isLocked) {
+                              handleManualVolunteerSelection(travel.id, vol.fullName, travel.slots);
+                            }
+                          }}>
                               <div className="flex items-center gap-2">
                                 {vol.isSelected && <div className="w-2 h-2 rounded-full bg-green-500"></div>}
                                 <span className={`${vol.isSelected ? "font-medium text-green-900" : vol.isManual ? 'text-blue-900 font-medium' : "text-gray-700"}`}>
@@ -704,14 +664,6 @@ export const TravelManagement = () => {
               </Card>;
       })}
       </div>
-
-      {/* User Selection Dialog */}
-      <UserSelectionDialog
-        open={isUserSelectionDialogOpen}
-        onOpenChange={setIsUserSelectionDialogOpen}
-        onSelect={handleVolunteersSelected}
-        title="Adicionar Voluntários"
-      />
 
       {isAdmin && <Button onClick={() => setIsModalOpen(true)} className="fixed bottom-6 right-6 rounded-full p-4 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] text-base py-[26px]">
           <Plus className="h-6 w-6" />
@@ -789,6 +741,19 @@ export const TravelManagement = () => {
             </form>
           </Card>
         </div>}
+
+      {/* Add Volunteer Dialog */}
+      <AddVolunteerDialog
+        open={addVolunteerDialogOpen}
+        onOpenChange={setAddVolunteerDialogOpen}
+        travelId={selectedTravelId}
+        currentVolunteers={
+          travels.find(t => t.id === selectedTravelId)?.volunteers || []
+        }
+        onVolunteersAdded={() => {
+          // Refresh data if needed
+        }}
+      />
     </>;
 };
 export default TravelManagement;

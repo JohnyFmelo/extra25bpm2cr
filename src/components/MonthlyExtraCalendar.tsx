@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -18,11 +19,8 @@ const MonthlyExtraCalendar = () => {
   const [workedDays, setWorkedDays] = useState<any[]>([]);
   const { toast } = useToast();
   
-  // Get user data from localStorage
-  const userData = JSON.parse(localStorage.getItem("user") || "{}");
-  const isAdmin = userData?.userType === "admin";
-  
   useEffect(() => {
+    const userData = JSON.parse(localStorage.getItem("user") || "{}");
     const currentMonth = new Date().getMonth();
     const currentMonthName = monthNames[currentMonth];
     
@@ -46,7 +44,7 @@ const MonthlyExtraCalendar = () => {
     };
     
     fetchExtraData();
-  }, [userData?.registration]);
+  }, []);
   
   const parseWorkDays = (workDaysStr: string | undefined, location: 'bpm' | 'saiop' | 'sinfra') => {
     if (!workDaysStr) return [];
@@ -124,7 +122,7 @@ const MonthlyExtraCalendar = () => {
               monthYear={getCurrentMonthYear()}
               workedDays={workedDays}
               total={totalHours.toString()}
-              isAdmin={isAdmin}
+              isAdmin={false}
             />
           </div>
         </div>
