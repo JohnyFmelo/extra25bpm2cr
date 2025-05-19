@@ -1,8 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
-import { ChartContainer } from "./ui/chart";
-import { Bar, BarChart, CartesianGrid, Legend, Tooltip, XAxis, YAxis } from "recharts";
+import { ChartContainer } from "./ui/chart"; // Seu ChartContainer
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Tooltip,
+  XAxis,
+  YAxis,
+  ResponsiveContainer, // Importar ResponsiveContainer
+  LabelList,          // Importar LabelList
+} from "recharts";
 import { collection, query, getDocs, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -32,7 +42,7 @@ const RankingChart = () => {
                 volunteerName = volunteerData;
               } else if (volunteerData && typeof volunteerData.name === 'string') {
                 volunteerName = volunteerData.name;
-              } else if (volunteerData && typeof volunteerData.nome === 'string') { // Exemplo alternativo
+              } else if (volunteerData && typeof volunteerData.nome === 'string') {
                 volunteerName = volunteerData.nome;
               }
               // Adicione mais 'else if' se a estrutura dos seus dados for outra
@@ -45,40 +55,32 @@ const RankingChart = () => {
                   const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)) + 1;
                   const currentAllowances = userAllowancesMap.get(volunteerName) || 0;
                   userAllowancesMap.set(volunteerName, currentAllowances + days);
-                } else {
-                  // console.warn(`Datas inválidas para a viagem ${doc.id} do voluntário ${volunteerName}`);
                 }
 
                 const currentTrips = userTripsMap.get(volunteerName) || 0;
                 userTripsMap.set(volunteerName, currentTrips + 1);
-              } else {
-                // console.warn("Voluntário sem nome ou com nome inválido encontrado na viagem:", doc.id, "Dados:", volunteerData);
               }
             });
           }
         });
 
-        let chartData: any[];
+        let processedChartData: any[];
 
         if (rankingType === "allowances") {
-          chartData = Array.from(userAllowancesMap.entries())
+          processedChartData = Array.from(userAllowancesMap.entries())
             .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value); // REMOVIDO .slice(0, 10)
-            // Se quiser manter uma ordenação, mas exibir todos, mantenha o .sort()
-            // Se não precisar de ordenação específica e quiser todos, pode remover o .sort() também,
-            // mas geralmente é bom ter uma ordenação (por valor ou por nome).
-        } else { // rankingType === "trips"
-          chartData = Array.from(userTripsMap.entries())
+            .sort((a, b) => b.value - a.value);
+        } else {
+          processedChartData = Array.from(userTripsMap.entries())
             .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value); // REMOVIDO .slice(0, 10)
+            .sort((a, b) => b.value - a.value);
         }
 
-        // Filtra nomes vazios ou undefined caso ainda existam por algum motivo
-        chartData = chartData.filter(item => item.name && item.name.trim() !== "");
+        // Filtra nomes vazios ou undefined
+        processedChartData = processedChartData.filter(item => item.name && item.name.trim() !== "" && item.value > 0);
 
-        setData(chartData);
-      } catch (error)
-{
+        setData(processedChartData);
+      } catch (error) {
         console.error("Error fetching ranking data:", error);
       } finally {
         setLoading(false);
@@ -88,8 +90,13 @@ const RankingChart = () => {
     fetchRankingData();
   }, [rankingType]);
 
+  // Calcular uma altura dinâmica para o gráfico se houver muitos itens,
+  // ou definir uma altura fixa grande e permitir rolagem no CardContent.
+  // Por exemplo, 30px por item + margens.
+  const chartHeight = Math.max(300, data.length * 35 + 60); // Mínimo 300px, aumenta com itens
+
   return (
-    <Card className="shadow-md">
+    <Card className="shadow-md w-full"> {/* Garante que o Card ocupe a largura disponível */}
       <CardHeader>
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900">Ranking</h2>
@@ -101,57 +108,69 @@ const RankingChart = () => {
           </Tabs>
         </div>
       </CardHeader>
-      <CardContent className="p-6">
+      {/* Adicionar overflow-y-auto se o conteúdo do card puder exceder a altura da tela */}
+      <CardContent className="p-6 overflow-y-auto" style={{ maxHeight: '80vh' }}> {/* Limita altura e permite scroll */}
         {loading ? (
-          <div className="flex justify-center items-center h-96"> {/* Aumentei altura para loading/sem dados */}
+          <div className="flex justify-center items-center" style={{ height: chartHeight }}>
             <span className="text-gray-500">Carregando dados...</span>
           </div>
         ) : data.length === 0 ? (
-          <div className="flex justify-center items-center h-96">
+          <div className="flex justify-center items-center" style={{ height: chartHeight }}>
             <span className="text-gray-500">Nenhum dado para exibir no ranking.</span>
           </div>
         ) : (
-          // Se houver muitos dados, o ChartContainer pode precisar de uma altura maior
-          // ou você pode querer adicionar uma rolagem ao CardContent.
-          <ChartContainer className="h-[600px]" config={{}}> {/* Aumentei altura para mais dados */}
-            <BarChart
-              data={data}
-              layout="vertical"
-              margin={{
-                top: 10,
-                right: 30,
-                left: 150, // Aumentei ainda mais para nomes potencialmente longos
-                bottom: 20,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-              <XAxis type="number" allowDecimals={false} />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tick={{ fontSize: 10, fill: '#333' }} // Diminuí um pouco a fonte se houver muitos nomes
-                width={140} // Ajuste conforme necessário
-                interval={0} // Tenta mostrar todos os ticks
-              />
-              <Tooltip
-                formatter={(value: number, name, props) => {
-                  return [
-                    `${value} ${rankingType === "allowances" ? "diárias" : "viagens"}`,
-                    `Viajante: ${props.payload.name}`
-                  ];
+          // Seu ChartContainer precisa permitir que ResponsiveContainer funcione.
+          // Idealmente, ChartContainer seria apenas um div com `width: 100%` e uma altura definida.
+          // Vou assumir que seu ChartContainer funciona como um wrapper simples.
+          // Se ChartContainer já for o ResponsiveContainer, ajuste.
+          <div style={{ width: '100%', height: chartHeight }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={data}
+                layout="vertical"
+                margin={{
+                  top: 20, // Espaço para títulos/etc.
+                  right: 50, // Espaço para os labels das barras
+                  left: 10,  // Espaço para o início do YAxis
+                  bottom: 20,
                 }}
-                cursor={{ fill: 'rgba(200, 200, 200, 0.3)' }}
-              />
-              <Bar
-                dataKey="value"
-                fill={rankingType === "allowances" ? "#4f46e5" : "#10b981"}
-                radius={[0, 4, 4, 0]}
-                barSize={15} // Pode diminuir o tamanho da barra se houver muitas
-                name={rankingType === "allowances" ? "Total de Diárias" : "Total de Viagens"}
-              />
-              <Legend formatter={(value) => <span style={{ color: '#333' }}>{value}</span>} />
-            </BarChart>
-          </ChartContainer>
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                <XAxis type="number" allowDecimals={false} />
+                <YAxis
+                  type="category"
+                  dataKey="name" // Nome do viajante aqui
+                  width={150}    // Largura para o eixo Y (ajuste conforme o tamanho dos nomes)
+                  tick={{ fontSize: 12, fill: '#333' }}
+                  interval={0} // Mostrar todos os ticks (nomes)
+                />
+                <Tooltip
+                  formatter={(value: number, name, props) => {
+                    return [
+                      `${value} ${rankingType === "allowances" ? "diárias" : "viagens"}`,
+                      `Viajante: ${props.payload.name}` // Nome do viajante no tooltip
+                    ];
+                  }}
+                  cursor={{ fill: 'rgba(200, 200, 200, 0.3)' }}
+                />
+                <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                <Bar
+                  dataKey="value" // Diárias ou Viagens
+                  fill={rankingType === "allowances" ? "#4f46e5" : "#10b981"}
+                  radius={[0, 4, 4, 0]}
+                  // barSize={20} // Pode ser dinâmico ou removido para auto-ajuste
+                >
+                  <LabelList
+                    dataKey="value" // O valor a ser exibido
+                    position="right"  // Posição do label (à direita da barra)
+                    offset={5}        // Pequeno deslocamento da ponta da barra
+                    style={{ fill: '#333', fontSize: 12 }} // Estilo do label
+                    formatter={(value: number) => `${value}`} // Formata para mostrar apenas o número
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </CardContent>
     </Card>
