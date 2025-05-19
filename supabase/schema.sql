@@ -56,6 +56,11 @@ create policy "Allow authenticated users to create TCOs"
   on public.tco_pdfs for insert to authenticated
   with check (true);
 
+-- Add policy to allow users to delete their own TCO records
+create policy "Allow authenticated users to delete their own TCOs"
+  on public.tco_pdfs for delete to authenticated
+  using (createdBy = auth.uid());
+
 -- Create public functions
 create or replace function public.get_all_tcos()
 returns setof public.tco_pdfs
@@ -70,20 +75,32 @@ create policy "Allow authenticated users to access all TCOs"
   on public.tco_pdfs for select to authenticated
   using (true);
 
--- Sample trigger to manage file metadata
+-- Improved trigger to properly manage file metadata and storage deletion
 create or replace function handle_storage_update()
 returns trigger
 language plpgsql as $$
 begin
   if TG_OP = 'DELETE' then
-    -- Attempt to delete the associated file
-    perform from storage.delete('tco-pdfs', old.pdfPath);
+    -- Extract bucket ID and path from pdfPath (assuming format follows standard 'bucket/path')
+    -- No need to extract bucket ID since we know it's 'tco-pdfs'
+    -- Attempt to delete the associated file using proper error handling
+    begin
+      perform storage.delete('tco-pdfs', old.pdfPath);
+    exception when others then
+      -- Log error but continue with deletion of the record
+      raise notice 'Error deleting file from storage: %', SQLERRM;
+    end;
     return old;
   end if;
   return new;
 end
 $$;
 
+-- Drop existing trigger if it exists
+drop trigger if exists on_tco_delete on public.tco_pdfs;
+
+-- Create the trigger to automatically delete files when TCO records are deleted
 create trigger on_tco_delete
   after delete on public.tco_pdfs
   for each row execute procedure handle_storage_update();
+
