@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, Trash, Calendar, Info, AlertTriangle } from "lucide-react"; // Adicionado Info e AlertTriangle
 import { format, addWeeks, subWeeks, parseISO, addDays } from "date-fns";
@@ -567,7 +568,7 @@ const WeeklyCalendar = ({
             {!isLocked && (
               <div className="mt-6 flex justify-center border-t border-gray-200 pt-4">
                 <Button
-                  size="md" // Um pouco maior
+                  size="default" /* Changed from "md" to "default" */
                   className="bg-green-500 hover:bg-green-600 text-white shadow-md hover:shadow-lg transition-shadow"
                   onClick={handlePlusClick}
                   disabled={isLoading}
@@ -622,7 +623,7 @@ const WeeklyCalendar = ({
           onAddTimeSlot={handleTimeSlotAdd} 
           onEditTimeSlot={handleTimeSlotEdit} 
           editingTimeSlot={editingTimeSlot} 
-          isLoading={isLoading} // Passar isLoading para o dialog
+          /* isLoading prop removed as it doesn't exist in the TimeSlotDialog interface */
         />
       )}
     </div>
