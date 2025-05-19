@@ -8,11 +8,9 @@ import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin, UserPlus } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { CalendarDays, Users, Clock, Calendar, Navigation } from "lucide-react";
-import AddVolunteerDialog from "./AddVolunteerDialog";
-
 interface Travel {
   id: string;
   startDate: string;
@@ -49,14 +47,11 @@ export const TravelManagement = () => {
   const [selectedVolunteers, setSelectedVolunteers] = useState<{
     [travelId: string]: string[];
   }>({});
-  const [addVolunteerDialogOpen, setAddVolunteerDialogOpen] = useState(false);
-  const [selectedTravelId, setSelectedTravelId] = useState<string>("");
-
-  const { toast } = useToast();
-  
+  const {
+    toast
+  } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
-
   useEffect(() => {
     const travelsRef = collection(db, "travels");
     const q = query(travelsRef);
@@ -460,11 +455,6 @@ export const TravelManagement = () => {
       }
     }
   };
-  const handleOpenAddVolunteerDialog = (travelId: string) => {
-    setSelectedTravelId(travelId);
-    setAddVolunteerDialogOpen(true);
-  };
-
   return <>
       {showRankingRules && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <Card className="p-6 bg-white shadow-xl max-w-md w-full relative border border-gray-100">
@@ -606,30 +596,14 @@ export const TravelManagement = () => {
                       </div>
                     </div>
 
-                    {sortedVolunteers.length > 0 && <div className="pt-3 border-t border-gray-200 relative">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="font-medium text-sm text-gray-700">Voluntários:</h4>
-                          {isAdmin && !travel.isLocked && (
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-7 px-2 text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenAddVolunteerDialog(travel.id);
-                              }}
-                            >
-                              <UserPlus className="h-3.5 w-3.5 mr-1" />
-                              Adicionar
-                            </Button>
-                          )}
-                        </div>
+                    {sortedVolunteers.length > 0 && <div className="pt-3 border-t border-gray-200">
+                        <h4 className="font-medium text-sm text-gray-700 mb-2">Voluntários:</h4>
                         <div className="space-y-2">
                           {sortedVolunteers.map(vol => <div key={vol.fullName} className={`text-sm p-2 rounded-lg flex justify-between items-center ${vol.isSelected ? 'bg-green-50 border border-green-200' : vol.isManual ? 'bg-blue-100 border border-blue-200' : 'bg-gray-50 border border-gray-200'}`} onDoubleClick={() => {
-                            if (isAdmin && !travel.isLocked) {
-                              handleManualVolunteerSelection(travel.id, vol.fullName, travel.slots);
-                            }
-                          }}>
+                    if (isAdmin && !travel.isLocked) {
+                      handleManualVolunteerSelection(travel.id, vol.fullName, travel.slots);
+                    }
+                  }}>
                               <div className="flex items-center gap-2">
                                 {vol.isSelected && <div className="w-2 h-2 rounded-full bg-green-500"></div>}
                                 <span className={`${vol.isSelected ? "font-medium text-green-900" : vol.isManual ? 'text-blue-900 font-medium' : "text-gray-700"}`}>
@@ -741,19 +715,6 @@ export const TravelManagement = () => {
             </form>
           </Card>
         </div>}
-
-      {/* Add Volunteer Dialog */}
-      <AddVolunteerDialog
-        open={addVolunteerDialogOpen}
-        onOpenChange={setAddVolunteerDialogOpen}
-        travelId={selectedTravelId}
-        currentVolunteers={
-          travels.find(t => t.id === selectedTravelId)?.volunteers || []
-        }
-        onVolunteersAdded={() => {
-          // Refresh data if needed
-        }}
-      />
     </>;
 };
 export default TravelManagement;
