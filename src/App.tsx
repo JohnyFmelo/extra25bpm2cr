@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,52 +12,60 @@ import TopBar from "./components/TopBar";
 import BottomMenuBar from "./components/BottomMenuBar";
 
 // Protected Route component
-const ProtectedRoute = ({
-  children
-}: {
-  children: React.ReactNode;
-}) => {
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const user = localStorage.getItem('user');
+  
   if (!user) {
     return <Navigate to="/login" replace />;
   }
+
   return <>{children}</>;
 };
 
 // Layout component to handle common layout elements
-const Layout = ({
-  children,
-  activeTab,
-  onTabChange
-}: {
-  children: React.ReactNode;
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-}) => {
+const Layout = ({ children }: { children: React.ReactNode }) => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  return <div className="flex min-h-screen flex-col">
+
+  return (
+    <div className="flex min-h-screen flex-col">
       <TopBar />
-      <main className="flex-1 w-full max-w-5xl sm:px-6 lg:px-8 py-6 px-0 mx-0">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {children}
       </main>
-      <BottomMenuBar activeTab={activeTab} onTabChange={onTabChange} isAdmin={user?.userType === 'admin'} />
-    </div>;
+      <BottomMenuBar 
+        activeTab={useLocation().pathname === "/" ? "main" : 
+                 useLocation().pathname === "/hours" ? "hours" : ""}
+        onTabChange={(tab) => {}}
+        isAdmin={user?.userType === 'admin'} 
+      />
+    </div>
+  );
 };
+
+// Route-specific wrapper that can pass location state to components
+const IndexWrapper = () => {
+  const location = useLocation();
+  const activeTab = location.state?.activeTab || 'main';
+  
+  return (
+    <Layout>
+      <Index initialActiveTab={activeTab} />
+    </Layout>
+  );
+};
+
 const App = () => {
-  const [activeTab, setActiveTab] = useState<string>("main");
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 1000 * 60 * 5,
-        // 5 minutes
-        retry: 1
-      }
-    }
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        retry: 1,
+      },
+    },
   });
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-  };
-  return <React.StrictMode>
+
+  return (
+    <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <TooltipProvider>
@@ -64,22 +73,32 @@ const App = () => {
             <Sonner />
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/" element={<ProtectedRoute>
-                    <Layout activeTab={activeTab} onTabChange={handleTabChange}>
-                      <Index initialActiveTab={activeTab} />
-                    </Layout>
-                  </ProtectedRoute>} />
-              <Route path="/hours" element={<ProtectedRoute>
-                    <Layout activeTab="hours" onTabChange={handleTabChange}>
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <IndexWrapper />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/hours" 
+                element={
+                  <ProtectedRoute>
+                    <Layout>
                       <Hours />
                     </Layout>
-                  </ProtectedRoute>} />
+                  </ProtectedRoute>
+                } 
+              />
               {/* Redirect any unknown routes to login */}
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </TooltipProvider>
         </BrowserRouter>
       </QueryClientProvider>
-    </React.StrictMode>;
+    </React.StrictMode>
+  );
 };
+
 export default App;
