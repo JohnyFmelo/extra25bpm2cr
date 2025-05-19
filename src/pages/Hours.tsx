@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import BottomMenuBar from "@/components/BottomMenuBar";
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
@@ -198,12 +197,30 @@ const Hours = () => {
     const year = new Date().getFullYear();
     return `${month}/${year}`;
   };
-  return (
-    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col mx-[13px] my-[4px] px-0">
+  const handleTabChange = (tab: string) => {
+    if (tab === 'main') {
+      navigate('/');
+    } else if (tab === 'hours') {
+      // Already on hours page, just update the tab
+      setActiveTab(tab);
+    } else {
+      // For other tabs, navigate to home with the tab as state
+      navigate('/', {
+        state: {
+          activeTab: tab
+        }
+      });
+    }
+  };
+  return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col mx-[13px] my-[4px] px-0">
       <div className="pt-6 px-4 sm:px-6 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[22px] lg:px-[23px] mx-[2px]">
-        <Tabs value={activeTab} className="space-y-6 flex flex-col flex-grow">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow">
           <TabsList className="hidden">
             <TabsTrigger value="hours">Hours</TabsTrigger>
+            <TabsTrigger value="extra">Extra</TabsTrigger>
+            <TabsTrigger value="travel">Travel</TabsTrigger>
+            <TabsTrigger value="tco">TCO</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="hours" className="flex-grow">
@@ -220,11 +237,9 @@ const Hours = () => {
                 <TabsTrigger value="individual" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
                   Consulta Individual
                 </TabsTrigger>
-                {userData?.userType === 'admin' && (
-                  <TabsTrigger value="general" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
+                {userData?.userType === 'admin' && <TabsTrigger value="general" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
                     Consulta Geral
-                  </TabsTrigger>
-                )}
+                  </TabsTrigger>}
               </TabsList>
 
               <TabsContent value="individual" className="flex-grow">
@@ -234,36 +249,22 @@ const Hours = () => {
                     <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
 
                     <Button onClick={handleConsult} disabled={loading || !userData?.registration} className="w-full">
-                      {loading ? (
-                        <>
+                      {loading ? <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Consultando...
-                        </>
-                      ) : (
-                        "Consultar"
-                      )}
+                        </> : "Consultar"}
                     </Button>
 
-                    {!userData?.registration && (
-                      <p className="text-sm text-red-500">
+                    {!userData?.registration && <p className="text-sm text-red-500">
                         Você precisa cadastrar sua matrícula para consultar as horas.
-                      </p>
-                    )}
+                      </p>}
 
-                    {data && (
-                      <UserHoursDisplay 
-                        data={data} 
-                        onClose={() => setData(null)} 
-                        isAdmin={userData?.userType === 'admin'} 
-                        monthYear={getSelectedMonthYear(selectedMonth)} 
-                      />
-                    )}
+                    {data && <UserHoursDisplay data={data} onClose={() => setData(null)} isAdmin={userData?.userType === 'admin'} monthYear={getSelectedMonthYear(selectedMonth)} />}
                   </div>
                 </div>
               </TabsContent>
 
-              {userData?.userType === 'admin' && (
-                <TabsContent value="general" className="flex-grow">
+              {userData?.userType === 'admin' && <TabsContent value="general" className="flex-grow">
                   <div className="bg-white rounded-lg shadow-sm p-6">
                     <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
                     <div className="space-y-4">
@@ -272,49 +273,56 @@ const Hours = () => {
                       <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
 
                       <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full">
-                        {loadingGeneral ? (
-                          <>
+                        {loadingGeneral ? <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Consultando...
-                          </>
-                        ) : (
-                          "Consultar"
-                        )}
+                          </> : "Consultar"}
                       </Button>
 
-                      {selectedUser === 'all' && allUsersData.map((userData, index) => (
-                        <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-stone-50">
-                          <UserHoursDisplay 
-                            data={userData} 
-                            onClose={() => {
-                              const updatedData = [...allUsersData];
-                              updatedData.splice(index, 1);
-                              setAllUsersData(updatedData);
-                            }} 
-                            isAdmin={true} 
-                            monthYear={getSelectedMonthYear(selectedGeneralMonth)} 
-                          />
-                        </div>
-                      ))}
+                      {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-stone-50">
+                          <UserHoursDisplay data={userData} onClose={() => {
+                      const updatedData = [...allUsersData];
+                      updatedData.splice(index, 1);
+                      setAllUsersData(updatedData);
+                    }} isAdmin={true} monthYear={getSelectedMonthYear(selectedGeneralMonth)} />
+                        </div>)}
 
-                      {generalData && (
-                        <UserHoursDisplay 
-                          data={generalData} 
-                          onClose={() => setGeneralData(null)} 
-                          isAdmin={true} 
-                          monthYear={getSelectedMonthYear(selectedGeneralMonth)} 
-                        />
-                      )}
+                      {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} isAdmin={true} monthYear={getSelectedMonthYear(selectedGeneralMonth)} />}
                     </div>
                   </div>
-                </TabsContent>
-              )}
+                </TabsContent>}
             </Tabs>
+          </TabsContent>
+
+          {/* Placeholder TabsContent for other tabs to prevent navigation issues */}
+          <TabsContent value="extra" className="flex-grow">
+            <div className="text-center p-6">
+              <p className="text-gray-600">Funcionalidade Extra não implementada nesta página.</p>
+              <Button onClick={() => navigate('/')} className="mt-4">Voltar para Home</Button>
+            </div>
+          </TabsContent>
+          <TabsContent value="travel" className="flex-grow">
+            <div className="text-center p-6">
+              <p className="text-gray-600">Funcionalidade Viagens não implementada nesta página.</p>
+              <Button onClick={() => navigate('/')} className="mt-4">Voltar para Home</Button>
+            </div>
+          </TabsContent>
+          <TabsContent value="tco" className="flex-grow">
+            <div className="text-center p-6">
+              <p className="text-gray-600">Funcionalidade TCO não implementada nesta página.</p>
+              <Button onClick={() => navigate('/')} className="mt-4">Voltar para Home</Button>
+            </div>
+          </TabsContent>
+          <TabsContent value="settings" className="flex-grow">
+            <div className="text-center p-6">
+              <p className="text-gray-600">Funcionalidade Configurações não implementada nesta página.</p>
+              <Button onClick={() => navigate('/')} className="mt-4">Voltar para Home</Button>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
-};
 
+      <BottomMenuBar activeTab={activeTab} onTabChange={handleTabChange} isAdmin={userData?.userType === 'admin'} />
+    </div>;
+};
 export default Hours;
