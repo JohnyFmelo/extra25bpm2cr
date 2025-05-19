@@ -214,9 +214,15 @@ const Hours = () => {
           <TabsContent value="hours" className="flex-grow">
             <div className="relative h-12">
               <div className="absolute right-0 top-0">
-                <button onClick={() => navigate('/')} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
+                <Button 
+                  onClick={() => navigate('/')} 
+                  className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" 
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Voltar para home"
+                >
                   <ArrowLeft className="h-6 w-6" />
-                </button>
+                </Button>
               </div>
             </div>
 
