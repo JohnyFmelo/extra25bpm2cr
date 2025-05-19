@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -19,7 +18,6 @@ interface TimeSlotDialogProps {
   onAddTimeSlot: (timeSlot: TimeSlot) => void;
   onEditTimeSlot: (timeSlot: TimeSlot) => void;
   editingTimeSlot: TimeSlot | null;
-  isLoading?: boolean; // Added isLoading prop
 }
 
 const TimeSlotDialog = ({
@@ -29,7 +27,6 @@ const TimeSlotDialog = ({
   onAddTimeSlot,
   onEditTimeSlot,
   editingTimeSlot,
-  isLoading = false, // Added with default value
 }: TimeSlotDialogProps) => {
   const [startTime, setStartTime] = useState("07:00");
   const [endTime, setEndTime] = useState("13:00");
@@ -89,8 +86,6 @@ const TimeSlotDialog = ({
   };
 
   const isButtonDisabled = () => {
-    // Consider isLoading in the disabled condition
-    if (isLoading) return true;
     if (showCustomSlots) {
       const numSlots = parseInt(customSlots);
       return isNaN(numSlots) || numSlots <= 0;
@@ -234,7 +229,6 @@ const TimeSlotDialog = ({
             variant="outline" 
             onClick={() => onOpenChange(false)}
             className="text-gray-700 border-gray-300"
-            disabled={isLoading}
           >
             Cancelar
           </Button>
@@ -243,7 +237,7 @@ const TimeSlotDialog = ({
             disabled={isButtonDisabled()}
             className="bg-green-500 hover:bg-green-600 text-white"
           >
-            {isLoading ? "Processando..." : (editingTimeSlot ? "Salvar alterações" : "Registrar horário")}
+            {editingTimeSlot ? "Salvar alterações" : "Registrar horário"}
           </Button>
         </DialogFooter>
       </DialogContent>
