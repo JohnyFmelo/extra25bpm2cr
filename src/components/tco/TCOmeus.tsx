@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Trash2, FileText, Download, Eye } from "lucide-react";
+// Importe MoreHorizontal e remova FileText se não for usado em outro lugar
+import { Trash2, Download, Eye, MoreHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,6 +10,13 @@ import { supabase } from "@/lib/supabaseClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { deletePDF, deleteTCOMetadata } from "@/lib/supabaseStorage";
+// Importe os componentes do DropdownMenu
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TCOmeusProps {
   user: { id: string; registration?: string };
@@ -36,22 +44,18 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     try {
       console.log("Buscando TCOs para o usuário:", user.id);
       
-      // Primeiro, tenta buscar diretamente do storage pela pasta do usuário
       console.log("Buscando diretamente do storage na pasta:", `tcos/${user.id}/`);
       
-      // Listar arquivos no storage
       const { data: storageFiles, error: storageError } = await supabase.storage
         .from(BUCKET_NAME)
         .list(`tcos/${user.id}/`);
       
       if (storageError) {
         console.error("Erro ao listar arquivos do storage:", storageError);
-        // Não lançar erro aqui, tentar buscar do banco
       } else {
         console.log("Arquivos encontrados no storage:", storageFiles);
       }
       
-      // Então tenta buscar metadados dos TCOs no banco de dados (se o usuário tiver um UUID válido)
       let dbTcos: any[] = [];
       
       if (isValidUUID(user.id)) {
@@ -62,19 +66,15 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         
         if (error) {
           console.error("Erro ao buscar do banco Supabase:", error);
-          // Não lançar erro aqui, apenas log
         } else if (supaTcos && supaTcos.length > 0) {
           console.log("TCOs encontrados no banco:", supaTcos);
           dbTcos = supaTcos;
         }
       }
       
-      // Consolidar resultados do storage e do banco de dados
       let consolidatedTcos: any[] = [];
       
-      // Converter arquivos do storage para o formato esperado
       const filesFromStorage = storageFiles?.map(file => {
-        // Extrair informações do nome do arquivo, assumindo formato "TCO-XXXX-data.pdf" ou apenas TCO.pdf
         const fileName = file.name;
         const tcoMatch = fileName.match(/TCO-(\w+)/i);
         const tcoNumber = tcoMatch ? tcoMatch[1] : fileName.replace(".pdf", "");
@@ -89,7 +89,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         };
       }) || [];
       
-      // Converter dados do Supabase para o formato esperado
       const supabaseTcos = dbTcos.map(tco => ({
         id: tco.id,
         tcoNumber: tco.tcoNumber || `TCO-${tco.id.substring(0, 8)}`,
@@ -99,10 +98,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         source: 'supabase'
       })) || [];
       
-      // Juntar os dois arrays e verificar duplicatas por nome de arquivo
       consolidatedTcos = [...supabaseTcos];
       
-      // Adicionar apenas arquivos do storage que não estão já no banco de dados
       for (const storageTco of filesFromStorage) {
         const isDuplicate = consolidatedTcos.some(
           tco => tco.pdfPath === storageTco.pdfPath || tco.tcoNumber === storageTco.tcoNumber
@@ -130,19 +127,16 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     }
   };
 
-  // Função auxiliar para verificar se uma string é um UUID válido
   const isValidUUID = (str: string) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
   };
 
-  // Função para confirmar exclusão de um TCO
   const confirmDelete = (tco: any) => {
     setTcoToDelete(tco);
     setIsDeleteDialogOpen(true);
   };
 
-  // Função para excluir um TCO
   const handleDeleteTco = async () => {
     if (!tcoToDelete) return;
     
@@ -150,18 +144,15 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
       setIsDeleting(true);
       console.log("Iniciando exclusão do TCO:", tcoToDelete);
       
-      // Primeiro excluir o arquivo do storage
       if (tcoToDelete.pdfPath) {
         console.log("Excluindo arquivo do storage:", tcoToDelete.pdfPath);
         const { success: storageSuccess, error: storageError } = await deletePDF(tcoToDelete.pdfPath);
         
         if (storageError) {
           console.error("Erro ao excluir arquivo do storage:", storageError);
-          // Não interromper o processo se falhar no storage
         }
       }
 
-      // Em seguida, excluir do banco de dados se for um registro existente
       if (tcoToDelete.source === 'supabase' && isValidUUID(tcoToDelete.id)) {
         console.log("Excluindo registro do banco de dados, ID:", tcoToDelete.id);
         const { success: dbSuccess, error: dbError } = await deleteTCOMetadata(tcoToDelete.id);
@@ -173,7 +164,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
       } else {
         console.log("Registro não encontrado no banco ou ID inválido:", tcoToDelete.id);
         
-        // Tentativa alternativa: excluir diretamente da tabela usando o caminho do PDF
         if (tcoToDelete.pdfPath) {
           console.log("Tentando excluir pelo caminho do PDF:", tcoToDelete.pdfPath);
           const { error } = await supabase
@@ -187,7 +177,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         }
       }
 
-      // Atualizar a interface após exclusão
       setTcoList(tcoList.filter(item => item.id !== tcoToDelete.id));
       if (selectedTco?.id === tcoToDelete.id) setSelectedTco(null);
       
@@ -211,13 +200,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     }
   };
 
-  // Função para visualizar PDF
   const handleViewPdf = async (tco: any) => {
     try {
       if (tco.pdfPath) {
         console.log("Obtendo URL público para o arquivo:", tco.pdfPath);
         
-        // Obter URL público do Supabase
         const { data } = await supabase.storage
           .from(BUCKET_NAME)
           .getPublicUrl(tco.pdfPath);
@@ -248,13 +235,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     }
   };
 
-  // Função para baixar PDF
   const handleDownloadPdf = async (tco: any) => {
     try {
       if (tco.pdfPath) {
         console.log("Obtendo URL para download:", tco.pdfPath);
         
-        // Obter URL público do Supabase
         const { data } = await supabase.storage
           .from(BUCKET_NAME)
           .getPublicUrl(tco.pdfPath);
@@ -263,7 +248,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         console.log("URL para download:", url);
         
         if (url) {
-          // Abre o URL em uma nova aba para download
           window.open(url, '_blank');
         } else {
           throw new Error("URL não encontrada");
@@ -285,7 +269,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
     }
   };
 
-  // Buscar TCOs quando o componente é montado
   useEffect(() => {
     fetchUserTcos();
   }, [user.id]);
@@ -318,7 +301,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
               <TableHead className="bg-slate-400">Número</TableHead>
               <TableHead className="bg-slate-400">Data</TableHead>
               <TableHead className="bg-slate-400">Natureza</TableHead>
-              <TableHead className="bg-slate-400">Ações</TableHead>
+              <TableHead className="bg-slate-400 text-right">Ações</TableHead> {/* Alinhado à direita para o menu */}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -341,43 +324,55 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
                     : "-"}
                 </TableCell>
                 <TableCell>{tco.natureza}</TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewPdf(tco);
-                      }}
-                      aria-label={`Visualizar TCO ${tco.tcoNumber}`}
+                <TableCell className="text-right"> {/* Alinhado à direita para o menu */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={(e) => e.stopPropagation()} // Impede que o clique selecione a linha
+                        aria-label={`Ações para TCO ${tco.tcoNumber}`}
+                        className="h-8 w-8" // Tamanho do botão do menu
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Abrir menu de ações</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                      align="end" 
+                      onClick={(e) => e.stopPropagation()} // Impede que clique no conteúdo do menu selecione a linha
                     >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownloadPdf(tco);
-                      }}
-                      aria-label={`Baixar TCO ${tco.tcoNumber}`}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        confirmDelete(tco);
-                      }}
-                      disabled={isDeleting}
-                      aria-label={`Excluir TCO ${tco.tcoNumber}`}
-                    >
-                      <Trash2 className={`h-4 w-4 text-red-500 hover:text-red-700`} />
-                    </Button>
-                  </div>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation(); // Redundante, mas seguro
+                          handleViewPdf(tco);
+                        }}
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        <span>Visualizar</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadPdf(tco);
+                        }}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        <span>Download</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          confirmDelete(tco);
+                        }}
+                        // Use classes 'destructive' para estilização temática de exclusão
+                        className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        <span>Excluir</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}
@@ -385,7 +380,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
         </Table>
       )}
 
-      {/* PDF Viewer Dialog - Simplified and direct */}
+      {/* PDF Viewer Dialog */}
       <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
         <DialogContent className="max-w-4xl h-[80vh] p-0 overflow-hidden">
           {selectedPdfUrl ? (
@@ -417,7 +412,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selected
             <AlertDialogAction 
               onClick={handleDeleteTco}
               disabled={isDeleting}
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-red-500 hover:bg-red-600" // Pode ser substituído por variant="destructive" se seu Button suportar
             >
               {isDeleting ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
