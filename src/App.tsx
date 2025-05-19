@@ -36,7 +36,7 @@ const Layout = ({
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   return <div className="flex min-h-screen flex-col">
       <TopBar />
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-20 my-0 py-0">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-20 py-[38px]">
         {children}
       </main>
       <BottomMenuBar activeTab={activeTab} onTabChange={onTabChange} isAdmin={user?.userType === 'admin'} />
