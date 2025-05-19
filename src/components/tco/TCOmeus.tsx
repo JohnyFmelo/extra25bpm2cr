@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { deletePDF, deleteTCOMetadata } from "@/lib/supabaseStorage";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+
 interface TCOmeusProps {
   user: {
     id: string;
@@ -20,7 +21,34 @@ interface TCOmeusProps {
   setSelectedTco: (tco: any) => void;
   selectedTco: any;
 }
+
 const BUCKET_NAME = 'tco-pdfs';
+
+// Função auxiliar para extrair o número de exibição do TCO
+const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): string => {
+  if (!fullTcoNumber) return "-";
+
+  // Padrão: TCO-NUMERO_OPCIONAL_EXTRA ou TCO-NUMERO-OPCIONAL_EXTRA
+  // Queremos extrair NUMERO.
+  // NUMERO é definido como os caracteres após "TCO-" até o primeiro "_" ou "-".
+  const match = fullTcoNumber.match(/^TCO-([^_ -]+)/i);
+  if (match && match[1]) {
+    return match[1];
+  }
+
+  // Fallback: Se começar com "TCO-" mas não casar com o padrão acima
+  // (ex: "TCO-12345" sem underscore ou hífen após a parte numérica),
+  // então retorna tudo após "TCO-".
+  if (fullTcoNumber.toUpperCase().startsWith("TCO-")) {
+    const numberPart = fullTcoNumber.substring(4);
+    if (numberPart) return numberPart; // Retorna se não for uma string vazia
+  }
+  
+  // Se não houver prefixo "TCO-" ou outro padrão específico, retorna a string original.
+  // Este caso idealmente não deve acontecer se tco.tcoNumber for sempre formado corretamente.
+  return fullTcoNumber; 
+};
+
 const TCOmeus: React.FC<TCOmeusProps> = ({
   user,
   toast,
@@ -68,13 +96,24 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       let consolidatedTcos: any[] = [];
       const filesFromStorage = storageFiles?.map(file => {
         const fileName = file.name;
-        const tcoMatch = fileName.match(/TCO-(\w+)/i);
-        const tcoNumber = tcoMatch ? tcoMatch[1] : fileName.replace(".pdf", "");
+        // Regex para capturar a parte do número/identificador do TCO do nome do arquivo
+        // Ex: "TCO-NUMERO_RESTO.pdf" -> captura "NUMERO_RESTO"
+        // Ex: "TCO-NUMERO-RESTO.pdf" -> captura "NUMERO" (pois \w+ não inclui '-')
+        const tcoMatch = fileName.match(/TCO-([\w.-]+)/i); // Modificado para incluir '.' e '-'
+        let tcoIdentifierPart = tcoMatch ? tcoMatch[1] : fileName.replace(/\.pdf$/i, "");
+        
+        // Se o nome do arquivo não começar com "TCO-", tcoIdentifierPart será o nome do arquivo sem .pdf
+        // Nesse caso, garantimos que o tcoNumber final comece com "TCO-"
+        let finalTcoNumber = tcoIdentifierPart;
+        if (!tcoIdentifierPart.toUpperCase().startsWith("TCO-")) {
+            finalTcoNumber = `TCO-${tcoIdentifierPart}`;
+        }
+
         return {
           id: file.id || fileName,
-          tcoNumber: `TCO-${tcoNumber}`,
+          tcoNumber: finalTcoNumber,
           createdAt: new Date(file.created_at || Date.now()),
-          natureza: "Não especificada",
+          natureza: "Não especificada", // Você pode querer extrair isso do nome do arquivo também se disponível
           pdfPath: `tcos/${user.id}/${fileName}`,
           source: 'storage'
         };
@@ -95,7 +134,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         }
       }
 
-      // Ordenar por data de criação (mais recente primeiro)
       consolidatedTcos.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       if (consolidatedTcos.length === 0) {
         console.log("Nenhum TCO encontrado para o usuário");
@@ -128,7 +166,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       if (tcoToDelete.pdfPath) {
         console.log("Excluindo arquivo do storage:", tcoToDelete.pdfPath);
         const {
-          success: storageSuccess,
           error: storageError
         } = await deletePDF(tcoToDelete.pdfPath);
         if (storageError) {
@@ -138,7 +175,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       if (tcoToDelete.source === 'supabase' && isValidUUID(tcoToDelete.id)) {
         console.log("Excluindo registro do banco de dados, ID:", tcoToDelete.id);
         const {
-          success: dbSuccess,
           error: dbError
         } = await deleteTCOMetadata(tcoToDelete.id);
         if (dbError) {
@@ -179,7 +215,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   };
   const handleViewPdf = async (tco: any) => {
     try {
-      setPdfLoading(true);
+      setPdfLoading(true); // Inicia o loading do PDF
       if (tco.pdfPath) {
         console.log("Obtendo URL público para o arquivo:", tco.pdfPath);
         const {
@@ -191,9 +227,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           setSelectedPdfUrl(url);
           setIsPdfDialogOpen(true);
         } else {
+          setPdfLoading(false); // Para o loading se URL não for encontrada
           throw new Error("URL não encontrada");
         }
       } else {
+        setPdfLoading(false); // Para o loading se não houver PDF
         toast({
           variant: "destructive",
           title: "PDF não encontrado",
@@ -201,15 +239,15 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         });
       }
     } catch (error) {
+      setPdfLoading(false); // Para o loading em caso de erro
       console.error("Erro ao buscar PDF:", error);
       toast({
         variant: "destructive",
         title: "Erro",
         description: "Falha ao carregar o PDF do TCO."
       });
-    } finally {
-      setPdfLoading(false);
-    }
+    } 
+    // Não coloque setPdfLoading(false) aqui se o iframe tiver onLoad
   };
   const handleDownloadPdf = async (tco: any) => {
     try {
@@ -280,7 +318,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 px-2 py-0.5">
-                          {tco.tcoNumber}
+                          {/* Modificação aqui para usar a função de extração */}
+                          {extractTcoDisplayNumber(tco.tcoNumber)}
                         </Badge>
                       </div>
                     </TableCell>
@@ -331,24 +370,50 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         </div>}
 
       {/* PDF Viewer Dialog */}
-      <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
+      <Dialog open={isPdfDialogOpen} onOpenChange={(open) => {
+        setIsPdfDialogOpen(open);
+        if (!open) {
+          setSelectedPdfUrl(null); // Limpa a URL ao fechar
+          setPdfLoading(false); // Reseta o estado de loading do PDF
+        }
+      }}>
         <DialogContent className="max-w-5xl h-[90vh] p-0 overflow-hidden rounded-lg">
           <DialogHeader className="sticky top-0 z-10 bg-white p-4 border-b border-gray-200 flex justify-between items-center">
-            <DialogTitle className="text-center">Visualizador de PDF</DialogTitle>
-            <Button variant="outline" size="sm" onClick={() => setIsPdfDialogOpen(false)} className="absolute right-4 top-4">
+            <DialogTitle className="text-lg font-medium text-gray-700">Visualizador de PDF</DialogTitle>
+            <Button variant="ghost" size="sm" onClick={() => setIsPdfDialogOpen(false)} className="absolute right-4 top-3 text-gray-500 hover:text-gray-700">
               Fechar
             </Button>
           </DialogHeader>
           
-          <div className="h-full overflow-hidden">
-            {pdfLoading ? <div className="flex flex-col items-center justify-center h-full w-full bg-gray-50">
-                <Skeleton className="h-8 w-8 rounded-full mb-4 animate-pulse" />
-                <p className="text-gray-500 text-sm">Carregando PDF...</p>
-              </div> : selectedPdfUrl ? <iframe src={selectedPdfUrl} className="w-full h-[calc(100%-56px)]" title="PDF Viewer" style={{
-            border: "none"
-          }} onLoad={() => setPdfLoading(false)} /> : <div className="flex items-center justify-center h-full bg-gray-50">
-                <p className="text-gray-500">Não foi possível carregar o PDF</p>
-              </div>}
+          <div className="h-[calc(100%-57px)] overflow-hidden bg-gray-100"> {/* Ajuste de altura e bg */}
+            {pdfLoading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-75 z-20">
+                <svg className="animate-spin h-8 w-8 text-blue-600 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p className="text-gray-600 text-sm">Carregando PDF...</p>
+              </div>
+            )}
+            {selectedPdfUrl ? (
+              <iframe 
+                src={selectedPdfUrl} 
+                className={`w-full h-full ${pdfLoading ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}`} // Transição suave
+                title="PDF Viewer" 
+                style={{ border: "none" }} 
+                onLoad={() => setPdfLoading(false)} // Para o loading quando o iframe carregar
+                onError={() => { // Lida com erro no carregamento do iframe
+                  setPdfLoading(false);
+                  toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar o PDF."});
+                  setSelectedPdfUrl(null); // Limpa URL para evitar iframe quebrado
+                }}
+              />
+            ) : (
+              !pdfLoading && // Só mostra se não estiver carregando
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-500">Selecione um TCO para visualizar o PDF.</p>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -367,13 +432,13 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteTco} disabled={isDeleting} className="bg-red-500 hover:bg-red-600 w-full sm:w-auto transition-colors">
-              {isDeleting ? <div className="flex items-center gap-2">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+              {isDeleting ? <div className="flex items-center gap-2 justify-center">
+                  <svg className="animate-spin -ml-1 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                   <span>Excluindo...</span>
-                </div> : <div className="flex items-center gap-2">
+                </div> : <div className="flex items-center gap-2 justify-center">
                   <Trash2 className="h-4 w-4" />
                   <span>Excluir</span>
                 </div>}
