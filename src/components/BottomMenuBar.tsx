@@ -1,7 +1,7 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Clock, Calendar, MapPinned, Scale, Settings, Home } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -64,18 +64,6 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
   isAdmin
 }) => {
   const navigate = useNavigate();
-  const location = useLocation();
-  
-  useEffect(() => {
-    // Update active tab based on current route
-    if (location.pathname === "/") {
-      if (activeTab === "hours") {
-        onTabChange("main");
-      }
-    } else if (location.pathname === "/hours") {
-      onTabChange("hours");
-    }
-  }, [location.pathname, activeTab, onTabChange]);
   
   const handleHoursClick = () => {
     navigate("/hours");
@@ -83,7 +71,6 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
   
   const handleMainClick = () => {
     onTabChange("main");
-    navigate("/");
   };
   
   return (
@@ -93,50 +80,38 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
           icon={<Home className="h-5 w-5" />} 
           label="Início" 
           onClick={handleMainClick} 
-          active={location.pathname === "/" && activeTab === "main"} 
+          active={activeTab === "main"} 
         />
         <BottomMenuItem 
           icon={<Clock className="h-5 w-5" />} 
           label="Horas" 
           onClick={handleHoursClick} 
-          active={location.pathname === "/hours"} 
+          active={false} 
         />
         <BottomMenuItem 
           icon={<Calendar className="h-5 w-5" />} 
           label="Extra" 
-          onClick={() => {
-            onTabChange("extra");
-            navigate("/");
-          }} 
+          onClick={() => onTabChange("extra")} 
           active={activeTab === "extra"} 
         />
         <BottomMenuItem 
           icon={<MapPinned className="h-5 w-5" />} 
           label="Viagens" 
-          onClick={() => {
-            onTabChange("travel");
-            navigate("/");
-          }} 
+          onClick={() => onTabChange("travel")} 
           active={activeTab === "travel"} 
         />
         {isAdmin && (
           <BottomMenuItem 
             icon={<Scale className="h-5 w-5" />} 
             label="TCO" 
-            onClick={() => {
-              onTabChange("tco");
-              navigate("/");
-            }} 
+            onClick={() => onTabChange("tco")} 
             active={activeTab === "tco"} 
           />
         )}
         <BottomMenuItem 
           icon={<Settings className="h-5 w-5" />} 
           label="Config" 
-          onClick={() => {
-            onTabChange("settings");
-            navigate("/");
-          }} 
+          onClick={() => onTabChange("settings")} 
           active={activeTab === "settings"} 
         />
       </div>
