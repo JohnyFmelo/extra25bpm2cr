@@ -4,7 +4,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { X } from "lucide-react";
-
 interface HistoricoTabProps {
   relatoPolicial: string;
   setRelatoPolicial: (value: string) => void;
@@ -25,7 +24,6 @@ interface HistoricoTabProps {
   videoLinks?: string[];
   setVideoLinks?: (value: string[]) => void;
 }
-
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
   relatoPolicial,
   setRelatoPolicial,
@@ -48,14 +46,12 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
-  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<{
     file: File;
     id: string;
   }[]>([]);
   const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
-
   useEffect(() => {
     return () => {
       selectedFiles.forEach(({
@@ -65,13 +61,11 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       });
     };
   }, [selectedFiles]);
-
   const handleFileUploadClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -91,14 +85,12 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       console.log(`Selected files: ${fileNames}`);
     }
   };
-
   const handleRemoveFile = (id: string) => {
     setSelectedFiles(prev => {
       const newFiles = prev.filter(fileObj => fileObj.id !== id);
       return newFiles;
     });
   };
-
   const handleVideoUrlsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const urls = e.target.value;
     setVideoUrls(urls);
@@ -106,18 +98,15 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       setVideoLinks(urls.split("\n").filter(url => url.trim() !== ""));
     }
   };
-
   const truncateFileName = (name: string, maxLength: number = 15): string => {
     if (name.length <= maxLength) return name;
     return name.slice(0, maxLength - 3) + "...";
   };
-
-  return (
-    <div className="border rounded-lg shadow-sm bg-white">
+  return <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
         <h3 className="text-2xl font-semibold flex items-center">Histórico</h3>
       </div>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 px-[6px]">
         <div>
           <Label htmlFor="relatoPolicial">RELATÓRIO POLICIAL</Label>
           <Textarea id="relatoPolicial" placeholder="Descreva o relato policial" value={relatoPolicial} onChange={e => setRelatoPolicial(e.target.value)} className="min-h-[150px]" />
@@ -129,13 +118,11 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
         </div>
         
         {/* Only show victim fields if it's NOT a drug case */}
-        {!isDrugCase && (
-          <div>
+        {!isDrugCase && <div>
             <Label htmlFor="relatoVitima">RELATO DA VÍTIMA</Label>
             <Textarea id="relatoVitima" placeholder="Descreva o relato da vítima" value={relatoVitima} onChange={e => setRelatoVitima(e.target.value)} className="min-h-[150px]" />
             
-            {setRepresentacao && (
-              <div className="mt-4 p-4 border rounded-md">
+            {setRepresentacao && <div className="mt-4 p-4 border rounded-md">
                 <Label className="font-bold mb-2 block">Representação da Vítima</Label>
                 <RadioGroup value={representacao} onValueChange={setRepresentacao}>
                   <div className="flex items-center space-x-2">
@@ -147,10 +134,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
                     <Label htmlFor="posteriormente">Representação posterior (6 meses)</Label>
                   </div>
                 </RadioGroup>
-              </div>
-            )}
-          </div>
-        )}
+              </div>}
+          </div>}
         
         <div>
           <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
@@ -167,8 +152,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea id="conclusaoPolicial" placeholder="Descreva a conclusão policial" value={conclusaoPolicial} onChange={e => setConclusaoPolicial(e.target.value)} className="min-h-[150px]" />
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default HistoricoTab;

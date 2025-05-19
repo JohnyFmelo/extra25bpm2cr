@@ -25,12 +25,12 @@ import UpcomingShifts from "@/components/UpcomingShifts";
 import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
-
 interface IndexProps {
   initialActiveTab?: string;
 }
-
-const Index = ({ initialActiveTab = "main" }: IndexProps) => {
+const Index = ({
+  initialActiveTab = "main"
+}: IndexProps) => {
   const [activeTab, setActiveTab] = useState(initialActiveTab);
   const [isLocked, setIsLocked] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -50,7 +50,6 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
-  
   useEffect(() => {
     const handleNotificationsChange = (count: number) => {
       setHasNotifications(count > 0);
@@ -68,7 +67,6 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
       window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     };
   }, [unreadCount]);
-  
   useEffect(() => {
     const today = new Date();
     const travelsRef = collection(db, "travels");
@@ -88,7 +86,6 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
     });
     return () => unsubscribe();
   }, []);
-  
   const handleRefresh = () => {
     window.location.reload();
     toast({
@@ -96,15 +93,12 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
       description: "Recarregando dados do sistema."
     });
   };
-  
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
-  
   const handleExtraClick = () => {
     setActiveTab("extra");
   };
-  
   const handleBackClick = () => {
     if (activeTab === "editor") {
       setActiveTab("extra");
@@ -112,25 +106,20 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
       setActiveTab("main");
     }
   };
-  
   const handleSettingsClick = () => {
     setActiveTab("settings");
   };
-  
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
-  
   const handleTCOClick = () => {
     setActiveTab("tco");
   };
-  
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
     setShowLogoutDialog(false);
   };
-  
   const handleTabChange = (tab: string) => {
     if (tab === 'hours') {
       navigate('/hours');
@@ -138,16 +127,13 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
       setActiveTab(tab);
     }
   };
-  
   useEffect(() => {
     // Update activeTab when initialActiveTab prop changes
     if (initialActiveTab && initialActiveTab !== activeTab) {
       setActiveTab(initialActiveTab);
     }
   }, [initialActiveTab]);
-  
-  return (
-    <div className="relative min-h-screen w-full flex flex-col">
+  return <div className="relative min-h-screen w-full flex flex-col">
       <div className="flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow">
           <TabsList className="hidden">
@@ -163,8 +149,7 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
 
           <TabsContent value="main" className="flex-grow">
             <div className="space-y-8">
-              {hasNotifications && (
-                <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
+              {hasNotifications && <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
                   <CardContent className="p-6">
                     <div className="flex items-center mb-2">
                       <CalendarDays className="h-5 w-5 text-amber-500 mr-2" />
@@ -172,8 +157,7 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
                     </div>
                     <NotificationsList showOnlyUnread={true} />
                   </CardContent>
-                </Card>
-              )}
+                </Card>}
               <MonthlyHoursSummary />
               <MonthlyExtraCalendar />
               <UpcomingShifts />
@@ -318,7 +302,7 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
 
                   <TabsContent value="form" className="flex-grow">
                     <Card className="shadow-md">
-                      <CardContent className="p-6">
+                      <CardContent className="p-6 px-0">
                         <TCOForm selectedTco={selectedTco} />
                       </CardContent>
                     </Card>
@@ -351,8 +335,6 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
       </AlertDialog>
 
       <BottomMenuBar activeTab={activeTab} onTabChange={handleTabChange} isAdmin={user?.userType === 'admin'} />
-    </div>
-  );
+    </div>;
 };
-
 export default Index;

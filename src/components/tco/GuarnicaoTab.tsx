@@ -114,17 +114,14 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState<boolean>(false);
   const [newOfficerFormData, setNewOfficerFormData] = useState<PoliceOfficerFormData>(initialOfficerFormData);
-  
   useEffect(() => {
     console.log("[GuarnicaoTab] Prop 'currentGuarnicaoList' recebida:", currentGuarnicaoList);
   }, [currentGuarnicaoList]);
-  
   const handleSearchRgpmChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = event.target.value;
     const numeros = somenteNumeros(rawValue).slice(0, 6);
     setSearchRgpm(numeros);
   };
-  
   const handleSearchAndAdd = useCallback(async () => {
     const rgpmToSearch = searchRgpm;
     console.log("[GuarnicaoTab] Iniciando busca por RGPM:", rgpmToSearch);
@@ -196,7 +193,6 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       console.log("[GuarnicaoTab] Busca finalizada.");
     }
   }, [searchRgpm, currentGuarnicaoList, toast, onAddPolicial]);
-  
   const handleRemove = (index: number) => {
     const itemToRemove = currentGuarnicaoList[index];
     console.log("[GuarnicaoTab] Chamando onRemovePolicial para índice:", index, itemToRemove);
@@ -206,18 +202,15 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       description: `Componente ${itemToRemove?.nome || ''} removido da guarnição.`
     });
   };
-  
   const openRegisterDialog = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsRegisterDialogOpen(true);
   };
-  
   const closeRegisterDialog = () => {
     setIsRegisterDialogOpen(false);
     setNewOfficerFormData(initialOfficerFormData);
   };
-  
   const handleRegisterInputChange = (field: keyof PoliceOfficerFormData, value: string) => {
     let processedValue = value;
     if (field === 'cpf') {
@@ -234,7 +227,6 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       [field]: processedValue
     }));
   };
-  
   const handleSaveNewOfficer = async () => {
     console.log("[GuarnicaoTab] Tentando salvar novo policial no BD:", newOfficerFormData);
     const {
@@ -318,7 +310,6 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       });
     }
   };
-  
   const isSaveDisabled = useCallback((): boolean => {
     const {
       rgpm,
@@ -337,7 +328,6 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
     if (telNums.length !== 10 && telNums.length !== 11) return true;
     return false;
   }, [newOfficerFormData]);
-  
   return <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
@@ -352,7 +342,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-[8px]">
         <div className="space-y-2">
           <div className="flex gap-2 items-center">
             <Input id="rgpmSearchInput" type="text" inputMode="numeric" placeholder="Buscar por RGPM (6 dígitos)" value={searchRgpm} onChange={handleSearchRgpmChange} disabled={isSearching} className="flex-grow" maxLength={6} onKeyDown={e => {

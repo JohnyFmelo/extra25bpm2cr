@@ -4,7 +4,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toUpperCase } from "@/lib/utils";
-
 interface GeneralInformationTabProps {
   natureza: string;
   tipificacao: string;
@@ -38,7 +37,6 @@ interface GeneralInformationTabProps {
   juizadoEspecialHora?: string;
   setJuizadoEspecialHora?: (value: string) => void;
 }
-
 const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   natureza,
   tipificacao,
@@ -77,16 +75,16 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
       setHoraFato(now.toTimeString().slice(0, 5));
     }
   }, [horaFato, setHoraFato]);
-  
+
   // The handleInputChange functions ensure we keep the values in uppercase in the PDF
   // but we don't need to modify the inputs themselves since we're handling the uppercase
   // conversion in the PDF generation
-  
+
   return <Card>
       <CardHeader>
         <CardTitle className="flex items-center">Dados da Ocorrência</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-[5px]">
         <div>
           <Label htmlFor="naturezaOcorrencia">NATUREZA DA OCORRÊNCIA</Label>
           {isCustomNatureza ? <Input id="naturezaOcorrencia" placeholder="Informe a natureza da ocorrência" value={customNatureza} /> : <Input id="naturezaOcorrencia" readOnly value={displayNatureza} />}
@@ -155,5 +153,4 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
       </CardContent>
     </Card>;
 };
-
 export default GeneralInformationTab;
