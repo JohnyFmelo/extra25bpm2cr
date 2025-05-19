@@ -14,8 +14,6 @@ export async function uploadPDF(filePath: string, fileBlob: Blob, metadata?: Rec
   error: Error | null;
 }> {
   try {
-    console.log('Uploading PDF to storage:', filePath);
-    
     // Upload the file to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
@@ -30,15 +28,11 @@ export async function uploadPDF(filePath: string, fileBlob: Blob, metadata?: Rec
       return { url: null, error: uploadError };
     }
 
-    console.log('PDF uploaded successfully:', uploadData);
-
     // Get the public URL of the uploaded file
     const { data: urlData } = await supabase.storage
       .from(BUCKET_NAME)
       .getPublicUrl(filePath);
 
-    console.log('Public URL generated:', urlData?.publicUrl);
-    
     return { url: urlData?.publicUrl || null, error: null };
   } catch (error) {
     console.error('Exception uploading PDF:', error);
@@ -118,13 +112,6 @@ export async function saveTCOMetadata(tcoMetadata: any) {
   const TABLE_NAME = 'tco_pdfs';
 
   try {
-    console.log('Saving TCO metadata to database:', tcoMetadata);
-    
-    // Ensure required fields are present
-    if (!tcoMetadata.tcoNumber || !tcoMetadata.natureza || !tcoMetadata.pdfPath || !tcoMetadata.pdfUrl) {
-      throw new Error('Missing required TCO metadata fields');
-    }
-    
     const { data, error } = await supabase
       .from(TABLE_NAME)
       .insert([tcoMetadata])
@@ -132,14 +119,12 @@ export async function saveTCOMetadata(tcoMetadata: any) {
       .single();
 
     if (error) {
-      console.error('Error saving TCO metadata to database:', error);
       throw error;
     }
 
-    console.log('TCO metadata saved successfully to database with ID:', data?.id);
     return { data, error: null };
   } catch (error) {
-    console.error('Exception saving TCO metadata:', error);
+    console.error('Error saving TCO metadata:', error);
     return { data: null, error };
   }
 }

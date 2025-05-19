@@ -25,8 +25,13 @@ import UpcomingShifts from "@/components/UpcomingShifts";
 import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
-const Index = () => {
-  const [activeTab, setActiveTab] = useState("main");
+
+interface IndexProps {
+  initialActiveTab?: string;
+}
+
+const Index = ({ initialActiveTab = "main" }: IndexProps) => {
+  const [activeTab, setActiveTab] = useState(initialActiveTab);
   const [isLocked, setIsLocked] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showProfileDialog, setShowProfileDialog] = useState(false);
@@ -45,6 +50,7 @@ const Index = () => {
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
+  
   useEffect(() => {
     const handleNotificationsChange = (count: number) => {
       setHasNotifications(count > 0);
@@ -62,6 +68,7 @@ const Index = () => {
       window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     };
   }, [unreadCount]);
+  
   useEffect(() => {
     const today = new Date();
     const travelsRef = collection(db, "travels");
@@ -81,6 +88,7 @@ const Index = () => {
     });
     return () => unsubscribe();
   }, []);
+  
   const handleRefresh = () => {
     window.location.reload();
     toast({
@@ -88,12 +96,15 @@ const Index = () => {
       description: "Recarregando dados do sistema."
     });
   };
+  
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
+  
   const handleExtraClick = () => {
     setActiveTab("extra");
   };
+  
   const handleBackClick = () => {
     if (activeTab === "editor") {
       setActiveTab("extra");
@@ -101,22 +112,35 @@ const Index = () => {
       setActiveTab("main");
     }
   };
+  
   const handleSettingsClick = () => {
     setActiveTab("settings");
   };
+  
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
+  
   const handleTCOClick = () => {
     setActiveTab("tco");
   };
+  
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
     setShowLogoutDialog(false);
   };
-  return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col my-[4px] px-0 mx-0">
-      <div className="pt-6 sm:px-6 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[22px] px-[2px] lg:px-[2px] mx-[49px]">
+  
+  useEffect(() => {
+    // Update activeTab when initialActiveTab prop changes
+    if (initialActiveTab && initialActiveTab !== activeTab) {
+      setActiveTab(initialActiveTab);
+    }
+  }, [initialActiveTab]);
+  
+  return (
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col mx-[13px] my-[4px] px-0">
+      <div className="pt-6 sm:px-6 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[22px] lg:px-0 mx-0 px-[2px]">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow px-0">
           <TabsList className="hidden">
             <TabsTrigger value="main">Main</TabsTrigger>
@@ -316,7 +340,9 @@ const Index = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <BottomMenuBar activeTab={activeTab} onTabChange={tab => setActiveTab(tab)} isAdmin={user.userType === 'admin'} />
-    </div>;
+      <BottomMenuBar activeTab={activeTab} onTabChange={handleTabChange} isAdmin={user?.userType === 'admin'} />
+    </div>
+  );
 };
+
 export default Index;
