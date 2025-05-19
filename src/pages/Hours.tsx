@@ -9,7 +9,6 @@ import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
@@ -196,9 +195,8 @@ const Hours = () => {
     const year = new Date().getFullYear();
     return `${month}/${year}`;
   };
-  return (
-    <div className="relative bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col mx-[13px] my-0 px-0">
-      <div className="pt-3 sm:px-6 pb-32 max-w-7xl flex flex-col flex-grow w-full lg:px-[23px] px-0 mx-0">
+  return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col mx-[13px] my-[4px] px-0">
+      <div className="pt-6 sm:px-6 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[22px] lg:px-[23px] px-0 mx-0">
         <Tabs defaultValue="hours" className="space-y-6 flex flex-col flex-grow my-0 px-0">
           <TabsList className="hidden">
             <TabsTrigger value="hours">Hours</TabsTrigger>
@@ -224,7 +222,7 @@ const Hours = () => {
               </TabsList>
 
               <TabsContent value="individual" className="flex-grow">
-                <div className="bg-white rounded-lg shadow-sm p-6 mb-20">
+                <div className="bg-white rounded-lg shadow-sm p-6">
                   <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
                   <div className="space-y-4">
                     <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
@@ -246,7 +244,7 @@ const Hours = () => {
               </TabsContent>
 
               {userData?.userType === 'admin' && <TabsContent value="general" className="flex-grow">
-                  <div className="bg-white rounded-lg shadow-sm p-6 mb-20">
+                  <div className="bg-white rounded-lg shadow-sm p-6">
                     <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
                     <div className="space-y-4">
                       <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
@@ -276,8 +274,6 @@ const Hours = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Hours;
