@@ -25,6 +25,8 @@ import UpcomingShifts from "@/components/UpcomingShifts";
 import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
+import RankingChart from "@/components/RankingChart";
+
 interface IndexProps {
   initialActiveTab?: string;
 }
@@ -40,6 +42,7 @@ const Index = ({
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [hasNotifications, setHasNotifications] = useState(false);
   const [activeTrips, setActiveTrips] = useState<any[]>([]);
+  const [travelTab, setTravelTab] = useState("trips");
   const {
     toast
   } = useToast();
@@ -268,7 +271,20 @@ const Index = ({
               </div>
               <Card className="shadow-md">
                 <CardContent className="p-6 my-0 mx-0 py-0 px-[9px]">
-                  <TravelManagement />
+                  <Tabs value={travelTab} onValueChange={setTravelTab} className="w-full">
+                    <TabsList className="w-full mb-6 justify-between">
+                      <TabsTrigger value="trips" className="flex-1">Viagens</TabsTrigger>
+                      <TabsTrigger value="ranking" className="flex-1">Ranking</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="trips" className="mt-0">
+                      <TravelManagement />
+                    </TabsContent>
+                    
+                    <TabsContent value="ranking" className="mt-0">
+                      <RankingChart />
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             </div>
