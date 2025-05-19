@@ -36,12 +36,13 @@ const Layout = ({
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   return <div className="flex min-h-screen flex-col">
       <TopBar />
-      <main className="flex-1 w-full max-w-5xl sm:px-6 lg:px-8 py-6 px-0 mx-0">
+      <main className="flex-1 w-full max-w-5xl mx-auto pt-0">
         {children}
       </main>
       <BottomMenuBar activeTab={activeTab} onTabChange={onTabChange} isAdmin={user?.userType === 'admin'} />
     </div>;
 };
+
 const App = () => {
   const [activeTab, setActiveTab] = useState<string>("main");
   const queryClient = new QueryClient({
@@ -82,4 +83,5 @@ const App = () => {
       </QueryClientProvider>
     </React.StrictMode>;
 };
+
 export default App;
