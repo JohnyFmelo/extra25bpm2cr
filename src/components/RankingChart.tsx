@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
-import { ChartContainer } from "./ui/chart"; // Seu ChartContainer
+// import { ChartContainer } from "./ui/chart"; // Removido se o div com style for suficiente
 import {
   Bar,
   BarChart,
@@ -10,8 +10,8 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  ResponsiveContainer, // Importar ResponsiveContainer
-  LabelList,          // Importar LabelList
+  ResponsiveContainer,
+  LabelList,
 } from "recharts";
 import { collection, query, getDocs, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -34,10 +34,17 @@ const RankingChart = () => {
 
         querySnapshot.forEach((doc) => {
           const travelData = doc.data();
-          if (travelData.volunteers && Array.isArray(travelData.volunteers)) {
-            travelData.volunteers.forEach((volunteerData: any) => {
+
+          // <<< IMPORTANTE: CONFIRMAR NOME DO CAMPO >>>
+          // Assumindo que os voluntários que REALMENTE viajaram estão em um campo como 'selectedVolunteers'
+          // Se o nome do campo for diferente (ex: 'participants', 'actualTravelers'), ajuste abaixo.
+          const participants = travelData.selectedVolunteers || travelData.volunteers; // Fallback para 'volunteers' se 'selectedVolunteers' não existir
+
+          if (participants && Array.isArray(participants)) {
+            participants.forEach((volunteerData: any) => {
               let volunteerName: string | undefined;
 
+              // Lógica para extrair o nome do voluntário (ajuste se necessário)
               if (typeof volunteerData === 'string') {
                 volunteerName = volunteerData;
               } else if (volunteerData && typeof volunteerData.name === 'string') {
@@ -45,18 +52,41 @@ const RankingChart = () => {
               } else if (volunteerData && typeof volunteerData.nome === 'string') {
                 volunteerName = volunteerData.nome;
               }
-              // Adicione mais 'else if' se a estrutura dos seus dados for outra
+              // Adicione mais 'else if' para outras estruturas de dados do voluntário
 
               if (volunteerName && volunteerName.trim() !== "") {
+                // --- Contagem de Diárias (Allowances) ---
                 const startDate = new Date(travelData.startDate);
                 const endDate = new Date(travelData.endDate);
+                let calculatedDays = 0;
 
                 if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate >= startDate) {
-                  const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)) + 1;
+                  // Calcula o número de "noites" ou dias completos entre as datas
+                  const timeDiff = endDate.getTime() - startDate.getTime();
+                  const fullDaysInteger = Math.floor(timeDiff / (1000 * 3600 * 24));
+
+                  // Se startDate e endDate são o mesmo dia, fullDaysInteger será 0.
+                  // Nesse caso, é 0.5 diária.
+                  // Se for mais de um dia, são os dias inteiros + 0.5 para o último dia.
+                  if (startDate.toDateString() === endDate.toDateString()) {
+                    calculatedDays = 0.5;
+                  } else {
+                    // Ex: Viagem de 2 dias (dia 1 e dia 2) -> fullDaysInteger = 1.
+                    // Deveria ser 1 dia inteiro + 0.5 = 1.5
+                    // Então, (fullDaysInteger) + 0.5
+                    // Ex: Viagem de 6 dias (dia 1 ao dia 6) -> fullDaysInteger = 5
+                    // Deveria ser 5 dias inteiros + 0.5 = 5.5
+                    calculatedDays = fullDaysInteger + 0.5;
+                  }
+
+                  // Garante que não seja negativo se algo der muito errado, embora improvável com endDate >= startDate
+                  calculatedDays = Math.max(0, calculatedDays);
+
                   const currentAllowances = userAllowancesMap.get(volunteerName) || 0;
-                  userAllowancesMap.set(volunteerName, currentAllowances + days);
+                  userAllowancesMap.set(volunteerName, currentAllowances + calculatedDays);
                 }
 
+                // --- Contagem de Viagens (Trips) ---
                 const currentTrips = userTripsMap.get(volunteerName) || 0;
                 userTripsMap.set(volunteerName, currentTrips + 1);
               }
@@ -70,16 +100,15 @@ const RankingChart = () => {
           processedChartData = Array.from(userAllowancesMap.entries())
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value);
-        } else {
+        } else { // rankingType === "trips"
           processedChartData = Array.from(userTripsMap.entries())
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value);
         }
 
-        // Filtra nomes vazios ou undefined
         processedChartData = processedChartData.filter(item => item.name && item.name.trim() !== "" && item.value > 0);
-
         setData(processedChartData);
+
       } catch (error) {
         console.error("Error fetching ranking data:", error);
       } finally {
@@ -90,13 +119,19 @@ const RankingChart = () => {
     fetchRankingData();
   }, [rankingType]);
 
-  // Calcular uma altura dinâmica para o gráfico se houver muitos itens,
-  // ou definir uma altura fixa grande e permitir rolagem no CardContent.
-  // Por exemplo, 30px por item + margens.
-  const chartHeight = Math.max(300, data.length * 35 + 60); // Mínimo 300px, aumenta com itens
+  const chartHeight = Math.max(300, data.length * 35 + 70); // Aumentei um pouco a base e por item
+
+  const formatLabelValue = (value: number) => {
+    if (rankingType === "allowances") {
+      // Mostra uma casa decimal para diárias (X.5 ou X.0)
+      return value.toFixed(1);
+    }
+    // Mostra como inteiro para viagens
+    return value.toFixed(0);
+  };
 
   return (
-    <Card className="shadow-md w-full"> {/* Garante que o Card ocupe a largura disponível */}
+    <Card className="shadow-md w-full">
       <CardHeader>
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900">Ranking</h2>
@@ -108,8 +143,7 @@ const RankingChart = () => {
           </Tabs>
         </div>
       </CardHeader>
-      {/* Adicionar overflow-y-auto se o conteúdo do card puder exceder a altura da tela */}
-      <CardContent className="p-6 overflow-y-auto" style={{ maxHeight: '80vh' }}> {/* Limita altura e permite scroll */}
+      <CardContent className="p-6 overflow-y-auto" style={{ maxHeight: '80vh' }}>
         {loading ? (
           <div className="flex justify-center items-center" style={{ height: chartHeight }}>
             <span className="text-gray-500">Carregando dados...</span>
@@ -119,53 +153,47 @@ const RankingChart = () => {
             <span className="text-gray-500">Nenhum dado para exibir no ranking.</span>
           </div>
         ) : (
-          // Seu ChartContainer precisa permitir que ResponsiveContainer funcione.
-          // Idealmente, ChartContainer seria apenas um div com `width: 100%` e uma altura definida.
-          // Vou assumir que seu ChartContainer funciona como um wrapper simples.
-          // Se ChartContainer já for o ResponsiveContainer, ajuste.
           <div style={{ width: '100%', height: chartHeight }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={data}
                 layout="vertical"
-                margin={{
-                  top: 20, // Espaço para títulos/etc.
-                  right: 50, // Espaço para os labels das barras
-                  left: 10,  // Espaço para o início do YAxis
-                  bottom: 20,
-                }}
+                margin={{ top: 20, right: 60, left: 10, bottom: 20 }} // Aumentei margem direita para labels
               >
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                <XAxis type="number" allowDecimals={false} />
+                <XAxis
+                  type="number"
+                  allowDecimals={rankingType === "allowances"} // Permite decimais para diárias
+                />
                 <YAxis
                   type="category"
-                  dataKey="name" // Nome do viajante aqui
-                  width={150}    // Largura para o eixo Y (ajuste conforme o tamanho dos nomes)
+                  dataKey="name"
+                  width={150}
                   tick={{ fontSize: 12, fill: '#333' }}
-                  interval={0} // Mostrar todos os ticks (nomes)
+                  interval={0}
                 />
                 <Tooltip
                   formatter={(value: number, name, props) => {
+                    const formattedValue = rankingType === "allowances" ? value.toFixed(1) : value.toFixed(0);
                     return [
-                      `${value} ${rankingType === "allowances" ? "diárias" : "viagens"}`,
-                      `Viajante: ${props.payload.name}` // Nome do viajante no tooltip
+                      `${formattedValue} ${rankingType === "allowances" ? "diárias" : "viagens"}`,
+                      `Viajante: ${props.payload.name}`
                     ];
                   }}
                   cursor={{ fill: 'rgba(200, 200, 200, 0.3)' }}
                 />
                 <Legend wrapperStyle={{ paddingTop: '10px' }} />
                 <Bar
-                  dataKey="value" // Diárias ou Viagens
+                  dataKey="value"
                   fill={rankingType === "allowances" ? "#4f46e5" : "#10b981"}
                   radius={[0, 4, 4, 0]}
-                  // barSize={20} // Pode ser dinâmico ou removido para auto-ajuste
                 >
                   <LabelList
-                    dataKey="value" // O valor a ser exibido
-                    position="right"  // Posição do label (à direita da barra)
-                    offset={5}        // Pequeno deslocamento da ponta da barra
-                    style={{ fill: '#333', fontSize: 12 }} // Estilo do label
-                    formatter={(value: number) => `${value}`} // Formata para mostrar apenas o número
+                    dataKey="value"
+                    position="right"
+                    offset={5}
+                    style={{ fill: '#333', fontSize: 12 }}
+                    formatter={formatLabelValue} // Usa a função de formatação
                   />
                 </Bar>
               </BarChart>
