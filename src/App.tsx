@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,7 +23,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 // Layout component to handle common layout elements
-const Layout = ({ children }: { children: React.ReactNode }) => {
+const Layout = ({ children, activeTab, onTabChange }: { 
+  children: React.ReactNode;
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}) => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   return (
@@ -33,28 +37,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         {children}
       </main>
       <BottomMenuBar 
-        activeTab={useLocation().pathname === "/" ? "main" : 
-                 useLocation().pathname === "/hours" ? "hours" : ""}
-        onTabChange={(tab) => {}}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
         isAdmin={user?.userType === 'admin'} 
       />
     </div>
   );
 };
 
-// Route-specific wrapper that can pass location state to components
-const IndexWrapper = () => {
-  const location = useLocation();
-  const activeTab = location.state?.activeTab || 'main';
-  
-  return (
-    <Layout>
-      <Index initialActiveTab={activeTab} />
-    </Layout>
-  );
-};
-
 const App = () => {
+  const [activeTab, setActiveTab] = useState<string>("main");
+  
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -63,6 +56,10 @@ const App = () => {
       },
     },
   });
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+  };
 
   return (
     <React.StrictMode>
@@ -77,7 +74,9 @@ const App = () => {
                 path="/" 
                 element={
                   <ProtectedRoute>
-                    <IndexWrapper />
+                    <Layout activeTab={activeTab} onTabChange={handleTabChange}>
+                      <Index initialActiveTab={activeTab} />
+                    </Layout>
                   </ProtectedRoute>
                 } 
               />
@@ -85,7 +84,7 @@ const App = () => {
                 path="/hours" 
                 element={
                   <ProtectedRoute>
-                    <Layout>
+                    <Layout activeTab="hours" onTabChange={handleTabChange}>
                       <Hours />
                     </Layout>
                   </ProtectedRoute>
