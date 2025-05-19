@@ -9,7 +9,6 @@ import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
@@ -22,10 +21,10 @@ const Hours = () => {
   const [userData, setUserData] = useState<any>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [activeConsult, setActiveConsult] = useState<'individual' | 'general'>('individual');
-  
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const navigate = useNavigate();
-  
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
     setUserData(storedUser);
@@ -38,13 +37,11 @@ const Hours = () => {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
-  
   useEffect(() => {
     if (userData?.userType === 'admin') {
       fetchUsersList();
     }
   }, [userData?.userType]);
-  
   const fetchUsersList = async () => {
     try {
       const fetchedUsers = await fetchAllUsers();
@@ -58,7 +55,6 @@ const Hours = () => {
       });
     }
   };
-  
   const handleConsult = async () => {
     if (!userData?.registration) {
       toast({
@@ -103,7 +99,6 @@ const Hours = () => {
       setLoading(false);
     }
   };
-  
   const handleGeneralConsult = async () => {
     if (!selectedGeneralMonth) {
       toast({
@@ -179,7 +174,6 @@ const Hours = () => {
       setLoadingGeneral(false);
     }
   };
-  
   const getSelectedMonthYear = (selectedMonth: string) => {
     const monthMap: {
       [key: string]: number;
@@ -201,11 +195,9 @@ const Hours = () => {
     const year = new Date().getFullYear();
     return `${month}/${year}`;
   };
-  
-  return (
-    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col mx-[13px] my-[4px] px-0">
-      <div className="pt-6 px-4 sm:px-6 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[22px] lg:px-[23px] mx-[2px]">
-        <Tabs defaultValue="hours" className="space-y-6 flex flex-col flex-grow">
+  return <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col mx-[13px] my-[4px] px-0">
+      <div className="pt-6 sm:px-6 pb-28 max-w-7xl flex flex-col flex-grow w-full my-[22px] lg:px-[23px] px-0 mx-0">
+        <Tabs defaultValue="hours" className="space-y-6 flex flex-col flex-grow my-0 px-0">
           <TabsList className="hidden">
             <TabsTrigger value="hours">Hours</TabsTrigger>
           </TabsList>
@@ -282,8 +274,6 @@ const Hours = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Hours;
