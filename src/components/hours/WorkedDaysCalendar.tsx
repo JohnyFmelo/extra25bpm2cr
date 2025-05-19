@@ -1,4 +1,3 @@
-
 import { useMemo, useState } from 'react';
 import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -211,7 +210,7 @@ export const WorkedDaysCalendar = ({
         open={isAnnotationDialogOpen}
         onOpenChange={setIsAnnotationDialogOpen}
         date={selectedDate}
-        annotation={selectedDate ? annotations[format(selectedDate, 'yyyy-MM-dd')] || '' : ''}
+        currentAnnotation={selectedDate ? annotations[format(selectedDate, 'yyyy-MM-dd')] || '' : ''}
         onSave={handleSaveAnnotation}
       />
     </div>
