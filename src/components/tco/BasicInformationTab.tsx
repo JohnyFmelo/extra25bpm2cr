@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -82,14 +83,13 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
               <Input id="customNatureza" placeholder="Digite a natureza específica" value={customNatureza} onChange={e => setCustomNatureza(e.target.value)} />
             </div>}
 
-          {/* Pena da Tipificação */}
-          {penaDescricao && <div>
+          {/* Pena da Tipificação - Ocultada quando natureza é "Outros" */}
+          {penaDescricao && natureza !== "Outros" && <div>
               <Label>Pena da Tipificação</Label>
               <Input readOnly value={penaDescricao} className="bg-gray-100" />
             </div>}
 
           {/* Apresentação em Juizado Especial VG */}
-          {/* Este bloco <div> é um item no fluxo de space-y-4 do pai */}
           <div className="space-y-2"> {/* Cria um sub-grupo para o rótulo "Apresentação..." e seus campos, com um espaçamento interno menor */}
             <Label>Apresentação em Juizado Especial VG</Label> {/* Rótulo principal da seção */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4"> {/* Grid para os campos Data e Hora */}
