@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2, Users, UserPlus, Info, Search, Check } from "lucide-react"; // Added Check icon
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch"; // Added Switch import
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
@@ -379,17 +380,18 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
                     <span className="text-xs text-muted-foreground text-slate-400 text-left px-[2px]">RGPM: {componente.rg || "Não informado"}</span>
                   </div>
                   <div className="flex items-center flex-shrink-0 space-x-1"> {/* Container para botões de ação */}
-                    {index > 0 && ( // Botão de Apoio apenas para não-condutores
-                      <Button
-                        variant={componente.apoio ? "default" : "outline"}
-                        size="sm" // Usando sm, pode ajustar com className se precisar menor
-                        onClick={() => handleToggleApoio(index)}
-                        className="px-2 py-1 h-auto text-xs" // Classes para tamanho customizado se necessário
-                        title={componente.apoio ? "Remover marcação de apoio" : "Marcar como apoio"}
-                      >
-                        {componente.apoio ? <Check className="h-3 w-3 mr-1" /> : null}
-                        Apoio{componente.apoio ? "" : "?"}
-                      </Button>
+                    {index > 0 && ( // Switch de Apoio apenas para não-condutores
+                      <div className="flex items-center space-x-1" title={componente.apoio ? "Desmarcar como apoio" : "Marcar como apoio"}>
+                        <Switch
+                          id={`apoio-switch-${index}`}
+                          checked={!!componente.apoio} // Ensure boolean
+                          onCheckedChange={() => handleToggleApoio(index)}
+                          aria-label={componente.apoio ? "Desmarcar como apoio" : "Marcar como apoio"}
+                        />
+                        <Label htmlFor={`apoio-switch-${index}`} className="text-xs cursor-pointer select-none">
+                          Apoio
+                        </Label>
+                      </div>
                     )}
                     <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0" onClick={() => handleRemove(index)} aria-label={`Remover ${componente.nome}`}>
                       <Trash2 className="h-4 w-4" />
