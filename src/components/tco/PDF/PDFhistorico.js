@@ -1,7 +1,8 @@
+
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
-    checkPageBreak, addSignatureWithNameAndRole, addNewPage, LINE_HEIGHT // Adicionado LINE_HEIGHT para consistência
+    checkPageBreak, addSignatureWithNameAndRole, addNewPage, LINE_HEIGHT
 } from './pdfUtils.js';
 import QRCode from 'qrcode';
 
