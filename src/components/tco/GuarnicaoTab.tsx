@@ -109,7 +109,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
   currentGuarnicaoList,
   onAddPolicial,
   onRemovePolicial,
-  onToggleApoioPolicial // Destruturar nova prop
+  onToggleApoioPolicial
 }) => {
   const {
     toast
@@ -379,12 +379,12 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
                     </span>
                     <span className="text-xs text-muted-foreground text-slate-400 text-left px-[2px]">RGPM: {componente.rg || "Não informado"}</span>
                   </div>
-                  <div className="flex items-center flex-shrink-0 space-x-1"> {/* Container para botões de ação */}
-                    {index > 0 && ( // Switch de Apoio apenas para não-condutores
+                  <div className="flex items-center flex-shrink-0 space-x-1">
+                    {index > 0 && (
                       <div className="flex items-center space-x-1" title={componente.apoio ? "Desmarcar como apoio" : "Marcar como apoio"}>
                         <Switch
                           id={`apoio-switch-${index}`}
-                          checked={!!componente.apoio} // Ensure boolean
+                          checked={!!componente.apoio}
                           onCheckedChange={() => handleToggleApoio(index)}
                           aria-label={componente.apoio ? "Desmarcar como apoio" : "Marcar como apoio"}
                         />
