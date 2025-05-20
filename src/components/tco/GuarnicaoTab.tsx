@@ -1,10 +1,9 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Users, UserPlus, Info, Search, Check } from "lucide-react"; // Added Check icon
+import { Trash2, Users, UserPlus, Info, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch"; // Added Switch import
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
@@ -65,7 +64,6 @@ interface ComponenteGuarnicao {
   naturalidade?: string;
   cpf?: string;
   telefone?: string;
-  apoio?: boolean; // Novo campo para status de apoio
 }
 interface PoliceOfficerSearchResult {
   nome: string | null;
@@ -101,15 +99,13 @@ interface GuarnicaoTabProps {
   currentGuarnicaoList: ComponenteGuarnicao[];
   onAddPolicial: (policial: ComponenteGuarnicao) => void;
   onRemovePolicial: (index: number) => void;
-  onToggleApoioPolicial: (index: number) => void; // Nova prop para alternar status de apoio
 }
 
 // --- Componente GuarnicaoTab ---
 const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
   currentGuarnicaoList,
   onAddPolicial,
-  onRemovePolicial,
-  onToggleApoioPolicial
+  onRemovePolicial
 }) => {
   const {
     toast
@@ -178,8 +174,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
           mae: officerData.mae?.toUpperCase() || "NÃO INFORMADO",
           naturalidade: officerData.naturalidade?.toUpperCase() || "NÃO INFORMADO",
           cpf: officerData.cpf ? formatarCPF(officerData.cpf) : "NÃO INFORMADO",
-          telefone: officerData.telefone ? formatarCelular(officerData.telefone) : "NÃO INFORMADO",
-          apoio: false, // Inicializa como não sendo de apoio
+          telefone: officerData.telefone ? formatarCelular(officerData.telefone) : "NÃO INFORMADO"
         };
         console.log("[GuarnicaoTab] Componente criado com telefone:", newComponente.telefone);
         console.log("[GuarnicaoTab] Policial encontrado. Chamando onAddPolicial:", newComponente);
@@ -198,7 +193,6 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       console.log("[GuarnicaoTab] Busca finalizada.");
     }
   }, [searchRgpm, currentGuarnicaoList, toast, onAddPolicial]);
-
   const handleRemove = (index: number) => {
     const itemToRemove = currentGuarnicaoList[index];
     console.log("[GuarnicaoTab] Chamando onRemovePolicial para índice:", index, itemToRemove);
@@ -208,11 +202,6 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       description: `Componente ${itemToRemove?.nome || ''} removido da guarnição.`
     });
   };
-
-  const handleToggleApoio = (index: number) => {
-    onToggleApoioPolicial(index);
-  };
-
   const openRegisterDialog = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -373,30 +362,14 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
                   <div className="flex flex-col flex-grow mr-2 truncate">
                     <span className="text-sm font-medium truncate" title={`${componente.posto} ${componente.nome} (RGPM: ${componente.rg})`}>
                       {index === 0 && <span className="font-bold text-blue-800">(Condutor) </span>}
-                      {index > 0 && componente.apoio && <span className="font-semibold text-orange-600">(Apoio) </span>}
                       <span>{componente.posto || "Sem Posto"}</span>{' '}
                       <span>{componente.nome || "Sem Nome"}</span>
                     </span>
-                    <span className="text-xs text-muted-foreground text-slate-400 text-left px-[2px]">RGPM: {componente.rg || "Não informado"}</span>
+                    <span className="text-xs text-muted-foreground">RGPM: {componente.rg || "Não informado"}</span>
                   </div>
-                  <div className="flex items-center flex-shrink-0 space-x-1">
-                    {index > 0 && (
-                      <div className="flex items-center space-x-1" title={componente.apoio ? "Desmarcar como apoio" : "Marcar como apoio"}>
-                        <Switch
-                          id={`apoio-switch-${index}`}
-                          checked={!!componente.apoio}
-                          onCheckedChange={() => handleToggleApoio(index)}
-                          aria-label={componente.apoio ? "Desmarcar como apoio" : "Marcar como apoio"}
-                        />
-                        <Label htmlFor={`apoio-switch-${index}`} className="text-xs cursor-pointer select-none">
-                          Apoio
-                        </Label>
-                      </div>
-                    )}
-                    <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0" onClick={() => handleRemove(index)} aria-label={`Remover ${componente.nome}`}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0" onClick={() => handleRemove(index)} aria-label={`Remover ${componente.nome}`}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>)}
             </div>}
         </div>
