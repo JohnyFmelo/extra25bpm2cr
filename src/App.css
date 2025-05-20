@@ -69,21 +69,3 @@
 .bottom-menu-spacing {
   margin-bottom: 70px; /* Adjust based on menu bar height */
 }
-
-/* Melhorar contraste dos inputs e textareas */
-input, textarea, select {
-  color: #000 !important;
-  font-weight: 500 !important;
-}
-
-/* Melhorar o placeholder dos campos de texto */
-input::placeholder, textarea::placeholder {
-  color: #666 !important;
-  opacity: 0.8 !important;
-}
-
-/* Estilos para selects e dropdowns */
-select, .select-content {
-  color: #000 !important;
-  font-weight: 500 !important;
-}
