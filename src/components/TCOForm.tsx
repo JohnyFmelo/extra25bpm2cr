@@ -67,12 +67,16 @@ const formatRepresentacao = (representacao: string): string => {
 };
 
 const formatCPF = (cpf: string): string => {
-  cpf = cpf.replace(/\D/g, '');
-  if (cpf.length <= 11) {
-    cpf = cpf.padEnd(11, '0'); // Garante que o CPF tenha 11 dígitos
-    cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2');
-    cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2');
-    cpf = cpf.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  cpf = cpf.replace(/\D/g, ''); // Remove tudo que não for dígito
+  if (cpf.length > 0) {
+    cpf = cpf.slice(0, 11); // Limita a 11 dígitos
+    cpf = cpf.replace(/(\d{1,3})(\d{1,3})?(\d{1,3})?(\d{1,2})?/, (match, p1, p2, p3, p4) => {
+      let result = p1;
+      if (p2) result += `.${p2}`;
+      if (p3) result += `.${p3}`;
+      if (p4) result += `-${p4}`;
+      return result;
+    });
   }
   return cpf;
 };
