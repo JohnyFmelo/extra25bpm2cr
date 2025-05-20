@@ -9,7 +9,7 @@ type ToastProps = {
   className?: string;
 };
 
-// Updated toast function for improved styling
+// Updated toast function to use black text with blue/red backgrounds
 export const toast = ({ title, description, variant = "default", duration = 5000, className }: ToastProps) => {
   if (variant === "destructive") {
     return sonnerToast.error(title, {
@@ -36,10 +36,9 @@ export const toast = ({ title, description, variant = "default", duration = 5000
         width: "100%", 
         maxWidth: "500px",
         color: "black",
-        backgroundColor: "#ffedd5", // Light orange background
-        borderColor: "#f97316", // orange-500
-        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-        fontWeight: "500"
+        backgroundColor: "#ff0000", // Red background for warnings
+        borderColor: "#dc2626", // darker red
+        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
       }
     });
   }
@@ -52,8 +51,8 @@ export const toast = ({ title, description, variant = "default", duration = 5000
       width: "100%", 
       maxWidth: "500px",
       color: "black", 
-      backgroundColor: "#e0f2fe", // Light blue background
-      borderColor: "#0ea5e9", // sky-500
+      backgroundColor: "#1B98E0", // Blue background for default
+      borderColor: "#006494", // darker blue
       boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
     }
   });

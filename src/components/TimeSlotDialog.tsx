@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -19,7 +18,6 @@ interface TimeSlotDialogProps {
   onAddTimeSlot: (timeSlot: TimeSlot) => void;
   onEditTimeSlot: (timeSlot: TimeSlot) => void;
   editingTimeSlot: TimeSlot | null;
-  isLoading?: boolean; // Added isLoading prop
 }
 
 const TimeSlotDialog = ({
@@ -29,7 +27,6 @@ const TimeSlotDialog = ({
   onAddTimeSlot,
   onEditTimeSlot,
   editingTimeSlot,
-  isLoading = false, // Default to false
 }: TimeSlotDialogProps) => {
   const [startTime, setStartTime] = useState("07:00");
   const [endTime, setEndTime] = useState("13:00");
@@ -91,9 +88,9 @@ const TimeSlotDialog = ({
   const isButtonDisabled = () => {
     if (showCustomSlots) {
       const numSlots = parseInt(customSlots);
-      return isNaN(numSlots) || numSlots <= 0 || isLoading; // Added isLoading check
+      return isNaN(numSlots) || numSlots <= 0;
     }
-    return isLoading; // Added isLoading check
+    return false;
   };
 
   return (
@@ -128,7 +125,6 @@ const TimeSlotDialog = ({
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   className="text-center"
-                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-1">
@@ -138,7 +134,6 @@ const TimeSlotDialog = ({
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
                   className="text-center"
-                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -164,7 +159,6 @@ const TimeSlotDialog = ({
                     setSelectedSlots(slots);
                     setShowCustomSlots(false);
                   }}
-                  disabled={isLoading}
                 >
                   {slots}
                 </Button>
@@ -177,7 +171,6 @@ const TimeSlotDialog = ({
                   showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
                 )}
                 onClick={() => setShowCustomSlots(true)}
-                disabled={isLoading}
               >
                 Outro
               </Button>
@@ -191,7 +184,6 @@ const TimeSlotDialog = ({
                   onChange={(e) => setCustomSlots(e.target.value)}
                   className="text-center"
                   placeholder="Número personalizado de vagas"
-                  disabled={isLoading}
                 />
               </div>
             )}
@@ -208,7 +200,6 @@ const TimeSlotDialog = ({
               onChange={(e) => setDescription(e.target.value)}
               className="min-h-[80px] resize-none"
               placeholder="Ex: Consulta de rotina, retorno, etc."
-              disabled={isLoading}
             />
           </div>
 
@@ -228,7 +219,6 @@ const TimeSlotDialog = ({
                   "data-[state=checked]:bg-green-500",
                   "data-[state=checked]:hover:bg-green-600"
                 )}
-                disabled={isLoading}
               />
             </div>
           )}
@@ -239,7 +229,6 @@ const TimeSlotDialog = ({
             variant="outline" 
             onClick={() => onOpenChange(false)}
             className="text-gray-700 border-gray-300"
-            disabled={isLoading}
           >
             Cancelar
           </Button>
@@ -248,17 +237,7 @@ const TimeSlotDialog = ({
             disabled={isButtonDisabled()}
             className="bg-green-500 hover:bg-green-600 text-white"
           >
-            {isLoading ? (
-              <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Processando...
-              </span>
-            ) : (
-              editingTimeSlot ? "Salvar alterações" : "Registrar horário"
-            )}
+            {editingTimeSlot ? "Salvar alterações" : "Registrar horário"}
           </Button>
         </DialogFooter>
       </DialogContent>
