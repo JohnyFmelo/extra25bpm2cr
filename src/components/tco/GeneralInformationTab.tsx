@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -68,7 +67,6 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   setOperacao
 }) => {
   const displayNatureza = isCustomNatureza ? customNatureza || "Outros" : natureza;
-  const isOutros = natureza === "Outros";
 
   // Set default time to current time if empty
   useEffect(() => {
@@ -94,15 +92,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
         
         <div>
           <Label htmlFor="tipificacaoLegal">TIPIFICAÇÃO LEGAL</Label>
-          {isOutros || isCustomNatureza ? 
-            <Input 
-              id="tipificacaoLegal" 
-              placeholder="Informe a tipificação legal" 
-              value={tipificacao} 
-              onChange={e => setTipificacao(e.target.value)} 
-            /> : 
-            <Input id="tipificacaoLegal" readOnly value={tipificacao} />
-          }
+          {isCustomNatureza ? <Input id="tipificacaoLegal" placeholder="Informe a tipificação legal" value={tipificacao} onChange={e => setTipificacao(e.target.value)} /> : <Input id="tipificacaoLegal" readOnly value={tipificacao} />}
         </div>
         
         <div className="grid grid-cols-2 gap-4">

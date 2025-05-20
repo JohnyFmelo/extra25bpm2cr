@@ -1,4 +1,3 @@
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, MARGIN_TOP, getPageConstants,
     getDataAtualExtenso, addFieldBoldLabel, addWrappedText, addStandardFooterContent,
@@ -11,7 +10,7 @@ import {
  * Retorna a posição Y final nesta página.
  */
 export const generateAutuacaoPage = (doc, currentY, data) => {
-    const { PAGE_WIDTH, PAGE_HEIGHT, FOOTER_AREA_HEIGHT } = getPageConstants(doc);
+    const { PAGE_WIDTH } = getPageConstants(doc);
     let yPos = currentY; // Geralmente MARGIN_TOP
 
     // --- Cabeçalho Específico da Página 1 ---
@@ -43,16 +42,9 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     yPos += 15; // Espaço extra
 
     // --- Título "AUTUAÇÃO" ---
-    // Calcula espaço necessário: Título + Texto + Assinatura = ~15 + 40 + 30 = 85
-    const necessarySpace = 85;
-    const footerPosition = PAGE_HEIGHT - FOOTER_AREA_HEIGHT;
-    
-    // Verifica se há espaço suficiente até a área de rodapé
-    if (yPos + necessarySpace > footerPosition) {
-        // Se não houver espaço, inicia nova página
-        yPos = checkPageBreak(doc, yPos, necessarySpace, data);
-    }
-    
+    // Precisamos verificar a página antes de adicionar conteúdo potencialmente grande
+    // Estima a altura: Título + Texto + Assinatura = ~15 + 40 + 30 = 85
+    yPos = checkPageBreak(doc, yPos, 85, data); // checkPageBreak usa 'data' para o header em nova página
     doc.setFont("helvetica", "bold"); doc.setFontSize(14);
     doc.text("AUTUAÇÃO", PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 15;
@@ -62,17 +54,12 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     const cidadeAutuacao = data.municipio || "VÁRZEA GRANDE"; // Usa município do TCO ou padrão
     const localAutuacao = data.localEncerramento || "NO CISC DO PARQUE DO LADGO"; // Local padrão
     const autuacaoText = `${dataAtualExtenso}, NESTA CIDADE DE ${cidadeAutuacao.toUpperCase()}, ESTADO DE MATO GROSSO, ${localAutuacao.toUpperCase()}, AUTUO AS PEÇAS QUE ADIANTE SE SEGUEM, DO QUE PARA CONSTAR, LAVREI E ASSINO ESTE TERMO.`;
-    
     // Usa MAX_LINE_WIDTH implícito pelo getPageConstants dentro de addWrappedText
     yPos = addWrappedText(doc, yPos, autuacaoText, MARGIN_LEFT, 12, "normal", null, 'justify', data);
     yPos += 20; // Espaço antes da assinatura
 
     // --- Assinatura do Condutor na Autuação ---
-    // Garante que a assinatura não vai ultrapassar a área de rodapé
-    const signatureHeight = 30;
-    // Use Math.min para garantir que a posição Y não ultrapasse o limite do rodapé
-    yPos = Math.min(yPos, footerPosition - signatureHeight);
-
+    yPos = checkPageBreak(doc, yPos, 30, data); // Verifica espaço para assinatura
     const condutorAutuacao = data.componentesGuarnicao?.[0];
     const signatureLineLength = 80;
     const signatureLineStartX = (PAGE_WIDTH - signatureLineLength) / 2; // Centraliza a linha
