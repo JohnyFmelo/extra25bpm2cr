@@ -1,3 +1,4 @@
+
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -22,12 +23,13 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight) => {
             const base64Data = image.data.replace(/^data:image\/[a-z]+;base64,/, '');
 
             // Verifica se a posição atual ultrapassa o limite da página
-            if (currentY + maxImageHeight + 10 > pageHeight) { // Added +10 for bottom margin consideration
-                currentY = addNewPage(doc, {}); // Assumes MARGIN_TOP is handled by addNewPage
+            if (currentY + maxImageHeight + 10 > pageHeight) {
+                currentY = addNewPage(doc, {});
+                currentY = 10; // Reseta a posição Y (ajuste conforme MARGIN_TOP)
             }
 
             // Adiciona a imagem ao PDF
-            doc.addImage(base64Data, format, MARGIN_LEFT, currentY, maxImageWidth, 0); // Use MARGIN_LEFT, height 0 for aspect ratio
+            doc.addImage(base64Data, format, MARGIN_RIGHT, currentY, maxImageWidth, 0); // Altura 0 para manter proporção
 
             // Obtém as dimensões reais da imagem adicionada
             const imgProps = doc.getImageProperties(base64Data);
@@ -38,7 +40,7 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight) => {
 
             // Adiciona o nome do arquivo como legenda
             doc.setFontSize(8);
-            doc.text(`Imagem: ${image.name}`, MARGIN_LEFT, currentY); // Use MARGIN_LEFT
+            doc.text(`Imagem: ${image.name}`, MARGIN_RIGHT, currentY);
             currentY += 5; // Espaço após a legenda
         } catch (error) {
             console.error(`Erro ao adicionar imagem ${image.name}:`, error);
@@ -55,7 +57,7 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight) => {
  */
 export const generateHistoricoContent = async (doc, currentY, data) => {
     let yPos = currentY;
-    const { PAGE_WIDTH, MAX_LINE_WIDTH, PAGE_HEIGHT, MARGIN_TOP } = getPageConstants(doc); // Added MARGIN_TOP
+    const { PAGE_WIDTH, MAX_LINE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
     const isDrugCase = data.natureza === "Porte de drogas para consumo";
 
     // Convert general information data to uppercase
@@ -84,31 +86,37 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     // --- SEÇÃO 2: ENVOLVIDOS ---
     yPos = addSectionTitle(doc, yPos, "ENVOLVIDOS", "2", 1, data);
 
+    // Seção 2.1: Autor(es) - Ajusta singular/plural e aplica flexão de gênero
     const autoresValidos = data.autores ? data.autores.filter(a => a?.nome) : [];
+    
+    // Determina o título com base na quantidade e gênero
     let autorTitle;
     if (autoresValidos.length === 1) {
         autorTitle = autoresValidos[0]?.sexo?.toLowerCase() === 'feminino' ? "AUTORA DO FATO" : "AUTOR DO FATO";
     } else {
-        autorTitle = "AUTORES DO FATO";
+        autorTitle = "AUTORES DO FATO"; // Plural para múltiplos autores, independente do gênero
     }
+    
     yPos = addSectionTitle(doc, yPos, autorTitle, "2.1", 2, data);
     if (autoresValidos.length > 0) {
         autoresValidos.forEach((autor, index) => {
+            // Create uppercase version of author data
             const upperAutor = {
                 ...autor,
-                nome: autor.nome ? autor.nome.toUpperCase() : 'NÃO INFORMADO',
-                sexo: autor.sexo ? autor.sexo.toUpperCase() : 'NÃO INFORMADO',
-                estadoCivil: autor.estadoCivil ? autor.estadoCivil.toUpperCase() : 'NÃO INFORMADO',
-                profissao: autor.profissao ? autor.profissao.toUpperCase() : 'NÃO INFORMADO',
-                endereco: autor.endereco ? autor.endereco.toUpperCase() : 'NÃO INFORMADO',
-                naturalidade: autor.naturalidade ? autor.naturalidade.toUpperCase() : 'NÃO INFORMADO',
-                filiacaoMae: autor.filiacaoMae ? autor.filiacaoMae.toUpperCase() : 'NÃO INFORMADO',
-                filiacaoPai: autor.filiacaoPai ? autor.filiacaoPai.toUpperCase() : 'NÃO INFORMADO',
-                rg: autor.rg ? autor.rg.toUpperCase() : 'NÃO INFORMADO',
-                cpf: autor.cpf ? autor.cpf.toUpperCase() : 'NÃO INFORMADO',
-                celular: autor.celular ? autor.celular.toUpperCase() : 'NÃO INFORMADO',
-                email: autor.email ? autor.email.toUpperCase() : 'NÃO INFORMADO',
+                nome: autor.nome ? autor.nome.toUpperCase() : '',
+                sexo: autor.sexo ? autor.sexo.toUpperCase() : '',
+                estadoCivil: autor.estadoCivil ? autor.estadoCivil.toUpperCase() : '',
+                profissao: autor.profissao ? autor.profissao.toUpperCase() : '',
+                endereco: autor.endereco ? autor.endereco.toUpperCase() : '',
+                naturalidade: autor.naturalidade ? autor.naturalidade.toUpperCase() : '',
+                filiacaoMae: autor.filiacaoMae ? autor.filiacaoMae.toUpperCase() : '',
+                filiacaoPai: autor.filiacaoPai ? autor.filiacaoPai.toUpperCase() : '',
+                rg: autor.rg ? autor.rg.toUpperCase() : '',
+                cpf: autor.cpf ? autor.cpf.toUpperCase() : '',
+                celular: autor.celular ? autor.celular.toUpperCase() : '',
+                email: autor.email ? autor.email.toUpperCase() : '',
             };
+            
             if (index > 0) {
                 yPos += 3; yPos = checkPageBreak(doc, yPos, 5, data);
                 doc.setLineWidth(0.1); doc.setDrawColor(150);
@@ -134,27 +142,30 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 2;
     }
 
+    // Seção 2.2: Vítima(s) - Skip completely for drug cases
     if (!isDrugCase) {
         const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome) : [];
         const vitimaTitle = vitimasValidas.length === 1 ? "VÍTIMA" : "VÍTIMAS";
         yPos = addSectionTitle(doc, yPos, vitimaTitle, "2.2", 2, data);
         if (vitimasValidas.length > 0) {
             vitimasValidas.forEach((vitima, index) => {
+                // Create uppercase version of victim data
                 const upperVitima = {
                     ...vitima,
-                    nome: vitima.nome ? vitima.nome.toUpperCase() : 'NÃO INFORMADO',
-                    sexo: vitima.sexo ? vitima.sexo.toUpperCase() : 'NÃO INFORMADO',
-                    estadoCivil: vitima.estadoCivil ? vitima.estadoCivil.toUpperCase() : 'NÃO INFORMADO',
-                    profissao: vitima.profissao ? vitima.profissao.toUpperCase() : 'NÃO INFORMADO',
-                    endereco: vitima.endereco ? vitima.endereco.toUpperCase() : 'NÃO INFORMADO',
-                    naturalidade: vitima.naturalidade ? vitima.naturalidade.toUpperCase() : 'NÃO INFORMADO',
-                    filiacaoMae: vitima.filiacaoMae ? vitima.filiacaoMae.toUpperCase() : 'NÃO INFORMADO',
-                    filiacaoPai: vitima.filiacaoPai ? vitima.filiacaoPai.toUpperCase() : 'NÃO INFORMADO',
-                    rg: vitima.rg ? vitima.rg.toUpperCase() : 'NÃO INFORMADO',
-                    cpf: vitima.cpf ? vitima.cpf.toUpperCase() : 'NÃO INFORMADO',
-                    celular: vitima.celular ? vitima.celular.toUpperCase() : 'NÃO INFORMADO',
-                    email: vitima.email ? vitima.email.toUpperCase() : 'NÃO INFORMADO',
+                    nome: vitima.nome ? vitima.nome.toUpperCase() : '',
+                    sexo: vitima.sexo ? vitima.sexo.toUpperCase() : '',
+                    estadoCivil: vitima.estadoCivil ? vitima.estadoCivil.toUpperCase() : '',
+                    profissao: vitima.profissao ? vitima.profissao.toUpperCase() : '',
+                    endereco: vitima.endereco ? vitima.endereco.toUpperCase() : '',
+                    naturalidade: vitima.naturalidade ? vitima.naturalidade.toUpperCase() : '',
+                    filiacaoMae: vitima.filiacaoMae ? vitima.filiacaoMae.toUpperCase() : '',
+                    filiacaoPai: vitima.filiacaoPai ? vitima.filiacaoPai.toUpperCase() : '',
+                    rg: vitima.rg ? vitima.rg.toUpperCase() : '',
+                    cpf: vitima.cpf ? vitima.cpf.toUpperCase() : '',
+                    celular: vitima.celular ? vitima.celular.toUpperCase() : '',
+                    email: vitima.email ? vitima.email.toUpperCase() : '',
                 };
+                
                 if (index > 0) {
                     yPos += 3; yPos = checkPageBreak(doc, yPos, 5, data);
                     doc.setLineWidth(0.1); doc.setDrawColor(150);
@@ -181,26 +192,29 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         }
     }
 
+    // Seção 2.3: Testemunha(s) - Ajusta singular/plural
     const testemunhasValidas = data.testemunhas ? data.testemunhas.filter(t => t?.nome) : [];
     const testemunhaTitle = testemunhasValidas.length === 1 ? "TESTEMUNHA" : "TESTEMUNHAS";
     yPos = addSectionTitle(doc, yPos, testemunhaTitle, "2.3", 2, data);
     if (testemunhasValidas.length > 0) {
         testemunhasValidas.forEach((testemunha, index) => {
+            // Create uppercase version of witness data
             const upperTestemunha = {
                 ...testemunha,
-                nome: testemunha.nome ? testemunha.nome.toUpperCase() : 'NÃO INFORMADO',
-                sexo: testemunha.sexo ? testemunha.sexo.toUpperCase() : 'NÃO INFORMADO',
-                estadoCivil: testemunha.estadoCivil ? testemunha.estadoCivil.toUpperCase() : 'NÃO INFORMADO',
-                profissao: testemunha.profissao ? testemunha.profissao.toUpperCase() : 'NÃO INFORMADO',
-                endereco: testemunha.endereco ? testemunha.endereco.toUpperCase() : 'NÃO INFORMADO',
-                naturalidade: testemunha.naturalidade ? testemunha.naturalidade.toUpperCase() : 'NÃO INFORMADO',
-                filiacaoMae: testemunha.filiacaoMae ? testemunha.filiacaoMae.toUpperCase() : 'NÃO INFORMADO',
-                filiacaoPai: testemunha.filiacaoPai ? testemunha.filiacaoPai.toUpperCase() : 'NÃO INFORMADO',
-                rg: testemunha.rg ? testemunha.rg.toUpperCase() : 'NÃO INFORMADO',
-                cpf: testemunha.cpf ? testemunha.cpf.toUpperCase() : 'NÃO INFORMADO',
-                celular: testemunha.celular ? testemunha.celular.toUpperCase() : 'NÃO INFORMADO',
-                email: testemunha.email ? testemunha.email.toUpperCase() : 'NÃO INFORMADO',
+                nome: testemunha.nome ? testemunha.nome.toUpperCase() : '',
+                sexo: testemunha.sexo ? testemunha.sexo.toUpperCase() : '',
+                estadoCivil: testemunha.estadoCivil ? testemunha.estadoCivil.toUpperCase() : '',
+                profissao: testemunha.profissao ? testemunha.profissao.toUpperCase() : '',
+                endereco: testemunha.endereco ? testemunha.endereco.toUpperCase() : '',
+                naturalidade: testemunha.naturalidade ? testemunha.naturalidade.toUpperCase() : '',
+                filiacaoMae: testemunha.filiacaoMae ? testemunha.filiacaoMae.toUpperCase() : '',
+                filiacaoPai: testemunha.filiacaoPai ? testemunha.filiacaoPai.toUpperCase() : '',
+                rg: testemunha.rg ? testemunha.rg.toUpperCase() : '',
+                cpf: testemunha.cpf ? testemunha.cpf.toUpperCase() : '',
+                celular: testemunha.celular ? testemunha.celular.toUpperCase() : '',
+                email: testemunha.email ? testemunha.email.toUpperCase() : '',
             };
+            
             if (index > 0) {
                 yPos += 3; yPos = checkPageBreak(doc, yPos, 5, data);
                 doc.setLineWidth(0.1); doc.setDrawColor(150);
@@ -226,24 +240,29 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 2;
     }
 
-    const primeiroAutor = autoresValidos[0];
-    const primeiraVitima = !isDrugCase ? (data.vitimas ? data.vitimas.find(v => v?.nome) : null) : null;
-    const primeiraTestemunha = testemunhasValidas[0];
+    // --- SEÇÃO 3: HISTÓRICO ---
+    const primeiroAutor = data.autores?.[0];
+    const primeiraVitima = !isDrugCase ? data.vitimas?.find(v => v?.nome) : null;
+    const primeiraTestemunha = data.testemunhas?.find(t => t?.nome);
 
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
     yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", "3.1", 2, data);
-    yPos = addWrappedText(doc, yPos, data.relatoPolicial || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.relatoPolicial, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
+    // Aplica flexão de gênero no título do relato do autor
     const tituloRelatoAutor = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "RELATO DA AUTORA DO FATO" : "RELATO DO AUTOR DO FATO";
     yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, "3.2", 2, data);
-    yPos = addWrappedText(doc, yPos, data.relatoAutor || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.relatoAutor, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    
     if (primeiroAutor) {
-        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor?.nome, autorTitle.replace("AUTORES", "AUTOR(A)"), data);
+        const autorLabel = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "AUTORA DO FATO" : "AUTOR DO FATO";
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor?.nome, autorLabel, data);
     } else {
         yPos += 10;
     }
 
+    // Only include victim section if it's not a drug case
     if (!isDrugCase) {
         yPos = addSectionTitle(doc, yPos, "RELATO DA VÍTIMA", "3.3", 2, data);
         const relatoVitimaText = primeiraVitima ? (data.relatoVitima || "Relato não fornecido pela vítima.") : "Nenhuma vítima identificada para fornecer relato.";
@@ -255,8 +274,9 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         }
     }
 
-    const testemunhaSectionNum = isDrugCase ? "3.3" : "3.4";
-    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", testemunhaSectionNum, 2, data);
+    // Adjust section numbering for witness report based on whether victim section exists
+    const testemunhaSection = isDrugCase ? "3.3" : "3.4";
+    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", testemunhaSection, 2, data);
     let relatoTestText = "Nenhuma testemunha identificada.";
     if (primeiraTestemunha) {
         relatoTestText = data.relatoTestemunha || "Relato não fornecido pela testemunha.";
@@ -268,11 +288,13 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 10;
     }
 
-    const conclusaoSectionNum = isDrugCase ? "3.4" : "3.5";
-    yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", conclusaoSectionNum, 2, data);
-    yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    // Adjust section numbering for conclusion based on whether victim section exists
+    const conclusaoSection = isDrugCase ? "3.4" : "3.5";
+    yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", conclusaoSection, 2, data);
+    yPos = addWrappedText(doc, yPos, data.conclusaoPolicial, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
+    // --- SEÇÃO 4: PROVIDÊNCIAS E ANEXOS ---
     yPos = addSectionTitle(doc, yPos, "PROVIDÊNCIAS", "4", 1, data);
     yPos = addWrappedText(doc, yPos, data.providencias || "Não informado.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
@@ -285,21 +307,101 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addWrappedText(doc, yPos, data.apreensaoDescricao || data.apreensoes || "Nenhum.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
     yPos += 2;
 
+    // --- SEÇÃO 4.3: FOTOS E/OU VÍDEOS ---
     const hasPhotos = data.objetosApreendidos && data.objetosApreendidos.length > 0;
     const hasVideos = data.videoLinks && data.videoLinks.length > 0;
     const hasImages = data.imageBase64 && data.imageBase64.length > 0;
-    let sectionTitleFotosVideos = "FOTOS E VÍDEOS";
-    if (hasPhotos && !hasVideos && !hasImages) sectionTitleFotosVideos = "FOTOS";
-    else if (!hasPhotos && hasVideos && !hasImages) sectionTitleFotosVideos = "VÍDEOS";
-    else if (!hasPhotos && !hasVideos && hasImages) sectionTitleFotosVideos = "IMAGENS ADICIONAIS";
-    else if (hasImages && (hasPhotos || hasVideos)) sectionTitleFotosVideos = "FOTOS, VÍDEOS E IMAGENS ADICIONAIS";
+    let sectionTitle = "FOTOS E VÍDEOS";
+    if (hasPhotos && !hasVideos && !hasImages) {
+        sectionTitle = "FOTOS";
+    } else if (!hasPhotos && hasVideos && !hasImages) {
+        sectionTitle = "VÍDEOS";
+    } else if (!hasPhotos && !hasVideos && hasImages) {
+        sectionTitle = "IMAGENS ADICIONAIS";
+    } else if (hasImages && (hasPhotos || hasVideos)) {
+        sectionTitle = "FOTOS, VÍDEOS E IMAGENS ADICIONAIS";
+    }
 
     if (hasPhotos || hasVideos || hasImages) {
-        yPos = addSectionTitle(doc, yPos, sectionTitleFotosVideos, "4.3", 2, data);
-        if (hasPhotos) { /* ... (photo adding logic - unchanged) ... */ }
-        if (hasVideos) { /* ... (video QR code logic - unchanged) ... */ }
+        yPos = addSectionTitle(doc, yPos, sectionTitle, "4.3", 2, data);
+
+        // Adicionar Fotos (data.objetosApreendidos)
+        if (hasPhotos) {
+            const photoWidth = 50; // Largura de cada foto
+            const photoHeight = 50; // Altura de cada foto
+            let xPos = MARGIN_LEFT;
+
+            for (let i = 0; i < data.objetosApreendidos.length; i++) {
+                const photo = data.objetosApreendidos[i];
+                yPos = checkPageBreak(doc, yPos, photoHeight + 5, data);
+
+                try {
+                    let imageData = photo;
+                    if (photo instanceof File) {
+                        imageData = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(photo);
+                        });
+                    }
+                    doc.addImage(imageData, 'JPEG', xPos, yPos, photoWidth, photoHeight);
+                    xPos += photoWidth + 5; // Espaço entre fotos
+
+                    if (xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += photoHeight + 5;
+                    }
+                } catch (error) {
+                    console.error(`Erro ao adicionar foto ${i + 1}:`, error);
+                    doc.text(`[Erro ao carregar foto ${i + 1}]`, xPos, yPos + 5);
+                    xPos += photoWidth + 5;
+                    if (xPos + photoWidth > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += photoHeight + 5;
+                    }
+                }
+            }
+            yPos = xPos !== MARGIN_LEFT ? yPos + photoHeight + 5 : yPos; // Ajusta yPos após as fotos
+        }
+
+        // Adicionar QR Codes para os links de vídeos
+        if (hasVideos) {
+            const qrSize = 30; // Tamanho do QR code
+            let xPos = MARGIN_LEFT;
+
+            for (let i = 0; i < data.videoLinks.length; i++) {
+                const link = data.videoLinks[i];
+                yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
+
+                try {
+                    const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
+                    doc.addImage(qrCodeDataUrl, 'PNG', xPos, yPos, qrSize, qrSize);
+                    
+                    doc.setFontSize(8);
+                    doc.text(`Vídeo ${i + 1}`, xPos, yPos + qrSize + 5);
+                    xPos += qrSize + 10;
+
+                    if (xPos + qrSize > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += qrSize + 10;
+                    }
+                } catch (error) {
+                    console.error(`Erro ao gerar QR code para o vídeo ${i + 1}:`, error);
+                    doc.text(`[Erro ao gerar QR code para vídeo ${i + 1}]`, xPos, yPos + 5);
+                    xPos += qrSize + 10;
+                    if (xPos + qrSize > PAGE_WIDTH - MARGIN_RIGHT) {
+                        xPos = MARGIN_LEFT;
+                        yPos += qrSize + 10;
+                    }
+                }
+            }
+            yPos = xPos !== MARGIN_LEFT ? yPos + qrSize + 10 : yPos;
+        }
+
+        // Adicionar Imagens de data.imageBase64
         if (hasImages) {
-            yPos = checkPageBreak(doc, yPos, 50, data); // Reserve some space
+            yPos = checkPageBreak(doc, yPos, 100, data); // Reserva espaço para imagens
             yPos = addImagesToPDF(doc, yPos, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT);
         }
     } else {
@@ -313,66 +415,34 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     
     if (data.componentesGuarnicao && data.componentesGuarnicao.length > 0) {
         data.componentesGuarnicao.forEach((componente, index) => {
-            const isCondutor = index === 0;
-            // An officer is "de apoio" for PDF display if 'apoio' flag is true AND they are NOT the condutor.
-            const isDeApoioParaDisplay = componente.apoio === true && !isCondutor;
-
-            // Calculate estimated height for the current officer's content block for page break check
-            const fieldsHeight = 3 * 6; // Approx height for 3 fields (Nome, Posto, RG)
-            // Signature if Condutor OR (Not Condutor AND Not Apoio Display)
-            const signatureHeight = (isCondutor || !isDeApoioParaDisplay) ? 7 : 0; 
-            let currentOfficerContentHeight = fieldsHeight + signatureHeight;
-            
-            let spaceToReserve = currentOfficerContentHeight;
-            if (index > 0) { // If not the first officer, add inter-officer spacing to reservation
-                spaceToReserve += 20; // Approx. 15 (space before line) + 5 (space after line)
-            }
-            yPos = checkPageBreak(doc, yPos, spaceToReserve, data);
-
-            // Add inter-officer spacing and separator line if not the first officer
             if (index > 0) { 
-                yPos += 15;  // Space before separator line
+                yPos += 15;  // Aumentado para 15 para criar mais espaço entre identificações
+                yPos = checkPageBreak(doc, yPos, 5 + 50, data);
                 
+                // Adicionando uma linha separadora entre os militares
                 doc.setLineWidth(0.1);
-                doc.setDrawColor(200, 200, 200); // Light grey separator line
+                doc.setDrawColor(200, 200, 200);
                 doc.line(MARGIN_LEFT, yPos - 10, PAGE_WIDTH - MARGIN_RIGHT, yPos - 10);
-                doc.setDrawColor(0); // Reset draw color to black
+                doc.setDrawColor(0);
                 
-                yPos += 5; // Space after the line, before officer details start
+                yPos += 5; // Espaço adicional após a linha
             }
     
-            // Prepare display name with (APOIO) label if applicable, and ensure uppercase
-            let nomeDisplay = componente.nome ? componente.nome.toUpperCase() : "NOME NÃO INFORMADO";
-            if (isDeApoioParaDisplay) {
-                nomeDisplay += " (APOIO)";
-            }
-
-            yPos = addField(doc, yPos, "NOME COMPLETO", nomeDisplay, data);
-            yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto ? componente.posto.toUpperCase() : "POSTO NÃO INFORMADO", data);
-            yPos = addField(doc, yPos, "RG PMMT", componente.rg || "RG NÃO INFORMADO", data);
+            yPos = addField(doc, yPos, "NOME COMPLETO", componente.nome, data);
+            yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto, data);
+            yPos = addField(doc, yPos, "RG PMMT", componente.rg, data);
+            yPos = checkPageBreak(doc, yPos, 5, data);
     
-            // Add signature line if it's the Condutor OR if it's another member who is NOT deApoioParaDisplay
-            if (isCondutor || !isDeApoioParaDisplay) {
-                yPos = checkPageBreak(doc, yPos, 7, data); // Ensure space for signature line itself (approx 7mm)
-
-                const sigLineY = yPos; 
-                doc.setFont("helvetica", "normal"); 
-                doc.setFontSize(12);
-                doc.text("ASSINATURA:", MARGIN_LEFT, sigLineY);
-                
-                const labelWidth = doc.getTextWidth("ASSINATURA:");
-                const lineStartX = MARGIN_LEFT + labelWidth + 2; // Start line after label + small gap
-                const lineEndX = lineStartX + 80; // Length of signature line
-                
-                doc.setLineWidth(0.3); 
-                doc.line(lineStartX, sigLineY, lineEndX, sigLineY); // Draw the signature line
-                
-                yPos = sigLineY + 2; // Move yPos down past the signature line baseline + small padding
-                                     // This assumes the text "ASSINATURA:" doesn't extend much below baseline.
-                                     // A more robust value might be sigLineY + 5 or sigLineY + (font_height_mm).
-            }
-            // If isDeApoioParaDisplay (and not Condutor), no signature line is drawn.
-            // yPos remains at the position after the last 'addField' call for this officer.
+            const sigLineY = yPos;
+            doc.setFont("helvetica", "normal"); 
+            doc.setFontSize(12);
+            doc.text("ASSINATURA:", MARGIN_LEFT, sigLineY);
+            const labelWidth = doc.getTextWidth("ASSINATURA:");
+            const lineStartX = MARGIN_LEFT + labelWidth + 2;
+            const lineEndX = lineStartX + 80;
+            doc.setLineWidth(0.3); 
+            doc.line(lineStartX, sigLineY, lineEndX, sigLineY);
+            yPos = sigLineY + 2;
         });
     } else {
         yPos = addWrappedText(doc, yPos, "Dados da Guarnição não informados.", MARGIN_LEFT, 12, 'italic', MAX_LINE_WIDTH, 'left', data);
