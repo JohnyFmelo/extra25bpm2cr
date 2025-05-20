@@ -91,26 +91,6 @@ const formatPhone = (phone: string): string => {
   return phone;
 };
 
-const validateCPF = (cpf: string): boolean => {
-  cpf = cpf.replace(/\D/g, '');
-  if (cpf.length !== 11) return false;
-  if (/^(\d)\1{10}$/.test(cpf)) return false;
-  let sum = 0;
-  for (let i = 0; i < 9; i++) {
-    sum += parseInt(cpf.charAt(i)) * (10 - i);
-  }
-  let remainder = sum % 11;
-  let digit1 = remainder < 2 ? 0 : 11 - remainder;
-  if (digit1 !== parseInt(cpf.charAt(9))) return false;
-  sum = 0;
-  for (let i = 0; i < 10; i++) {
-    sum += parseInt(cpf.charAt(i)) * (11 - i);
-  }
-  remainder = sum % 11;
-  let digit2 = remainder < 2 ? 0 : 11 - remainder;
-  return digit2 === parseInt(cpf.charAt(10));
-};
-
 const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
   if (!componentes || componentes.length === 0) return "[GUPM PENDENTE]";
 
@@ -515,18 +495,10 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     let processedValue = value;
     if (field === 'cpf') {
       processedValue = formatCPF(value);
-      if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
-        toast({
-          title: "CPF Inválido (Vítima)",
-          description: "O CPF informado não é válido.",
-          className: "bg-red-600 text-white border-red-700",
-          duration: 7000
-        });
-      }
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
     }
-
+  
     if (newVitimas[index].nome === "O ESTADO" && field === 'nome' && value.trim() !== "O ESTADO") {
       newVitimas[index] = { ...initialPersonData, [field]: processedValue };
     } else {
@@ -540,14 +512,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     let processedValue = value;
     if (field === 'cpf') {
       processedValue = formatCPF(value);
-      if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
-        toast({
-          title: "CPF Inválido (Testemunha)",
-          description: "O CPF informado não é válido.",
-          className: "bg-red-600 text-white border-red-700",
-          duration: 7000
-        });
-      }
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
     }
@@ -560,14 +524,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     let processedValue = value;
     if (field === 'cpf') {
       processedValue = formatCPF(value);
-      if (processedValue.replace(/\D/g, '').length === 11 && !validateCPF(processedValue)) {
-        toast({
-          title: "CPF Inválido (Autor)",
-          description: "O CPF informado não é válido.",
-          className: "bg-red-600 text-white border-red-700",
-          duration: 7000
-        });
-      }
     } else if (field === 'celular') {
       processedValue = formatPhone(value);
     } else if (field === 'dataNascimento') {
@@ -596,18 +552,18 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     }
     newAutores[index] = { ...newAutores[index], [field]: processedValue };
     setAutores(newAutores);
-
+  
     if (index === 0 && field === 'nome') {
       setAutor(processedValue);
     }
   };
-
-  const handleRelatoPolicialChange = (value: string) => {
-    setRelatoPolicial(value);
-    if (value !== relatoPolicialTemplate && !value.includes("[HORÁRIO]")) {
-      setIsRelatoPolicialManuallyEdited(true);
-    }
-  };
+  
+    const handleRelatoPolicialChange = (value: string) => {
+      setRelatoPolicial(value);
+      if (value !== relatoPolicialTemplate && !value.includes("[HORÁRIO]")) {
+        setIsRelatoPolicialManuallyEdited(true);
+      }
+    };
 
   const handleAddVideoLink = () => {
     if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
