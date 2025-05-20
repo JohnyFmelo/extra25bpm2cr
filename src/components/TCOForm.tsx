@@ -404,7 +404,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   }, [componentesGuarnicao, toast]);
 
   const handleRemovePolicialFromList = useCallback((index: number) => {
-    setComponentesGuarnicao(prevList => prevList.filter((_, index) => index !== index));
+    setComponentesGuarnicao(prevList => prevList.filter((_, i) => i !== index));
   }, []);
 
   const handleToggleApoioPolicial = useCallback((index: number) => {
