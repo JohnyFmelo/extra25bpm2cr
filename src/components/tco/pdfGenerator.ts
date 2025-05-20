@@ -1,3 +1,4 @@
+
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -17,50 +18,6 @@ import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
-
-// Função auxiliar para adicionar imagens ao PDF
-const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; data: string }[], pageWidth: number, pageHeight: number) => {
-    const maxImageWidth = pageWidth - MARGIN_RIGHT * 2; // Largura máxima da imagem
-    const maxImageHeight = 100; // Altura máxima por imagem (ajustável)
-    const marginBetweenImages = 10; // Espaço entre imagens
-    let currentY = yPosition;
-
-    for (const image of images) {
-        try {
-            // Extrai o formato da imagem a partir do início da string base64
-            const formatMatch = image.data.match(/^data:image\/(jpeg|png);base64,/);
-            const format = formatMatch ? formatMatch[1].toUpperCase() : 'JPEG'; // Default para JPEG
-
-            // Remove o prefixo "data:image/..." para obter apenas os dados base64
-            const base64Data = image.data.replace(/^data:image\/[a-z]+;base64,/, '');
-
-            // Verifica se a posição atual ultrapassa o limite da página
-            if (currentY + maxImageHeight + MARGIN_BOTTOM > pageHeight) {
-                currentY = addNewPage(doc, {});
-                currentY = MARGIN_TOP; // Reseta a posição Y
-            }
-
-            // Adiciona a imagem ao PDF
-            doc.addImage(base64Data, format, MARGIN_RIGHT, currentY, maxImageWidth, 0); // Altura 0 para manter proporção
-
-            // Obtém as dimensões reais da imagem adicionada
-            const imgProps = doc.getImageProperties(base64Data);
-            const imgHeight = (imgProps.height * maxImageWidth) / imgProps.width; // Calcula altura proporcional
-
-            // Atualiza a posição Y
-            currentY += imgHeight + marginBetweenImages;
-
-            // Adiciona o nome do arquivo como legenda
-            doc.setFontSize(8);
-            doc.text(`Imagem: ${image.name}`, MARGIN_RIGHT, currentY);
-            currentY += 5; // Espaço após a legenda
-        } catch (error) {
-            console.error(`Erro ao adicionar imagem ${image.name}:`, error);
-        }
-    }
-
-    return currentY; // Retorna a nova posição Y
-};
 
 // --- Função Principal de Geração ---
 export const generatePDF = async (inputData: any): Promise<Blob> => {

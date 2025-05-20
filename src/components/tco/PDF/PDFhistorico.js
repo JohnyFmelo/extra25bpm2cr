@@ -1,4 +1,3 @@
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -50,6 +49,44 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight) => {
 };
 
 /**
+ * Função para adicionar QR Code ao PDF
+ * @param {Object} doc - Documento jsPDF
+ * @param {number} x - Posição X do QR Code
+ * @param {number} y - Posição Y do QR Code
+ * @param {string} url - URL para o QR Code
+ * @param {string} label - Texto descritivo para o QR Code
+ * @param {number} size - Tamanho do QR Code (opcional)
+ * @returns {Promise<number>} - Retorna a nova posição Y após adicionar o QR code
+ */
+const addQRCodeToPDF = async (doc, x, y, url, label, size = 30) => {
+    try {
+        const qrCodeDataURL = await QRCode.toDataURL(url, {
+            margin: 1,
+            width: size
+        });
+        
+        doc.addImage(qrCodeDataURL, 'PNG', x, y, size, size);
+        
+        // Adiciona o label abaixo do QR code
+        doc.setFontSize(8);
+        const textWidth = doc.getTextWidth(label);
+        const centerX = x + (size / 2) - (textWidth / 2);
+        
+        doc.text(label, centerX, y + size + 5);
+        
+        return y + size + 10; // Retorna a posição Y após o QR code e o label
+    } catch (error) {
+        console.error('Erro ao gerar QR Code:', error);
+        // Adiciona mensagem de erro no PDF
+        doc.setFontSize(8);
+        doc.setTextColor(255, 0, 0);
+        doc.text(`Erro ao gerar QR Code para: ${url}`, x, y + 5);
+        doc.setTextColor(0, 0, 0);
+        return y + 10;
+    }
+};
+
+/**
  * Gera o conteúdo das seções 1 a 5 do TCO.
  * Assume que começa após uma chamada a `addNewPage`.
  * Retorna a posição Y final após adicionar todo o conteúdo.
@@ -83,8 +120,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addField(doc, yPos, "COMUNICANTE", upperCaseData.comunicante, data);
 
     // --- SEÇÃO 2: ENVOLVIDOS ---
-    yPos = addSectionTitle(doc, yPos, "ENVOLVIDOS", "2", 1, data);
-
     const autoresValidos = data.autores ? data.autores.filter(a => a?.nome) : [];
     let autorTitle;
     if (autoresValidos.length === 1) {
@@ -289,6 +324,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     const hasPhotos = data.objetosApreendidos && data.objetosApreendidos.length > 0;
     const hasVideos = data.videoLinks && data.videoLinks.length > 0;
     const hasImages = data.imageBase64 && data.imageBase64.length > 0;
+    
     let sectionTitleFotosVideos = "FOTOS E VÍDEOS";
     if (hasPhotos && !hasVideos && !hasImages) sectionTitleFotosVideos = "FOTOS";
     else if (!hasPhotos && hasVideos && !hasImages) sectionTitleFotosVideos = "VÍDEOS";
@@ -297,11 +333,76 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
     if (hasPhotos || hasVideos || hasImages) {
         yPos = addSectionTitle(doc, yPos, sectionTitleFotosVideos, "4.3", 2, data);
-        if (hasPhotos) { /* ... (photo adding logic - unchanged) ... */ }
-        if (hasVideos) { /* ... (video QR code logic - unchanged) ... */ }
+        
+        // Adicionar imagens anexadas
         if (hasImages) {
             yPos = checkPageBreak(doc, yPos, 50, data); // Reserve some space
             yPos = addImagesToPDF(doc, yPos, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT);
+        }
+        
+        // Adicionar QR Codes para links de vídeos
+        if (hasVideos) {
+            yPos = addSectionTitle(doc, yPos, "LINKS PARA VÍDEOS", "4.3.1", 3, data);
+            yPos = checkPageBreak(doc, yPos, 40, data); // Reserva espaço para os QR Codes
+            
+            // Implementar layout em grade para os QR codes
+            const qrSize = 30; // Tamanho de cada QR Code
+            const qrMargin = 10; // Margem entre QR Codes
+            const qrTextHeight = 10; // Espaço para o texto abaixo do QR Code
+            const maxQRsPerRow = 3; // Máximo de QR codes por linha
+            
+            let currentX = MARGIN_LEFT;
+            let currentY = yPos;
+            const startY = yPos;
+            
+            for (let i = 0; i < data.videoLinks.length; i++) {
+                const link = data.videoLinks[i];
+                
+                // Se atingiu o máximo por linha, vai para a próxima linha
+                if (i > 0 && i % maxQRsPerRow === 0) {
+                    currentX = MARGIN_LEFT;
+                    currentY += qrSize + qrTextHeight + qrMargin;
+                    
+                    // Verifica se precisa de nova página
+                    if (currentY + qrSize + qrTextHeight > PAGE_HEIGHT - 20) {
+                        currentY = addNewPage(doc, data);
+                    }
+                }
+                
+                // Adiciona o QR Code
+                try {
+                    const qrCodeDataURL = await QRCode.toDataURL(link.url, {
+                        margin: 1,
+                        width: qrSize
+                    });
+                    
+                    doc.addImage(qrCodeDataURL, 'PNG', currentX, currentY, qrSize, qrSize);
+                    
+                    // Adiciona legenda abaixo do QR Code
+                    doc.setFontSize(8);
+                    const label = link.descricao || `Vídeo ${i + 1}`;
+                    const textWidth = doc.getTextWidth(label);
+                    const centerX = currentX + (qrSize / 2) - (textWidth / 2);
+                    
+                    doc.text(label, centerX, currentY + qrSize + 5);
+                    
+                } catch (error) {
+                    console.error(`Erro ao gerar QR Code para vídeo ${i+1}:`, error);
+                    // Adiciona erro no PDF
+                    doc.setFontSize(8);
+                    doc.setTextColor(255, 0, 0);
+                    doc.text(`Erro no QR #${i+1}`, currentX, currentY + 10);
+                    doc.setTextColor(0, 0, 0);
+                }
+                
+                // Avança para o próximo QR Code na mesma linha
+                currentX += qrSize + qrMargin;
+            }
+            
+            // Atualiza a posição Y para após a última linha de QR Codes
+            const qrRows = Math.ceil(data.videoLinks.length / maxQRsPerRow);
+            const totalQRHeight = qrRows * (qrSize + qrTextHeight + qrMargin);
+            yPos = startY + totalQRHeight;
         }
     } else {
         yPos = addSectionTitle(doc, yPos, "FOTOS E VÍDEOS", "4.3", 2, data);
