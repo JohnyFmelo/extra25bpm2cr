@@ -49,6 +49,7 @@ export const TravelManagement = () => {
 
   const { toast } = useToast();
   
+  // Garanta que 'user' no localStorage tenha 'userType: "admin"' para isAdmin ser true
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
 
@@ -97,11 +98,10 @@ export const TravelManagement = () => {
   useEffect(() => {
     const q = query(collection(db, "travels"));
     const unsubscribe = onSnapshot(q, querySnapshot => {
-      // Fix type conversion issue here - map the data correctly to the Travel interface
       const travelsData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Travel[]; // Cast as an array of Travel objects
+      })) as Travel[];
       setTravels(travelsData);
     });
     return () => unsubscribe();
@@ -172,7 +172,6 @@ export const TravelManagement = () => {
   };
 
   const handleDeleteTravel = async (travelId: string) => {
-    // ADICIONADO: Pergunta de segurança para excluir viagem
     const confirmDelete = window.confirm("Tem certeza que deseja excluir esta viagem permanentemente? Esta ação não pode ser desfeita.");
     if (!confirmDelete) {
         return;
@@ -345,11 +344,7 @@ export const TravelManagement = () => {
     if (travel.isLocked) {
         const finalSelected = travel.selectedVolunteers || [];
         displayList = displayList.map(v => ({ ...v, isSelected: finalSelected.includes(v.fullName) }));
-        
-        // MODIFICAÇÃO 2: Ocultar voluntários não selecionados quando a viagem está bloqueada
-        displayList = displayList.filter(v => v.isSelected); // Mostrar apenas os realmente selecionados
-        
-        // Ordenar os selecionados pela ordem que aparecem em travel.selectedVolunteers
+        displayList = displayList.filter(v => v.isSelected);
         displayList.sort((a,b) => {
             return finalSelected.indexOf(a.fullName) - finalSelected.indexOf(b.fullName);
         });
@@ -377,10 +372,9 @@ export const TravelManagement = () => {
   };
 
   const handleRemoveVolunteer = async (travelId: string, volunteerName: string) => {
-    // MODIFICAÇÃO 3: Adicionar pergunta de segurança
     const confirmRemove = window.confirm(`Tem certeza que deseja remover "${volunteerName}" da lista de inscritos para esta viagem? Esta ação não remove o usuário do sistema.`);
     if (!confirmRemove) {
-        return; // Usuário cancelou
+        return; 
     }
 
     try {
@@ -439,7 +433,6 @@ export const TravelManagement = () => {
 
   return <>
       {showRankingRules && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          {/* ... (código do modal de regras inalterado) ... */}
           <Card className="p-6 bg-white shadow-xl max-w-md w-full relative border border-gray-100 rounded-lg">
             <h2 className="text-xl font-semibold mb-4 text-blue-900">Regras de Ordenação Automática</h2>
             <ol className="list-decimal list-inside text-sm space-y-2 text-gray-600">
@@ -453,9 +446,6 @@ export const TravelManagement = () => {
           </Card>
         </div>}
 
-      {/* MODIFICAÇÃO 1: Contêiner de Viagens Transparente (removendo bg- se houver, ou garantindo que não haja) */}
-      {/* Este div já não tinha uma cor de fundo explícita. Se o fundo não estiver transparente, */}
-      {/* a cor vem de um elemento pai não controlado por este componente. */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-transparent">
         {travels
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
@@ -466,7 +456,6 @@ export const TravelManagement = () => {
             today.setHours(0, 0, 0, 0);
 
             const isLocked = travel.isLocked ?? false;
-            // getSortedVolunteers agora retorna apenas os selecionados se isLocked for true
             const displayVolunteersList = getSortedVolunteers(travel); 
             
             let numDays = 0;
@@ -475,7 +464,7 @@ export const TravelManagement = () => {
             const formattedDailyCount = formattedDiaryCount(dailyCount);
             const totalCost = (travel.dailyRate && dailyCount > 0) ? dailyCount * Number(travel.dailyRate) : 0;
 
-            let cardBg = "bg-white"; // Cor de fundo padrão para o Card individual
+            let cardBg = "bg-white";
             let statusBadge = null;
             const rightPosDropdown = "right-2";
             const rightPosStatus = isAdmin ? "right-12 sm:right-14" : "right-2"; 
@@ -487,7 +476,6 @@ export const TravelManagement = () => {
                         Processando diária
                       </div>;
               } else {
-                // Mantém a cor de fundo padrão (bg-white) para cards de viagens futuras e abertas
                 statusBadge = <div className={`absolute top-3 ${rightPosStatus} bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 text-xs rounded-full shadow-sm whitespace-nowrap`}>
                         Em aberto
                         <button onClick={e => { e.stopPropagation(); setShowRankingRules(true); }} className="hover:bg-white/20 rounded-full p-0.5 transition-colors">
@@ -517,7 +505,6 @@ export const TravelManagement = () => {
                 {statusBadge}
 
                 {isAdmin && <DropdownMenu>
-                    {/* ... (dropdown inalterado) ... */}
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className={`absolute top-2 ${rightPosDropdown} h-8 w-8 p-0 hover:bg-black/10 rounded-full z-10`}>
                         <MoreHorizontal className="h-5 w-5" />
@@ -540,7 +527,6 @@ export const TravelManagement = () => {
                   </DropdownMenu>}
 
                 <div className="p-4 cursor-pointer" onClick={() => toggleExpansion(travel.id)}>
-                  {/* ... (informações da viagem inalteradas) ... */}
                   <div className="space-y-3">
                     <div>
                       <h3 className="text-lg font-semibold mb-1.5 text-blue-900 pr-8">
@@ -561,14 +547,11 @@ export const TravelManagement = () => {
                       </div>
                     </div>
                     
-                    {/* Seção de Voluntários: A lista `displayVolunteersList` já está filtrada se `isLocked` */}
                     {(expandedTravels.includes(travel.id) || displayVolunteersList.length > 0 || (isAdmin && !isLocked && today < travelStart)) && (
                     <div className="pt-3 border-t border-gray-200">
                         <div className="flex justify-between items-center mb-2">
                           <h4 className="font-medium text-sm text-gray-800">
-                            {/* A contagem de inscritos ainda reflete o total original */}
                             Voluntários ({travel.volunteers?.length || 0} inscritos 
-                            {/* A contagem de selecionados agora reflete o tamanho da lista exibida se isLocked */}
                             {isLocked ? `, ${displayVolunteersList.length} selecionados` : ''})
                           </h4>
                           {isAdmin && today < travelStart && !isLocked && (
@@ -580,7 +563,7 @@ export const TravelManagement = () => {
                         </div>
                         {displayVolunteersList.length > 0 ? (
                           <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-                            {displayVolunteersList.map(vol => ( // Usando a lista já processada
+                            {displayVolunteersList.map(vol => (
                             <div 
                                 key={vol.fullName} 
                                 title={isAdmin && !isLocked && today < travelStart ? "Duplo clique para selecionar/desselecionar manualmente" : ""}
@@ -597,7 +580,6 @@ export const TravelManagement = () => {
                                   }
                                 }}>
                               <div className="flex items-center gap-2 overflow-hidden">
-                                {/* O indicador visual de selecionado continua relevante */}
                                 {(vol.isSelected || (vol.isManual && !isLocked)) && <div className={`w-2 h-2 rounded-full shrink-0 ${vol.isSelected ? 'bg-green-500' : 'bg-yellow-500'}`}></div>}
                                 <span className={`truncate ${vol.isSelected ? "font-medium text-green-800" : vol.isManual && !isLocked ? 'font-medium text-yellow-800' : "text-gray-800"}`}>
                                   {vol.fullName}
@@ -613,7 +595,7 @@ export const TravelManagement = () => {
                                 {isAdmin && today < travelStart && !isLocked && (
                                   <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-red-100 rounded-full text-red-500" 
                                     onClick={e => { e.stopPropagation(); handleRemoveVolunteer(travel.id, vol.fullName); }}
-                                    title="Remover voluntário da viagem"> {/* Título atualizado para clareza */}
+                                    title="Remover voluntário da viagem">
                                     <X className="h-3.5 w-3.5" />
                                   </Button>
                                 )}
@@ -628,7 +610,6 @@ export const TravelManagement = () => {
                       </div>
                     )}
 
-                    {/* ... (botão Quero ser Voluntário inalterado) ... */}
                     {canUserVolunteer && (
                       <div className="mt-4 pt-3 border-t border-gray-200">
                         <Button 
@@ -647,16 +628,16 @@ export const TravelManagement = () => {
           })}
       </div>
 
-      {/* ... (botão de criar viagem e modal inalterados) ... */}
+      {/* Botão Flutuante MODIFICADO para ter a aparência do primeiro código */}
+      {/* Lembre-se que este botão só aparece se 'isAdmin' for true. */}
       {isAdmin && <Button 
                     onClick={() => setIsModalOpen(true)} 
-                    className="fixed bottom-6 right-6 rounded-full p-0 bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 h-14 w-14 flex items-center justify-center z-30"
-                    title="Criar Nova Viagem">
-          <Plus className="h-7 w-7" />
+                    className="fixed bottom-6 right-6 rounded-full p-4 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] text-base py-[26px] z-30" // Aplicadas classes do primeiro código + z-30
+                    >
+          <Plus className="h-6 w-6" /> {/* Ícone ajustado para h-6 w-6 */}
         </Button>}
 
       {isModalOpen && <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          {/* ... (conteúdo do modal de criação/edição inalterado) ... */}
           <Card className="p-6 bg-white shadow-2xl max-w-lg w-full relative rounded-lg">
             <button onClick={() => { setIsModalOpen(false); setEditingTravel(null); setStartDate(""); setEndDate(""); setSlots(""); setDestination(""); setDailyAllowance(""); setDailyRate(""); setHalfLastDay(false);}} 
                     className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition-colors p-1 rounded-full hover:bg-gray-100" title="Fechar">
