@@ -205,3 +205,18 @@ export const splitTextToLines = (doc, text, maxWidth) => {
   const lines = doc.splitTextToSize(text, maxWidth);
   return lines;
 };
+
+// Função para retornar a data atual por extenso
+export const getDataAtualExtenso = () => {
+  const meses = [
+    'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
+    'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'
+  ];
+  
+  const data = new Date();
+  const dia = data.getDate();
+  const mes = meses[data.getMonth()];
+  const ano = data.getFullYear();
+  
+  return `AOS ${dia} DIAS DO MÊS DE ${mes} DO ANO DE ${ano}`;
+};
