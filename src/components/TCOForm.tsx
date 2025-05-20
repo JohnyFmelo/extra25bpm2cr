@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; // Card ainda é usado para Anexos e Drogas
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; // Card ainda é usado para Anexos e Drogas
 import { Input } from "@/components/ui/input"; // Mantendo o original, se for o ShadCN UI Input
 import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +11,7 @@ import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
 import GuarnicaoTab from "./tco/GuarnicaoTab";
 import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
+import ApreensaoTab from "./tco/ApreensaoTab"; // Novo componente importado
 import { generatePDF } from "./tco/pdfGenerator";
 import supabase from "@/lib/supabaseClient"; // Não usado diretamente aqui, mas presumivelmente em utilitários
 import { uploadPDF, saveTCOMetadata } from '@/lib/supabaseStorage';
@@ -242,6 +243,10 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const [relatoTestemunha, setRelatoTestemunha] = useState("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.");
   const [conclusaoPolicial, setConclusaoPolicial] = useState("");
   const [isRelatoPolicialManuallyEdited, setIsRelatoPolicialManuallyEdited] = useState(false);
+
+  // Novas variáveis de estado para apreensão
+  const [houveApreensao, setHouveApreensao] = useState("nao");
+  const [descricaoApreensao, setDescricaoApreensao] = useState("");
 
   useEffect(() => {
     if (tcoNumber && !isTimerRunning) {
@@ -804,6 +809,18 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
       return;
     }
+
+    // Validação para apreensão em caso de Perturbação do Sossego
+    if (natureza === "Perturbação do Sossego" && houveApreensao === "sim" && !descricaoApreensao.trim()) {
+      toast({
+        title: "Campo Obrigatório",
+        description: "Por favor, descreva o material apreendido.",
+        className: "bg-red-600 text-white border-red-700",
+        duration: 7000
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setIsTimerRunning(false); // Para o timer ao iniciar o submit
 
@@ -883,6 +900,8 @@ const TCOForm: React.FC<TCOFormProps> = ({
         juizadoEspecialHora: juizadoEspecialHora.trim() || undefined,
         relatoVitima: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' ? relatoVitima.trim() : undefined,
         representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined,
+        houveApreensao: natureza === "Perturbação do Sossego" ? houveApreensao : undefined,
+        descricaoApreensao: natureza === "Perturbação do Sossego" && houveApreensao === "sim" ? descricaoApreensao.trim() : undefined,
         downloadLocal: true // Sinaliza para o gerador de PDF para iniciar o download
       };
 
@@ -993,6 +1012,19 @@ const TCOForm: React.FC<TCOFormProps> = ({
           <BasicInformationTab tcoNumber={tcoNumber} setTcoNumber={setTcoNumber} natureza={natureza} setNatureza={setNatureza} autor={autor} setAutor={setAutor} 
         penaDescricao={penaDescricao} naturezaOptions={naturezaOptions} customNatureza={customNatureza} setCustomNatureza={setCustomNatureza} startTime={startTime} isTimerRunning={isTimerRunning} juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData} juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora} />
         </div>
+
+        {/* Seção especial de Apreensão para Perturbação do Sossego */}
+        {natureza === "Perturbação do Sossego" && (
+          <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
+            <h2 className="text-xl font-semibold mb-4">Apreensões</h2>
+            <ApreensaoTab
+              houveApreensao={houveApreensao}
+              setHouveApreensao={setHouveApreensao}
+              descricaoApreensao={descricaoApreensao}
+              setDescricaoApreensao={setDescricaoApreensao}
+            />
+          </div>
+        )}
 
         {/* Card para Verificação de Entorpecente (condicional) - Mantido como Card */}
         {natureza === "Porte de drogas para consumo" && <Card className="mb-8"> 
