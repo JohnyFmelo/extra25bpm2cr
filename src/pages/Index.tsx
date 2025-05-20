@@ -25,6 +25,7 @@ import UpcomingShifts from "@/components/UpcomingShifts";
 import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
+import RankingChart from "@/components/RankingChart";
 interface IndexProps {
   initialActiveTab?: string;
 }
@@ -40,6 +41,7 @@ const Index = ({
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [hasNotifications, setHasNotifications] = useState(false);
   const [activeTrips, setActiveTrips] = useState<any[]>([]);
+  const [travelTab, setTravelTab] = useState("trips");
   const {
     toast
   } = useToast();
@@ -113,7 +115,15 @@ const Index = ({
     setActiveTab("travel");
   };
   const handleTCOClick = () => {
-    setActiveTab("tco");
+    if (user.userType === "admin") {
+      setActiveTab("tco");
+    } else {
+      toast({
+        variant: "warning",
+        title: "Funcionalidade Restrita",
+        description: "O módulo TCO está em desenvolvimento e disponível apenas para administradores."
+      });
+    }
   };
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -123,6 +133,17 @@ const Index = ({
   const handleTabChange = (tab: string) => {
     if (tab === 'hours') {
       navigate('/hours');
+    } else if (tab === 'tco') {
+      if (user.userType === "admin") {
+        setActiveTab(tab);
+      } else {
+        toast({
+          variant: "warning",
+          title: "Funcionalidade Restrita",
+          description: "O módulo TCO está em desenvolvimento e disponível apenas para administradores."
+        });
+        return;
+      }
     } else {
       setActiveTab(tab);
     }
@@ -267,8 +288,21 @@ const Index = ({
                 </button>
               </div>
               <Card className="shadow-md">
-                <CardContent className="p-6 my-0 mx-0 py-0 px-[9px]">
-                  <TravelManagement />
+                <CardContent className="p-6 my-0 mx-0 px-[9px] py-[13px]">
+                  <Tabs value={travelTab} onValueChange={setTravelTab} className="w-full">
+                    <TabsList className="w-full mb-6 justify-between py-[20px] my-[11px]">
+                      <TabsTrigger value="trips" className="flex-1">Viagens</TabsTrigger>
+                      <TabsTrigger value="ranking" className="flex-1">Ranking</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="trips" className="mt-0">
+                      <TravelManagement />
+                    </TabsContent>
+                    
+                    <TabsContent value="ranking" className="mt-0">
+                      <RankingChart />
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             </div>

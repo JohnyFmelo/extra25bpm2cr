@@ -4,6 +4,7 @@ import { Clock, Calendar, MapPinned, Scale, Settings, Home } from "lucide-react"
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "@/hooks/use-toast";
 
 interface BottomMenuItemProps {
   icon: React.ReactNode;
@@ -77,6 +78,18 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
       navigate("/");
     } else if (tab === "hours") {
       navigate("/hours");
+    } else if (tab === "tco") {
+      if (isAdmin) {
+        navigate("/", { state: { activeTab: tab } });
+      } else {
+        // Show notification for non-admin users
+        toast({
+          variant: "warning",
+          title: "Funcionalidade Restrita",
+          description: "O módulo TCO está em desenvolvimento e disponível apenas para administradores."
+        });
+        return;
+      }
     } else {
       // For tabs that don't have dedicated pages yet, navigate to home with state
       navigate("/", { state: { activeTab: tab } });
@@ -85,8 +98,6 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
     onTabChange(tab);
   };
   
-  // Calculate the height of the bottom menu bar to use as a CSS variable
-  // This will be used to add padding to the bottom of the content
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] border-t border-gray-100 flex justify-center z-40">
       <div className="flex justify-around items-center w-full max-w-5xl mx-auto rounded-t-xl py-[6px]">
@@ -114,14 +125,13 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
           onClick={() => handleTabChange("travel")} 
           active={activeTab === "travel"} 
         />
-        {isAdmin && (
-          <BottomMenuItem 
-            icon={<Scale className="h-5 w-5" />} 
-            label="TCO" 
-            onClick={() => handleTabChange("tco")} 
-            active={activeTab === "tco"} 
-          />
-        )}
+        {/* Now showing TCO for all users */}
+        <BottomMenuItem 
+          icon={<Scale className="h-5 w-5" />} 
+          label="TCO" 
+          onClick={() => handleTabChange("tco")} 
+          active={activeTab === "tco"} 
+        />
         <BottomMenuItem 
           icon={<Settings className="h-5 w-5" />} 
           label="Config" 
