@@ -1,15 +1,16 @@
-import React, { useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toUpperCase } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+
 interface GeneralInformationTabProps {
   natureza: string;
   tipificacao: string;
   setTipificacao: (value: string) => void;
   isCustomNatureza: boolean;
-  customNatureza: string;
+  customNatureza?: string;
   dataFato: string;
   setDataFato: (value: string) => void;
   horaFato: string;
@@ -25,18 +26,15 @@ interface GeneralInformationTabProps {
   municipio: string;
   comunicante: string;
   setComunicante: (value: string) => void;
-  condutorNome: string;
-  condutorPosto: string;
-  condutorRg: string;
   guarnicao: string;
   setGuarnicao: (value: string) => void;
   operacao: string;
   setOperacao: (value: string) => void;
-  juizadoEspecialData?: string;
-  setJuizadoEspecialData?: (value: string) => void;
-  juizadoEspecialHora?: string;
-  setJuizadoEspecialHora?: (value: string) => void;
+  condutorNome: string;
+  condutorPosto: string;
+  condutorRg: string;
 }
+
 const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   natureza,
   tipificacao,
@@ -58,99 +56,264 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   municipio,
   comunicante,
   setComunicante,
-  condutorNome,
-  condutorPosto,
-  condutorRg,
   guarnicao,
   setGuarnicao,
   operacao,
-  setOperacao
+  setOperacao,
+  condutorNome,
+  condutorPosto,
+  condutorRg
 }) => {
-  const displayNatureza = isCustomNatureza ? customNatureza || "Outros" : natureza;
+  // Mostrar o nome da natureza adequado (natureza padrão ou customizada)
+  const displayNatureza = isCustomNatureza ? customNatureza || "[PERSONALIZADA]" : natureza;
 
-  // Set default time to current time if empty
-  useEffect(() => {
-    if (!horaFato) {
-      const now = new Date();
-      setHoraFato(now.toTimeString().slice(0, 5));
-    }
-  }, [horaFato, setHoraFato]);
-
-  // The handleInputChange functions ensure we keep the values in uppercase in the PDF
-  // but we don't need to modify the inputs themselves since we're handling the uppercase
-  // conversion in the PDF generation
-
-  return <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">Dados da Ocorrência</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 px-[5px]">
+  return (
+    <div className="space-y-6 px-[6px]">
+      {/* Tipificação Legal e Pena */}
+      <div className="grid gap-4 md:grid-cols-1">
         <div>
-          <Label htmlFor="naturezaOcorrencia">NATUREZA DA OCORRÊNCIA</Label>
-          {isCustomNatureza ? <Input id="naturezaOcorrencia" placeholder="Informe a natureza da ocorrência" value={customNatureza} /> : <Input id="naturezaOcorrencia" readOnly value={displayNatureza} />}
+          <Label htmlFor="tipificacao" className="font-bold">
+            Tipificação Legal {isCustomNatureza && "- Preencha para natureza personalizada"}
+          </Label>
+          <Textarea
+            id="tipificacao"
+            value={tipificacao}
+            onChange={(e) => setTipificacao(e.target.value)}
+            rows={2}
+            className={cn(
+              "mt-1 resize-none",
+              isCustomNatureza ? "border-blue-400 focus:border-blue-600" : ""
+            )}
+            placeholder={isCustomNatureza ? "Digite a tipificação legal completa..." : ""}
+          />
         </div>
         
-        <div>
-          <Label htmlFor="tipificacaoLegal">TIPIFICAÇÃO LEGAL</Label>
-          {isCustomNatureza ? <Input id="tipificacaoLegal" placeholder="Informe a tipificação legal" value={tipificacao} onChange={e => setTipificacao(e.target.value)} /> : <Input id="tipificacaoLegal" readOnly value={tipificacao} />}
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
+        {/* Oculta a Pena quando natureza for "Outros" */}
+        {natureza !== "Outros" && (
           <div>
-            <Label htmlFor="dataFato">DATA DO FATO</Label>
-            <Input id="dataFato" type="date" value={dataFato} onChange={e => setDataFato(e.target.value)} />
+            <Label htmlFor="pena" className="font-bold">
+              Pena
+            </Label>
+            <Textarea
+              id="pena"
+              value={tipificacao ? "PENA: DETENÇÃO DE X A Y..." : ""}
+              readOnly
+              rows={2}
+              className="mt-1 bg-gray-50 resize-none"
+              placeholder="A pena será exibida automaticamente com base na tipificação."
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Data, Hora e Local do Fato */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label htmlFor="dataFato" className="font-bold">
+            Data do Fato
+          </Label>
+          <Input
+            id="dataFato"
+            type="date"
+            value={dataFato}
+            onChange={(e) => setDataFato(e.target.value)}
+            className="mt-1"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="horaFato" className="font-bold">
+            Hora do Fato
+          </Label>
+          <Input
+            id="horaFato"
+            type="time"
+            value={horaFato}
+            onChange={(e) => setHoraFato(e.target.value)}
+            className="mt-1"
+            required
+          />
+        </div>
+      </div>
+
+      {/* Início e Término do Registro */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label htmlFor="dataInicioRegistro" className="font-bold">
+            Data de Início do Registro
+          </Label>
+          <Input
+            id="dataInicioRegistro"
+            type="date"
+            value={dataInicioRegistro}
+            readOnly
+            className="mt-1 bg-gray-50"
+          />
+        </div>
+        <div>
+          <Label htmlFor="horaInicioRegistro" className="font-bold">
+            Hora de Início do Registro
+          </Label>
+          <Input
+            id="horaInicioRegistro"
+            type="time"
+            value={horaInicioRegistro}
+            readOnly
+            className="mt-1 bg-gray-50"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label htmlFor="dataTerminoRegistro" className="font-bold">
+            Data de Término do Registro
+          </Label>
+          <Input
+            id="dataTerminoRegistro"
+            type="date"
+            value={dataTerminoRegistro}
+            readOnly
+            className="mt-1 bg-gray-50"
+            placeholder="Preenchido automaticamente"
+          />
+        </div>
+        <div>
+          <Label htmlFor="horaTerminoRegistro" className="font-bold">
+            Hora de Término do Registro
+          </Label>
+          <Input
+            id="horaTerminoRegistro"
+            type="time"
+            value={horaTerminoRegistro}
+            readOnly
+            className="mt-1 bg-gray-50"
+            placeholder="Preenchido automaticamente"
+          />
+        </div>
+      </div>
+
+      {/* Local do Fato e Endereço */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label htmlFor="localFato" className="font-bold">
+            Local do Fato
+          </Label>
+          <Input
+            id="localFato"
+            value={localFato}
+            onChange={(e) => setLocalFato(e.target.value)}
+            className="mt-1"
+            placeholder="Ex: Residência, Via Pública, Estabelecimento Comercial..."
+          />
+        </div>
+        <div>
+          <Label htmlFor="endereco" className="font-bold">
+            Endereço
+          </Label>
+          <Textarea
+            id="endereco"
+            value={endereco}
+            onChange={(e) => setEndereco(e.target.value)}
+            className="mt-1"
+            placeholder="Logradouro, número, bairro..."
+          />
+        </div>
+      </div>
+
+      {/* Município e Meio de Acionamento */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label htmlFor="municipio" className="font-bold">
+            Município
+          </Label>
+          <Input
+            id="municipio"
+            value={municipio}
+            readOnly
+            className="mt-1 bg-gray-50"
+          />
+        </div>
+        <div>
+          <Label htmlFor="comunicante" className="font-bold">
+            Meio de Acionamento
+          </Label>
+          <Input
+            id="comunicante"
+            value={comunicante}
+            onChange={(e) => setComunicante(e.target.value)}
+            className="mt-1"
+            placeholder="Ex: CIOSP, 190, Denúncia anônima..."
+          />
+        </div>
+      </div>
+
+      {/* Guarnição e Operação */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label htmlFor="guarnicao" className="font-bold">
+            Guarnição
+          </Label>
+          <Input
+            id="guarnicao"
+            value={guarnicao}
+            onChange={(e) => setGuarnicao(e.target.value)}
+            className="mt-1"
+            placeholder="Ex: RP-3022, PPE-223..."
+          />
+        </div>
+        <div>
+          <Label htmlFor="operacao" className="font-bold">
+            Operação (Se houver)
+          </Label>
+          <Input
+            id="operacao"
+            value={operacao}
+            onChange={(e) => setOperacao(e.target.value)}
+            className="mt-1"
+            placeholder="Ex: Operação Impacto, Operação Saturação..."
+          />
+        </div>
+      </div>
+
+      {/* Informações do Condutor (Somente leitura) */}
+      <div className="p-4 border rounded-lg bg-gray-50">
+        <h4 className="font-bold mb-2">Condutor da Ocorrência</h4>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <Label htmlFor="condutorNome">Nome</Label>
+            <Input
+              id="condutorNome"
+              value={condutorNome}
+              readOnly
+              className="mt-1 bg-gray-100"
+              placeholder="Definido na seção de Guarnição"
+            />
           </div>
           <div>
-            <Label htmlFor="horaFato">HORA DO FATO</Label>
-            <Input id="horaFato" type="time" value={horaFato} onChange={e => setHoraFato(e.target.value)} />
+            <Label htmlFor="condutorPosto">Posto/Graduação</Label>
+            <Input
+              id="condutorPosto"
+              value={condutorPosto}
+              readOnly
+              className="mt-1 bg-gray-100"
+              placeholder="Definido na seção de Guarnição"
+            />
+          </div>
+          <div>
+            <Label htmlFor="condutorRg">RG PM</Label>
+            <Input
+              id="condutorRg"
+              value={condutorRg}
+              readOnly
+              className="mt-1 bg-gray-100"
+              placeholder="Definido na seção de Guarnição"
+            />
           </div>
         </div>
-        
-        {/* Hidden registration date/time fields - they exist but are not displayed to users */}
-        <input type="hidden" id="dataInicioRegistro" value={dataInicioRegistro} />
-        <input type="hidden" id="horaInicioRegistro" value={horaInicioRegistro} />
-        <input type="hidden" id="dataTerminoRegistro" value={dataTerminoRegistro} />
-        <input type="hidden" id="horaTerminoRegistro" value={horaTerminoRegistro} />
-        
-        <div>
-          <Label htmlFor="localFato">LOCAL DO FATO</Label>
-          <Input id="localFato" placeholder="RESIDENCIA, VIA PÚBLICA, PRAÇA..." value={localFato} onChange={e => setLocalFato(e.target.value)} />
-        </div>
-        
-        <div>
-          <Label htmlFor="endereco">ENDEREÇO</Label>
-          <Input id="endereco" placeholder="RUA, NÚMERO/QUADRA/LOTE, BAIRRO, COORDENADAS" value={endereco} onChange={e => setEndereco(e.target.value)} />
-        </div>
-        
-        <div>
-          <Label htmlFor="municipio">MUNICÍPIO</Label>
-          <Input id="municipio" readOnly value={municipio} />
-        </div>
-        
-        <div>
-          <Label htmlFor="comunicante">COMUNICANTE</Label>
-          <Select value={comunicante} onValueChange={setComunicante}>
-            <SelectTrigger id="comunicante">
-              <SelectValue placeholder="Selecione o comunicante" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="CIOSP">CIOSP</SelectItem>
-              <SelectItem value="Adjunto">Adjunto</SelectItem>
-              <SelectItem value="Patrulhamento">Patrulhamento</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div>
-          <Label htmlFor="guarnicao">GUARNIÇÃO</Label>
-          <Input id="guarnicao" placeholder="Ex: Viatura Duster ABC-1234" value={guarnicao} onChange={e => setGuarnicao(e.target.value)} />
-        </div>
-
-        <div>
-          <Label htmlFor="operacao">OPERAÇÃO</Label>
-          <Input id="operacao" placeholder="Ex: Operação Asfixia IV" value={operacao} onChange={e => setOperacao(e.target.value)} />
-        </div>
-      </CardContent>
-    </Card>;
+      </div>
+    </div>
+  );
 };
+
 export default GeneralInformationTab;

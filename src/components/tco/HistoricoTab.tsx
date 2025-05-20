@@ -162,9 +162,9 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
             className="min-h-[100px]"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            {!isDrugCase ? 
-              "Se houver apreensões, o Termo de Apreensão será gerado automaticamente no PDF." : 
-              "Para casos de drogas, o Termo de Apreensão será gerado automaticamente."}
+            {isDrugCase ? 
+              "Para casos de drogas, o Termo de Apreensão será gerado automaticamente com o número do lacre." : 
+              "Se houver apreensões, o Termo de Apreensão será gerado automaticamente no PDF sem o número de lacre."}
           </p>
         </div>
         

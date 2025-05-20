@@ -119,6 +119,15 @@ const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
   return `${nomesFormatados.slice(0, -1).join(", ")} E ${nomesFormatados[nomesFormatados.length - 1]}`.toUpperCase();
 };
 
+const formatarApioGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
+  if (!componentes || componentes.length === 0) return "";
+  const nomesFormatados = componentes.filter(c => c.nome && c.posto).map(c => `${c.posto} PM ${c.nome}`);
+  if (nomesFormatados.length === 0) return "";
+  if (nomesFormatados.length === 1) return nomesFormatados[0].toUpperCase();
+  if (nomesFormatados.length === 2) return `${nomesFormatados[0]} E ${nomesFormatados[1]}`.toUpperCase();
+  return `${nomesFormatados.slice(0, -1).join(", ")} E ${nomesFormatados[nomesFormatados.length - 1]}`.toUpperCase();
+};
+
 const formatarRelatoAutor = (autores: Pessoa[]): string => {
   if (autores.length === 0 || !autores.some(a => a.nome.trim() !== "")) {
     return "O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.";
@@ -212,6 +221,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const [apreensoes, setApreensoes] = useState("");
   const [lacreNumero, setLacreNumero] = useState("");
   const [componentesGuarnicao, setComponentesGuarnicao] = useState<ComponenteGuarnicao[]>([]);
+  const [componentesApoio, setComponentesApoio] = useState<ComponenteGuarnicao[]>([]);
 
   // Drug related states
   const [quantidade, setQuantidade] = useState("");
@@ -370,6 +380,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     let updatedRelato = relatoPolicialTemplate;
     const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
     const gupm = formatarGuarnicao(componentesGuarnicao);
+    const apioGuarnicao = formatarApioGuarnicao(componentesApoio);
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA PENDENTE]" : natureza;
     const operacaoText = operacao ? `, DURANTE A ${operacao.toUpperCase()},` : "";
     updatedRelato = updatedRelato.replace("[HORÁRIO]", horaFato || "[HORÁRIO PENDENTE]").replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR', {
@@ -380,7 +391,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     } else {
       setRelatoPolicial(updatedRelato); // Mantém o que o usuário digitou mas atualiza os placeholders
     }
-  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited, relatoPolicial]);
+  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, componentesApoio, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited, relatoPolicial]);
 
   useEffect(() => {
     const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
@@ -424,6 +435,39 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
   const handleRemovePolicialFromList = useCallback((indexToRemove: number) => {
     setComponentesGuarnicao(prevList => prevList.filter((_, index) => index !== indexToRemove));
+  }, []);
+
+  const handleAddApoioToList = useCallback((novoApoio: ComponenteGuarnicao) => {
+    const alreadyExists = componentesApoio.some(comp => 
+      comp.nome === novoApoio.nome && comp.posto === novoApoio.posto
+    );
+    
+    if (!alreadyExists) {
+      setComponentesApoio(prevList => {
+        const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].nome && !prevList[0].posto)
+          ? [novoApoio] 
+          : [...prevList, novoApoio];
+        return newList;
+      });
+      
+      toast({
+        title: "Adicionado",
+        description: `Policial ${novoApoio.nome} adicionado como apoio.`,
+        className: "bg-green-600 text-white border-green-700",
+        duration: 5000
+      });
+    } else {
+      toast({
+        title: "Duplicado",
+        description: "Este policial já está na lista de apoio.",
+        className: "bg-yellow-600 text-white border-yellow-700",
+        duration: 5000
+      });
+    }
+  }, [componentesApoio, toast]);
+
+  const handleRemoveApoioFromList = useCallback((indexToRemove: number) => {
+    setComponentesApoio(prevList => prevList.filter((_, index) => index !== indexToRemove));
   }, []);
 
   const handleAddVitima = () => {
@@ -498,7 +542,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     } else {
       setAutores(newAutores);
     }
-    // Atualiza o nome do autor principal se o primeiro foi removido
+    // Atualiza o nome do autor principal se o primeiro foi modificado
     if (index === 0) {
       setAutor(newAutores.length > 0 ? newAutores[0].nome : "");
     }
@@ -862,6 +906,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
         guarnicao: guarnicao.trim(),
         operacao: operacao.trim(),
         componentesGuarnicao: componentesValidos,
+        componentesApoio: componentesApoio.filter(c => c.nome?.trim() && c.posto?.trim()),
         relatoPolicial: relatoPolicial.trim(),
         relatoAutor: relatoAutor.trim(),
         relatoTestemunha: relatoTestemunha.trim(),
@@ -977,6 +1022,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
   const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Outros"];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
+  
   return <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
         {hasMinorAuthor.isMinor && hasMinorAuthor.details && <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
@@ -990,8 +1036,24 @@ const TCOForm: React.FC<TCOFormProps> = ({
         {/* Seção de Informações Básicas - Sem Card */}
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0 px-0">
           <h2 className="text-xl font-semibold mb-4">Informações Básicas do TCO</h2>
-          <BasicInformationTab tcoNumber={tcoNumber} setTcoNumber={setTcoNumber} natureza={natureza} setNatureza={setNatureza} autor={autor} setAutor={setAutor} 
-        penaDescricao={penaDescricao} naturezaOptions={naturezaOptions} customNatureza={customNatureza} setCustomNatureza={setCustomNatureza} startTime={startTime} isTimerRunning={isTimerRunning} juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData} juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora} />
+          <BasicInformationTab 
+            tcoNumber={tcoNumber} 
+            setTcoNumber={setTcoNumber} 
+            natureza={natureza} 
+            setNatureza={setNatureza} 
+            autor={autor} 
+            setAutor={setAutor} 
+            penaDescricao={penaDescricao} 
+            naturezaOptions={naturezaOptions} 
+            customNatureza={customNatureza} 
+            setCustomNatureza={setCustomNatureza} 
+            startTime={startTime} 
+            isTimerRunning={isTimerRunning} 
+            juizadoEspecialData={juizadoEspecialData} 
+            setJuizadoEspecialData={setJuizadoEspecialData} 
+            juizadoEspecialHora={juizadoEspecialHora} 
+            setJuizadoEspecialHora={setJuizadoEspecialHora} 
+          />
         </div>
 
         {/* Card para Verificação de Entorpecente (condicional) - Mantido como Card */}
@@ -1024,7 +1086,14 @@ const TCOForm: React.FC<TCOFormProps> = ({
         {/* Seção de Guarnição Policial - Sem Card */}
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Guarnição Policial</h2>
-          <GuarnicaoTab currentGuarnicaoList={componentesGuarnicao} onAddPolicial={handleAddPolicialToList} onRemovePolicial={handleRemovePolicialFromList} />
+          <GuarnicaoTab 
+            currentGuarnicaoList={componentesGuarnicao} 
+            onAddPolicial={handleAddPolicialToList} 
+            onRemovePolicial={handleRemovePolicialFromList}
+            apoioList={componentesApoio}
+            onAddApoio={handleAddApoioToList}
+            onRemoveApoio={handleRemoveApoioFromList}
+          />
         </div>
 
         {/* Seção de Histórico e Narrativas - Sem Card */}
@@ -1073,54 +1142,4 @@ const TCOForm: React.FC<TCOFormProps> = ({
                </div>
 
                {/* Seção de Vídeos */}
-               <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-green-500 transition-colors duration-200 ease-in-out">
-                 <div className="flex flex-col items-center text-center">
-                   <VideoIcon className="w-12 h-12 text-green-600 mb-2" />
-                   <h3 className="text-lg font-medium text-gray-700">Vídeos (Links)</h3>
-                   <p className="text-sm text-gray-500 px-4 mt-1">Adicione links para vídeos online (YouTube, Drive, etc.).</p>
-                 </div>
-                 <div className="flex w-full space-x-2 items-center pt-1">
-                   <Input 
-                type="url" value={newVideoLink} onChange={e => setNewVideoLink(e.target.value)} placeholder="https://..." aria-label="Link do vídeo" className="flex-1 text-sm" />
-                   <Button type="button" onClick={handleAddVideoLink} className="bg-green-600 hover:bg-green-700 text-white shrink-0" size="icon" aria-label="Adicionar link de vídeo" disabled={!newVideoLink.trim()}>
-                     <Plus className="h-5 w-5" />
-                   </Button>
-                 </div>
-                 {videoLinks.length > 0 && <div className="w-full pt-2">
-                     <p className="text-sm font-medium text-gray-600 mb-1.5">Links adicionados:</p>
-                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
-                       {videoLinks.map((link, index) => <li key={`${index}-${link}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
-                           <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate mr-2 flex-1" title={`Abrir link: ${link}`}>
-                             {link}
-                           </a>
-                           <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveVideoLink(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover link ${link}`}>
-                             <X className="h-4 w-4" />
-                           </Button>
-                         </li>)}
-                     </ul>
-                   </div>}
-                  {videoLinks.length === 0 && <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p>}
-               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end mt-8 pt-6 border-t border-gray-300">
-          <Button type="submit" disabled={isSubmitting || hasMinorAuthor.isMinor} size="lg" className="min-w-[200px]">
-            {isSubmitting ? <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Processando...
-              </> : <>
-                 <FileText className="mr-2 h-5 w-5" />
-                 Finalizar e Salvar TCO
-               </>}
-          </Button>
-        </div>
-      </form>
-    </div>;
-};
-
-export default TCOForm;
+               <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-green-500 transition-colors duration-200 ease-in
