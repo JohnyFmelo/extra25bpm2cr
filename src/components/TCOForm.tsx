@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; // Card ainda é usado para Anexos e Drogas
-// Label e Input não são usados diretamente neste componente de alto nível, mas podem ser usados nas abas.
-// import { Label } from "@/components/ui/label";
-// import { Input as ShadInput } from "@/components/ui/input"; // Renomeado para evitar conflito com o Input de HTML
 import { Input } from "@/components/ui/input"; // Mantendo o original, se for o ShadCN UI Input
 import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -17,11 +14,13 @@ import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
 import supabase from "@/lib/supabaseClient"; // Não usado diretamente aqui, mas presumivelmente em utilitários
 import { uploadPDF, saveTCOMetadata } from '@/lib/supabaseStorage';
+
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
   posto: string;
 }
+
 interface Pessoa {
   nome: string;
   sexo: string;
@@ -38,10 +37,12 @@ interface Pessoa {
   email: string;
   laudoPericial: string;
 }
+
 interface TCOFormProps {
   selectedTco?: any;
   onClear?: () => void;
 }
+
 const initialPersonData: Pessoa = {
   nome: "",
   sexo: "",
@@ -58,11 +59,13 @@ const initialPersonData: Pessoa = {
   email: "",
   laudoPericial: "Não"
 };
+
 const formatRepresentacao = (representacao: string): string => {
-  if (representacao === "Representa") return "representar";
-  if (representacao === "Posteriormente") return "decidir_posteriormente";
+  if (representacao === "representar") return "representar";
+  if (representacao === "decidir_posteriormente") return "decidir_posteriormente";
   return "";
 };
+
 const formatCPF = (cpf: string) => {
   cpf = cpf.replace(/\D/g, '');
   if (cpf.length <= 11) {
@@ -72,6 +75,7 @@ const formatCPF = (cpf: string) => {
   }
   return cpf;
 };
+
 const formatPhone = (phone: string) => {
   phone = phone.replace(/\D/g, '');
   if (phone.length === 11) {
@@ -85,6 +89,7 @@ const formatPhone = (phone: string) => {
   }
   return phone;
 };
+
 const validateCPF = (cpf: string) => {
   cpf = cpf.replace(/\D/g, '');
   if (cpf.length !== 11) return false;
@@ -104,6 +109,7 @@ const validateCPF = (cpf: string) => {
   let digit2 = remainder < 2 ? 0 : 11 - remainder;
   return digit2 === parseInt(cpf.charAt(10));
 };
+
 const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
   if (!componentes || componentes.length === 0) return "[GUPM PENDENTE]";
   const nomesFormatados = componentes.filter(c => c.nome && c.posto).map(c => `${c.posto} PM ${c.nome}`);
@@ -112,6 +118,7 @@ const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
   if (nomesFormatados.length === 2) return `${nomesFormatados[0]} E ${nomesFormatados[1]}`.toUpperCase();
   return `${nomesFormatados.slice(0, -1).join(", ")} E ${nomesFormatados[nomesFormatados.length - 1]}`.toUpperCase();
 };
+
 const formatarRelatoAutor = (autores: Pessoa[]): string => {
   if (autores.length === 0 || !autores.some(a => a.nome.trim() !== "")) {
     return "O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.";
@@ -126,10 +133,12 @@ const formatarRelatoAutor = (autores: Pessoa[]): string => {
   const pronomePlural = todosFemininos ? "AS AUTORAS" : "OS AUTORES";
   return `${pronomePlural} DOS FATOS ABAIXO ASSINADOS, JÁ QUALIFICADOS NOS AUTOS, CIENTIFICADOS DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLARARAM QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.`;
 };
+
 const numberToText = (num: number): string => {
   const numbers = ["ZERO", "UMA", "DUAS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"];
   return num >= 0 && num <= 10 ? numbers[num] : num.toString();
 };
+
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -138,6 +147,7 @@ const fileToBase64 = (file: File): Promise<string> => {
     reader.readAsDataURL(file);
   });
 };
+
 const calculateAge = (birthDate: Date, referenceDate: Date) => {
   let years = referenceDate.getFullYear() - birthDate.getFullYear();
   let months = referenceDate.getMonth() - birthDate.getMonth();
@@ -156,13 +166,12 @@ const calculateAge = (birthDate: Date, referenceDate: Date) => {
     days
   };
 };
+
 const TCOForm: React.FC<TCOFormProps> = ({
   selectedTco,
   onClear
 }) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasMinorAuthor, setHasMinorAuthor] = useState<{
@@ -233,12 +242,14 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const [relatoTestemunha, setRelatoTestemunha] = useState("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.");
   const [conclusaoPolicial, setConclusaoPolicial] = useState("");
   const [isRelatoPolicialManuallyEdited, setIsRelatoPolicialManuallyEdited] = useState(false);
+
   useEffect(() => {
     if (tcoNumber && !isTimerRunning) {
       setStartTime(new Date());
       setIsTimerRunning(true);
     }
   }, [tcoNumber, isTimerRunning]);
+
   useEffect(() => {
     if (substancia === "Vegetal" && cor !== "Verde") {
       setIsUnknownMaterial(true);
@@ -251,6 +262,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       if (substancia === "Vegetal" && cor === "Verde") setIndicios("Maconha");else if (substancia === "Artificial" && cor === "Amarelada") setIndicios("Pasta-Base");else if (substancia === "Artificial" && cor === "Branca") setIndicios("Cocaína");else setIndicios("");
     }
   }, [substancia, cor]);
+
   useEffect(() => {
     const isDrugCase = natureza === "Porte de drogas para consumo";
     if (isDrugCase) {
@@ -292,6 +304,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
     }
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]);
+
   useEffect(() => {
     const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
     let tipificacaoAtual = "";
@@ -351,6 +364,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, SE HOUVER, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
     setConclusaoPolicial(conclusaoBase);
   }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
+
   useEffect(() => {
     if (isRelatoPolicialManuallyEdited) return;
     let updatedRelato = relatoPolicialTemplate;
@@ -367,6 +381,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setRelatoPolicial(updatedRelato); // Mantém o que o usuário digitou mas atualiza os placeholders
     }
   }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited, relatoPolicial]);
+
   useEffect(() => {
     const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
     // Atualiza o relato do autor apenas se não foi editado manualmente ou se ainda está no formato padrão
@@ -374,6 +389,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setRelatoAutor(novoRelatoAutor);
     }
   }, [autores, relatoAutor]);
+
   useEffect(() => {
     // Atualiza o campo 'autor' (usado em BasicInformationTab) com o nome do primeiro autor da lista 'autores'
     const currentFirstAutorName = autores.length > 0 ? autores[0].nome : "";
@@ -381,6 +397,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setAutor(currentFirstAutorName);
     }
   }, [autores, autor]);
+
   const handleAddPolicialToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
     const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
     if (!alreadyExists) {
@@ -404,9 +421,11 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
     }
   }, [componentesGuarnicao, toast]);
+
   const handleRemovePolicialFromList = useCallback((indexToRemove: number) => {
     setComponentesGuarnicao(prevList => prevList.filter((_, index) => index !== indexToRemove));
   }, []);
+
   const handleAddVitima = () => {
     // Se a lista de vítimas tem apenas um item e esse item é um placeholder ou "O ESTADO", substitui pelo novo item.
     const hasOnlyPlaceholder = vitimas.length === 1 && !vitimas[0].nome && !vitimas[0].cpf || vitimas.length === 1 && vitimas[0].nome === "O ESTADO";
@@ -420,6 +439,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       }]);
     }
   };
+
   const handleRemoveVitima = (index: number) => {
     const newVitimas = vitimas.filter((_, i) => i !== index);
     // Se a remoção resultar em uma lista vazia, adiciona um placeholder
@@ -431,6 +451,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setVitimas(newVitimas);
     }
   };
+
   const handleAddTestemunha = () => {
     const hasOnlyPlaceholder = testemunhas.length === 1 && !testemunhas[0].nome && !testemunhas[0].cpf;
     if (hasOnlyPlaceholder) {
@@ -443,6 +464,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       }]);
     }
   };
+
   const handleRemoveTestemunha = (index: number) => {
     const newTestemunhas = testemunhas.filter((_, i) => i !== index);
     if (newTestemunhas.length === 0) {
@@ -453,6 +475,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setTestemunhas(newTestemunhas);
     }
   };
+
   const handleAddAutor = () => {
     const hasOnlyPlaceholder = autores.length === 1 && !autores[0].nome && !autores[0].cpf;
     if (hasOnlyPlaceholder) {
@@ -465,6 +488,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       }]);
     }
   };
+
   const handleRemoveAutor = (index: number) => {
     const newAutores = autores.filter((_, i) => i !== index);
     if (newAutores.length === 0) {
@@ -495,6 +519,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       isMinor: !!minorAuthor
     });
   };
+
   const handleVitimaChange = (index: number, field: string, value: string) => {
     const newVitimas = [...vitimas];
     let processedValue = value;
@@ -526,6 +551,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     }
     setVitimas(newVitimas);
   };
+
   const handleTestemunhaChange = (index: number, field: string, value: string) => {
     const newTestemunhas = [...testemunhas];
     let processedValue = value;
@@ -548,6 +574,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     };
     setTestemunhas(newTestemunhas);
   };
+
   const handleAutorDetalhadoChange = (index: number, field: string, value: string) => {
     const newAutores = [...autores];
     let processedValue = value;
@@ -610,6 +637,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setAutor(processedValue);
     }
   };
+
   const handleRelatoPolicialChange = (value: string) => {
     setRelatoPolicial(value);
     // Considera editado manualmente se o texto for diferente do template E não contiver mais os placeholders principais.
@@ -618,6 +646,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setIsRelatoPolicialManuallyEdited(true);
     }
   };
+
   const handleAddVideoLink = () => {
     if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
       if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
@@ -653,6 +682,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
     }
   };
+
   const handleRemoveVideoLink = (index: number) => {
     setVideoLinks(prev => prev.filter((_, i) => i !== index));
     toast({
@@ -662,6 +692,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       duration: 5000
     });
   };
+
   const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const newFiles = Array.from(event.target.files);
@@ -689,6 +720,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       }
     }
   };
+
   const handleRemoveImageFile = (index: number) => {
     setImageFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
     toast({
@@ -698,6 +730,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       duration: 5000
     });
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (hasMinorAuthor.isMinor) {
@@ -929,6 +962,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setIsSubmitting(false);
     }
   };
+
   const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
     if (e.key === 'Enter') {
       const target = e.target as HTMLElement;
@@ -940,6 +974,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       }
     }
   };
+
   const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Outros"];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
   return <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
@@ -955,12 +990,12 @@ const TCOForm: React.FC<TCOFormProps> = ({
         {/* Seção de Informações Básicas - Sem Card */}
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0 px-0">
           <h2 className="text-xl font-semibold mb-4">Informações Básicas do TCO</h2>
-          <BasicInformationTab tcoNumber={tcoNumber} setTcoNumber={setTcoNumber} natureza={natureza} setNatureza={setNatureza} autor={autor} setAutor={setAutor} // Este setAutor é para BasicInformationTab, mas o valor real vem de 'autores'
+          <BasicInformationTab tcoNumber={tcoNumber} setTcoNumber={setTcoNumber} natureza={natureza} setNatureza={setNatureza} autor={autor} setAutor={setAutor} 
         penaDescricao={penaDescricao} naturezaOptions={naturezaOptions} customNatureza={customNatureza} setCustomNatureza={setCustomNatureza} startTime={startTime} isTimerRunning={isTimerRunning} juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData} juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora} />
         </div>
 
         {/* Card para Verificação de Entorpecente (condicional) - Mantido como Card */}
-        {natureza === "Porte de drogas para consumo" && <Card className="mb-8"> {/* Adicionado mb-8 para espaçamento se for o último antes do próximo div separador */}
+        {natureza === "Porte de drogas para consumo" && <Card className="mb-8"> 
             <CardHeader>
               <CardTitle>Verificação de Entorpecente</CardTitle>
               <CardDescription>Detalhes sobre a substância apreendida.</CardDescription>
@@ -973,20 +1008,17 @@ const TCOForm: React.FC<TCOFormProps> = ({
         {/* Seção de Informações Gerais da Ocorrência - Sem Card */}
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Gerais da Ocorrência</h2>
-          <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza === "Outros"} customNatureza={customNatureza} // Passando para GeneralInformationTab se precisar
-        dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} // Não editável, apenas display
-        horaInicioRegistro={horaInicioRegistro} // Não editável, apenas display
-        dataTerminoRegistro={dataTerminoRegistro} // Não editável, apenas display
-        horaTerminoRegistro={horaTerminoRegistro} // Não editável, apenas display
-        localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} // Não editável, apenas display
+          <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza === "Outros"} customNatureza={customNatureza} 
+        dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} 
+        horaInicioRegistro={horaInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} 
+        horaTerminoRegistro={horaTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} 
         comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
         </div>
         
         {/* Seção de Pessoas Envolvidas - Sem Card */}
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Pessoas Envolvidas</h2>
-          <PessoasEnvolvidasTab vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima} testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha} autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor} natureza={natureza} // Passado para lógica interna de PessoasEnvolvidasTab
-        />
+          <PessoasEnvolvidasTab vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima} testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha} autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor} natureza={natureza} />
         </div>
 
         {/* Seção de Guarnição Policial - Sem Card */}
@@ -998,12 +1030,12 @@ const TCOForm: React.FC<TCOFormProps> = ({
         {/* Seção de Histórico e Narrativas - Sem Card */}
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Histórico e Narrativas</h2>
-           <HistoricoTab relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange} relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor} relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima} relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha} apreensoes={apreensoes} setApreensoes={setApreensoes} conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial} // Se for editável
+           <HistoricoTab relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange} relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor} relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima} relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha} apreensoes={apreensoes} setApreensoes={setApreensoes} conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial} 
         drugSeizure={natureza === "Porte de drogas para consumo"} representacao={representacao} setRepresentacao={setRepresentacao} natureza={natureza} />
         </div>
 
         {/* Card para Anexos - Mantido como Card */}
-        <Card className="mb-8"> {/* Adicionado mb-8 para espaçamento */}
+        <Card className="mb-8"> 
           <CardHeader>
             <CardTitle>Anexos (Opcional)</CardTitle>
             <CardDescription>Adicione fotos ou links de vídeos relacionados à ocorrência.</CardDescription>
@@ -1048,7 +1080,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
                    <p className="text-sm text-gray-500 px-4 mt-1">Adicione links para vídeos online (YouTube, Drive, etc.).</p>
                  </div>
                  <div className="flex w-full space-x-2 items-center pt-1">
-                   <Input // Usando o Input importado (ShadCN UI)
+                   <Input 
                 type="url" value={newVideoLink} onChange={e => setNewVideoLink(e.target.value)} placeholder="https://..." aria-label="Link do vídeo" className="flex-1 text-sm" />
                    <Button type="button" onClick={handleAddVideoLink} className="bg-green-600 hover:bg-green-700 text-white shrink-0" size="icon" aria-label="Adicionar link de vídeo" disabled={!newVideoLink.trim()}>
                      <Plus className="h-5 w-5" />
@@ -1090,4 +1122,5 @@ const TCOForm: React.FC<TCOFormProps> = ({
       </form>
     </div>;
 };
+
 export default TCOForm;

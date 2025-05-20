@@ -35,8 +35,11 @@ export const addTermoManifestacao = (doc, data) => {
     yPos = addWrappedText(doc, yPos, "EU, VÍTIMA ABAIXO ASSINADA, POR ESTE INSTRUMENTO MANIFESTO O MEU INTERESSE EM:", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
     yPos += 5;
 
+    // Fix: Corrigir a marcação do X de acordo com o valor de representacao
     let manifestacaoOption1 = '(   )';
     let manifestacaoOption2 = '(   )';
+    
+    // Usando os valores corretos que vem do frontend
     if (data.representacao === 'representar') {
         manifestacaoOption1 = '( X )';
     } else if (data.representacao === 'decidir_posteriormente') {
