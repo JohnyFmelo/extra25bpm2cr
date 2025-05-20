@@ -18,8 +18,13 @@ const getCustomDataAtualExtenso = () => {
 export const addRequisicaoExameDrogas = (doc, data) => {
     let yPos = addNewPage(doc, data);
     const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
-    const condutor = data.componentesGuarnicao?.[0];
-    const autor = data.autores?.[0];
+    
+    // Ensure arrays exist
+    const componentesGuarnicao = data.componentesGuarnicao || [];
+    const autores = data.autores || [];
+    
+    const condutor = componentesGuarnicao.length > 0 ? componentesGuarnicao[0] : null;
+    const autor = autores.length > 0 ? autores[0] : null;
 
     // Use raw values here; .toUpperCase() will be applied to the final strings
     const lacreNumero = data.lacreNumero || "00000000";
@@ -28,10 +33,11 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     const dataFatoStr = formatarDataSimples(data.dataFato) || "20/02/2025"; // Format like DD/MM/YYYY
 
     // Flexão de gênero para autor/autora
-    const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'A' : 'O';
-    const autorArtigo = autor?.sexo?.toLowerCase() === 'feminino' ? 'A' : 'O';
-    const autorTermo = autor?.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR';
-    const qualificado = autor?.sexo?.toLowerCase() === 'feminino' ? 'QUALIFICADA' : 'QUALIFICADO';
+    const autorSexo = autor?.sexo?.toLowerCase() || "";
+    const generoAutor = autorSexo === 'feminino' ? 'A' : 'O';
+    const autorArtigo = autorSexo === 'feminino' ? 'A' : 'O';
+    const autorTermo = autorSexo === 'feminino' ? 'AUTORA' : 'AUTOR';
+    const qualificado = autorSexo === 'feminino' ? 'QUALIFICADA' : 'QUALIFICADO';
 
     // Título
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
@@ -90,7 +96,7 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     yPos += 15;
 
     // Adiciona a assinatura
-    const nomeCondutorCompleto = (`${condutor?.nome || ""} ${condutor?.posto || ""}`.trim()).toUpperCase();
+    const nomeCondutorCompleto = (`${condutor?.nome || ""} ${condutor?.posto || ""}`.trim()).toUpperCase() || "CONDUTOR DA OCORRÊNCIA";
     yPos = checkPageBreak(doc, yPos, 20, data);
     const linhaAssinaturaWidth = 100;
     doc.setLineWidth(0.3);

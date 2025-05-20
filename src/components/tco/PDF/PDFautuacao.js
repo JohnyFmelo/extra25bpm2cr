@@ -1,3 +1,4 @@
+
 import {
     MARGIN_LEFT, MARGIN_RIGHT, MARGIN_TOP, getPageConstants,
     getDataAtualExtenso, addFieldBoldLabel, addWrappedText, addStandardFooterContent,
@@ -26,8 +27,13 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     yPos += 12; // Espaço após o título TCO
 
     // --- Informações Principais (Natureza, Autor, Vítima) ---
-    const primeiroAutor = data.autores?.[0];
-    const primeiraVitima = data.vitimas?.[0];
+    // Ensure autores array exists before accessing it
+    const autores = data.autores || [];
+    const primeiroAutor = autores.length > 0 ? autores[0] : null;
+    
+    // Ensure vitimas array exists before accessing it
+    const vitimas = data.vitimas || [];
+    const primeiraVitima = vitimas.length > 0 ? vitimas[0] : null;
 
     // Adiciona campos usando a função utilitária, passando doc, yPos e data
     yPos = addFieldBoldLabel(doc, yPos, "NATUREZA", data.natureza, data);
@@ -60,7 +66,9 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
 
     // --- Assinatura do Condutor na Autuação ---
     yPos = checkPageBreak(doc, yPos, 30, data); // Verifica espaço para assinatura
-    const condutorAutuacao = data.componentesGuarnicao?.[0];
+    // Ensure componentesGuarnicao array exists
+    const componentesGuarnicao = data.componentesGuarnicao || [];
+    const condutorAutuacao = componentesGuarnicao.length > 0 ? componentesGuarnicao[0] : null;
     const signatureLineLength = 80;
     const signatureLineStartX = (PAGE_WIDTH - signatureLineLength) / 2; // Centraliza a linha
     const signatureLineY = yPos;
