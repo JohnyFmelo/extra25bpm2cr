@@ -1,4 +1,3 @@
-
 // src/components/tco/PDF/pdfUtils.js
 
 // --- Constantes ---
@@ -8,7 +7,6 @@ export const MARGIN_TOP = 15;
 export const MARGIN_BOTTOM = 15;
 export const FOOTER_AREA_HEIGHT = 25; // Estimativa
 export const HEADER_AREA_HEIGHT = 28; // Estimativa
-export const LINE_HEIGHT = 12 * 0.3528 * 1.2; // Altura de linha padrão baseada na fonte tamanho 12
 
 // --- Funções Utilitárias Gerais ---
 
