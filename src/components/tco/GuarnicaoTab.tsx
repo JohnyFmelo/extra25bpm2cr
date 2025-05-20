@@ -441,7 +441,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
               </div>
             </div>
             <div>
-              <Label htmlFor="dlg-naturalidade">Naturalidade (Cidade/UF) *</Label>
+              <Label htmlFor="dlg-naturalidade">Naturalidade ( Cidade/UF) *</Label>
               <Input id="dlg-naturalidade" value={newOfficerFormData.naturalidade} onChange={e => handleRegisterInputChange("naturalidade", e.target.value)} placeholder="Ex: Cuiabá/MT" required />
             </div>
             <div className="grid grid-cols-2 gap-4">
