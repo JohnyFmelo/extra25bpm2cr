@@ -49,6 +49,45 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight) => {
     return currentY; // Retorna a nova posição Y
 };
 
+// Função para adicionar QR Code ao PDF
+const addQRCodeToPDF = async (doc, yPosition, url, label, width = 60) => {
+    try {
+        // Gera o QR Code como um Data URL (PNG)
+        const qrCodeDataURL = await QRCode.toDataURL(url, {
+            margin: 1,
+            width: 300,
+            color: {
+                dark: '#000000',
+                light: '#ffffff'
+            }
+        });
+        
+        const pageWidth = doc.internal.pageSize.width;
+        const qrX = pageWidth - width - MARGIN_RIGHT;
+        
+        // Adiciona o QR Code ao PDF
+        doc.addImage(qrCodeDataURL, 'PNG', qrX, yPosition, width, width);
+        
+        // Adiciona uma legenda abaixo do QR Code
+        if (label) {
+            doc.setFontSize(8);
+            doc.setTextColor(0, 0, 0);
+            const labelWidth = doc.getTextWidth(label);
+            const labelX = qrX + (width - labelWidth) / 2;
+            doc.text(label, labelX, yPosition + width + 5);
+        }
+        
+        // Retorna a posição Y após o QR Code + legenda
+        return {
+            endY: yPosition + width + (label ? 10 : 0),
+            qrWidth: width
+        };
+    } catch (error) {
+        console.error('Erro ao gerar QR Code:', error);
+        return { endY: yPosition, qrWidth: 0 };
+    }
+};
+
 /**
  * Gera o conteúdo das seções 1 a 5 do TCO.
  * Assume que começa após uma chamada a `addNewPage`.
@@ -227,7 +266,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 2;
     }
 
-    const primeiroAutor = autoresValidos[0];
+    const primeiroAutor = data.autores?.[0];
     const primeiraVitima = !isDrugCase ? (data.vitimas ? data.vitimas.find(v => v?.nome) : null) : null;
     const primeiraTestemunha = testemunhasValidas[0];
 
@@ -406,6 +445,86 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     } else {
         yPos = addWrappedText(doc, yPos, "Dados da Guarnição não informados.", MARGIN_LEFT, 12, 'italic', MAX_LINE_WIDTH, 'left', data);
         yPos += 2;
+    }
+
+    // Adicionando QR Codes para links de vídeos se disponíveis
+    const hasVideos = data.videoLinks && data.videoLinks.length > 0;
+    if (hasVideos) {
+        yPos = addSectionTitle(doc, yPos, "LINKS PARA VÍDEOS", "4.3.1", 3, data);
+        
+        // Espaço antes dos QR codes
+        yPos += 5;
+        yPos = checkPageBreak(doc, yPos, 80, data); // Reserve space for QR codes
+        
+        // Inicializa variáveis para posicionamento de QR codes em grade
+        const qrSize = 60; // Tamanho do QR code em mm
+        const qrMargin = 10; // Margem entre QR codes
+        const qrPerRow = 2; // Número de QR codes por linha
+        let qrX = MARGIN_LEFT;
+        let qrMaxY = yPos;
+        
+        // Gera QR codes para cada vídeo
+        for (let i = 0; i < data.videoLinks.length; i++) {
+            const video = data.videoLinks[i];
+            
+            // Calcular posição X e Y
+            const colIndex = i % qrPerRow;
+            if (colIndex === 0 && i > 0) {
+                // Nova linha, atualiza yPos para o maior Y da linha anterior
+                yPos = qrMaxY + qrMargin;
+                // Verificar quebra de página
+                yPos = checkPageBreak(doc, yPos, qrSize + 20, data);
+                // Reset X position
+                qrX = MARGIN_LEFT;
+                // Reset max Y
+                qrMaxY = yPos;
+            } else if (i > 0) {
+                // Mesma linha, move para a direita
+                qrX += qrSize + qrMargin;
+            }
+            
+            if (video?.url) {
+                try {
+                    // Gerar QR code
+                    const qrCodeDataURL = await QRCode.toDataURL(video.url, {
+                        margin: 1,
+                        width: 300,
+                        color: { dark: '#000000', light: '#ffffff' }
+                    });
+                    
+                    // Adicionar o QR code ao PDF
+                    doc.addImage(qrCodeDataURL, 'PNG', qrX, yPos, qrSize, qrSize);
+                    
+                    // Adicionar legenda
+                    doc.setFontSize(8);
+                    doc.text(`Vídeo ${i+1}: ${video.descricao || 'Sem descrição'}`, qrX, yPos + qrSize + 5, {
+                        maxWidth: qrSize
+                    });
+                    
+                    // Atualiza maxY se necessário
+                    const currentQrMaxY = yPos + qrSize + 15; // QR + legenda + espaço
+                    qrMaxY = Math.max(qrMaxY, currentQrMaxY);
+                    
+                } catch (error) {
+                    console.error(`Erro ao gerar QR code para vídeo ${i+1}:`, error);
+                    doc.setFontSize(8);
+                    doc.text(`Erro ao gerar QR code para vídeo ${i+1}`, qrX, yPos + 10);
+                    qrMaxY = Math.max(qrMaxY, yPos + 20);
+                }
+            }
+        }
+        
+        // Atualiza yPos para a posição após todos os QR codes
+        yPos = qrMaxY;
+    }
+    
+    // Adicionando imagens se disponíveis
+    const hasImages = data.imageBase64 && data.imageBase64.length > 0;
+    if (hasImages) {
+        yPos = checkPageBreak(doc, yPos, 20, data);
+        yPos = addSectionTitle(doc, yPos, "IMAGENS ADICIONAIS", "4.3.2", 3, data);
+        yPos = checkPageBreak(doc, yPos, 50, data); // Reserve some space
+        yPos = addImagesToPDF(doc, yPos, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT);
     }
     
     return yPos;
