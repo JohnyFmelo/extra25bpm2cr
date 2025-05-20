@@ -1,0 +1,22 @@
+
+/* Estilo para aumentar o contraste do placeholder */
+::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: #777;
+  opacity: 1; /* Firefox */
+  font-weight: 500;
+}
+
+:-ms-input-placeholder { /* Internet Explorer 10-11 */
+  color: #777;
+  font-weight: 500;
+}
+
+::-ms-input-placeholder { /* Microsoft Edge */
+  color: #777;
+  font-weight: 500;
+}
+
+/* Estilos específicos para o Textarea */
+.textarea::placeholder {
+  color: #777;
+}

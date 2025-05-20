@@ -1,4 +1,3 @@
-
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -69,3 +68,6 @@
 .bottom-menu-spacing {
   margin-bottom: 70px; /* Adjust based on menu bar height */
 }
+
+/* Importar estilos de formulário */
+@import './styles/form-styles.css';
