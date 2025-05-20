@@ -365,7 +365,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
                       <span>{componente.posto || "Sem Posto"}</span>{' '}
                       <span>{componente.nome || "Sem Nome"}</span>
                     </span>
-                    <span className="text-xs text-muted-foreground">RGPM: {componente.rg || "Não informado"}</span>
+                    <span className="text-xs text-muted-foreground text-slate-400 text-left px-[2px]">RGPM: {componente.rg || "Não informado"}</span>
                   </div>
                   <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0" onClick={() => handleRemove(index)} aria-label={`Remover ${componente.nome}`}>
                     <Trash2 className="h-4 w-4" />
