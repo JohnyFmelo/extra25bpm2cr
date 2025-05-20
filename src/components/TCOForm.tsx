@@ -1,3 +1,5 @@
+--- START OF FILE TCOForm (42).tsx ---
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; // Card ainda é usado para Anexos e Drogas
@@ -19,6 +21,7 @@ interface ComponenteGuarnicao {
   rg: string;
   nome: string;
   posto: string;
+  apoio?: boolean; // Adicionada propriedade apoio
 }
 
 interface Pessoa {
@@ -112,8 +115,12 @@ const validateCPF = (cpf: string) => {
 
 const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
   if (!componentes || componentes.length === 0) return "[GUPM PENDENTE]";
-  const nomesFormatados = componentes.filter(c => c.nome && c.posto).map(c => `${c.posto} PM ${c.nome}`);
-  if (nomesFormatados.length === 0) return "[GUPM PENDENTE]";
+  // Filtra componentes que não são de apoio para a string principal
+  const nomesFormatados = componentes
+    .filter(c => c.nome && c.posto && !c.apoio) 
+    .map(c => `${c.posto} PM ${c.nome}`);
+  
+  if (nomesFormatados.length === 0) return "[GUPM PENDENTE - APENAS APOIO]";
   if (nomesFormatados.length === 1) return nomesFormatados[0].toUpperCase();
   if (nomesFormatados.length === 2) return `${nomesFormatados[0]} E ${nomesFormatados[1]}`.toUpperCase();
   return `${nomesFormatados.slice(0, -1).join(", ")} E ${nomesFormatados[nomesFormatados.length - 1]}`.toUpperCase();
@@ -401,9 +408,12 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const handleAddPolicialToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
     const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
     if (!alreadyExists) {
+      // Garante que 'apoio' seja definido, default para false se não fornecido
+      const policialComApoioDefinido = { ...novoPolicial, apoio: novoPolicial.apoio || false };
       setComponentesGuarnicao(prevList => {
-        // Se a lista está vazia ou contém apenas um placeholder, substitui. Senão, adiciona.
-        const newList = prevList.length === 0 || prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto ? [novoPolicial] : [...prevList, novoPolicial];
+        const newList = prevList.length === 0 || (prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto)
+          ? [policialComApoioDefinido]
+          : [...prevList, policialComApoioDefinido];
         return newList;
       });
       toast({
@@ -425,6 +435,25 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const handleRemovePolicialFromList = useCallback((indexToRemove: number) => {
     setComponentesGuarnicao(prevList => prevList.filter((_, index) => index !== indexToRemove));
   }, []);
+
+  const handleToggleApoioPolicial = useCallback((indexToToggle: number) => {
+    setComponentesGuarnicao(prevList =>
+      prevList.map((componente, index) =>
+        index === indexToToggle
+          ? { ...componente, apoio: !componente.apoio }
+          : componente
+      )
+    );
+    const policial = componentesGuarnicao[indexToToggle];
+    if (policial) {
+        toast({
+            title: "Status de Apoio Atualizado",
+            description: `Policial ${policial.nome} agora está ${!policial.apoio ? "marcado como apoio" : "desmarcado como apoio"}.`,
+            className: "bg-blue-600 text-white border-blue-700",
+            duration: 3000
+        });
+    }
+  }, [componentesGuarnicao, toast]);
 
   const handleAddVitima = () => {
     // Se a lista de vítimas tem apenas um item e esse item é um placeholder ou "O ESTADO", substitui pelo novo item.
@@ -861,7 +890,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
         testemunhas: testemunhasFiltradas,
         guarnicao: guarnicao.trim(),
         operacao: operacao.trim(),
-        componentesGuarnicao: componentesValidos,
+        componentesGuarnicao: componentesValidos, // inclui o campo 'apoio'
         relatoPolicial: relatoPolicial.trim(),
         relatoAutor: relatoAutor.trim(),
         relatoTestemunha: relatoTestemunha.trim(),
@@ -920,10 +949,11 @@ const TCOForm: React.FC<TCOFormProps> = ({
       const tcoMetadata = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
-        policiais: componentesValidos.map(p => ({
+        policiais: componentesValidos.map(p => ({ // componentesValidos já inclui 'apoio'
           nome: p.nome,
           rg: p.rg,
-          posto: p.posto
+          posto: p.posto,
+          apoio: p.apoio || false // Garante que apoio seja enviado
         })),
         pdfPath: filePath,
         pdfUrl: downloadURL,
@@ -976,7 +1006,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
   };
 
   const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Outros"];
-  const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
+  const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg && !c.apoio); // Prioriza não-apoio para condutor
   return <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
         {hasMinorAuthor.isMinor && hasMinorAuthor.details && <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
@@ -1024,7 +1054,12 @@ const TCOForm: React.FC<TCOFormProps> = ({
         {/* Seção de Guarnição Policial - Sem Card */}
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Guarnição Policial</h2>
-          <GuarnicaoTab currentGuarnicaoList={componentesGuarnicao} onAddPolicial={handleAddPolicialToList} onRemovePolicial={handleRemovePolicialFromList} />
+          <GuarnicaoTab 
+            currentGuarnicaoList={componentesGuarnicao} 
+            onAddPolicial={handleAddPolicialToList} 
+            onRemovePolicial={handleRemovePolicialFromList}
+            onToggleApoioPolicial={handleToggleApoioPolicial} // Prop adicionada
+          />
         </div>
 
         {/* Seção de Histórico e Narrativas - Sem Card */}
@@ -1124,3 +1159,4 @@ const TCOForm: React.FC<TCOFormProps> = ({
 };
 
 export default TCOForm;
+--- END OF FILE TCOForm (42).tsx ---
