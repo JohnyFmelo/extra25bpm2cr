@@ -567,7 +567,7 @@ const WeeklyCalendar = ({
             {!isLocked && (
               <div className="mt-6 flex justify-center border-t border-gray-200 pt-4">
                 <Button
-                  size="md" // Um pouco maior
+                  size="default" // Changed from "md" to "default" which is a valid size
                   className="bg-green-500 hover:bg-green-600 text-white shadow-md hover:shadow-lg transition-shadow"
                   onClick={handlePlusClick}
                   disabled={isLoading}

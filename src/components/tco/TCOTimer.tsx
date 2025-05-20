@@ -1,10 +1,13 @@
+
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Clock } from "lucide-react";
+
 interface TCOTimerProps {
   startTime: Date | null;
   isRunning: boolean;
 }
+
 const TCOTimer: React.FC<TCOTimerProps> = ({
   startTime,
   isRunning
@@ -37,6 +40,18 @@ const TCOTimer: React.FC<TCOTimerProps> = ({
     }, 1000);
     return () => clearInterval(interval);
   }, [isRunning, startTime]);
-  return;
+
+  return (
+    <Card className={`p-4 flex items-center justify-between ${
+      isScrolled ? "fixed top-4 right-4 z-50 shadow-lg" : ""
+    }`}>
+      <div className="flex items-center">
+        <Clock className="mr-2 h-5 w-5 text-green-600" />
+        <span className="font-semibold text-green-600">Tempo:</span>
+      </div>
+      <div className="text-xl font-mono font-bold">{elapsedTime}</div>
+    </Card>
+  );
 };
+
 export default TCOTimer;
