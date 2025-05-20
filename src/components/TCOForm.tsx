@@ -1023,15 +1023,18 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Outros"];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
   
-  return <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
+  return (
+    <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
-        {hasMinorAuthor.isMinor && hasMinorAuthor.details && <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
+        {hasMinorAuthor.isMinor && hasMinorAuthor.details && (
+          <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
             <p className="font-semibold">Atenção: Autor Menor de Idade Detectado</p>
             <p>
               O autor {autores[hasMinorAuthor.details.index].nome || 'sem nome'} possui {hasMinorAuthor.details.years} anos,{' '}
               {hasMinorAuthor.details.months} meses e {hasMinorAuthor.details.days} dias. Não é permitido registrar TCO para menores de 18 anos.
             </p>
-          </div>}
+          </div>
+        )}
         
         {/* Seção de Informações Básicas - Sem Card */}
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0 px-0">
@@ -1057,7 +1060,8 @@ const TCOForm: React.FC<TCOFormProps> = ({
         </div>
 
         {/* Card para Verificação de Entorpecente (condicional) - Mantido como Card */}
-        {natureza === "Porte de drogas para consumo" && <Card className="mb-8"> 
+        {natureza === "Porte de drogas para consumo" && (
+          <Card className="mb-8"> 
             <CardHeader>
               <CardTitle>Verificação de Entorpecente</CardTitle>
               <CardDescription>Detalhes sobre a substância apreendida.</CardDescription>
@@ -1065,22 +1069,38 @@ const TCOForm: React.FC<TCOFormProps> = ({
             <CardContent>
               <DrugVerificationTab quantidade={quantidade} setQuantidade={setQuantidade} substancia={substancia} setSubstancia={setSubstancia} cor={cor} setCor={setCor} indicios={indicios} customMaterialDesc={customMaterialDesc} setCustomMaterialDesc={setCustomMaterialDesc} isUnknownMaterial={isUnknownMaterial} lacreNumero={lacreNumero} setLacreNumero={setLacreNumero} />
             </CardContent>
-          </Card>}
+          </Card>
+        )}
 
         {/* Seção de Informações Gerais da Ocorrência - Sem Card */}
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Gerais da Ocorrência</h2>
           <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza === "Outros"} customNatureza={customNatureza} 
-        dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} 
-        horaInicioRegistro={horaInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} 
-        horaTerminoRegistro={horaTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} 
-        comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
+            dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} 
+            horaInicioRegistro={horaInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} 
+            horaTerminoRegistro={horaTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} 
+            comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} 
+            condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
         </div>
         
         {/* Seção de Pessoas Envolvidas - Sem Card */}
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Pessoas Envolvidas</h2>
-          <PessoasEnvolvidasTab vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima} testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha} autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor} natureza={natureza} />
+          <PessoasEnvolvidasTab 
+            vitimas={vitimas} 
+            handleVitimaChange={handleVitimaChange} 
+            handleAddVitima={handleAddVitima} 
+            handleRemoveVitima={handleRemoveVitima} 
+            testemunhas={testemunhas} 
+            handleTestemunhaChange={handleTestemunhaChange} 
+            handleAddTestemunha={handleAddTestemunha} 
+            handleRemoveTestemunha={handleRemoveTestemunha} 
+            autores={autores} 
+            handleAutorDetalhadoChange={handleAutorDetalhadoChange} 
+            handleAddAutor={handleAddAutor} 
+            handleRemoveAutor={handleRemoveAutor} 
+            natureza={natureza} 
+          />
         </div>
 
         {/* Seção de Guarnição Policial - Sem Card */}
@@ -1099,8 +1119,24 @@ const TCOForm: React.FC<TCOFormProps> = ({
         {/* Seção de Histórico e Narrativas - Sem Card */}
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Histórico e Narrativas</h2>
-           <HistoricoTab relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange} relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor} relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima} relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha} apreensoes={apreensoes} setApreensoes={setApreensoes} conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial} 
-        drugSeizure={natureza === "Porte de drogas para consumo"} representacao={representacao} setRepresentacao={setRepresentacao} natureza={natureza} />
+           <HistoricoTab 
+             relatoPolicial={relatoPolicial} 
+             setRelatoPolicial={handleRelatoPolicialChange} 
+             relatoAutor={relatoAutor} 
+             setRelatoAutor={setRelatoAutor} 
+             relatoVitima={relatoVitima} 
+             setRelatoVitima={setRelatoVitima} 
+             relatoTestemunha={relatoTestemunha} 
+             setRelatoTestemunha={setRelatoTestemunha} 
+             apreensoes={apreensoes} 
+             setApreensoes={setApreensoes} 
+             conclusaoPolicial={conclusaoPolicial} 
+             setConclusaoPolicial={setConclusaoPolicial} 
+             drugSeizure={natureza === "Porte de drogas para consumo"} 
+             representacao={representacao} 
+             setRepresentacao={setRepresentacao} 
+             natureza={natureza} 
+           />
         </div>
 
         {/* Card para Anexos - Mantido como Card */}
@@ -1125,21 +1161,95 @@ const TCOForm: React.FC<TCOFormProps> = ({
                    <Plus className="mr-2 h-5 w-5" />
                    Selecionar Fotos
                  </Button>
-                 {imageFiles.length > 0 && <div className="w-full pt-2">
+                 {imageFiles.length > 0 && (
+                   <div className="w-full pt-2">
                      <p className="text-sm font-medium text-gray-600 mb-1.5">Arquivos selecionados:</p>
                      <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
-                       {imageFiles.map((file, index) => <li key={`${file.name}-${index}-${file.lastModified}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
+                       {imageFiles.map((file, index) => (
+                         <li key={`${file.name}-${index}-${file.lastModified}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
                            <span className="truncate mr-2 flex-1 text-gray-700" title={file.name}>
                              {file.name} <span className="text-gray-400 text-xs">({(file.size / 1024).toFixed(1)} KB)</span>
                            </span>
                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveImageFile(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover imagem ${file.name}`}>
                              <X className="h-4 w-4" />
                            </Button>
-                         </li>)}
+                         </li>
+                       ))}
                      </ul>
-                   </div>}
+                   </div>
+                 )}
                  {imageFiles.length === 0 && <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p>}
                </div>
 
                {/* Seção de Vídeos */}
-               <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-green-500 transition-colors duration-200 ease-in
+               <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-green-500 transition-colors duration-200 ease-in-out">
+                 <div className="flex flex-col items-center text-center">
+                   <VideoIcon className="w-12 h-12 text-green-600 mb-2" />
+                   <h3 className="text-lg font-medium text-gray-700">Vídeos</h3>
+                   <p className="text-sm text-gray-500 px-4 mt-1">
+                     Adicione links para vídeos relevantes (YouTube, Drive, etc).
+                   </p>
+                 </div>
+                 <div className="flex gap-2 w-full">
+                   <Input 
+                     type="url" 
+                     placeholder="https://exemplo.com/video" 
+                     value={newVideoLink} 
+                     onChange={(e) => setNewVideoLink(e.target.value)} 
+                     className="flex-1"
+                   />
+                   <Button type="button" variant="outline" onClick={handleAddVideoLink} className="border-green-600 text-green-600 hover:bg-green-50">
+                     <Plus className="mr-2 h-4 w-4" />
+                     Adicionar
+                   </Button>
+                 </div>
+                 {videoLinks.length > 0 && (
+                   <div className="w-full pt-2">
+                     <p className="text-sm font-medium text-gray-600 mb-1.5">Links adicionados:</p>
+                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
+                       {videoLinks.map((link, index) => (
+                         <li key={index} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
+                           <a 
+                             href={link} 
+                             target="_blank" 
+                             rel="noopener noreferrer" 
+                             className="truncate mr-2 flex-1 text-blue-600 hover:underline"
+                             title={link}
+                           >
+                             {link}
+                           </a>
+                           <Button 
+                             type="button" 
+                             variant="ghost" 
+                             size="icon" 
+                             onClick={() => handleRemoveVideoLink(index)}
+                             className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7"
+                           >
+                             <X className="h-4 w-4" />
+                           </Button>
+                         </li>
+                       ))}
+                     </ul>
+                   </div>
+                 )}
+                 {videoLinks.length === 0 && <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p>}
+               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-center pt-8 mb-4">
+          <Button 
+            type="submit" 
+            disabled={isSubmitting || hasMinorAuthor.isMinor}
+            className={`w-full max-w-md py-6 text-lg ${hasMinorAuthor.isMinor ? 'bg-red-600' : ''}`}
+          >
+            {isSubmitting ? 'Gerando TCO...' : 'Gerar PDF do TCO'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default TCOForm;
