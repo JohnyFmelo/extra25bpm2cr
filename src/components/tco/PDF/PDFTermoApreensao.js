@@ -177,7 +177,7 @@ export function addTermoApreensao(doc, data) {
     const condutor = data.componentesGuarnicao?.[0];
     const autor = data.autores?.[0];
     const isDroga = data.natureza && data.natureza.toLowerCase() === "porte de drogas para consumo";
-    const lacreNumero = data.lacreNumero || "00000000";
+    const lacreNumero = isDroga ? (data.lacreNumero || "00000000") : "";
 
     // Flexão de gênero para autor do fato
     const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR';
@@ -190,7 +190,7 @@ export function addTermoApreensao(doc, data) {
     const xCol3 = MARGIN_LEFT + 2 * colWidth;
     const lastColWidth = MAX_LINE_WIDTH - (2 * colWidth);
 
-    // Title with reduced vertical spacing - Explicitly set font to Helvetica before rendering the title
+    // Title with reduced vertical spacing - set the title based on whether it's a drug case
     const titulo = isDroga ? `TERMO DE APREENSÃO LACRE Nº ${lacreNumero}` : "TERMO DE APREENSÃO";
     doc.setFont(DEFAULT_FONT_NAME, "bold");
     doc.setFontSize(12);
@@ -269,6 +269,8 @@ export function addTermoApreensao(doc, data) {
     // Seção de apreensões com tamanho otimizado
     rowY = currentY;
     let textoApreensaoOriginal = (data.apreensoes || "Nenhum objeto/documento descrito para apreensão.").toUpperCase();
+    
+    // Texto específico para casos de droga
     if (isDroga) {
         const quantidadeStr = String(data.drogaQuantidade || "01 (UMA)");
         const quantidadeNumMatch = quantidadeStr.match(/\d+/);

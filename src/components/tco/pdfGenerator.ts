@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -132,8 +131,15 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível ou sem vítimas.");
                     }
 
-                    if (data.apreensaoDescrição || data.apreensoes) {
+                    // Incluir o termo de apreensão quando houver uma descrição de apreensão
+                    // e não for caso de droga para consumo
+                    const isDroga = data.natureza === "Porte de drogas para consumo";
+                    if ((data.apreensaoDescrição || data.apreensoes) && 
+                        (isDroga || data.apreensoes)) {
+                        console.log("Adicionando Termo de Apreensão");
                         addTermoApreensao(doc, data);
+                    } else {
+                        console.log("Pulando Termo de Apreensão: sem descrição de apreensão.");
                     }
 
                     if (data.drogaTipo || data.drogaNomeComum) {
