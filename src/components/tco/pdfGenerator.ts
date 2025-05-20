@@ -132,10 +132,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível ou sem vítimas.");
                     }
 
-                    // Adiciona termo de apreensão para casos de droga ou quando houver apreensão e descrição
-                    if (data.apreensaoDescrição || data.apreensoes || 
-                        (data.natureza === "Perturbação do Sossego" && data.houveApreensao === "sim" && data.descricaoApreensao)) {
-                        console.log("Adicionando Termo de Apreensão");
+                    if (data.apreensaoDescrição || data.apreensoes) {
                         addTermoApreensao(doc, data);
                     }
 
