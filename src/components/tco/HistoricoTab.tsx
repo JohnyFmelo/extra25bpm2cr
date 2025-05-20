@@ -25,7 +25,6 @@ interface HistoricoTabProps {
   natureza: string;
   videoLinks?: string[];
   setVideoLinks?: (value: string[]) => void;
-  showVictimSpecificFields?: boolean; // Added new prop
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
@@ -46,8 +45,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   setRepresentacao,
   natureza,
   videoLinks = [],
-  setVideoLinks,
-  showVictimSpecificFields = !drugSeizure // Default to true if not drug case
+  setVideoLinks
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
@@ -129,8 +127,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea id="relatoAutor" placeholder="Descreva o relato do autor" value={relatoAutor} onChange={e => setRelatoAutor(e.target.value)} className="min-h-[150px]" />
         </div>
         
-        {/* Only show victim fields if showVictimSpecificFields is true */}
-        {showVictimSpecificFields && <div>
+        {/* Only show victim fields if it's NOT a drug case */}
+        {!isDrugCase && <div>
             <Label htmlFor="relatoVitima">RELATO DA VÍTIMA</Label>
             <Textarea id="relatoVitima" placeholder="Descreva o relato da vítima" value={relatoVitima} onChange={e => setRelatoVitima(e.target.value)} className="min-h-[150px]" />
             
