@@ -12,14 +12,16 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight, data) => 
     const {
         MARGIN_LEFT: M_LEFT,
         MARGIN_RIGHT: M_RIGHT,
-        // MARGIN_TOP: M_TOP, // addNewPage deve retornar yPos já considerando MARGIN_TOP
-        // PAGE_HEIGHT_USABLE // checkPageBreak deve usar isso internamente
     } = getPageConstants(doc);
 
     const maxImageDisplayWidth = pageWidth - M_LEFT - M_RIGHT; // Largura máxima para exibir a imagem
     const defaultMaxImageHeight = 150; // Altura padrão para estimar quebra de página, se não puder calcular antes
     const marginBetweenImages = 10;
     let currentY = yPosition;
+
+    if (!images || !Array.isArray(images) || images.length === 0) {
+        return currentY;
+    }
 
     for (const image of images) {
         if (!image || !image.data) {
@@ -45,6 +47,7 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight, data) => 
             }
             
             currentY = checkPageBreak(doc, currentY, estimatedBlockHeight, data);
+            if (currentY < startYOfQrLine) startYOfQrLine = currentY;
 
             // Adiciona a imagem ao PDF, jsPDF calcula a altura para manter proporção se altura for 0
             doc.addImage(base64Data, format, M_LEFT, currentY, maxImageDisplayWidth, 0);
@@ -58,7 +61,8 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight, data) => 
 
             currentY = checkPageBreak(doc, currentY, 8, data); // Espaço para legenda
             doc.setFontSize(8);
-            doc.text(`Imagem: ${image.name || 'Imagem sem nome'}`, M_LEFT, currentY);
+            const imageName = image.name || 'Imagem sem nome';
+            doc.text(imageName.substring(0, 50), M_LEFT, currentY); // Limitar o comprimento do nome
             currentY += 8; // Altura da legenda + espaço depois
 
             currentY += marginBetweenImages / 2; // Espaço antes da próxima
@@ -67,8 +71,9 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight, data) => 
             console.error(`Erro ao adicionar imagem ${image.name || 'desconhecida'}:`, error);
             // Adicionar texto de erro no PDF
             currentY = checkPageBreak(doc, currentY, 10, data);
-            doc.setFontSize(8).setTextColor(255, 0, 0); // Vermelho
-            doc.text(`[Erro ao processar imagem: ${image.name || 'desconhecida'}]`, M_LEFT, currentY);
+            doc.setFontSize(8);
+            doc.setTextColor(255, 0, 0); // Vermelho
+            doc.text(`[Erro ao processar imagem]`, M_LEFT, currentY);
             doc.setTextColor(0, 0, 0); // Resetar cor
             currentY += 10;
         }
@@ -174,7 +179,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 }
                 yPos = addField(doc, yPos, "NOME", upperVitima.nome, data);
                 yPos = addField(doc, yPos, "SEXO", upperVitima.sexo, data);
-                // ... (restante dos campos da vítima, similar ao autor)
                 yPos = addField(doc, yPos, "ESTADO CIVIL", upperVitima.estadoCivil, data);
                 yPos = addField(doc, yPos, "PROFISSÃO", upperVitima.profissao, data);
                 yPos = addField(doc, yPos, "ENDEREÇO", upperVitima.endereco, data);
@@ -213,7 +217,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             }
             yPos = addField(doc, yPos, "NOME", upperTestemunha.nome, data);
             yPos = addField(doc, yPos, "SEXO", upperTestemunha.sexo, data);
-            // ... (restante dos campos da testemunha, similar ao autor)
             yPos = addField(doc, yPos, "ESTADO CIVIL", upperTestemunha.estadoCivil, data);
             yPos = addField(doc, yPos, "PROFISSÃO", upperTestemunha.profissao, data);
             yPos = addField(doc, yPos, "ENDEREÇO", upperTestemunha.endereco, data);
@@ -369,17 +372,23 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
             for (let i = 0; i < data.videoLinks.length; i++) {
                 const link = data.videoLinks[i];
+                if (!link) {
+                    console.warn("Link de vídeo vazio encontrado no índice", i);
+                    continue;
+                }
+                
                 yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
-                 if (yPos < startYOfQrLine) startYOfQrLine = yPos;
+                if (yPos < startYOfQrLine) startYOfQrLine = yPos;
 
                 try {
-                     if (xPos + qrSize > PAGE_WIDTH - M_RIGHT) {
+                    if (xPos + qrSize > PAGE_WIDTH - M_RIGHT) {
                         xPos = M_LEFT;
                         yPos = startYOfQrLine + qrSize + 10;
                         startYOfQrLine = yPos;
                         yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
-                         if (yPos < startYOfQrLine) startYOfQrLine = yPos;
+                        if (yPos < startYOfQrLine) startYOfQrLine = yPos;
                     }
+                    
                     const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
                     doc.addImage(qrCodeDataUrl, 'PNG', xPos, yPos, qrSize, qrSize);
                     doc.setFontSize(8);
@@ -387,22 +396,25 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                     xPos += qrSize + 10;
                 } catch (error) {
                     console.error(`Erro ao gerar QR code para o vídeo ${i + 1}:`, error);
-                     if (xPos + qrSize > PAGE_WIDTH - M_RIGHT) {
+                    if (xPos + qrSize > PAGE_WIDTH - M_RIGHT) {
                         xPos = M_LEFT;
                         yPos = startYOfQrLine + qrSize + 10;
                         startYOfQrLine = yPos;
                         yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
                         if (yPos < startYOfQrLine) startYOfQrLine = yPos;
                     }
+                    doc.setFontSize(8);
                     doc.text(`[Erro QR ${i + 1}]`, xPos, yPos + qrSize / 2);
                     xPos += qrSize + 10;
                 }
             }
-             yPos = startYOfQrLine + qrSize + 10;
+            yPos = startYOfQrLine + qrSize + 10;
         }
 
         if (hasImagesData) {
             yPos += (hasPhotosData || hasVideosData ? 5 : 0);
+            // Corrigido para não usar startYOfQrLine que pode não estar definido
+            let startYOfImageSection = yPos;
             yPos = addImagesToPDF(doc, yPos, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT, data);
         }
         yPos += 2; // Espaço após a seção de mídias
@@ -417,6 +429,11 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     
     if (data.componentesGuarnicao && data.componentesGuarnicao.length > 0) {
         data.componentesGuarnicao.forEach((componente, index) => {
+            if (!componente) {
+                console.warn("Componente de guarnição inválido encontrado no índice", index);
+                return;
+            }
+            
             if (index > 0) { 
                 yPos += 10; // Espaço entre componentes
                 yPos = checkPageBreak(doc, yPos, 55, data); // Altura estimada para próximo componente
@@ -427,9 +444,13 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 doc.setDrawColor(0); // Resetar cor do traço
             }
     
-            yPos = addField(doc, yPos, "NOME COMPLETO", componente.nome?.toUpperCase(), data);
-            yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto?.toUpperCase(), data);
-            yPos = addField(doc, yPos, "RG PMMT", componente.rg?.toUpperCase(), data);
+            const nomeCompleto = componente.nome ? componente.nome.toUpperCase() : "Não informado";
+            const posto = componente.posto ? componente.posto.toUpperCase() : "Não informado";
+            const rgPmmt = componente.rg ? componente.rg.toUpperCase() : "Não informado";
+            
+            yPos = addField(doc, yPos, "NOME COMPLETO", nomeCompleto, data);
+            yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", posto, data);
+            yPos = addField(doc, yPos, "RG PMMT", rgPmmt, data);
             yPos = checkPageBreak(doc, yPos, LINE_HEIGHT + 5, data); // Para assinatura
     
             const sigLineY = yPos;

@@ -1,3 +1,4 @@
+
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -17,50 +18,6 @@ import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
-
-// Função auxiliar para adicionar imagens ao PDF
-const addImagesToPDF = (doc: jsPDF, yPosition: number, images: { name: string; data: string }[], pageWidth: number, pageHeight: number) => {
-    const maxImageWidth = pageWidth - MARGIN_RIGHT * 2; // Largura máxima da imagem
-    const maxImageHeight = 100; // Altura máxima por imagem (ajustável)
-    const marginBetweenImages = 10; // Espaço entre imagens
-    let currentY = yPosition;
-
-    for (const image of images) {
-        try {
-            // Extrai o formato da imagem a partir do início da string base64
-            const formatMatch = image.data.match(/^data:image\/(jpeg|png);base64,/);
-            const format = formatMatch ? formatMatch[1].toUpperCase() : 'JPEG'; // Default para JPEG
-
-            // Remove o prefixo "data:image/..." para obter apenas os dados base64
-            const base64Data = image.data.replace(/^data:image\/[a-z]+;base64,/, '');
-
-            // Verifica se a posição atual ultrapassa o limite da página
-            if (currentY + maxImageHeight + MARGIN_BOTTOM > pageHeight) {
-                currentY = addNewPage(doc, {});
-                currentY = MARGIN_TOP; // Reseta a posição Y
-            }
-
-            // Adiciona a imagem ao PDF
-            doc.addImage(base64Data, format, MARGIN_RIGHT, currentY, maxImageWidth, 0); // Altura 0 para manter proporção
-
-            // Obtém as dimensões reais da imagem adicionada
-            const imgProps = doc.getImageProperties(base64Data);
-            const imgHeight = (imgProps.height * maxImageWidth) / imgProps.width; // Calcula altura proporcional
-
-            // Atualiza a posição Y
-            currentY += imgHeight + marginBetweenImages;
-
-            // Adiciona o nome do arquivo como legenda
-            doc.setFontSize(8);
-            doc.text(`Imagem: ${image.name}`, MARGIN_RIGHT, currentY);
-            currentY += 5; // Espaço após a legenda
-        } catch (error) {
-            console.error(`Erro ao adicionar imagem ${image.name}:`, error);
-        }
-    }
-
-    return currentY; // Retorna a nova posição Y
-};
 
 // --- Função Principal de Geração ---
 export const generatePDF = async (inputData: any): Promise<Blob> => {
@@ -94,12 +51,19 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 format: "a4",
             });
 
-            // Clona os dados para evitar mutações inesperadas
+            // Clona os dados para evitar mutações inesperadas e garante que campos necessários estejam presentes
             const data = { 
                 ...inputData,
-                // Garantir que os dados do juizado estão disponíveis para o termo de compromisso
                 juizadoEspecialData: juizadoData,
-                juizadoEspecialHora: juizadoHora
+                juizadoEspecialHora: juizadoHora,
+                // Inicializa arrays vazios para evitar erros null/undefined
+                autores: inputData.autores || [],
+                vitimas: inputData.vitimas || [],
+                testemunhas: inputData.testemunhas || [],
+                componentesGuarnicao: inputData.componentesGuarnicao || [],
+                imageBase64: inputData.imageBase64 || [],
+                videoLinks: inputData.videoLinks || [],
+                objetosApreendidos: inputData.objetosApreendidos || []
             };
 
             // Pega as constantes da página
@@ -115,91 +79,96 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
             generateHistoricoContent(doc, yPosition, data)
                 .then(() => {
-                    // --- ADIÇÃO DOS TERMOS ---
-                    if (data.autores && data.autores.length > 0) {
-                        addTermoCompromisso(doc, data);
-                    } else {
-                        console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
-                    }
-
-                    // Corrigindo a lógica para incluir o Termo de Manifestação
-                    // Verifica se NÃO é um caso de droga para consumo OU se tem vítimas informadas
-                    if ((data.natureza !== "Porte de drogas para consumo") && (data.vitimas && data.vitimas.length > 0)) {
-                        console.log("Adicionando Termo de Manifestação da Vítima");
-                        addTermoManifestacao(doc, data);
-                    } else {
-                        console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível ou sem vítimas.");
-                    }
-
-                    // Incluir o termo de apreensão quando houver uma descrição de apreensão
-                    // e não for caso de droga para consumo
-                    const isDroga = data.natureza === "Porte de drogas para consumo";
-                    if ((data.apreensaoDescrição || data.apreensoes) && 
-                        (isDroga || data.apreensoes)) {
-                        console.log("Adicionando Termo de Apreensão");
-                        addTermoApreensao(doc, data);
-                    } else {
-                        console.log("Pulando Termo de Apreensão: sem descrição de apreensão.");
-                    }
-
-                    if (data.drogaTipo || data.drogaNomeComum) {
-                        addTermoConstatacaoDroga(doc, data);
-                        
-                        // Adiciona Requisição de Exame em Drogas logo após o Termo de Constatação de Droga
-                        if (data.natureza === "Porte de drogas para consumo") {
-                            addRequisicaoExameDrogas(doc, data);
+                    try {
+                        // --- ADIÇÃO DOS TERMOS ---
+                        if (data.autores && data.autores.length > 0) {
+                            addTermoCompromisso(doc, data);
+                        } else {
+                            console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
                         }
-                    }
 
-                    // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
-                    const pessoasComLaudo = [
-                        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
-                        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-                    ].filter(p => p.nome && p.nome.trim());
-
-                    if (pessoasComLaudo.length > 0) {
-                        pessoasComLaudo.forEach(pessoa => {
-                            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
-                            addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
-                        });
-                    } else {
-                        console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
-                    }
-
-                    addTermoEncerramentoRemessa(doc, data);
-
-                    // --- Finalização: Adiciona Números de Página e Salva ---
-                    const pageCount = doc.internal.pages.length - 1;
-                    for (let i = 1; i <= pageCount; i++) {
-                        doc.setPage(i);
-                        doc.setFont("helvetica", "normal");
-                        doc.setFontSize(8);
-                        doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
-
-                        if (i > 1) {
-                            addStandardFooterContent(doc);
+                        // Corrigindo a lógica para incluir o Termo de Manifestação
+                        // Verifica se NÃO é um caso de droga para consumo OU se tem vítimas informadas
+                        if ((data.natureza !== "Porte de drogas para consumo") && (data.vitimas && data.vitimas.length > 0)) {
+                            console.log("Adicionando Termo de Manifestação da Vítima");
+                            addTermoManifestacao(doc, data);
+                        } else {
+                            console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível ou sem vítimas.");
                         }
-                    }
 
-                    // Opcionalmente, gera um download local
-                    if (data.downloadLocal) {
-                        try {
-                            const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
-                            const dateStr = new Date().toISOString().slice(0, 10);
-                            const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
+                        // Incluir o termo de apreensão quando houver uma descrição de apreensão
+                        // e não for caso de droga para consumo
+                        const isDroga = data.natureza === "Porte de drogas para consumo";
+                        if ((data.apreensaoDescrição || data.apreensoes) && 
+                            (isDroga || data.apreensoes)) {
+                            console.log("Adicionando Termo de Apreensão");
+                            addTermoApreensao(doc, data);
+                        } else {
+                            console.log("Pulando Termo de Apreensão: sem descrição de apreensão.");
+                        }
+
+                        if (data.drogaTipo || data.drogaNomeComum) {
+                            addTermoConstatacaoDroga(doc, data);
                             
-                            doc.save(fileName);
-                            console.log(`PDF salvo localmente: ${fileName}`);
-                        } catch (downloadError) {
-                            console.error("Erro ao salvar o PDF localmente:", downloadError);
-                            // Não falha a Promise principal se o download falhar
+                            // Adiciona Requisição de Exame em Drogas logo após o Termo de Constatação de Droga
+                            if (data.natureza === "Porte de drogas para consumo") {
+                                addRequisicaoExameDrogas(doc, data);
+                            }
                         }
-                    }
 
-                    // Generate blob and resolve the promise
-                    const pdfBlob = doc.output('blob');
-                    clearTimeout(timeout);
-                    resolve(pdfBlob);
+                        // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
+                        const pessoasComLaudo = [
+                            ...(data.autores || []).filter(a => a?.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
+                            ...(data.vitimas || []).filter(v => v?.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
+                        ].filter(p => p.nome && p.nome.trim());
+
+                        if (pessoasComLaudo.length > 0) {
+                            pessoasComLaudo.forEach(pessoa => {
+                                console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
+                                addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
+                            });
+                        } else {
+                            console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
+                        }
+
+                        addTermoEncerramentoRemessa(doc, data);
+
+                        // --- Finalização: Adiciona Números de Página e Salva ---
+                        const pageCount = doc.internal.pages.length - 1;
+                        for (let i = 1; i <= pageCount; i++) {
+                            doc.setPage(i);
+                            doc.setFont("helvetica", "normal");
+                            doc.setFontSize(8);
+                            doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
+
+                            if (i > 1) {
+                                addStandardFooterContent(doc);
+                            }
+                        }
+
+                        // Opcionalmente, gera um download local
+                        if (data.downloadLocal) {
+                            try {
+                                const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
+                                const dateStr = new Date().toISOString().slice(0, 10);
+                                const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
+                                
+                                doc.save(fileName);
+                                console.log(`PDF salvo localmente: ${fileName}`);
+                            } catch (downloadError) {
+                                console.error("Erro ao salvar o PDF localmente:", downloadError);
+                                // Não falha a Promise principal se o download falhar
+                            }
+                        }
+
+                        // Generate blob and resolve the promise
+                        const pdfBlob = doc.output('blob');
+                        clearTimeout(timeout);
+                        resolve(pdfBlob);
+                    } catch (termoError) {
+                        clearTimeout(timeout);
+                        reject(new Error(`Erro ao gerar termos do PDF: ${termoError.message}`));
+                    }
                 })
                 .catch(histError => {
                     clearTimeout(timeout);
