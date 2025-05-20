@@ -1,22 +1,23 @@
-
-/* Estilo para aumentar o contraste do placeholder */
+/* Estilo para o placeholder com cor cinza e sem negrito */
 ::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
   color: #777;
-  opacity: 1; /* Firefox */
-  font-weight: 500;
+  opacity: 1; /* Garante que a cor seja totalmente opaca no Firefox */
+  /* font-weight: 500; FOI REMOVIDO */
 }
 
 :-ms-input-placeholder { /* Internet Explorer 10-11 */
   color: #777;
-  font-weight: 500;
+  /* font-weight: 500; FOI REMOVIDO */
 }
 
-::-ms-input-placeholder { /* Microsoft Edge */
+::-ms-input-placeholder { /* Microsoft Edge (versões mais antigas) */
   color: #777;
-  font-weight: 500;
+  /* font-weight: 500; FOI REMOVIDO */
 }
 
-/* Estilos específicos para o Textarea */
+/* Estilos específicos para o Textarea (se o textarea em si não for negrito) */
 .textarea::placeholder {
   color: #777;
+  /* Se o .textarea tiver um font-weight bold e você quiser o placeholder normal,
+     adicione 'font-weight: normal;' aqui. Caso contrário, ele herdará. */
 }
