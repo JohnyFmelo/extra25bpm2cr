@@ -616,7 +616,7 @@ export const TravelManagement = () => {
                         {travel.destination || "Destino não informado"}
                       </h3>
                       <div className="space-y-1.5 text-sm text-gray-700">
-                        <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-blue-500 shrink-0" /><p>Destino: {travel.destination || "N/A"}</p></div>
+                        
                         <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-blue-500 shrink-0" /><p>Início: {travelStart.toLocaleDateString()}</p></div>
                         <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-blue-500 shrink-0" /><p>Fim: {travelEnd.toLocaleDateString()}</p></div>
                         <div className="flex items-center gap-2"><Users className="h-4 w-4 text-blue-500 shrink-0" /><p>Vagas: {travel.slots}</p></div>
