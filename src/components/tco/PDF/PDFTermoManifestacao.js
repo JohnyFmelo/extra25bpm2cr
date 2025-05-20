@@ -13,7 +13,8 @@ export const addTermoManifestacao = (doc, data) => {
         return null;
     }
     
-    const vitima = data.vitimas?.find(v => v?.nome);
+    // Find a victim with a valid name
+    const vitima = data.vitimas?.find(v => v?.nome && v.nome.trim() !== "");
     if (!vitima) {
         console.warn("Nenhuma vítima com nome informado, pulando Termo de Manifestação.");
         return null;

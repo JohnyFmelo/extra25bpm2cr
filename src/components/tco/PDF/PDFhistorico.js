@@ -1,8 +1,7 @@
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
-    checkPageBreak, addSignatureWithNameAndRole, addNewPage, LINE_HEIGHT
+    checkPageBreak, addSignatureWithNameAndRole, addNewPage
 } from './pdfUtils.js';
 import QRCode from 'qrcode';
 
@@ -111,7 +110,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     // --- SEÇÃO 2: ENVOLVIDOS ---
     yPos = addSectionTitle(doc, yPos, "ENVOLVIDOS", "2", 1, data);
 
-    const autoresValidos = data.autores ? data.autores.filter(a => a?.nome) : [];
+    const autoresValidos = data.autores ? data.autores.filter(a => a?.nome && a.nome.trim() !== "") : [];
     if (autoresValidos.length > 0) {
         let autorTitleText;
         if (autoresValidos.length === 1) {
@@ -155,7 +154,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     }
 
     if (!isDrugCase) {
-        const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome) : [];
+        const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome && v.nome.trim() !== "") : [];
         if (vitimasValidas.length > 0) {
             const vitimaTitleText = vitimasValidas.length === 1 ? "VÍTIMA" : "VÍTIMAS";
             yPos = addSectionTitle(doc, yPos, vitimaTitleText, "2.2", 2, data);
@@ -194,7 +193,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         }
     }
 
-    const testemunhasValidas = data.testemunhas ? data.testemunhas.filter(t => t?.nome) : [];
+    const testemunhasValidas = data.testemunhas ? data.testemunhas.filter(t => t?.nome && t.nome.trim() !== "") : [];
     if (testemunhasValidas.length > 0) {
         const testemunhaTitleText = testemunhasValidas.length === 1 ? "TESTEMUNHA" : "TESTEMUNHAS";
         yPos = addSectionTitle(doc, yPos, testemunhaTitleText, "2.3", 2, data);
@@ -234,8 +233,8 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
     // --- SEÇÃO 3: HISTÓRICO ---
     const primeiroAutor = autoresValidos[0]; // Usar autoresValidos
-    const primeiraVitima = !isDrugCase ? (data.vitimas ? data.vitimas.find(v => v?.nome) : null) : null;
-    const primeiraTestemunha = testemunhasValidas[0]; // Usar testemunhasValidas
+    const primeiraVitima = !isDrugCase ? vitimasValidas[0] : null; // Use the filtered list
+    const primeiraTestemunha = testemunhasValidas[0]; // Use the filtered list
 
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
     yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", "3.1", 2, data);
@@ -254,33 +253,31 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos = checkPageBreak(doc, yPos, 0, data); // Verificar quebra mesmo para espaço
     }
 
-    if (!isDrugCase) {
+    // Only include victim report if there's a valid victim and it's not a drug case
+    if (!isDrugCase && primeiraVitima) {
         yPos = addSectionTitle(doc, yPos, "RELATO DA VÍTIMA", "3.3", 2, data);
-        const relatoVitimaText = primeiraVitima ? (data.relatoVitima || "Relato não fornecido pela vítima.") : "Nenhuma vítima identificada para fornecer relato.";
-        yPos = addWrappedText(doc, yPos, relatoVitimaText, M_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        if (primeiraVitima) {
-            yPos = addSignatureWithNameAndRole(doc, yPos, primeiraVitima?.nome?.toUpperCase(), "VÍTIMA", data);
-        } else {
-            yPos += 10;
-            yPos = checkPageBreak(doc, yPos, 0, data);
-        }
+        yPos = addWrappedText(doc, yPos, data.relatoVitima || "Relato não fornecido pela vítima.", M_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiraVitima?.nome?.toUpperCase(), "VÍTIMA", data);
     }
 
-    const testemunhaSectionNumber = isDrugCase ? "3.3" : "3.4";
-    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", testemunhaSectionNumber, 2, data);
-    let relatoTestText = "Nenhuma testemunha identificada para fornecer relato.";
+    // Calculate the section number for witness report based on if we've included victim report
+    const testemunhaSectionNumber = !isDrugCase && primeiraVitima ? "3.4" : "3.3";
+    
+    // Only include witness report if there's a valid witness
     if (primeiraTestemunha) {
-        relatoTestText = data.relatoTestemunha || "Relato não fornecido pela testemunha.";
-    }
-    yPos = addWrappedText(doc, yPos, relatoTestText, M_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-    if (primeiraTestemunha) {
+        yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", testemunhaSectionNumber, 2, data);
+        yPos = addWrappedText(doc, yPos, data.relatoTestemunha || "Relato não fornecido pela testemunha.", M_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
         yPos = addSignatureWithNameAndRole(doc, yPos, primeiraTestemunha?.nome?.toUpperCase(), "TESTEMUNHA", data);
-    } else {
-        yPos += 10;
-        yPos = checkPageBreak(doc, yPos, 0, data);
     }
 
-    const conclusaoSectionNumber = isDrugCase ? "3.4" : "3.5";
+    // Calculate the section number for conclusion based on what sections were included
+    const conclusaoSectionNumber = (() => {
+        let baseNumber = 3;
+        if (!isDrugCase && primeiraVitima) baseNumber++;
+        if (primeiraTestemunha) baseNumber++;
+        return `3.${baseNumber}`;
+    })();
+    
     yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", conclusaoSectionNumber, 2, data);
     yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "Não informado.", M_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
