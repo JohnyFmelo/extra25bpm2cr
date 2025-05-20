@@ -51,12 +51,25 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 format: "a4",
             });
 
+            // Processar links de vídeo para garantir compatibilidade
+            let processedVideoLinks = inputData.videoLinks;
+            if (processedVideoLinks && Array.isArray(processedVideoLinks)) {
+                // Normaliza os links de vídeo para o formato esperado
+                processedVideoLinks = processedVideoLinks.map((link, index) => {
+                    if (typeof link === 'string') {
+                        return { url: link, descricao: `Vídeo ${index + 1}` };
+                    }
+                    return link;
+                });
+            }
+
             // Clona os dados para evitar mutações inesperadas
             const data = { 
                 ...inputData,
-                // Garantir que os dados do juizado estão disponíveis para o termo de compromisso
+                // Garante que os dados do juizado estão disponíveis para o termo de compromisso
                 juizadoEspecialData: juizadoData,
-                juizadoEspecialHora: juizadoHora
+                juizadoEspecialHora: juizadoHora,
+                videoLinks: processedVideoLinks
             };
 
             // Pega as constantes da página

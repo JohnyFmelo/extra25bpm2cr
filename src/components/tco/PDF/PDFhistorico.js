@@ -262,9 +262,9 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 2;
     }
 
-    const primeiroAutor = autoresValidos[0];
+    const primeiroAutor = data.autores && data.autores.length > 0 ? data.autores.find(a => a?.nome) : null;
     const primeiraVitima = !isDrugCase ? (data.vitimas ? data.vitimas.find(v => v?.nome) : null) : null;
-    const primeiraTestemunha = testemunhasValidas[0];
+    const primeiraTestemunha = data.testemunhas && data.testemunhas.length > 0 ? data.testemunhas.find(t => t?.nome) : null;
 
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
     yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", "3.1", 2, data);
@@ -356,7 +356,8 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             const startY = yPos;
             
             for (let i = 0; i < data.videoLinks.length; i++) {
-                const link = data.videoLinks[i];
+                const videoLink = data.videoLinks[i];
+                const url = typeof videoLink === 'string' ? videoLink : videoLink.url;
                 
                 // Se atingiu o máximo por linha, vai para a próxima linha
                 if (i > 0 && i % maxQRsPerRow === 0) {
@@ -371,16 +372,19 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 
                 // Adiciona o QR Code
                 try {
-                    const qrCodeDataURL = await QRCode.toDataURL(link.url, {
+                    const qrCodeDataURL = await QRCode.toDataURL(url, {
                         margin: 1,
-                        width: qrSize
+                        width: 300,
+                        errorCorrectionLevel: 'H'
                     });
                     
                     doc.addImage(qrCodeDataURL, 'PNG', currentX, currentY, qrSize, qrSize);
                     
                     // Adiciona legenda abaixo do QR Code
                     doc.setFontSize(8);
-                    const label = link.descricao || `Vídeo ${i + 1}`;
+                    const label = typeof videoLink === 'object' && videoLink.descricao 
+                        ? videoLink.descricao 
+                        : `Vídeo ${i + 1}`;
                     const textWidth = doc.getTextWidth(label);
                     const centerX = currentX + (qrSize / 2) - (textWidth / 2);
                     

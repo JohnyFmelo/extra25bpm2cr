@@ -112,7 +112,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     return name.slice(0, maxLength - 3) + "...";
   };
 
-  return <div className="border rounded-lg shadow-sm bg-white">
+  return (
+    <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
         <h3 className="text-2xl font-semibold flex items-center">Histórico</h3>
       </div>
@@ -172,8 +173,24 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Label htmlFor="conclusaoPolicial">CONCLUSÃO POLICIAL</Label>
           <Textarea id="conclusaoPolicial" placeholder="Descreva a conclusão policial" value={conclusaoPolicial} onChange={e => setConclusaoPolicial(e.target.value)} className="min-h-[150px]" />
         </div>
+        
+        {/* Video Links Section */}
+        <div>
+          <Label htmlFor="videoLinks">LINKS PARA VÍDEOS</Label>
+          <Textarea
+            id="videoLinks"
+            placeholder="Insira links para vídeos (um por linha)"
+            value={videoUrls}
+            onChange={handleVideoUrlsChange}
+            className="min-h-[100px]"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Insira cada URL em uma linha separada. Códigos QR serão gerados automaticamente no PDF.
+          </p>
+        </div>
       </div>
-    </div>;
+    </div>
+  );
 };
 
 export default HistoricoTab;
