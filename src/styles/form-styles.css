@@ -1,26 +1,26 @@
-/* Estilo para o placeholder: cor cinza, sem negrito, sem itálico */
+/* Estilo para o placeholder: cor CINZA CLARO, sem negrito, sem itálico */
 ::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
-  color: #777;
+  color: #ccc;          /* Alterado para cinza claro */
   opacity: 1;          /* Garante que a cor seja totalmente opaca no Firefox */
   font-weight: normal; /* Remove o negrito */
   font-style: normal;  /* Remove o itálico, se houver */
 }
 
 :-ms-input-placeholder { /* Internet Explorer 10-11 */
-  color: #777;
+  color: #ccc;          /* Alterado para cinza claro */
   font-weight: normal;
   font-style: normal;
 }
 
 ::-ms-input-placeholder { /* Microsoft Edge (versões mais antigas) */
-  color: #777;
+  color: #ccc;          /* Alterado para cinza claro */
   font-weight: normal;
   font-style: normal;
 }
 
 /* Estilos específicos para o Textarea, se necessário */
 .textarea::placeholder {
-  color: #777;
+  color: #ccc;          /* Alterado para cinza claro */
   font-weight: normal;
   font-style: normal;
 }
