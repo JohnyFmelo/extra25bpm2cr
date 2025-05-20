@@ -1,14 +1,26 @@
-body {
-  font-family: 'Open Sans', Arial, sans-serif; /* Fonte padrão para o corpo do documento */
+/* Estilo para o placeholder: cor cinza, sem negrito, sem itálico */
+::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: #777;
+  opacity: 1;          /* Garante que a cor seja totalmente opaca no Firefox */
+  font-weight: normal; /* Remove o negrito */
+  font-style: normal;  /* Remove o itálico, se houver */
 }
 
-input,
-textarea,
-select,
-button {
-  font-family: inherit; /* Faz com que herdem a fonte do 'body' ou de um container pai */
-  /* OU você pode definir explicitamente: */
-  /* font-family: 'Open Sans', Arial, sans-serif; */
-  font-size: 1rem; /* Ou o tamanho que desejar */
-  /* Outros estilos base para seus inputs aqui */
+:-ms-input-placeholder { /* Internet Explorer 10-11 */
+  color: #777;
+  font-weight: normal;
+  font-style: normal;
+}
+
+::-ms-input-placeholder { /* Microsoft Edge (versões mais antigas) */
+  color: #777;
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Estilos específicos para o Textarea, se necessário */
+.textarea::placeholder {
+  color: #777;
+  font-weight: normal;
+  font-style: normal;
 }
