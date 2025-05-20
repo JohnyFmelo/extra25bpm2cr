@@ -25,9 +25,6 @@ interface HistoricoTabProps {
   natureza: string;
   videoLinks?: string[];
   setVideoLinks?: (value: string[]) => void;
-  vitimas?: any[];
-  testemunhas?: any[];
-  showVictimSpecificFields?: boolean; // Added this prop to the interface
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
@@ -48,10 +45,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   setRepresentacao,
   natureza,
   videoLinks = [],
-  setVideoLinks,
-  vitimas = [],
-  testemunhas = [],
-  showVictimSpecificFields = false // Default value to maintain backward compatibility
+  setVideoLinks
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
@@ -61,12 +55,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     id: string;
   }[]>([]);
   const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
-  
-  // Check if there's at least one valid victim (with name provided)
-  const hasValidVictim = vitimas.some(v => v?.nome && v.nome.trim() !== "");
-  
-  // Check if there's at least one valid witness (with name provided)
-  const hasValidWitness = testemunhas.some(t => t?.nome && t.nome.trim() !== "");
 
   useEffect(() => {
     return () => {
@@ -139,14 +127,12 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea id="relatoAutor" placeholder="Descreva o relato do autor" value={relatoAutor} onChange={e => setRelatoAutor(e.target.value)} className="min-h-[150px]" />
         </div>
         
-        {/* Only show victim fields if showVictimSpecificFields is true */}
-        {showVictimSpecificFields && (
-          <div>
+        {/* Only show victim fields if it's NOT a drug case */}
+        {!isDrugCase && <div>
             <Label htmlFor="relatoVitima">RELATO DA VÍTIMA</Label>
             <Textarea id="relatoVitima" placeholder="Descreva o relato da vítima" value={relatoVitima} onChange={e => setRelatoVitima(e.target.value)} className="min-h-[150px]" />
             
-            {setRepresentacao && (
-              <div className="mt-4 p-4 border rounded-md">
+            {setRepresentacao && <div className="mt-4 p-4 border rounded-md">
                 <Label className="font-bold mb-2 block">Representação da Vítima</Label>
                 <RadioGroup value={representacao} onValueChange={setRepresentacao}>
                   <div className="flex items-center space-x-2">
@@ -158,18 +144,13 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
                     <Label htmlFor="posteriormente">Representação posterior (6 meses)</Label>
                   </div>
                 </RadioGroup>
-              </div>
-            )}
-          </div>
-        )}
+              </div>}
+          </div>}
         
-        {/* Only show testemunha fields if there's a valid witness */}
-        {hasValidWitness && (
-          <div>
-            <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
-            <Textarea id="relatoTestemunha" placeholder="Descreva o relato da testemunha" value={relatoTestemunha} onChange={e => setRelatoTestemunha(e.target.value)} className="min-h-[150px]" />
-          </div>
-        )}
+        <div>
+          <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
+          <Textarea id="relatoTestemunha" placeholder="Descreva o relato da testemunha" value={relatoTestemunha} onChange={e => setRelatoTestemunha(e.target.value)} className="min-h-[150px]" />
+        </div>
         
         <div>
           <Label htmlFor="apreensoes">OBJETOS/DOCUMENTOS APREENDIDOS</Label>

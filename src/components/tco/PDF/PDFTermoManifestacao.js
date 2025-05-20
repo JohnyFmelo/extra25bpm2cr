@@ -13,8 +13,7 @@ export const addTermoManifestacao = (doc, data) => {
         return null;
     }
     
-    // Find a victim with a valid name
-    const vitima = data.vitimas?.find(v => v?.nome && v.nome.trim() !== "");
+    const vitima = data.vitimas?.find(v => v?.nome);
     if (!vitima) {
         console.warn("Nenhuma vítima com nome informado, pulando Termo de Manifestação.");
         return null;
@@ -57,7 +56,7 @@ export const addTermoManifestacao = (doc, data) => {
     yPos = addWrappedText(doc, yPos, option2Text, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 5;
 
-    yPos = addSignatureWithNameAndRole(doc, yPos, vitima?.nome?.toUpperCase(), "VÍTIMA", data);
+    yPos = addSignatureWithNameAndRole(doc, yPos, vitima?.nome, "VÍTIMA", data);
     const nomeCondutorManif = `${condutor?.nome || ""} ${condutor?.posto || ""}`.trim();
     yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutorManif, "CONDUTOR DA OCORRENCIA", data);
 

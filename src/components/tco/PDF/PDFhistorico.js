@@ -12,17 +12,14 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight, data) => 
     const {
         MARGIN_LEFT: M_LEFT,
         MARGIN_RIGHT: M_RIGHT,
+        // MARGIN_TOP: M_TOP, // addNewPage deve retornar yPos já considerando MARGIN_TOP
+        // PAGE_HEIGHT_USABLE // checkPageBreak deve usar isso internamente
     } = getPageConstants(doc);
 
     const maxImageDisplayWidth = pageWidth - M_LEFT - M_RIGHT; // Largura máxima para exibir a imagem
     const defaultMaxImageHeight = 150; // Altura padrão para estimar quebra de página, se não puder calcular antes
     const marginBetweenImages = 10;
     let currentY = yPosition;
-
-    // Verificar se images é um array válido
-    if (!Array.isArray(images) || images.length === 0) {
-        return currentY;
-    }
 
     for (const image of images) {
         if (!image || !image.data) {
@@ -61,9 +58,7 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight, data) => 
 
             currentY = checkPageBreak(doc, currentY, 8, data); // Espaço para legenda
             doc.setFontSize(8);
-            // Garantir que o nome da imagem seja uma string válida
-            const imageName = image.name || 'Imagem sem nome';
-            doc.text(String(`Imagem: ${imageName}`), M_LEFT, currentY);
+            doc.text(`Imagem: ${image.name || 'Imagem sem nome'}`, M_LEFT, currentY);
             currentY += 8; // Altura da legenda + espaço depois
 
             currentY += marginBetweenImages / 2; // Espaço antes da próxima
@@ -73,8 +68,7 @@ const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight, data) => 
             // Adicionar texto de erro no PDF
             currentY = checkPageBreak(doc, currentY, 10, data);
             doc.setFontSize(8).setTextColor(255, 0, 0); // Vermelho
-            const errorName = image.name || 'desconhecida';
-            doc.text(String(`[Erro ao processar imagem: ${errorName}]`), M_LEFT, currentY);
+            doc.text(`[Erro ao processar imagem: ${image.name || 'desconhecida'}]`, M_LEFT, currentY);
             doc.setTextColor(0, 0, 0); // Resetar cor
             currentY += 10;
         }
@@ -117,7 +111,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     // --- SEÇÃO 2: ENVOLVIDOS ---
     yPos = addSectionTitle(doc, yPos, "ENVOLVIDOS", "2", 1, data);
 
-    const autoresValidos = data.autores ? data.autores.filter(a => a?.nome && a.nome.trim() !== "") : [];
+    const autoresValidos = data.autores ? data.autores.filter(a => a?.nome) : [];
     if (autoresValidos.length > 0) {
         let autorTitleText;
         if (autoresValidos.length === 1) {
@@ -161,7 +155,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     }
 
     if (!isDrugCase) {
-        const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome && v.nome.trim() !== "") : [];
+        const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome) : [];
         if (vitimasValidas.length > 0) {
             const vitimaTitleText = vitimasValidas.length === 1 ? "VÍTIMA" : "VÍTIMAS";
             yPos = addSectionTitle(doc, yPos, vitimaTitleText, "2.2", 2, data);
@@ -200,7 +194,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         }
     }
 
-    const testemunhasValidas = data.testemunhas ? data.testemunhas.filter(t => t?.nome && t.nome.trim() !== "") : [];
+    const testemunhasValidas = data.testemunhas ? data.testemunhas.filter(t => t?.nome) : [];
     if (testemunhasValidas.length > 0) {
         const testemunhaTitleText = testemunhasValidas.length === 1 ? "TESTEMUNHA" : "TESTEMUNHAS";
         yPos = addSectionTitle(doc, yPos, testemunhaTitleText, "2.3", 2, data);
@@ -239,53 +233,55 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     }
 
     // --- SEÇÃO 3: HISTÓRICO ---
-    const primeiroAutor = autoresValidos.length > 0 ? autoresValidos[0] : null;
-    const primeiraVitima = !isDrugCase && data.vitimas ? data.vitimas.find(v => v?.nome && v.nome.trim() !== "") : null;
-    const primeiraTestemunha = testemunhasValidas.length > 0 ? testemunhasValidas[0] : null;
+    const primeiroAutor = autoresValidos[0]; // Usar autoresValidos
+    const primeiraVitima = !isDrugCase ? (data.vitimas ? data.vitimas.find(v => v?.nome) : null) : null;
+    const primeiraTestemunha = testemunhasValidas[0]; // Usar testemunhasValidas
 
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
     yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", "3.1", 2, data);
     yPos = addWrappedText(doc, yPos, data.relatoPolicial || "Não informado.", M_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
-    let sectionCounter = 2; // Começa em 3.2 para o relato do autor
-
-    // Relato do autor
-    let tituloRelatoAutor = "RELATO DO AUTOR DO FATO";
-    if (primeiroAutor && primeiroAutor.sexo?.toLowerCase() === 'feminino') {
-        tituloRelatoAutor = "RELATO DA AUTORA DO FATO";
-    }
-    
-    yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, `3.${sectionCounter}`, 2, data);
+    const tituloRelatoAutor = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "RELATO DA AUTORA DO FATO" : "RELATO DO AUTOR DO FATO";
+    yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, "3.2", 2, data);
     yPos = addWrappedText(doc, yPos, data.relatoAutor || "Não informado.", M_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     
     if (primeiroAutor) {
-        const autorLabel = primeiroAutor.sexo?.toLowerCase() === 'feminino' ? "AUTORA DO FATO" : "AUTOR DO FATO";
-        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor.nome?.toUpperCase(), autorLabel, data);
+        const autorLabel = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "AUTORA DO FATO" : "AUTOR DO FATO";
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor?.nome?.toUpperCase(), autorLabel, data);
     } else {
         yPos += 10; // Espaço se não houver assinatura
         yPos = checkPageBreak(doc, yPos, 0, data); // Verificar quebra mesmo para espaço
     }
-    
-    sectionCounter++;
 
-    // Only include victim report if there's a valid victim and it's not a drug case
-    if (!isDrugCase && primeiraVitima) {
-        yPos = addSectionTitle(doc, yPos, "RELATO DA VÍTIMA", `3.${sectionCounter}`, 2, data);
-        yPos = addWrappedText(doc, yPos, data.relatoVitima || "Relato não fornecido pela vítima.", M_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        yPos = addSignatureWithNameAndRole(doc, yPos, primeiraVitima.nome?.toUpperCase(), "VÍTIMA", data);
-        sectionCounter++;
+    if (!isDrugCase) {
+        yPos = addSectionTitle(doc, yPos, "RELATO DA VÍTIMA", "3.3", 2, data);
+        const relatoVitimaText = primeiraVitima ? (data.relatoVitima || "Relato não fornecido pela vítima.") : "Nenhuma vítima identificada para fornecer relato.";
+        yPos = addWrappedText(doc, yPos, relatoVitimaText, M_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+        if (primeiraVitima) {
+            yPos = addSignatureWithNameAndRole(doc, yPos, primeiraVitima?.nome?.toUpperCase(), "VÍTIMA", data);
+        } else {
+            yPos += 10;
+            yPos = checkPageBreak(doc, yPos, 0, data);
+        }
     }
 
-    // Only include witness report if there's a valid witness
+    const testemunhaSectionNumber = isDrugCase ? "3.3" : "3.4";
+    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", testemunhaSectionNumber, 2, data);
+    let relatoTestText = "Nenhuma testemunha identificada para fornecer relato.";
     if (primeiraTestemunha) {
-        yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", `3.${sectionCounter}`, 2, data);
-        yPos = addWrappedText(doc, yPos, data.relatoTestemunha || "Relato não fornecido pela testemunha.", M_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        yPos = addSignatureWithNameAndRole(doc, yPos, primeiraTestemunha.nome?.toUpperCase(), "TESTEMUNHA", data);
-        sectionCounter++;
+        relatoTestText = data.relatoTestemunha || "Relato não fornecido pela testemunha.";
     }
-    
-    yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", `3.${sectionCounter}`, 2, data);
+    yPos = addWrappedText(doc, yPos, relatoTestText, M_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    if (primeiraTestemunha) {
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiraTestemunha?.nome?.toUpperCase(), "TESTEMUNHA", data);
+    } else {
+        yPos += 10;
+        yPos = checkPageBreak(doc, yPos, 0, data);
+    }
+
+    const conclusaoSectionNumber = isDrugCase ? "3.4" : "3.5";
+    yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", conclusaoSectionNumber, 2, data);
     yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "Não informado.", M_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
@@ -305,9 +301,9 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos += 2;
 
     // --- SEÇÃO 4.3: FOTOS E/OU VÍDEOS ---
-    const hasPhotosData = data.objetosApreendidos && Array.isArray(data.objetosApreendidos) && data.objetosApreendidos.length > 0;
-    const hasVideosData = data.videoLinks && Array.isArray(data.videoLinks) && data.videoLinks.length > 0;
-    const hasImagesData = data.imageBase64 && Array.isArray(data.imageBase64) && data.imageBase64.length > 0;
+    const hasPhotosData = data.objetosApreendidos && data.objetosApreendidos.length > 0;
+    const hasVideosData = data.videoLinks && data.videoLinks.length > 0;
+    const hasImagesData = data.imageBase64 && data.imageBase64.length > 0;
     let fotosVideosSectionTitle = "FOTOS, VÍDEOS E IMAGENS ADICIONAIS"; // Título mais genérico
 
     if (hasPhotosData || hasVideosData || hasImagesData) {
@@ -358,7 +354,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                          yPos = checkPageBreak(doc, yPos, photoHeight + 5, data);
                          if (yPos < startYOfPhotoLine) startYOfPhotoLine = yPos;
                     }
-                    doc.text(String(`[Erro foto ${i + 1}]`), xPos, yPos + photoHeight / 2);
+                    doc.text(`[Erro foto ${i + 1}]`, xPos, yPos + photoHeight / 2);
                     xPos += photoWidth + 5;
                 }
             }
@@ -373,38 +369,36 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
             for (let i = 0; i < data.videoLinks.length; i++) {
                 const link = data.videoLinks[i];
-                if (!link) continue; // Pular links nulos ou indefinidos
-                
                 yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
-                if (yPos < startYOfQrLine) startYOfQrLine = yPos;
+                 if (yPos < startYOfQrLine) startYOfQrLine = yPos;
 
                 try {
-                    if (xPos + qrSize > PAGE_WIDTH - M_RIGHT) {
+                     if (xPos + qrSize > PAGE_WIDTH - M_RIGHT) {
                         xPos = M_LEFT;
                         yPos = startYOfQrLine + qrSize + 10;
                         startYOfQrLine = yPos;
                         yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
-                        if (yPos < startYOfQrLine) startYOfQrLine = yPos;
+                         if (yPos < startYOfQrLine) startYOfQrLine = yPos;
                     }
-                    const qrCodeDataUrl = await QRCode.toDataURL(String(link), { width: qrSize, margin: 1 });
+                    const qrCodeDataUrl = await QRCode.toDataURL(link, { width: qrSize, margin: 1 });
                     doc.addImage(qrCodeDataUrl, 'PNG', xPos, yPos, qrSize, qrSize);
                     doc.setFontSize(8);
-                    doc.text(String(`Vídeo ${i + 1}`), xPos, yPos + qrSize + 5);
+                    doc.text(`Vídeo ${i + 1}`, xPos, yPos + qrSize + 5);
                     xPos += qrSize + 10;
                 } catch (error) {
                     console.error(`Erro ao gerar QR code para o vídeo ${i + 1}:`, error);
-                    if (xPos + qrSize > PAGE_WIDTH - M_RIGHT) {
+                     if (xPos + qrSize > PAGE_WIDTH - M_RIGHT) {
                         xPos = M_LEFT;
                         yPos = startYOfQrLine + qrSize + 10;
                         startYOfQrLine = yPos;
                         yPos = checkPageBreak(doc, yPos, qrSize + 10, data);
                         if (yPos < startYOfQrLine) startYOfQrLine = yPos;
                     }
-                    doc.text(String(`[Erro QR ${i + 1}]`), xPos, yPos + qrSize / 2);
+                    doc.text(`[Erro QR ${i + 1}]`, xPos, yPos + qrSize / 2);
                     xPos += qrSize + 10;
                 }
             }
-            yPos = startYOfQrLine + qrSize + 10;
+             yPos = startYOfQrLine + qrSize + 10;
         }
 
         if (hasImagesData) {
@@ -421,10 +415,8 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     // --- SEÇÃO 5: IDENTIFICAÇÃO DA GUARNIÇÃO ---
     yPos = addSectionTitle(doc, yPos, "IDENTIFICAÇÃO DA GUARNIÇÃO", "5", 1, data);
     
-    if (data.componentesGuarnicao && Array.isArray(data.componentesGuarnicao) && data.componentesGuarnicao.length > 0) {
+    if (data.componentesGuarnicao && data.componentesGuarnicao.length > 0) {
         data.componentesGuarnicao.forEach((componente, index) => {
-            if (!componente) return; // Pular componentes nulos ou indefinidos
-            
             if (index > 0) { 
                 yPos += 10; // Espaço entre componentes
                 yPos = checkPageBreak(doc, yPos, 55, data); // Altura estimada para próximo componente
@@ -435,9 +427,9 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 doc.setDrawColor(0); // Resetar cor do traço
             }
     
-            yPos = addField(doc, yPos, "NOME COMPLETO", componente.nome ? componente.nome.toUpperCase() : "Não informado", data);
-            yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto ? componente.posto.toUpperCase() : "Não informado", data);
-            yPos = addField(doc, yPos, "RG PMMT", componente.rg ? componente.rg.toUpperCase() : "Não informado", data);
+            yPos = addField(doc, yPos, "NOME COMPLETO", componente.nome?.toUpperCase(), data);
+            yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto?.toUpperCase(), data);
+            yPos = addField(doc, yPos, "RG PMMT", componente.rg?.toUpperCase(), data);
             yPos = checkPageBreak(doc, yPos, LINE_HEIGHT + 5, data); // Para assinatura
     
             const sigLineY = yPos;
