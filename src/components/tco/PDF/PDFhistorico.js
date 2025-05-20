@@ -1,4 +1,3 @@
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -313,22 +312,15 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addSectionTitle(doc, yPos, "IDENTIFICAÇÃO DA GUARNIÇÃO", "5", 1, data);
     
     if (data.componentesGuarnicao && data.componentesGuarnicao.length > 0) {
-        // Separar componentes principais e de apoio
-        const componentesPrincipais = data.componentesGuarnicao.filter((comp, index) => 
-            index === 0 || !comp.apoio  // Condutor (index 0) ou não é apoio
-        );
-        
-        const componentesApoio = data.componentesGuarnicao.filter((comp, index) => 
-            index > 0 && comp.apoio === true  // Não é condutor e é marcado como apoio
-        );
-        
-        // Adicionar componentes principais primeiro
-        componentesPrincipais.forEach((componente, index) => {
+        data.componentesGuarnicao.forEach((componente, index) => {
             const isCondutor = index === 0;
+            // An officer is "de apoio" for PDF display if 'apoio' flag is true AND they are NOT the condutor.
+            const isDeApoioParaDisplay = componente.apoio === true && !isCondutor;
 
             // Calculate estimated height for the current officer's content block for page break check
             const fieldsHeight = 3 * 6; // Approx height for 3 fields (Nome, Posto, RG)
-            const signatureHeight = 7; // All principal officers get signature lines
+            // Signature if Condutor OR (Not Condutor AND Not Apoio Display)
+            const signatureHeight = (isCondutor || !isDeApoioParaDisplay) ? 7 : 0; 
             let currentOfficerContentHeight = fieldsHeight + signatureHeight;
             
             let spaceToReserve = currentOfficerContentHeight;
@@ -349,60 +341,39 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 yPos += 5; // Space after the line, before officer details start
             }
     
-            // Exibir informações do oficial principal
+            // Prepare display name with (APOIO) label if applicable, and ensure uppercase
             let nomeDisplay = componente.nome ? componente.nome.toUpperCase() : "NOME NÃO INFORMADO";
+            if (isDeApoioParaDisplay) {
+                nomeDisplay += " (APOIO)";
+            }
 
             yPos = addField(doc, yPos, "NOME COMPLETO", nomeDisplay, data);
             yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto ? componente.posto.toUpperCase() : "POSTO NÃO INFORMADO", data);
             yPos = addField(doc, yPos, "RG PMMT", componente.rg || "RG NÃO INFORMADO", data);
     
-            // Adicionar linha de assinatura para todos os oficiais principais
-            yPos = checkPageBreak(doc, yPos, 7, data);
+            // Add signature line if it's the Condutor OR if it's another member who is NOT deApoioParaDisplay
+            if (isCondutor || !isDeApoioParaDisplay) {
+                yPos = checkPageBreak(doc, yPos, 7, data); // Ensure space for signature line itself (approx 7mm)
 
-            const sigLineY = yPos; 
-            doc.setFont("helvetica", "normal"); 
-            doc.setFontSize(12);
-            doc.text("ASSINATURA:", MARGIN_LEFT, sigLineY);
-            
-            const labelWidth = doc.getTextWidth("ASSINATURA:");
-            const lineStartX = MARGIN_LEFT + labelWidth + 2;
-            const lineEndX = lineStartX + 80;
-            
-            doc.setLineWidth(0.3); 
-            doc.line(lineStartX, sigLineY, lineEndX, sigLineY);
-            
-            yPos = sigLineY + 7; // Espaço após a linha de assinatura
+                const sigLineY = yPos; 
+                doc.setFont("helvetica", "normal"); 
+                doc.setFontSize(12);
+                doc.text("ASSINATURA:", MARGIN_LEFT, sigLineY);
+                
+                const labelWidth = doc.getTextWidth("ASSINATURA:");
+                const lineStartX = MARGIN_LEFT + labelWidth + 2; // Start line after label + small gap
+                const lineEndX = lineStartX + 80; // Length of signature line
+                
+                doc.setLineWidth(0.3); 
+                doc.line(lineStartX, sigLineY, lineEndX, sigLineY); // Draw the signature line
+                
+                yPos = sigLineY + 2; // Move yPos down past the signature line baseline + small padding
+                                     // This assumes the text "ASSINATURA:" doesn't extend much below baseline.
+                                     // A more robust value might be sigLineY + 5 or sigLineY + (font_height_mm).
+            }
+            // If isDeApoioParaDisplay (and not Condutor), no signature line is drawn.
+            // yPos remains at the position after the last 'addField' call for this officer.
         });
-        
-        // Adicionar seção de policiais de apoio, se existirem
-        if (componentesApoio.length > 0) {
-            yPos += 10; // Espaço antes da seção de apoio
-            yPos = checkPageBreak(doc, yPos, 20, data); // Verificar quebra de página
-            
-            doc.setFontSize(11);
-            doc.setFont("helvetica", "bold");
-            doc.text("POLICIAIS DE APOIO:", MARGIN_LEFT, yPos);
-            yPos += 7;
-            
-            // Criar uma tabela simples para os policiais de apoio
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
-            
-            componentesApoio.forEach((componente, index) => {
-                // Verificar se precisamos quebrar a página
-                yPos = checkPageBreak(doc, yPos, 6, data);
-                
-                // Graduação, Nome e RGPM em uma linha
-                const posto = componente.posto ? componente.posto.toUpperCase() : "POSTO NÃO INFORMADO";
-                const nome = componente.nome ? componente.nome.toUpperCase() : "NOME NÃO INFORMADO";
-                const rg = componente.rg || "RG NÃO INFORMADO";
-                
-                const textoApoio = `${posto} ${nome} - RG: ${rg}`;
-                doc.text(textoApoio, MARGIN_LEFT + 5, yPos); // Indentado
-                
-                yPos += 6; // Espaço para o próximo policial de apoio
-            });
-        }
     } else {
         yPos = addWrappedText(doc, yPos, "Dados da Guarnição não informados.", MARGIN_LEFT, 12, 'italic', MAX_LINE_WIDTH, 'left', data);
         yPos += 2;
