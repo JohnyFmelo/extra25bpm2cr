@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -146,6 +147,7 @@ interface PoliceOfficerFormData {
   cpf: string;
   telefone: string;
 }
+
 const initialOfficerFormData: PoliceOfficerFormData = {
   rgpm: "",
   nome: "",
