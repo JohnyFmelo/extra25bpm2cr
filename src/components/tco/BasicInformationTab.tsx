@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TCOTimer from "./TCOTimer";
-
 interface BasicInformationTabProps {
   tcoNumber: string;
   setTcoNumber: (value: string) => void;
@@ -24,23 +23,22 @@ interface BasicInformationTabProps {
   juizadoEspecialHora: string;
   setJuizadoEspecialHora: (value: string) => void;
 }
-
 const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
-  tcoNumber = "",
+  tcoNumber,
   setTcoNumber,
-  natureza = "",
+  natureza,
   setNatureza,
   // autor, // Props mantidas na interface, mas não usadas diretamente aqui
   // setAutor,
-  penaDescricao = "",
-  naturezaOptions = [],
-  customNatureza = "",
+  penaDescricao,
+  naturezaOptions,
+  customNatureza,
   setCustomNatureza,
   startTime,
   isTimerRunning,
-  juizadoEspecialData = "",
+  juizadoEspecialData,
   setJuizadoEspecialData,
-  juizadoEspecialHora = "",
+  juizadoEspecialHora,
   setJuizadoEspecialHora
 }) => {
   return <Card>
@@ -116,5 +114,4 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       </CardFooter>
     </Card>;
 };
-
 export default BasicInformationTab;
