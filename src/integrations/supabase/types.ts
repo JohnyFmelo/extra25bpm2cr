@@ -261,6 +261,39 @@ export type Database = {
         }
         Relationships: []
       }
+      tco_pdfs: {
+        Row: {
+          createdat: string
+          createdby: string | null
+          id: string
+          natureza: string
+          pdfpath: string
+          pdfurl: string
+          policiais: Json | null
+          tconumber: string
+        }
+        Insert: {
+          createdat?: string
+          createdby?: string | null
+          id?: string
+          natureza: string
+          pdfpath: string
+          pdfurl: string
+          policiais?: Json | null
+          tconumber: string
+        }
+        Update: {
+          createdat?: string
+          createdby?: string | null
+          id?: string
+          natureza?: string
+          pdfpath?: string
+          pdfurl?: string
+          policiais?: Json | null
+          tconumber?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

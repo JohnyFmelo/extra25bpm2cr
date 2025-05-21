@@ -14,6 +14,11 @@ export async function uploadPDF(filePath: string, fileBlob: Blob, metadata?: Rec
   error: Error | null;
 }> {
   try {
+    console.log('Starting PDF upload to path:', filePath);
+    
+    // Ensure bucket exists before uploading
+    await ensureBucketExists();
+    
     // Upload the file to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
@@ -28,11 +33,14 @@ export async function uploadPDF(filePath: string, fileBlob: Blob, metadata?: Rec
       return { url: null, error: uploadError };
     }
 
+    console.log('PDF uploaded successfully:', uploadData);
+
     // Get the public URL of the uploaded file
     const { data: urlData } = await supabase.storage
       .from(BUCKET_NAME)
       .getPublicUrl(filePath);
 
+    console.log('Generated public URL:', urlData?.publicUrl);
     return { url: urlData?.publicUrl || null, error: null };
   } catch (error) {
     console.error('Exception uploading PDF:', error);
@@ -112,16 +120,36 @@ export async function saveTCOMetadata(tcoMetadata: any) {
   const TABLE_NAME = 'tco_pdfs';
 
   try {
+    console.log('Saving TCO metadata to database:', JSON.stringify(tcoMetadata, null, 2));
+    
+    // Make sure createdAt is properly formatted
+    const formattedMetadata = {
+      ...tcoMetadata,
+      createdat: new Date().toISOString(),
+    };
+
+    // Ensure policiais field is properly structured
+    if (!formattedMetadata.policiais && Array.isArray(formattedMetadata.componentesGuarnicao)) {
+      formattedMetadata.policiais = formattedMetadata.componentesGuarnicao.map(comp => ({
+        nome: comp.nome,
+        rgpm: comp.rg,
+        posto: comp.posto,
+        apoio: !!comp.apoio
+      }));
+    }
+
     const { data, error } = await supabase
       .from(TABLE_NAME)
-      .insert([tcoMetadata])
+      .insert([formattedMetadata])
       .select('id')
       .single();
 
     if (error) {
+      console.error('Error saving TCO metadata:', error);
       throw error;
     }
 
+    console.log('TCO metadata saved successfully, returned ID:', data?.id);
     return { data, error: null };
   } catch (error) {
     console.error('Error saving TCO metadata:', error);
@@ -135,7 +163,13 @@ export async function saveTCOMetadata(tcoMetadata: any) {
 export async function ensureBucketExists(): Promise<boolean> {
   try {
     // Check if bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+      return false;
+    }
+    
     const bucketExists = buckets?.some(bucket => bucket.name === BUCKET_NAME);
 
     if (!bucketExists) {

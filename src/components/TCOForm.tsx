@@ -811,6 +811,12 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
       const filePath = `tcos/${userId || 'anonimo'}/${tcoNumParaNome}_${dateStr}.pdf`;
 
+      // Ensure bucket exists before trying to upload
+      const bucketExists = await ensureBucketExists();
+      if (!bucketExists) {
+        throw new Error("Não foi possível criar ou verificar o bucket de armazenamento.");
+      }
+
       const { url: downloadURL, error: uploadError } = await uploadPDF(filePath, pdfBlob, {
         tcoNumber: tcoNumParaNome,
         natureza: displayNaturezaReal,
@@ -820,28 +826,58 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       if (!downloadURL) throw new Error("URL do arquivo não disponível após o upload.");
       console.log('URL pública do arquivo:', downloadURL);
 
+      // Prepare detailed metadata for Supabase database
       const tcoMetadata = {
-        tcoNumber: tcoNumber.trim(),
+        tconumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
         policiais: componentesValidos.map(p => ({
           nome: p.nome,
-          rg: p.rg,
+          rgpm: p.rg,
           posto: p.posto,
-          apoio: p.apoio
+          apoio: !!p.apoio
         })),
-        pdfPath: filePath,
-        pdfUrl: downloadURL,
-        createdBy: userId,
-        createdAt: new Date().toISOString()
+        pdfpath: filePath,
+        pdfurl: downloadURL,
+        createdby: userId,
+        createdat: new Date().toISOString()
       };
       console.log("Metadados para salvar no DB:", tcoMetadata);
 
-      const { error: metadataError } = await saveTCOMetadata(tcoMetadata);
-      if (metadataError) {
-        console.error("Erro ao salvar metadados no Supabase DB:", metadataError);
-        throw new Error(`Erro ao salvar informações do TCO: ${metadataError.message || metadataError}`);
+      // Try up to 3 times to save metadata if there's a transient error
+      let attempt = 0;
+      let metadataSuccess = false;
+      let lastError = null;
+      
+      while (attempt < 3 && !metadataSuccess) {
+        try {
+          attempt++;
+          console.log(`Tentativa ${attempt} de salvar metadados...`);
+          const { error: metadataError } = await saveTCOMetadata(tcoMetadata);
+          
+          if (metadataError) {
+            console.error(`Erro na tentativa ${attempt} ao salvar metadados:`, metadataError);
+            lastError = metadataError;
+            // Wait before retrying (exponential backoff)
+            if (attempt < 3) {
+              await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+            }
+          } else {
+            console.log("Metadados salvos com sucesso no DB");
+            metadataSuccess = true;
+          }
+        } catch (error) {
+          console.error(`Exceção na tentativa ${attempt}:`, error);
+          lastError = error;
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+          }
+        }
       }
-      console.log("Metadados salvos com sucesso no DB");
+
+      if (!metadataSuccess) {
+        throw new Error(`Falha ao salvar metadados após ${attempt} tentativas: ${lastError?.message || 'Erro desconhecido'}`);
+      }
+      
       toast({
         title: "TCO Registrado com Sucesso!",
         description: "PDF enviado e informações salvas no sistema.",
