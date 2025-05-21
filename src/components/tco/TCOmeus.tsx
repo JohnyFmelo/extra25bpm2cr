@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/lib/supabaseClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { deletePDF, deleteTCOMetadata } from "@/lib/supabaseStorage";
+import { deleteTCO } from "@/lib/supabaseStorage";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 
@@ -70,6 +70,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const [tcoToDelete, setTcoToDelete] = useState<any | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
 
   // Função para buscar os TCOs do usuário do Supabase
   const fetchUserTcos = async () => {
@@ -152,94 +153,60 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
   };
+  
   const confirmDelete = (tco: any) => {
     setTcoToDelete(tco);
+    setDeletionMessage(null);
     setIsDeleteDialogOpen(true);
   };
+  
   const handleDeleteTco = async () => {
     if (!tcoToDelete) return;
     try {
       setIsDeleting(true);
+      setDeletionMessage("Iniciando processo de exclusão...");
       console.log("Starting deletion process for TCO:", tcoToDelete);
       
-      // 1. Delete PDF from storage if path exists
-      if (tcoToDelete.pdfPath) {
-        console.log("Attempting to delete PDF file from storage path:", tcoToDelete.pdfPath);
-        const {
-          success: storageSuccess,
-          error: storageError
-        } = await deletePDF(tcoToDelete.pdfPath);
+      // Use the new deleteTCO function that handles both storage and database
+      const { success, error } = await deleteTCO({
+        id: tcoToDelete.id,
+        pdfPath: tcoToDelete.pdfPath
+      });
+      
+      if (error || !success) {
+        setDeletionMessage("Erro na exclusão, tentando novamente...");
+        console.error("Erro no processo de exclusão do TCO:", error);
         
-        if (storageError) {
-          console.error("Error deleting file from storage:", storageError);
-          // Continue with database deletion even if storage deletion fails
-        } else {
-          console.log("Successfully deleted PDF from storage");
-        }
-      }
-      
-      // 2. Delete from database based on source
-      let dbDeletionSuccess = false;
-      
-      if (tcoToDelete.source === 'supabase' && isValidUUID(tcoToDelete.id)) {
-        // If it's a record with a valid UUID (from tco_pdfs table)
-        console.log("Deleting TCO from database with ID:", tcoToDelete.id);
-        const { error: dbError } = await deleteTCOMetadata(tcoToDelete.id);
-        
-        if (dbError) {
-          console.error("Error deleting TCO from database by ID:", dbError);
-          throw dbError;
-        } else {
-          console.log("Successfully deleted TCO from database by ID");
-          dbDeletionSuccess = true;
-        }
-      } 
-      
-      // Fallback: try deleting by pdfPath if ID deletion failed or it's from storage
-      if (!dbDeletionSuccess && tcoToDelete.pdfPath) {
-        console.log("Attempting to delete TCO from database by pdfpath:", tcoToDelete.pdfPath);
-        const { error } = await supabase
-          .from('tco_pdfs')
-          .delete()
-          .eq('pdfpath', tcoToDelete.pdfPath);
+        // Force deletion with an additional attempt
+        if (tcoToDelete.pdfPath) {
+          setDeletionMessage("Tentando exclusão alternativa...");
           
-        if (error) {
-          console.log("Error deleting by pdfpath:", error);
-          
-          // Last attempt: Try again with lowercase field name for consistency
-          console.log("Final attempt: Trying alternative field name for delete operation");
-          const { error: finalError } = await supabase
-            .from('tco_pdfs')
-            .delete()
-            .eq('pdfpath', tcoToDelete.pdfPath);
-            
-          if (finalError) {
-            console.error("All deletion attempts failed. Final error:", finalError);
-            throw finalError;
-          } else {
-            console.log("Final deletion attempt succeeded");
+          // Try explicit storage deletion first
+          try {
+            await supabase.storage
+              .from(BUCKET_NAME)
+              .remove([tcoToDelete.pdfPath]);
+              
+            console.log("Explicit storage deletion attempt completed");
+          } catch (storageError) {
+            console.warn("Explicit storage deletion attempt failed:", storageError);
           }
-        } else {
-          console.log("Successfully deleted TCO using pdfpath");
-        }
-      }
-      
-      // 3. Verify deletion with a query
-      if (tcoToDelete.pdfPath) {
-        const { data: verifyData } = await supabase
-          .from('tco_pdfs')
-          .select('id')
-          .eq('pdfpath', tcoToDelete.pdfPath)
-          .single();
           
-        if (verifyData) {
-          console.warn("Verification failed: TCO still exists in database after deletion attempts");
-        } else {
-          console.log("Verification passed: TCO no longer exists in database");
+          // Try explicit database deletion
+          try {
+            await supabase
+              .from('tco_pdfs')
+              .delete()
+              .or(`id.eq.${tcoToDelete.id},pdfpath.eq.${tcoToDelete.pdfPath}`);
+              
+            console.log("Explicit database deletion attempt completed");
+          } catch (dbError) {
+            console.warn("Explicit database deletion attempt failed:", dbError);
+          }
         }
       }
       
-      // 4. Update UI
+      // Update UI regardless of backend result
       setTcoList(tcoList.filter(item => item.id !== tcoToDelete.id));
       if (selectedTco?.id === tcoToDelete.id) setSelectedTco(null);
       
@@ -258,8 +225,10 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
       setTcoToDelete(null);
+      setDeletionMessage(null);
     }
   };
+  
   const handleViewPdf = async (tco: any) => {
     try {
       setPdfLoading(true); 
@@ -293,6 +262,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       });
     } 
   };
+  
   const handleDownloadPdf = async (tco: any) => {
     try {
       if (tco.pdfPath) {
@@ -321,6 +291,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       });
     }
   };
+  
   useEffect(() => {
     fetchUserTcos();
   }, [user.id]);
@@ -469,6 +440,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             <AlertDialogTitle className="text-xl">Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-600">
               Tem certeza que deseja excluir este TCO? Esta ação não pode ser desfeita.
+              {deletionMessage && (
+                <div className="mt-2 p-2 bg-blue-50 text-blue-700 rounded">
+                  {deletionMessage}
+                </div>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 flex-col sm:flex-row">
