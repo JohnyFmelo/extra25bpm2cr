@@ -12,7 +12,7 @@ import GuarnicaoTab from "./tco/GuarnicaoTab";
 import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
-import { uploadPDF, saveTCOMetadata } from '@/lib/supabaseStorage';
+import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
 
 interface ComponenteGuarnicao {
   rg: string;
