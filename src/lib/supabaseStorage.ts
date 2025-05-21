@@ -345,39 +345,103 @@ export async function saveTCOMetadata(tcoMetadata: any) {
   const TABLE_NAME = 'tco_pdfs';
 
   try {
-    console.log('Saving TCO metadata to database:', JSON.stringify(tcoMetadata, null, 2));
+    console.log('Preparing to save TCO metadata to database:', JSON.stringify(tcoMetadata, null, 2));
     
-    // Make sure createdAt is properly formatted
-    const formattedMetadata = {
-      ...tcoMetadata,
-      createdat: new Date().toISOString(),
-    };
+    // Get current user to ensure we're authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !user.id) {
+      console.error('No authenticated user found for saving TCO metadata');
+      return { data: null, error: new Error('User not authenticated') };
+    }
 
-    // Ensure policiais field is properly structured
-    if (!formattedMetadata.policiais && Array.isArray(formattedMetadata.componentesGuarnicao)) {
-      formattedMetadata.policiais = formattedMetadata.componentesGuarnicao.map(comp => ({
+    // Standardize field names to lowercase to match database column names
+    const standardizedMetadata: Record<string, any> = {};
+    
+    // Map the required fields with correct casing
+    if (tcoMetadata.tcoNumber) standardizedMetadata.tconumber = tcoMetadata.tcoNumber;
+    if (tcoMetadata.natureza) standardizedMetadata.natureza = tcoMetadata.natureza;
+    if (tcoMetadata.pdfPath) standardizedMetadata.pdfpath = tcoMetadata.pdfPath;
+    if (tcoMetadata.pdfUrl) standardizedMetadata.pdfurl = tcoMetadata.pdfUrl;
+    
+    // Ensure required fields are present
+    if (!standardizedMetadata.tconumber) {
+      console.error('TCO number is required but missing');
+      return { data: null, error: new Error('TCO number is required') };
+    }
+    
+    if (!standardizedMetadata.natureza) {
+      console.error('Natureza is required but missing');
+      return { data: null, error: new Error('Natureza is required') };
+    }
+    
+    if (!standardizedMetadata.pdfpath) {
+      console.error('PDF path is required but missing');
+      return { data: null, error: new Error('PDF path is required') };
+    }
+    
+    if (!standardizedMetadata.pdfurl) {
+      console.error('PDF URL is required but missing');
+      return { data: null, error: new Error('PDF URL is required') };
+    }
+
+    // Set creation timestamp and user
+    standardizedMetadata.createdat = new Date().toISOString();
+    standardizedMetadata.createdby = user.id;
+
+    // Handle policiais field (ensuring proper structure)
+    if (Array.isArray(tcoMetadata.componentesGuarnicao) && !tcoMetadata.policiais) {
+      standardizedMetadata.policiais = tcoMetadata.componentesGuarnicao.map(comp => ({
         nome: comp.nome,
         rgpm: comp.rg,
         posto: comp.posto,
         apoio: !!comp.apoio
       }));
+    } else if (tcoMetadata.policiais) {
+      standardizedMetadata.policiais = tcoMetadata.policiais;
     }
 
+    console.log('Standardized metadata ready to save:', standardizedMetadata);
+    
+    // Insert data into the database
     const { data, error } = await supabase
       .from(TABLE_NAME)
-      .insert([formattedMetadata])
+      .insert([standardizedMetadata])
       .select('id')
       .single();
 
     if (error) {
-      console.error('Error saving TCO metadata:', error);
-      throw error;
+      console.error('Error saving TCO metadata to database:', error);
+      
+      // Log more details about the error
+      if (error.code) {
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+      }
+      
+      return { data: null, error };
     }
 
-    console.log('TCO metadata saved successfully, returned ID:', data?.id);
+    console.log('TCO metadata saved successfully to database, returned ID:', data?.id);
+    
+    // Verify the insertion by fetching the newly created record
+    if (data?.id) {
+      const { data: verifyData, error: verifyError } = await supabase
+        .from(TABLE_NAME)
+        .select('*')
+        .eq('id', data.id)
+        .single();
+        
+      if (verifyError || !verifyData) {
+        console.warn('Could not verify TCO metadata insertion:', verifyError);
+      } else {
+        console.log('Verified TCO metadata successfully saved:', verifyData);
+      }
+    }
+    
     return { data, error: null };
   } catch (error) {
-    console.error('Error saving TCO metadata:', error);
+    console.error('Exception saving TCO metadata:', error);
     return { data: null, error };
   }
 }
