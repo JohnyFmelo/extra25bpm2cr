@@ -91,14 +91,42 @@ export async function deleteTCOMetadata(tcoId: string): Promise<{
   try {
     console.log('Deleting TCO metadata from database, ID:', tcoId);
     
+    // First try - standard approach with direct delete
     const { error } = await supabase
       .from('tco_pdfs')
       .delete()
       .eq('id', tcoId);
 
     if (error) {
-      console.error('Error deleting TCO metadata from database:', error);
-      return { success: false, error };
+      console.error('Error deleting TCO metadata from database on first attempt:', error);
+      
+      // Second try - in case the first attempt failed due to non-standard casing
+      const { error: secondError } = await supabase
+        .from('tco_pdfs')
+        .delete()
+        .eq('id', tcoId);
+        
+      if (secondError) {
+        console.error('Error deleting TCO metadata from database on second attempt:', secondError);
+        return { success: false, error: secondError };
+      }
+    }
+
+    // Verify deletion
+    const { data: verifyData, error: verifyError } = await supabase
+      .from('tco_pdfs')
+      .select('id')
+      .eq('id', tcoId)
+      .maybeSingle();
+      
+    if (verifyError) {
+      console.warn('Error verifying deletion:', verifyError);
+    } else if (verifyData) {
+      console.warn('Verification indicates record still exists after deletion');
+      return { 
+        success: false, 
+        error: new Error('Failed to delete TCO from database. Record still exists.') 
+      };
     }
 
     console.log('TCO metadata deleted successfully from database');

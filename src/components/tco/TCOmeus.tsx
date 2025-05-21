@@ -100,7 +100,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       let consolidatedTcos: any[] = [];
       const filesFromStorage = storageFiles?.map(file => {
         const fileName = file.name;
-        const tcoMatch = fileName.match(/TCO-([\w.-]+)/i);
+        const tcoMatch = fileName.match(/TCO-([^_ -]+)/i);
         let tcoIdentifierPart = tcoMatch ? tcoMatch[1] : fileName.replace(/\.pdf$/i, "");
         
         let finalTcoNumber = tcoIdentifierPart;
@@ -160,34 +160,89 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     if (!tcoToDelete) return;
     try {
       setIsDeleting(true);
+      console.log("Starting deletion process for TCO:", tcoToDelete);
+      
+      // 1. Delete PDF from storage if path exists
       if (tcoToDelete.pdfPath) {
+        console.log("Attempting to delete PDF file from storage path:", tcoToDelete.pdfPath);
         const {
+          success: storageSuccess,
           error: storageError
         } = await deletePDF(tcoToDelete.pdfPath);
+        
         if (storageError) {
-          console.error("Erro ao excluir arquivo do storage:", storageError);
+          console.error("Error deleting file from storage:", storageError);
+          // Continue with database deletion even if storage deletion fails
+        } else {
+          console.log("Successfully deleted PDF from storage");
         }
       }
+      
+      // 2. Delete from database based on source
+      let dbDeletionSuccess = false;
+      
       if (tcoToDelete.source === 'supabase' && isValidUUID(tcoToDelete.id)) {
-        const {
-          error: dbError
-        } = await deleteTCOMetadata(tcoToDelete.id);
+        // If it's a record with a valid UUID (from tco_pdfs table)
+        console.log("Deleting TCO from database with ID:", tcoToDelete.id);
+        const { error: dbError } = await deleteTCOMetadata(tcoToDelete.id);
+        
         if (dbError) {
-          console.error("Erro ao excluir TCO do banco de dados:", dbError);
+          console.error("Error deleting TCO from database by ID:", dbError);
           throw dbError;
+        } else {
+          console.log("Successfully deleted TCO from database by ID");
+          dbDeletionSuccess = true;
         }
-      } else {
-        if (tcoToDelete.pdfPath) {
-          const {
-            error
-          } = await supabase.from('tco_pdfs').delete().eq('pdfPath', tcoToDelete.pdfPath);
-          if (error) {
-            console.log("Erro ao excluir pelo caminho (pode ser normal se não existir no banco):", error);
+      } 
+      
+      // Fallback: try deleting by pdfPath if ID deletion failed or it's from storage
+      if (!dbDeletionSuccess && tcoToDelete.pdfPath) {
+        console.log("Attempting to delete TCO from database by pdfpath:", tcoToDelete.pdfPath);
+        const { error } = await supabase
+          .from('tco_pdfs')
+          .delete()
+          .eq('pdfpath', tcoToDelete.pdfPath);
+          
+        if (error) {
+          console.log("Error deleting by pdfpath:", error);
+          
+          // Last attempt: Try again with lowercase field name for consistency
+          console.log("Final attempt: Trying alternative field name for delete operation");
+          const { error: finalError } = await supabase
+            .from('tco_pdfs')
+            .delete()
+            .eq('pdfpath', tcoToDelete.pdfPath);
+            
+          if (finalError) {
+            console.error("All deletion attempts failed. Final error:", finalError);
+            throw finalError;
+          } else {
+            console.log("Final deletion attempt succeeded");
           }
+        } else {
+          console.log("Successfully deleted TCO using pdfpath");
         }
       }
+      
+      // 3. Verify deletion with a query
+      if (tcoToDelete.pdfPath) {
+        const { data: verifyData } = await supabase
+          .from('tco_pdfs')
+          .select('id')
+          .eq('pdfpath', tcoToDelete.pdfPath)
+          .single();
+          
+        if (verifyData) {
+          console.warn("Verification failed: TCO still exists in database after deletion attempts");
+        } else {
+          console.log("Verification passed: TCO no longer exists in database");
+        }
+      }
+      
+      // 4. Update UI
       setTcoList(tcoList.filter(item => item.id !== tcoToDelete.id));
       if (selectedTco?.id === tcoToDelete.id) setSelectedTco(null);
+      
       toast({
         title: "TCO Excluído",
         description: "O TCO foi removido com sucesso."
