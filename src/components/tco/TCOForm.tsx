@@ -1,38 +1,37 @@
 
 import React from 'react';
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface TCOmeusProps {
-  user: any;
-  toast: any;
-  setSelectedTco: (tco: any) => void;
-  selectedTco: any;
+interface TCOFormProps {
+  userId?: string;
+  toast?: any;
 }
 
-const TCOmeus: React.FC<TCOmeusProps> = ({ user, toast, setSelectedTco, selectedTco }) => {
+const TCOForm: React.FC<TCOFormProps> = ({ userId, toast }) => {
   return (
     <div className="container mx-auto px-4 py-8">
       <Card>
         <CardHeader>
-          <CardTitle>My TCOs</CardTitle>
+          <CardTitle>New TCO Form</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-4">This is a placeholder for the TCOmeus component.</p>
-          <p>User email: {user?.email || 'No user email available'}</p>
-          <button 
+          <p className="mb-4">This is a placeholder for the TCO Form component.</p>
+          <p>User ID: {userId || 'No user ID available'}</p>
+          <Button 
             onClick={() => toast({ 
               title: "Test Toast", 
               description: "The toast functionality is working!", 
               className: "bg-green-600 text-white" 
             })}
-            className="px-4 py-2 bg-blue-500 text-white rounded mt-4 hover:bg-blue-600"
+            className="mt-4"
           >
             Test Toast
-          </button>
+          </Button>
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default TCOmeus;
+export default TCOForm;

@@ -21,8 +21,8 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 initializeSupabase();
 
 function App() {
-  const [selectedTco, setSelectedTco] = useState(null);
-  const [session, setSession] = useState(null);
+  const [selectedTco, setSelectedTco] = useState<any>(null);
+  const [session, setSession] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -55,16 +55,10 @@ function App() {
           ) : (
             <Routes>
               <Route path="/" element={<Home session={session} />} />
-              <Route
-                path="/account"
-                element={<Account session={session} />}
-              />
+              <Route path="/account" element={<Account session={session} />} />
               <Route
                 path="/tco/new"
-                element={<TCOForm
-                  userId={session?.user?.id}
-                  toast={toast}
-                />}
+                element={<TCOForm userId={session?.user?.id} toast={toast} />}
               />
               <Route
                 path="/tco/meus"
