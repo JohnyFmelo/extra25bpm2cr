@@ -1,5 +1,3 @@
---- START OF FILE TCOForm (46).tsx ---
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1234,4 +1232,3 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 };
 
 export default TCOForm;
---- END OF FILE TCOForm (46).tsx ---
