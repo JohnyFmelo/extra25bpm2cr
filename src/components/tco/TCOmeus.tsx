@@ -52,58 +52,44 @@ const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): stri
   return "-";
 };
 
-// Função melhorada para extrair a natureza do nome do arquivo TCO e substituir underscores por espaços
+// Em TCOmeus (3).tsx
 const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
   if (!fileName) return "Não especificada";
   
-  console.log("Extraindo natureza do arquivo:", fileName);
+  console.log("Extraindo natureza do arquivo (nova lógica):", fileName);
   
-  // Formato esperado: TCO_[número]_[data]_[natureza1_natureza2]_[RGPMs...].pdf
   const parts = fileName.split('_');
   
-  if (parts.length < 4) { // TCO, numero, data, natureza_minima
-    console.log("Arquivo tem menos de 4 partes, formato não reconhecido");
+  // Formato esperado: TCO_[número]_[data]_[naturezaSegment1_naturezaSegment2_...]_[rgCode].pdf
+  // Precisa de pelo menos 5 partes para ter: 
+  // TCO, numero, data, natureza_minima_um_segmento, rgCode.pdf
+  // Ex: TCO_1_01.01.2024_Ameaca_123456.pdf
+  if (parts.length < 5) { 
+    console.log("Arquivo tem menos de 5 partes, formato não reconhecido para natureza:", parts);
     return "Não especificada";
   }
 
-  let naturezaParts: string[] = [];
-  
-  // O último segmento pode ser RGPMs. Verificamos se ele começa com um número.
-  const lastPart = parts[parts.length - 1];
-  const rgpmSegmentPotentially = lastPart.replace(/\.pdf$/i, ""); // Remove .pdf para checar
-  
-  if (parts.length >= 5 && /^\d/.test(rgpmSegmentPotentially)) {
-    // Se o último segmento começa com número, assumimos que são RGPMs.
-    // A natureza é tudo entre a data (parts[2]) e o segmento de RGPMs (parts[parts.length - 1]).
-    // Isso significa que a natureza está de parts[3] até parts[parts.length - 2].
-    naturezaParts = parts.slice(3, parts.length - 1);
-    console.log("Formato com RGPMs detectado, naturezaParts:", naturezaParts);
-  } else {
-    // Se não houver segmento de RGPM no final (ou ele não começar com número),
-    // a natureza vai de parts[3] até o final (antes da extensão).
-    // Precisamos remover a extensão .pdf da última parte se ela fizer parte da natureza.
-    const lastNaturePart = parts[parts.length - 1].replace(/\.pdf$/i, "");
-    naturezaParts = parts.slice(3, parts.length - 1);
-    naturezaParts.push(lastNaturePart);
-    console.log("Formato sem RGPMs no final, naturezaParts:", naturezaParts);
-  }
+  // A natureza são todos os segmentos entre a data (índice 2) e o segmento de código RGPM (penúltimo)
+  // parts[0]=TCO, parts[1]=Numero, parts[2]=Data, 
+  // parts[3]...parts[parts.length-2]=SegmentosDaNatureza, 
+  // parts[parts.length-1]=RgCode.pdf
+  const naturezaParts = parts.slice(3, parts.length - 1); 
   
   if (naturezaParts.length === 0) {
-    console.log("Nenhuma parte de natureza encontrada");
+    // Isso aconteceria se o nome fosse TCO_Numero_Data_RgCode.pdf, o que não é esperado.
+    console.log("Nenhuma parte de natureza encontrada entre data e segmento RG:", parts);
     return "Não especificada";
   }
 
-  // Junta as partes da natureza substituindo underscores por espaços
-  const joinedNatureza = naturezaParts.join('_');
+  const joinedNatureza = naturezaParts.join('_'); // Rejunta segmentos da natureza se ela tiver múltiplos underscores
   
-  // Substitui underscores por espaços e capitaliza cada palavra
   const formattedNatureza = joinedNatureza
     .replace(/_/g, ' ') // Substitui todos os underscores por espaços
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
       
-  console.log("Natureza formatada:", formattedNatureza);
+  console.log("Natureza formatada (nova lógica):", formattedNatureza);
   return formattedNatureza || "Não especificada";
 };
 
