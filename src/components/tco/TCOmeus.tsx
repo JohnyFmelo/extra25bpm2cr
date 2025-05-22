@@ -109,8 +109,8 @@ const extractTcoNatureFromFilename = (fileName: string | undefined | null): stri
 };
 
 // Função melhorada para extrair os RGPMs do nome do arquivo
-const extractRGPMsFromFilename = (fileName: string | undefined | null): string => {
-  if (!fileName) return "Não disponível";
+const extractRGPMsFromFilename = (fileName: string | undefined | null): string[] => {
+  if (!fileName) return [];
 
   console.log("Extraindo RGPMs do arquivo:", fileName);
 
@@ -122,7 +122,7 @@ const extractRGPMsFromFilename = (fileName: string | undefined | null): string =
   // Ex: TCO_1_data_Natureza_RGPM.pdf
   if (parts.length < 5) {
     console.log("Arquivo tem menos de 5 partes, possível formato sem RGPMs");
-    return "Não disponível";
+    return [];
   }
 
   // O último segmento antes da extensão .pdf deve ser o RGPM
@@ -132,7 +132,7 @@ const extractRGPMsFromFilename = (fileName: string | undefined | null): string =
   const rgpmStringWithoutExtension = rgpmSegmentWithExtension.replace(/\.pdf$/i, "");
   if (!rgpmStringWithoutExtension.match(/^\d/)) {
     console.log("Último segmento não começa com número, possível formato sem RGPMs");
-    return "Não disponível"; // Última parte não parece ser RGPMs
+    return []; // Última parte não parece ser RGPMs
   }
 
   console.log("Segmento de RGPM encontrado:", rgpmStringWithoutExtension);
@@ -157,27 +157,41 @@ const extractRGPMsFromFilename = (fileName: string | undefined | null): string =
   console.log("RGPMs principais:", mainRgpmsList);
   console.log("RGPMs de apoio:", supportRgpmsList);
 
-  if (mainRgpmsList.length === 0 && supportRgpmsList.length === 0) {
-    console.log("Nenhum RGPM válido encontrado");
-    return "Não disponível";
+  return [...mainRgpmsList, ...supportRgpmsList];
+};
+
+// Função para formatar o display de RGPM com informações dos policiais
+const formatRGPMsDisplay = async (rgpms: string[]): Promise<string> => {
+  if (rgpms.length === 0) return "Não disponível";
+  
+  try {
+    // Buscar informações dos policiais no Supabase
+    const officerPromises = rgpms.map(async (rgpm) => {
+      const { data, error } = await supabase
+        .from('police_officers')
+        .select('graduacao, nome')
+        .eq('rgpm', rgpm)
+        .single();
+      
+      if (error || !data) {
+        console.log(`Policial com RGPM ${rgpm} não encontrado:`, error);
+        return `RGPM ${rgpm}`;
+      }
+      
+      return `${data.graduacao} ${data.nome}`;
+    });
+    
+    const officerDetails = await Promise.all(officerPromises);
+    
+    // Separar principais e apoio para formatação
+    if (officerDetails.length === 0) return "Não disponível";
+    if (officerDetails.length === 1) return officerDetails[0];
+    
+    return officerDetails.join(' | ');
+  } catch (error) {
+    console.error("Erro ao buscar policiais:", error);
+    return rgpms.map(rgpm => `RGPM ${rgpm}`).join(' | ');
   }
-
-  const outputParts: string[] = [];
-
-  if (mainRgpmsList.length > 0) {
-    outputParts.push(`Cond: ${mainRgpmsList[0]}`);
-    if (mainRgpmsList.length > 1) {
-      outputParts.push(`GU: ${mainRgpmsList.slice(1).join(', ')}`);
-    }
-  }
-
-  if (supportRgpmsList.length > 0) {
-    outputParts.push(`Apoio: ${supportRgpmsList.join(', ')}`);
-  }
-
-  const result = outputParts.join(' | ');
-  console.log("RGPMs formatados:", result);
-  return result || "Não disponível";
 };
 
 const TCOmeus: React.FC<TCOmeusProps> = ({
@@ -195,6 +209,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
+  const [policiaisInfo, setPoliciaisInfo] = useState<Record<string, string>>({});
 
   const fetchUserTcos = async () => {
     if (!user.id) return;
@@ -227,16 +242,17 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         const natureza = extractTcoNatureFromFilename(fileName);
         const rgpms = extractRGPMsFromFilename(fileName);
 
-        console.log(`TCO ${finalTcoNumber} - Natureza: ${natureza}, RGPMs: ${rgpms}`);
+        console.log(`TCO ${finalTcoNumber} - Natureza: ${natureza}, RGPMs:`, rgpms);
 
         return {
           id: file.id || fileName, // Use fileName as fallback id if file.id is null
           tcoNumber: finalTcoNumber,
           createdAt: new Date(file.created_at || Date.now()),
           natureza: natureza,
-          rgpms: rgpms,
+          rgpmsList: rgpms,
           pdfPath: `tcos/${user.id}/${fileName}`,
-          source: 'storage'
+          source: 'storage',
+          fileName: fileName
         };
       }) || [];
       
@@ -245,6 +261,18 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       
       console.log("TCOs encontrados:", filesFromStorage.length);
       setTcoList(filesFromStorage);
+      
+      // Buscar informações dos policiais para cada TCO
+      const policiaisMap: Record<string, string> = {};
+      
+      for (const tco of filesFromStorage) {
+        if (tco.rgpmsList && tco.rgpmsList.length > 0) {
+          const displayText = await formatRGPMsDisplay(tco.rgpmsList);
+          policiaisMap[tco.id] = displayText;
+        }
+      }
+      
+      setPoliciaisInfo(policiaisMap);
     } catch (error) {
       console.error("Erro ao buscar TCOs:", error);
       toast({
@@ -440,7 +468,9 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                     </TableCell>
                     <TableCell className="px-3">{tco.natureza || "Não especificada"}</TableCell>
                     <TableCell className="px-3">
-                      <span className="text-sm font-medium text-gray-600">{tco.rgpms || "Não disponível"}</span>
+                      <span className="text-sm font-medium text-gray-600">
+                        {policiaisInfo[tco.id] || "Carregando..."}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right px-3 pr-4">
                       <DropdownMenu>
