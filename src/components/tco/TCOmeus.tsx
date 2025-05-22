@@ -3,12 +3,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Trash2, Download, Eye, MoreHorizontal, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
-import { useToast as useShadcnToast } from "@/components/ui/use-toast";
+import { useToast as useShadcnToast } from "@/components/ui/use-toast"; // Renomeado para evitar conflito
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { deleteTCO } from "@/lib/supabaseStorage"; // Agora importa o deleteTCO corrigido
+import { deleteTCO as deleteTCOFromStorageAndDB } from "@/lib/supabaseStorage"; // Assumindo que deleteTCO lida com DB e Storage
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 
@@ -17,50 +17,56 @@ interface TCOmeusProps {
     id: string;
     registration?: string;
   };
+  // Se você tem um hook useToast customizado, mantenha-o. Se estiver usando o de shadcn/ui:
   toast: ReturnType<typeof useShadcnToast>["toast"];
-  setSelectedTco: (tco: TcoDataType | null) => void;
-  selectedTco: TcoDataType | null;
+  setSelectedTco: (tco: TcoDataType | null) => void; // Tipo mais específico
+  selectedTco: TcoDataType | null; // Tipo mais específico
 }
 
+// Defina um tipo para os dados do TCO para melhor type safety
 interface TcoDataType {
-  id: string; 
+  id: string; // UUID do banco de dados
   tcoNumber: string;
   createdAt: Date;
   natureza: string;
-  rgpms: string; 
+  rgpms: string; // String formatada para exibição
   pdfPath: string;
-  policiais?: Array<{ nome?: string; rgpm: string; posto?: string; apoio?: boolean }>;
+  policiais?: Array<{ nome?: string; rgpm: string; posto?: string; apoio?: boolean }>; // Opcional, se precisar dos dados brutos na UI
+  // Adicione outros campos que você possa ter
 }
 
 const BUCKET_NAME = 'tco-pdfs';
 
+// Função auxiliar para extrair e formatar o número de exibição do TCO
 const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): string => {
   if (!fullTcoNumber) return "-";
   let numberPart = "";
-  const tcoPrefixMatch = fullTcoNumber.match(/^TCO[-_]?([^_ -]+)/i); 
-  if (tcoPrefixMatch && tcoPrefixMatch[1]) {
-      numberPart = tcoPrefixMatch[1];
+  const match = fullTcoNumber.match(/^TCO-([^_ -]+)/i);
+  if (match && match[1]) {
+    numberPart = match[1];
+  } else if (fullTcoNumber.toUpperCase().startsWith("TCO-")) {
+    numberPart = fullTcoNumber.substring(4);
   } else {
-      const parts = fullTcoNumber.split('_');
-      if (parts.length > 1 && parts[0].toUpperCase() === "TCO" && /^\d+$/.test(parts[1])) {
-          numberPart = parts[1];
-      } else if (/^\d+$/.test(fullTcoNumber)) {
-          numberPart = fullTcoNumber;
-      } else {
-          return fullTcoNumber; 
-      }
+    // Se não começa com TCO-, tenta pegar a parte numérica se houver um TCO_ ou TCO- implícito
+    const plainNumberMatch = fullTcoNumber.match(/(\d+)/);
+    if (plainNumberMatch && plainNumberMatch[1]) {
+        numberPart = plainNumberMatch[1];
+    } else {
+        return fullTcoNumber; // Retorna o número como está se não houver padrão claro
+    }
   }
 
   if (numberPart) {
-      const num = parseInt(numberPart, 10);
-      if (!isNaN(num)) {
-        return String(num).padStart(2, '0');
-      }
-      return numberPart;
+    const num = parseInt(numberPart, 10);
+    if (!isNaN(num)) {
+      return String(num).padStart(2, '0');
+    }
+    return numberPart; // Retorna a parte extraída se não for um número (improvável mas seguro)
   }
   return "-";
 };
 
+// Nova função para formatar RGPMs a partir do array de policiais dos metadados
 const formatRgpmsFromMetadata = (policiais: Array<{ rgpm: string; apoio?: boolean }> | undefined | null): string => {
   if (!policiais || policiais.length === 0) return "Não disponível";
 
@@ -70,7 +76,7 @@ const formatRgpmsFromMetadata = (policiais: Array<{ rgpm: string; apoio?: boolea
   const outputParts: string[] = [];
 
   if (principais.length > 0) {
-    outputParts.push(`Cond: ${principais[0].rgpm}`);
+    outputParts.push(`Cond: ${principais[0].rgpm}`); // O primeiro principal é o condutor
     const outrosGuarnicao = principais.slice(1).map(p => p.rgpm);
     if (outrosGuarnicao.length > 0) {
       outputParts.push(`GU: ${outrosGuarnicao.join(', ')}`);
@@ -82,7 +88,7 @@ const formatRgpmsFromMetadata = (policiais: Array<{ rgpm: string; apoio?: boolea
   }
 
   const result = outputParts.join(' | ');
-  return result || "Não disponível";
+  return result || "Não disponível"; // Retorna "Não disponível" se outputParts estiver vazio
 };
 
 
@@ -105,7 +111,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const fetchUserTcos = async () => {
     if (!user || !user.id) {
       console.warn("Usuário não autenticado. Abortando busca de TCOs.");
-      setTcoList([]);
+      setTcoList([]); // Limpa a lista se o usuário não estiver disponível
       return;
     }
     setIsLoading(true);
@@ -114,9 +120,9 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       
       const { data: tcosFromDb, error: dbError } = await supabase
         .from('tco_pdfs') // NOME DA SUA TABELA DE METADADOS DO TCO
-        .select('id, tconumber, natureza, policiais, pdfpath, created_at') // Use created_at se for o nome no DB
+        .select('id, tconumber, natureza, policiais, pdfpath, createdat') // Selecione as colunas necessárias
         .eq('createdby', user.id)
-        .order('created_at', { ascending: false }); // Use created_at se for o nome no DB
+        .order('createdat', { ascending: false });
 
       if (dbError) {
         console.error("Erro ao buscar TCOs do banco de dados:", dbError);
@@ -128,26 +134,28 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           return {
             id: tco.id,
             tcoNumber: tco.tconumber || "N/A",
-            createdAt: new Date(tco.created_at), // Ajustado para created_at
+            createdAt: new Date(tco.createdat),
             natureza: tco.natureza || "Não especificada",
+            // A coluna 'policiais' deve ser um JSONB no Supabase
+            // contendo um array de objetos { rgpm: string, apoio: boolean, nome?: string, posto?: string }
             rgpms: formatRgpmsFromMetadata(tco.policiais), 
             pdfPath: tco.pdfpath,
-            policiais: tco.policiais, 
+            policiais: tco.policiais, // Opcional: manter os dados brutos se precisar em outro lugar
           };
         });
         
-        console.log("TCOs formatados a partir do DB:", formattedTcos.length);
+        console.log("TCOs formatados a partir do DB:", formattedTcos.length, formattedTcos);
         setTcoList(formattedTcos);
       } else {
         setTcoList([]);
       }
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erro ao buscar TCOs:", error);
       toast({
         variant: "destructive",
         title: "Erro ao Carregar TCOs",
-        description: error.message || "Falha ao buscar os TCOs. Verifique o console."
+        description: "Falha ao buscar os TCOs do banco dedados. Verifique o console para mais detalhes."
       });
     } finally {
       setIsLoading(false);
@@ -161,28 +169,26 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   };
   
   const handleDeleteTco = async () => {
-    if (!tcoToDelete || !tcoToDelete.id || !tcoToDelete.pdfPath) {
-        toast({ variant: "destructive", title: "Erro", description: "Dados do TCO incompletos para exclusão." });
-        return;
-    }
+    if (!tcoToDelete || !tcoToDelete.id || !tcoToDelete.pdfPath) return;
   
     setIsDeleting(true);
     setDeletionMessage("Iniciando processo de exclusão...");
   
     try {
-      const { success, error } = await deleteTCO({ // Usa a função deleteTCO corrigida
-        id: tcoToDelete.id, 
-        pdfPath: tcoToDelete.pdfPath
+      // A função deleteTCOFromStorageAndDB deve lidar com a exclusão no DB (usando tcoToDelete.id)
+      // e no Storage (usando tcoToDelete.pdfPath).
+      const { success, error } = await deleteTCOFromStorageAndDB({
+        id: tcoToDelete.id, // ID do registro no banco de dados
+        pdfPath: tcoToDelete.pdfPath // Caminho do arquivo no storage
       });
   
       if (error || !success) {
-        const errorMessage = error?.message || "Falha ao excluir o TCO. Tente novamente.";
-        setDeletionMessage(`Erro na exclusão: ${errorMessage}`);
+        setDeletionMessage("Erro na exclusão. Verifique o console para detalhes.");
         console.error("Erro no processo de exclusão do TCO:", error);
         toast({
           variant: "destructive",
           title: "Erro ao Excluir",
-          description: errorMessage
+          description: error?.message || "Falha ao excluir o TCO. Tente novamente."
         });
       } else {
         setTcoList(prevList => prevList.filter(item => item.id !== tcoToDelete.id));
@@ -191,31 +197,32 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           title: "TCO Excluído",
           description: "O TCO foi removido com sucesso."
         });
-        setDeletionMessage(null); 
-        setTcoToDelete(null); // Limpar após sucesso
-        setIsDeleteDialogOpen(false); // Fechar diálogo após sucesso
+        setDeletionMessage(null); // Limpa a mensagem em caso de sucesso
       }
     } catch (error: any) {
-      const catchErrorMessage = error.message || "Falha inesperada ao excluir o TCO.";
       console.error("Erro catastrófico no processo de exclusão do TCO:", error);
-      setDeletionMessage(`Erro crítico: ${catchErrorMessage}`);
+      setDeletionMessage("Erro crítico durante a exclusão.");
       toast({
         variant: "destructive",
         title: "Erro Crítico",
-        description: catchErrorMessage
+        description: "Falha inesperada ao excluir o TCO. Verifique o console."
       });
     } finally {
       setIsDeleting(false);
-      // setIsDeleteDialogOpen é tratado no sucesso/erro
+      setIsDeleteDialogOpen(false);
+      // Não resetar tcoToDelete aqui, pois pode ser útil para depuração se a exclusão falhar
+      // setTcoToDelete(null); 
+      // setDeletionMessage(null); // Já tratado no sucesso/erro
     }
   };
   
   const handleViewPdf = async (tco: TcoDataType) => {
     setPdfLoading(true); 
-    setIsPdfDialogOpen(true); 
+    setIsPdfDialogOpen(true); // Abrir o diálogo imediatamente para mostrar o loader
     try {
       if (tco.pdfPath) {
         const { data, error } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(tco.pdfPath);
+        
         if (error) {
             console.error("Erro ao obter URL pública:", error);
             throw new Error("Falha ao obter URL do PDF.");
@@ -223,20 +230,29 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         const url = data?.publicUrl;
         if (url) {
           setSelectedPdfUrl(url);
+          // setPdfLoading(false) será chamado no onLoad do iframe
         } else {
           setPdfLoading(false);
           throw new Error("URL pública não encontrada para o PDF.");
         }
       } else {
         setPdfLoading(false);
-        toast({ variant: "destructive", title: "PDF não encontrado", description: "Este TCO não possui um caminho de PDF." });
-        setIsPdfDialogOpen(false);
+        toast({
+          variant: "destructive",
+          title: "PDF não encontrado",
+          description: "Este TCO não possui um caminho de PDF associado."
+        });
+        setIsPdfDialogOpen(false); // Fechar se não houver caminho
       }
     } catch (error: any) {
       setPdfLoading(false); 
       console.error("Erro ao buscar PDF:", error);
-      toast({ variant: "destructive", title: "Erro ao Carregar PDF", description: error.message || "Falha ao carregar PDF." });
-      setIsPdfDialogOpen(false); 
+      toast({
+        variant: "destructive",
+        title: "Erro ao Carregar PDF",
+        description: error.message || "Falha ao carregar o PDF do TCO."
+      });
+      setIsPdfDialogOpen(false); // Fechar em caso de erro
       setSelectedPdfUrl(null);
     } 
   };
@@ -246,18 +262,32 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       if (tco.pdfPath) {
         const { data, error } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(tco.pdfPath);
         if (error) throw error;
+
         const url = data?.publicUrl;
         if (url) {
-          window.open(url + '?download=true', '_blank'); 
+          // Forçar o download em vez de abrir no navegador (se possível)
+          // Isso pode ser feito criando um link temporário e clicando nele.
+          // No entanto, a maneira mais simples e comum é window.open.
+          // Para forçar download, seria preciso mais do que getPublicUrl, talvez download() do supabase-js
+          // Mas para este caso, window.open é suficiente.
+          window.open(url + '?download=true', '_blank'); // Adicionar ?download=true pode ajudar alguns CDNs/servidores
         } else {
           throw new Error("URL pública não encontrada para download.");
         }
       } else {
-        toast({ variant: "destructive", title: "PDF não encontrado", description: "PDF não disponível para download." });
+        toast({
+          variant: "destructive",
+          title: "PDF não encontrado",
+          description: "Este TCO não possui um PDF para download."
+        });
       }
     } catch (error: any) {
       console.error("Erro ao baixar PDF:", error);
-      toast({ variant: "destructive", title: "Erro ao Baixar PDF", description: error.message || "Falha ao iniciar download." });
+      toast({
+        variant: "destructive",
+        title: "Erro ao Baixar PDF",
+        description: error.message || "Falha ao iniciar o download do PDF do TCO."
+      });
     }
   };
   
@@ -265,12 +295,10 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     if(user?.id) {
       fetchUserTcos();
     } else {
-      setTcoList([]); 
+      setTcoList([]); // Limpa a lista se o usuário for deslogado ou não estiver definido
     }
-  }, [user?.id]); // Adicionar toast aqui se quiser notificar sobre falha em fetchUserTcos sem que fetchUserTcos trate.
+  }, [user?.id]);
 
-  // O JSX permanece o mesmo da sua versão anterior, pois ele já estava preparado para
-  // exibir tco.natureza e tco.rgpms, que agora serão preenchidos corretamente.
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 flex-grow overflow-hidden flex flex-col px-[14px]">
       <div className="flex items-center justify-between mb-6">
@@ -376,7 +404,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         setIsPdfDialogOpen(open);
         if (!open) {
           setSelectedPdfUrl(null); 
-          setPdfLoading(false); 
+          setPdfLoading(false); // Garante que o loading é resetado ao fechar
         }
       }}>
         <DialogContent className="max-w-5xl h-[90vh] p-0 overflow-hidden rounded-lg">
@@ -396,8 +424,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             </Button>
           </DialogHeader>
           
-          <div className="h-[calc(100%-57px)] overflow-hidden bg-gray-100 relative"> 
-            {(pdfLoading || (!selectedPdfUrl && isPdfDialogOpen)) && ( // Mostrar loader se pdfLoading ou se o diálogo está aberto sem URL ainda
+          <div className="h-[calc(100%-57px)] overflow-hidden bg-gray-100 relative"> {/* Adicionado relative para posicionar o loader */}
+            {(pdfLoading || !selectedPdfUrl) && ( // Mostrar loader se pdfLoading ou se não há URL ainda (exceto se erro)
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-75 z-20">
                 <svg className="animate-spin h-8 w-8 text-blue-600 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -416,6 +444,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                 onError={() => { 
                   setPdfLoading(false);
                   toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar o PDF no visualizador."});
+                  // Não fechar o diálogo automaticamente, deixar o usuário fechar.
+                  // setSelectedPdfUrl(null); // Poderia limpar para tentar de novo
                 }}
               />
             )}
@@ -423,27 +453,21 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
-          setIsDeleteDialogOpen(open);
-          if (!open) { // Se fechar o diálogo sem confirmar
-            setTcoToDelete(null);
-            setDeletionMessage(null);
-          }
-        }}>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="max-w-md rounded-lg">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl">Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-600">
               Tem certeza que deseja excluir o TCO número {tcoToDelete?.tcoNumber ? extractTcoDisplayNumber(tcoToDelete.tcoNumber) : ''}? Esta ação não pode ser desfeita.
               {deletionMessage && (
-                <div className={`mt-2 p-2 rounded text-sm ${deletionMessage.toLowerCase().startsWith("erro") ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}`}>
+                <div className={`mt-2 p-2 rounded text-sm ${deletionMessage.startsWith("Erro") ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}`}>
                   {deletionMessage}
                 </div>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 flex-col sm:flex-row">
-            <AlertDialogCancel disabled={isDeleting} className="mt-0 w-full sm:w-auto" onClick={() => { setTcoToDelete(null); setDeletionMessage(null); setIsDeleteDialogOpen(false); }}>
+            <AlertDialogCancel disabled={isDeleting} className="mt-0 w-full sm:w-auto" onClick={() => { setTcoToDelete(null); setDeletionMessage(null); }}>
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteTco} disabled={isDeleting} className="bg-red-500 hover:bg-red-600 w-full sm:w-auto transition-colors">
