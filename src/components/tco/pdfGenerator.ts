@@ -19,53 +19,6 @@ import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
 
-/**
- * Gera o nome do arquivo TCO no formato específico pedido
- * TCO_[número]_[data]_[natureza]_[RGPM condutor][RGPMs outros].[RGPMs apoio]
- */
-export const generateTCOFilename = (data: any): string => {
-    // Processar o número do TCO
-    const tcoNum = data.tcoNumber?.trim() || 'SEM_NUMERO';
-    
-    // Formatar data do evento (DD.MM.YYYY)
-    const eventDate = data.dataFato ? data.dataFato.split('-') : [];
-    const formattedDate = eventDate.length === 3 ? 
-        `${eventDate[2]}.${eventDate[1]}.${eventDate[0]}` : 
-        new Date().toLocaleDateString('pt-BR').replace(/\//g, '.');
-    
-    // Obter natureza
-    const natureza = data.natureza === "Outros" && data.customNatureza ? 
-        data.customNatureza.trim() : 
-        data.natureza || 'Sem_Natureza';
-
-    // Processar RGPMs dos componentes da guarnição
-    const componentes = Array.isArray(data.componentesGuarnicao) ? data.componentesGuarnicao : [];
-    
-    // Separar em principais e apoio
-    const principais = componentes.filter(c => c && c.rg && !c.apoio);
-    const apoio = componentes.filter(c => c && c.rg && c.apoio);
-    
-    // Garantir que há pelo menos um componente principal (condutor)
-    if (principais.length === 0 && apoio.length > 0) {
-        principais.push({...apoio.shift(), apoio: false});
-    }
-    
-    // Extrair apenas os dígitos dos RGs
-    const rgsPrincipais = principais.map(p => p.rg.replace(/\D/g, ''));
-    const rgsApoio = apoio.map(p => p.rg.replace(/\D/g, ''));
-    
-    // Construir a parte do código de barras do nome do arquivo
-    let rgCode = rgsPrincipais.length > 0 ? rgsPrincipais.join('') : 'RG_INDISPONIVEL';
-    
-    // Adicionar RGs de apoio com ponto separador, se existirem
-    if (rgsApoio.length > 0) {
-        rgCode += '.' + rgsApoio.join('');
-    }
-    
-    // Construir o nome do arquivo final
-    return `TCO_${tcoNum}_${formattedDate}_${natureza}_${rgCode}.pdf`;
-};
-
 // --- Função Principal de Geração ---
 export const generatePDF = async (inputData: any): Promise<Blob> => {
     return new Promise((resolve, reject) => {
@@ -201,7 +154,9 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     // Opcionalmente, gera um download local
                     if (data.downloadLocal) {
                         try {
-                            const fileName = generateTCOFilename(data);
+                            const tcoNumParaNome = data.tcoNumber || 'SEM_NUMERO';
+                            const dateStr = new Date().toISOString().slice(0, 10);
+                            const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
                             
                             doc.save(fileName);
                             console.log(`PDF salvo localmente: ${fileName}`);

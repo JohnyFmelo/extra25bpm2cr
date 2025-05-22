@@ -11,8 +11,9 @@ import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
 import GuarnicaoTab from "./tco/GuarnicaoTab";
 import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
-import { generatePDF, generateTCOFilename } from "./tco/pdfGenerator";
+import { generatePDF } from "./tco/pdfGenerator";
 import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
+import { generateTCOFilename } from '@/lib/supabaseStorage';
 
 interface ComponenteGuarnicao {
   rg: string;
@@ -749,7 +750,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           });
         }
       }
-
       const tcoDataParaPDF: any = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
@@ -794,7 +794,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         juizadoEspecialHora: juizadoEspecialHora.trim() || undefined,
         relatoVitima: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' ? relatoVitima.trim() : undefined,
         representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined,
-        downloadLocal: true,
+        downloadLocal: true
       };
 
       Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
@@ -808,29 +808,33 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
       
-      // Usar a função para gerar o nome do arquivo TCO com o formato especificado
-      const desiredFileName = generateTCOFilename(tcoDataParaPDF);
+      // Generate formatted filename using the new function
+      import { generateTCOFilename } from '@/lib/supabaseStorage';
       
-      // Para Supabase storage path, use uma nomenclatura ligeiramente diferente (mais simples para o caminho)
-      const uploadDateStr = new Date().toISOString().slice(0, 10); // Current date for organization
-      const filePath = `tcos/${userId || 'anonimo'}/${tcoNumber.trim()}_${uploadDateStr}.pdf`;
+      const tcoNumParaNome = tcoNumber.trim();
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const fileName = generateTCOFilename(tcoNumParaNome, dateStr, displayNaturezaReal, componentesValidos);
+      
+      // Create the file path using the new filename format
+      const filePath = `tcos/${userId || 'anonimo'}/${fileName}.pdf`;
 
+      // Ensure bucket exists before trying to upload
       const bucketExists = await ensureBucketExists();
       if (!bucketExists) {
         throw new Error("Não foi possível criar ou verificar o bucket de armazenamento.");
       }
 
       const { url: downloadURL, error: uploadError } = await uploadPDF(filePath, pdfBlob, {
-        tcoNumber: tcoNumber.trim(),
+        tcoNumber: tcoNumParaNome,
         natureza: displayNaturezaReal,
-        createdBy: userId || 'anonimo',
-        fileName: desiredFileName // Passa o nome do arquivo desejado nos metadados
+        createdBy: userId || 'anonimo'
       });
       
       if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
       if (!downloadURL) throw new Error("URL do arquivo não disponível após o upload.");
       console.log('URL pública do arquivo:', downloadURL);
 
+      // Prepare detailed metadata for Supabase database
       const tcoMetadata = {
         tconumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
@@ -840,15 +844,14 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           posto: p.posto,
           apoio: !!p.apoio
         })),
-        pdfpath: filePath, // Storing the cloud storage path
+        pdfpath: filePath,
         pdfurl: downloadURL,
         createdby: userId,
-        createdat: new Date().toISOString(),
-        // Optionally store the user-friendly filename as well if needed elsewhere
-        // userfacingfilename: desiredFileName 
+        createdat: new Date().toISOString()
       };
       console.log("Metadados para salvar no DB:", tcoMetadata);
 
+      // Try up to 3 times to save metadata if there's a transient error
       let attempt = 0;
       let metadataSuccess = false;
       let lastError = null;
@@ -862,6 +865,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           if (metadataError) {
             console.error(`Erro na tentativa ${attempt} ao salvar metadados:`, metadataError);
             lastError = metadataError;
+            // Wait before retrying (exponential backoff)
             if (attempt < 3) {
               await new Promise(resolve => setTimeout(resolve, attempt * 1000));
             }
