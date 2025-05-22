@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -32,29 +33,152 @@ const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): stri
 
   // Padrão: TCO-NUMERO_OPCIONAL_EXTRA ou TCO-NUMERO-OPCIONAL_EXTRA
   // Queremos extrair NUMERO.
-  const match = fullTcoNumber.match(/^TCO-([^_ -]+)/i);
+  const match = fullTcoNumber.match(/^TCO[-_]([^_-]+)/i);
   if (match && match[1]) {
     numberPart = match[1];
   } else if (fullTcoNumber.toUpperCase().startsWith("TCO-")) {
-    // Fallback: se o tcoNumber for apenas "TCO-X" ou "TCO-XX"
     numberPart = fullTcoNumber.substring(4);
   } else {
-    // Se não corresponder a nenhum padrão TCO, retorna o original (improvável se os dados estiverem corretos)
     return fullTcoNumber;
   }
 
-  // Tenta converter para número e formatar com zero à esquerda
   if (numberPart) {
     const num = parseInt(numberPart, 10);
     if (!isNaN(num)) {
-      return String(num).padStart(2, '0'); // Garante 2 dígitos com zero à esquerda
+      return String(num).padStart(2, '0');
     }
-    return numberPart; // Retorna a parte extraída se não for um número puro (ex: "A1")
+    return numberPart;
   }
   
-  return "-"; // Se numberPart ficou vazio
+  return "-";
 };
 
+// Função melhorada para extrair a natureza do nome do arquivo TCO e substituir underscores por espaços
+const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
+  if (!fileName) return "Não especificada";
+  
+  console.log("Extraindo natureza do arquivo:", fileName);
+  
+  // Formato esperado: TCO_[número]_[data]_[natureza1_natureza2]_[RGPMs...].pdf
+  const parts = fileName.split('_');
+  
+  if (parts.length < 4) { // TCO, numero, data, natureza_minima
+    console.log("Arquivo tem menos de 4 partes, formato não reconhecido");
+    return "Não especificada";
+  }
+
+  let naturezaParts: string[] = [];
+  
+  // O último segmento pode ser RGPMs. Verificamos se ele começa com um número.
+  const lastPart = parts[parts.length - 1];
+  const rgpmSegmentPotentially = lastPart.replace(/\.pdf$/i, ""); // Remove .pdf para checar
+  
+  if (parts.length >= 5 && /^\d/.test(rgpmSegmentPotentially)) {
+    // Se o último segmento começa com número, assumimos que são RGPMs.
+    // A natureza é tudo entre a data (parts[2]) e o segmento de RGPMs (parts[parts.length - 1]).
+    // Isso significa que a natureza está de parts[3] até parts[parts.length - 2].
+    naturezaParts = parts.slice(3, parts.length - 1);
+    console.log("Formato com RGPMs detectado, naturezaParts:", naturezaParts);
+  } else {
+    // Se não houver segmento de RGPM no final (ou ele não começar com número),
+    // a natureza vai de parts[3] até o final (antes da extensão).
+    // Precisamos remover a extensão .pdf da última parte se ela fizer parte da natureza.
+    const lastNaturePart = parts[parts.length - 1].replace(/\.pdf$/i, "");
+    naturezaParts = parts.slice(3, parts.length - 1);
+    naturezaParts.push(lastNaturePart);
+    console.log("Formato sem RGPMs no final, naturezaParts:", naturezaParts);
+  }
+  
+  if (naturezaParts.length === 0) {
+    console.log("Nenhuma parte de natureza encontrada");
+    return "Não especificada";
+  }
+
+  // Junta as partes da natureza substituindo underscores por espaços
+  const joinedNatureza = naturezaParts.join('_');
+  
+  // Substitui underscores por espaços e capitaliza cada palavra
+  const formattedNatureza = joinedNatureza
+    .replace(/_/g, ' ') // Substitui todos os underscores por espaços
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+      
+  console.log("Natureza formatada:", formattedNatureza);
+  return formattedNatureza || "Não especificada";
+};
+
+// Função melhorada para extrair os RGPMs do nome do arquivo
+const extractRGPMsFromFilename = (fileName: string | undefined | null): string => {
+  if (!fileName) return "Não disponível";
+
+  console.log("Extraindo RGPMs do arquivo:", fileName);
+
+  // Formato esperado: TCO_[número]_[data]_[natureza]_[RGPMsPrincipais.RGPMsApoio].pdf
+  // ou TCO_[número]_[data]_[natureza]_[RGPMsPrincipais].pdf
+  const parts = fileName.split('_');
+
+  // Precisa de pelo menos 5 partes para ter: TCO, numero, data, natureza_minima, RGPMSegment
+  // Ex: TCO_1_data_Natureza_RGPM.pdf
+  if (parts.length < 5) {
+    console.log("Arquivo tem menos de 5 partes, possível formato sem RGPMs");
+    return "Não disponível";
+  }
+
+  // O último segmento antes da extensão .pdf deve ser o RGPM
+  const rgpmSegmentWithExtension = parts[parts.length - 1];
+
+  // Remove a extensão .pdf e verifica se o segmento de RGPM realmente começa com um número
+  const rgpmStringWithoutExtension = rgpmSegmentWithExtension.replace(/\.pdf$/i, "");
+  if (!rgpmStringWithoutExtension.match(/^\d/)) {
+    console.log("Último segmento não começa com número, possível formato sem RGPMs");
+    return "Não disponível"; // Última parte não parece ser RGPMs
+  }
+
+  console.log("Segmento de RGPM encontrado:", rgpmStringWithoutExtension);
+
+  const [mainRgpmsStr, supportRgpmsStr] = rgpmStringWithoutExtension.split('.');
+
+  const parseRgpmsFromString = (rgpmStr: string | undefined): string[] => {
+    if (!rgpmStr) return [];
+    const rgpmsList: string[] = [];
+    for (let i = 0; i < rgpmStr.length; i += 6) {
+      const rgpm = rgpmStr.substring(i, i + 6);
+      if (rgpm.length === 6 && /^\d{6}$/.test(rgpm)) { // Verifica se são 6 dígitos numéricos
+        rgpmsList.push(rgpm);
+      }
+    }
+    return rgpmsList;
+  };
+
+  const mainRgpmsList = parseRgpmsFromString(mainRgpmsStr);
+  const supportRgpmsList = parseRgpmsFromString(supportRgpmsStr);
+
+  console.log("RGPMs principais:", mainRgpmsList);
+  console.log("RGPMs de apoio:", supportRgpmsList);
+
+  if (mainRgpmsList.length === 0 && supportRgpmsList.length === 0) {
+    console.log("Nenhum RGPM válido encontrado");
+    return "Não disponível";
+  }
+
+  const outputParts: string[] = [];
+
+  if (mainRgpmsList.length > 0) {
+    outputParts.push(`Cond: ${mainRgpmsList[0]}`);
+    if (mainRgpmsList.length > 1) {
+      outputParts.push(`GU: ${mainRgpmsList.slice(1).join(', ')}`);
+    }
+  }
+
+  if (supportRgpmsList.length > 0) {
+    outputParts.push(`Apoio: ${supportRgpmsList.join(', ')}`);
+  }
+
+  const result = outputParts.join(' | ');
+  console.log("RGPMs formatados:", result);
+  return result || "Não disponível";
+};
 
 const TCOmeus: React.FC<TCOmeusProps> = ({
   user,
@@ -72,36 +196,26 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const [pdfLoading, setPdfLoading] = useState(false);
   const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
 
-  // Função para buscar os TCOs do usuário do Supabase
   const fetchUserTcos = async () => {
     if (!user.id) return;
     setIsLoading(true);
     try {
+      console.log("Buscando TCOs para o usuário:", user.id);
       const {
         data: storageFiles,
         error: storageError
       } = await supabase.storage.from(BUCKET_NAME).list(`tcos/${user.id}/`);
+      
       if (storageError) {
         console.error("Erro ao listar arquivos do storage:", storageError);
       }
       
-      let dbTcos: any[] = [];
-      if (isValidUUID(user.id)) {
-        const {
-          data: supaTcos,
-          error
-        } = await supabase.from('tco_pdfs').select('*').eq('createdBy', user.id);
-        if (error) {
-          console.error("Erro ao buscar do banco Supabase:", error);
-        } else if (supaTcos && supaTcos.length > 0) {
-          dbTcos = supaTcos;
-        }
-      }
-      
-      let consolidatedTcos: any[] = [];
+      // Para simplificar, usaremos apenas arquivos do storage e ignoraremos o banco de dados
       const filesFromStorage = storageFiles?.map(file => {
         const fileName = file.name;
-        const tcoMatch = fileName.match(/TCO-([^_ -]+)/i);
+        console.log("Processando arquivo:", fileName);
+        
+        const tcoMatch = fileName.match(/TCO[-_]([^_-]+)/i);
         let tcoIdentifierPart = tcoMatch ? tcoMatch[1] : fileName.replace(/\.pdf$/i, "");
         
         let finalTcoNumber = tcoIdentifierPart;
@@ -109,35 +223,28 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             finalTcoNumber = `TCO-${tcoIdentifierPart}`;
         }
 
+        // Extrai natureza e RGPMs do nome do arquivo
+        const natureza = extractTcoNatureFromFilename(fileName);
+        const rgpms = extractRGPMsFromFilename(fileName);
+
+        console.log(`TCO ${finalTcoNumber} - Natureza: ${natureza}, RGPMs: ${rgpms}`);
+
         return {
-          id: file.id || fileName,
-          tcoNumber: finalTcoNumber, // Ex: TCO-2_2025-05-19 ou TCO-002_etc
+          id: file.id || fileName, // Use fileName as fallback id if file.id is null
+          tcoNumber: finalTcoNumber,
           createdAt: new Date(file.created_at || Date.now()),
-          natureza: "Não especificada", 
+          natureza: natureza,
+          rgpms: rgpms,
           pdfPath: `tcos/${user.id}/${fileName}`,
           source: 'storage'
         };
       }) || [];
       
-      const supabaseTcos = dbTcos.map(tco => ({
-        id: tco.id,
-        tcoNumber: tco.tcoNumber || `TCO-${tco.id.substring(0, 8)}`,
-        createdAt: new Date(tco.createdAt || tco.created_at),
-        natureza: tco.natureza || "Não especificada",
-        pdfPath: tco.pdfPath,
-        source: 'supabase'
-      })) || [];
+      // Ordena por data, mais recente primeiro
+      filesFromStorage.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-      consolidatedTcos = [...supabaseTcos];
-      for (const storageTco of filesFromStorage) {
-        const isDuplicate = consolidatedTcos.some(tco => tco.pdfPath === storageTco.pdfPath || tco.tcoNumber === storageTco.tcoNumber);
-        if (!isDuplicate) {
-          consolidatedTcos.push(storageTco);
-        }
-      }
-
-      consolidatedTcos.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setTcoList(consolidatedTcos);
+      console.log("TCOs encontrados:", filesFromStorage.length);
+      setTcoList(filesFromStorage);
     } catch (error) {
       console.error("Erro ao buscar TCOs:", error);
       toast({
@@ -149,6 +256,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       setIsLoading(false);
     }
   };
+
   const isValidUUID = (str: string) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
@@ -165,9 +273,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     try {
       setIsDeleting(true);
       setDeletionMessage("Iniciando processo de exclusão...");
-      console.log("Starting deletion process for TCO:", tcoToDelete);
       
-      // Use the new deleteTCO function that handles both storage and database
       const { success, error } = await deleteTCO({
         id: tcoToDelete.id,
         pdfPath: tcoToDelete.pdfPath
@@ -177,37 +283,27 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         setDeletionMessage("Erro na exclusão, tentando novamente...");
         console.error("Erro no processo de exclusão do TCO:", error);
         
-        // Force deletion with an additional attempt
         if (tcoToDelete.pdfPath) {
           setDeletionMessage("Tentando exclusão alternativa...");
-          
-          // Try explicit storage deletion first
           try {
             await supabase.storage
               .from(BUCKET_NAME)
               .remove([tcoToDelete.pdfPath]);
-              
-            console.log("Explicit storage deletion attempt completed");
           } catch (storageError) {
             console.warn("Explicit storage deletion attempt failed:", storageError);
           }
-          
-          // Try explicit database deletion
           try {
             await supabase
               .from('tco_pdfs')
               .delete()
-              .or(`id.eq.${tcoToDelete.id},pdfpath.eq.${tcoToDelete.pdfPath}`);
-              
-            console.log("Explicit database deletion attempt completed");
+              .or(`id.eq.${tcoToDelete.id},pdfPath.eq.${tcoToDelete.pdfPath}`); // Corrected pdfpath to pdfPath
           } catch (dbError) {
             console.warn("Explicit database deletion attempt failed:", dbError);
           }
         }
       }
       
-      // Update UI regardless of backend result
-      setTcoList(tcoList.filter(item => item.id !== tcoToDelete.id));
+      setTcoList(prevList => prevList.filter(item => item.id !== tcoToDelete.id));
       if (selectedTco?.id === tcoToDelete.id) setSelectedTco(null);
       
       toast({
@@ -293,8 +389,10 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   };
   
   useEffect(() => {
-    fetchUserTcos();
-  }, [user.id]);
+    if(user?.id) { // Ensure user.id exists before fetching
+      fetchUserTcos();
+    }
+  }, [user?.id]); // Add user.id as dependency
 
   return <div className="bg-white rounded-xl shadow-lg p-6 flex-grow overflow-hidden flex flex-col px-[14px]">
       <div className="flex items-center justify-between mb-6">
@@ -321,16 +419,15 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             <Table role="grid" className="min-w-full">
               <TableHeader>
                 <TableRow>
-                  {/* Modificação: Adicionada classe de largura para a coluna Número */}
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold w-[120px] px-3">Número</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">Data</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">Natureza</TableHead>
+                  <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">GUPM</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold text-right pr-4 px-3">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tcoList.map(tco => <TableRow key={tco.id} aria-selected={selectedTco?.id === tco.id} className={`cursor-pointer transition-colors hover:bg-slate-50 ${selectedTco?.id === tco.id ? "bg-primary/10" : ""}`} onClick={() => setSelectedTco(tco)}>
-                    {/* Modificação: Adicionado padding também na célula para consistência */}
                     <TableCell className="font-medium px-3">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 px-2 py-0.5 text-sm">
@@ -339,9 +436,12 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                       </div>
                     </TableCell>
                     <TableCell className="px-3">
-                      {tco.createdAt ? format(tco.createdAt instanceof Date ? tco.createdAt : new Date(tco.createdAt), "dd/MM/yyyy") : "-"}
+                      {tco.createdAt ? format(tco.createdAt instanceof Date ? tco.createdAt : new Date(tco.createdAt), "dd/MM/yyyy - HH:mm") : "-"}
                     </TableCell>
                     <TableCell className="px-3">{tco.natureza || "Não especificada"}</TableCell>
+                    <TableCell className="px-3">
+                      <span className="text-sm font-medium text-gray-600">{tco.rgpms || "Não disponível"}</span>
+                    </TableCell>
                     <TableCell className="text-right px-3 pr-4">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -384,7 +484,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           </div>
         </div>}
 
-      {/* PDF Viewer Dialog */}
       <Dialog open={isPdfDialogOpen} onOpenChange={(open) => {
         setIsPdfDialogOpen(open);
         if (!open) {
@@ -433,7 +532,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="max-w-md rounded-lg">
           <AlertDialogHeader>
