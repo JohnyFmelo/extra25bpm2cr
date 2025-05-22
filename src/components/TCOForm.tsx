@@ -13,6 +13,7 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
 import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
+import { generateTCOFilename } from '@/lib/supabaseStorage';
 
 interface ComponenteGuarnicao {
   rg: string;
@@ -806,10 +807,16 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       const pdfBlob = await Promise.race([pdfGenerationPromise, timeoutPromise]);
       if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
+      
+      // Generate formatted filename using the new function
+      import { generateTCOFilename } from '@/lib/supabaseStorage';
+      
       const tcoNumParaNome = tcoNumber.trim();
       const dateStr = new Date().toISOString().slice(0, 10);
-      const fileName = `TCO_${tcoNumParaNome}_${dateStr}.pdf`;
-      const filePath = `tcos/${userId || 'anonimo'}/${tcoNumParaNome}_${dateStr}.pdf`;
+      const fileName = generateTCOFilename(tcoNumParaNome, dateStr, displayNaturezaReal, componentesValidos);
+      
+      // Create the file path using the new filename format
+      const filePath = `tcos/${userId || 'anonimo'}/${fileName}.pdf`;
 
       // Ensure bucket exists before trying to upload
       const bucketExists = await ensureBucketExists();
@@ -822,6 +829,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         natureza: displayNaturezaReal,
         createdBy: userId || 'anonimo'
       });
+      
       if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
       if (!downloadURL) throw new Error("URL do arquivo não disponível após o upload.");
       console.log('URL pública do arquivo:', downloadURL);
