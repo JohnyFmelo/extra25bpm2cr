@@ -55,7 +55,7 @@ const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): stri
   return "-"; // Se numberPart ficou vazio
 };
 
-// Nova função para extrair a natureza do nome do arquivo TCO
+// Função para extrair a natureza do nome do arquivo TCO e remover underscores
 const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
   if (!fileName) return "Não especificada";
   
@@ -76,20 +76,63 @@ const extractTcoNatureFromFilename = (fileName: string | undefined | null): stri
       if (rgpmMatch) {
         // Se a última parte começa com números, então é os RGPMs
         // A natureza é tudo entre a parte 3 e a última parte
-        natureza = parts.slice(3, parts.length - 1).join('_');
+        natureza = parts.slice(3, parts.length - 1).join(' ');
       } else {
         // Se não, consideramos que a última parte também faz parte da natureza
-        natureza = parts.slice(3).join('_');
+        natureza = parts.slice(3).join(' ');
       }
     }
     
     // Remove a extensão .pdf ou outra se estiver presente
     natureza = natureza.replace(/\.[^/.]+$/, "");
     
-    return natureza || "Não especificada";
+    // Substitui underscores por espaços e capitaliza a primeira letra de cada palavra
+    const formattedNatureza = natureza
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+      
+    return formattedNatureza || "Não especificada";
   }
   
   return "Não especificada";
+};
+
+// Função para extrair os RGPMs do nome do arquivo
+const extractRGPMsFromFilename = (fileName: string | undefined | null): string => {
+  if (!fileName) return "Não disponível";
+  
+  // Formato esperado: TCO_[número]_[data]_[natureza]_[RGPMs].[RGPMs apoio]
+  const parts = fileName.split('_');
+  
+  // Verificamos se temos pelo menos 5 partes (para ter RGPM no final)
+  if (parts.length >= 5) {
+    // O último elemento deve conter os RGPMs
+    const lastPart = parts[parts.length - 1];
+    
+    // Se for um número ou contiver números no início, é provável que seja o RGPM
+    if (lastPart.match(/^\d+/)) {
+      // Verifica se tem extensão .pdf ou ponto separando RGPMs principais e de apoio
+      const rgpmData = lastPart.split('.');
+      
+      if (rgpmData.length > 1) {
+        // Remove a extensão .pdf se existir
+        const lastRgpmPart = rgpmData[rgpmData.length - 1].replace(/\.pdf$/i, "");
+        
+        // Formata os RGPMs principais e de apoio
+        const principais = rgpmData[0].replace(/\.pdf$/i, "");
+        const apoio = lastRgpmPart !== "pdf" ? lastRgpmPart : "";
+        
+        return `${principais}${apoio ? ` • ${apoio}` : ''}`;
+      }
+      
+      // Caso não tenha ponto, apenas remove a extensão .pdf
+      return lastPart.replace(/\.pdf$/i, "");
+    }
+  }
+  
+  return "Não disponível";
 };
 
 const TCOmeus: React.FC<TCOmeusProps> = ({
@@ -147,12 +190,16 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
 
         // Extrair a natureza do nome do arquivo
         const natureza = extractTcoNatureFromFilename(fileName);
+        
+        // Extrair os RGPMs do nome do arquivo
+        const rgpms = extractRGPMsFromFilename(fileName);
 
         return {
           id: file.id || fileName,
           tcoNumber: finalTcoNumber, // Ex: TCO-2_2025-05-19 ou TCO-002_etc
           createdAt: new Date(file.created_at || Date.now()),
-          natureza: natureza, // Agora estamos usando a natureza extraída do nome do arquivo
+          natureza: natureza, // Formato limpo da natureza
+          rgpms: rgpms, // RGPMs extraídos do nome do arquivo
           pdfPath: `tcos/${user.id}/${fileName}`,
           source: 'storage'
         };
@@ -161,14 +208,17 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       const supabaseTcos = dbTcos.map(tco => {
         // Para TCOs do banco de dados, verificar se podemos extrair natureza do arquivo
         let natureza = tco.natureza || "Não especificada";
+        let rgpms = "Não disponível";
         
-        // Se temos um caminho para o PDF, tentamos extrair a natureza do nome do arquivo
+        // Se temos um caminho para o PDF, tentamos extrair a natureza e RGPMs do nome do arquivo
         if (tco.pdfPath) {
           const fileName = tco.pdfPath.split('/').pop();
           const extractedNature = extractTcoNatureFromFilename(fileName);
           if (extractedNature !== "Não especificada") {
             natureza = extractedNature;
           }
+          
+          rgpms = extractRGPMsFromFilename(fileName);
         }
         
         return {
@@ -176,6 +226,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           tcoNumber: tco.tcoNumber || `TCO-${tco.id.substring(0, 8)}`,
           createdAt: new Date(tco.createdAt || tco.created_at),
           natureza: natureza,
+          rgpms: rgpms,
           pdfPath: tco.pdfPath,
           source: 'supabase'
         };
@@ -374,16 +425,15 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             <Table role="grid" className="min-w-full">
               <TableHeader>
                 <TableRow>
-                  {/* Modificação: Adicionada classe de largura para a coluna Número */}
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold w-[120px] px-3">Número</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">Data</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">Natureza</TableHead>
+                  <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">GUPM</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold text-right pr-4 px-3">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tcoList.map(tco => <TableRow key={tco.id} aria-selected={selectedTco?.id === tco.id} className={`cursor-pointer transition-colors hover:bg-slate-50 ${selectedTco?.id === tco.id ? "bg-primary/10" : ""}`} onClick={() => setSelectedTco(tco)}>
-                    {/* Modificação: Adicionado padding também na célula para consistência */}
                     <TableCell className="font-medium px-3">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 px-2 py-0.5 text-sm">
@@ -392,9 +442,12 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                       </div>
                     </TableCell>
                     <TableCell className="px-3">
-                      {tco.createdAt ? format(tco.createdAt instanceof Date ? tco.createdAt : new Date(tco.createdAt), "dd/MM/yyyy") : "-"}
+                      {tco.createdAt ? format(tco.createdAt instanceof Date ? tco.createdAt : new Date(tco.createdAt), "dd/MM/yyyy - HH:mm") : "-"}
                     </TableCell>
                     <TableCell className="px-3">{tco.natureza || "Não especificada"}</TableCell>
+                    <TableCell className="px-3">
+                      <span className="text-sm font-medium text-gray-600">{tco.rgpms || "Não disponível"}</span>
+                    </TableCell>
                     <TableCell className="text-right px-3 pr-4">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
