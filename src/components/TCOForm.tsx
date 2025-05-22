@@ -12,8 +12,7 @@ import GuarnicaoTab from "./tco/GuarnicaoTab";
 import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF } from "./tco/pdfGenerator";
-import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
-import { generateTCOFilename } from '@/lib/supabaseStorage';
+import { uploadPDF, saveTCOMetadata, ensureBucketExists, generateTCOFilename } from '@/lib/supabaseStorage';
 
 interface ComponenteGuarnicao {
   rg: string;
@@ -807,9 +806,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       const pdfBlob = await Promise.race([pdfGenerationPromise, timeoutPromise]);
       if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
-      
-      // Generate formatted filename using the new function
-      import { generateTCOFilename } from '@/lib/supabaseStorage';
       
       const tcoNumParaNome = tcoNumber.trim();
       const dateStr = new Date().toISOString().slice(0, 10);
