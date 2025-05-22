@@ -1,9 +1,9 @@
-// TCOmeus (7).tsx
+// TCOmeus (10).tsx
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Trash2, Download, Eye, MoreHorizontal, RefreshCw, Users, FileText, Info, X } from "lucide-react"; // Adicionado X para fechar modais
+import { Trash2, Download, Eye, MoreHorizontal, RefreshCw, Users, FileText, Info, X } from "lucide-react";
 import { format } from "date-fns";
 import { useToast as useShadcnToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { deleteTCO } from "@/lib/supabaseStorage";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; // Removido DropdownMenuSeparator da importação se não for mais usado em outros lugares
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 
 interface TCOmeusProps {
@@ -119,11 +119,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
 }) => {
   const [tcoList, setTcoList] = useState<TcoData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  // Estados para o diálogo de PDF não são mais necessários se abrirmos externamente
-  // const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null);
-  // const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
-  // const [pdfLoading, setPdfLoading] = useState(false);
-
   const [isDeleting, setIsDeleting] = useState(false);
   const [tcoToDelete, setTcoToDelete] = useState<TcoData | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -134,7 +129,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const [currentGupmToDisplay, setCurrentGupmToDisplay] = useState<StructuredGupm | null>(null);
 
   const fetchAndStructureGupmForTco = useCallback(async (rgpms: ExtractedRgpms): Promise<StructuredGupm | null> => {
-    // ... (função sem alterações)
     if (rgpms.main.length === 0 && rgpms.support.length === 0) return null;
     const allRgpms = [...new Set([...rgpms.main, ...rgpms.support])];
     if (allRgpms.length === 0) return null;
@@ -145,6 +139,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       } = await supabase.from('police_officers').select('rgpm, graduacao, nome').in('rgpm', allRgpms);
       if (error) {
         console.error("Error fetching officer details for GUPM:", error);
+        // Fallback for display if DB fetch fails, though ideally we'd handle this more gracefully
         const fallbackOfficer = (rgpm: string): OfficerInfo => ({
           rgpm,
           graduacao: "RGPM",
@@ -174,12 +169,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       };
     } catch (e) {
       console.error("Exception fetching/structuring GUPM:", e);
-      return null;
+      return null; // Or some other error indication
     }
   }, []);
 
   const fetchUserTcos = useCallback(async () => {
-    // ... (lógica de fetchTcos, pequena modificação para gupmDetailsCache)
     if (!user.id) return;
     setIsLoading(true);
     try {
@@ -209,16 +203,25 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       setTcoList(filesFromStorage);
 
       // Preencher o cache de detalhes da GUPM
-      const newGupmDetailsCache: Record<string, StructuredGupm | null> = { ...gupmDetailsCache }; // Preserve existing cache
+      const newGupmDetailsCacheUpdates: Record<string, StructuredGupm | null> = {};
+      let cacheNeedsUpdate = false;
+
       for (const tco of filesFromStorage) {
-        if (!newGupmDetailsCache[tco.id] && tco.rgpmsExtracted) { // Fetch only if not already cached
-          const gupmInfo = await fetchAndStructureGupmForTco(tco.rgpmsExtracted);
-          newGupmDetailsCache[tco.id] = gupmInfo;
-        } else if (!tco.rgpmsExtracted) {
-          newGupmDetailsCache[tco.id] = null;
+        // eslint-disable-next-line react-hooks/exhaustive-deps 
+        // (Acesso ao gupmDetailsCache aqui é intencional sem estar nas dependências do useCallback para quebrar o ciclo)
+        if (!(tco.id in gupmDetailsCache)) { // Só busca/processa se o TCO ID não estiver no cache
+          if (tco.rgpmsExtracted && (tco.rgpmsExtracted.main.length > 0 || tco.rgpmsExtracted.support.length > 0)) {
+            const gupmInfo = await fetchAndStructureGupmForTco(tco.rgpmsExtracted);
+            newGupmDetailsCacheUpdates[tco.id] = gupmInfo;
+          } else {
+            newGupmDetailsCacheUpdates[tco.id] = null; // Não há RGPMs, marca como null
+          }
+          cacheNeedsUpdate = true;
         }
       }
-      setGupmDetailsCache(newGupmDetailsCache);
+      if (cacheNeedsUpdate) {
+        setGupmDetailsCache(prevCache => ({ ...prevCache, ...newGupmDetailsCacheUpdates }));
+      }
 
     } catch (error) {
       console.error("Erro ao buscar TCOs:", error);
@@ -226,7 +229,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [user.id, toast, fetchAndStructureGupmForTco, gupmDetailsCache]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps 
+  }, [user.id, toast, fetchAndStructureGupmForTco]); // gupmDetailsCache foi removido das dependências para quebrar o loop
 
   const confirmDelete = (tco: TcoData) => {
     setTcoToDelete(tco);
@@ -235,7 +239,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   };
 
   const handleDeleteTco = async () => {
-    // ... (função sem alterações)
     if (!tcoToDelete) return;
     try {
       setIsDeleting(true);
@@ -252,11 +255,16 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         if (tcoToDelete.pdfPath) {
           await supabase.storage.from(BUCKET_NAME).remove([tcoToDelete.pdfPath]);
         }
-        if (tcoToDelete.source === 'database') {
+        if (tcoToDelete.source === 'database') { // Embora não estejamos usando 'database' source neste exemplo, mantido por robustez
           await supabase.from('tco_pdfs').delete().eq('id', tcoToDelete.id);
         }
       }
       setTcoList(prevList => prevList.filter(item => item.id !== tcoToDelete.id));
+      setGupmDetailsCache(prevCache => { // Remover do cache também
+        const newCache = {...prevCache};
+        delete newCache[tcoToDelete.id];
+        return newCache;
+      });
       if (selectedTco?.id === tcoToDelete.id) setSelectedTco(null);
       toast({
         title: "TCO Excluído",
@@ -278,18 +286,16 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   };
 
   const handleViewPdf = async (tco: TcoData) => {
-    // MODIFICADO: Abrir PDF em nova aba/externamente
     try {
-      // Poderia adicionar um estado de loading específico para esta ação se desejado
       if (tco.pdfPath) {
         const { data, error } = await supabase.storage
           .from(BUCKET_NAME)
-          .createSignedUrl(tco.pdfPath, 60 * 5); // URL válida por 5 minutos
+          .createSignedUrl(tco.pdfPath, 60 * 5); 
 
         if (error || !data?.signedUrl) {
           throw new Error(error?.message || "URL assinada não encontrada para visualização.");
         }
-        window.open(data.signedUrl, '_blank'); // Tenta abrir em nova aba/app externo
+        window.open(data.signedUrl, '_blank');
       } else {
         toast({
           variant: "destructive",
@@ -308,7 +314,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   };
 
   const handleDownloadPdf = async (tco: TcoData) => {
-    // ... (função sem alterações)
     try {
       if (tco.pdfPath) {
         const { data, error } = await supabase.storage.from(BUCKET_NAME).download(tco.pdfPath);
@@ -336,16 +341,13 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   };
 
   const openGupmDetailsModal = (tcoId: string) => {
-    const details = gupmDetailsCache[tcoId];
-    if (details) {
-      setCurrentGupmToDisplay(details);
+    if (gupmDetailsCache.hasOwnProperty(tcoId)) {
+      setCurrentGupmToDisplay(gupmDetailsCache[tcoId]);
       setIsGupmDetailModalOpen(true);
-    } else if (gupmDetailsCache.hasOwnProperty(tcoId) && gupmDetailsCache[tcoId] === null) { // Explicitly null, meaning no GUPM
-       setCurrentGupmToDisplay(null); // Show modal with "no info"
-       setIsGupmDetailModalOpen(true);
-    }
-    else {
-      toast({ variant: "default", title: "GUPM", description: "Detalhes da guarnição não disponíveis ou ainda carregando." });
+    } else {
+      // Este caso deve ser raro se fetchUserTcos popular o cache para todos os TCOs.
+      // Pode indicar que o cache ainda está sendo populado.
+      toast({ variant: "default", title: "GUPM", description: "Detalhes da guarnição ainda não disponíveis. Tente novamente em instantes." });
     }
   };
 
@@ -353,6 +355,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     if (user?.id) {
       fetchUserTcos();
     }
+  // fetchUserTcos é memorizada e só muda se suas próprias dependências mudarem (user.id, toast, fetchAndStructureGupmForTco).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, fetchUserTcos]);
 
   return (
@@ -394,8 +398,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
               <TableBody>
                 {tcoList.map(tco => {
                   const gupmInfo = gupmDetailsCache[tco.id];
-                  const conductorDisplay = gupmInfo?.conductor ? `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}` : (gupmInfo === undefined && isLoading) || (gupmInfo === undefined && !gupmDetailsCache.hasOwnProperty(tco.id)) ? "Carregando GUPM..." : "N/D";
-                  const hasAnyOfficerForModal = gupmInfo && (gupmInfo.conductor || gupmInfo.mainTeam.length > 0 || gupmInfo.supportTeam.length > 0);
+                  const conductorDisplay = gupmInfo === undefined ? "Carregando GUPM..." : (gupmInfo?.conductor ? `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}` : "N/D");
+                  const hasAnyOfficerForModal = gupmDetailsCache.hasOwnProperty(tco.id);
                   
                   return (
                     <TableRow 
@@ -452,8 +456,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                             <DropdownMenuItem onClick={() => handleDownloadPdf(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md">
                               <Download className="h-4 w-4 text-green-500" /> Baixar PDF
                             </DropdownMenuItem>
-                            {/* DropdownMenuSeparator removido daqui */}
-                            <DropdownMenuItem onClick={() => confirmDelete(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md mt-1"> {/* Adicionado mt-1 para um leve espaçamento visual */}
+                            <DropdownMenuItem onClick={() => confirmDelete(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md mt-1">
                               <Trash2 className="h-4 w-4" /> Excluir TCO
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -470,8 +473,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           <div className="md:hidden space-y-3 flex-grow overflow-y-auto p-1">
             {tcoList.map(tco => {
               const gupmInfo = gupmDetailsCache[tco.id];
-              const conductorDisplay = gupmInfo?.conductor ? `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}` : (gupmInfo === undefined && isLoading) || (gupmInfo === undefined && !gupmDetailsCache.hasOwnProperty(tco.id))  ? "Carregando GUPM..." : "N/D";
-              const hasAnyOfficerForModal = gupmInfo && (gupmInfo.conductor || gupmInfo.mainTeam.length > 0 || gupmInfo.supportTeam.length > 0);
+              const conductorDisplay = gupmInfo === undefined ? "Carregando GUPM..." : (gupmInfo?.conductor ? `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}` : "N/D");
+              const hasAnyOfficerForModal = gupmDetailsCache.hasOwnProperty(tco.id);
               
               return (
                 <div 
@@ -497,8 +500,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                             <DropdownMenuItem onClick={() => handleDownloadPdf(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md">
                               <Download className="h-4 w-4 text-green-500" /> Baixar PDF
                             </DropdownMenuItem>
-                            {/* DropdownMenuSeparator removido daqui */}
-                            <DropdownMenuItem onClick={() => confirmDelete(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md mt-1"> {/* Adicionado mt-1 */}
+                            <DropdownMenuItem onClick={() => confirmDelete(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md mt-1">
                               <Trash2 className="h-4 w-4" /> Excluir TCO
                             </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -541,16 +543,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         </div>
       )}
 
-      {/* PDF Viewer Dialog não é mais usado para 'Visualizar PDF', pode ser removido se não houver outro uso */}
-      {/* 
-      <Dialog open={isPdfDialogOpen} onOpenChange={open => {
-        // ...
-      }}>
-        <DialogContent>...</DialogContent>
-      </Dialog>
-      */}
-
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="max-w-md rounded-lg">
           <AlertDialogHeader>
@@ -582,41 +574,63 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       {/* GUPM Details Modal */}
       <Dialog open={isGupmDetailModalOpen} onOpenChange={setIsGupmDetailModalOpen}>
         <DialogContent className="max-w-lg rounded-lg">
-          <DialogHeader className="pb-3">
+          <DialogHeader className="pb-3 border-b mb-4"> {/* Adicionado border-b e mb-4 */}
             <DialogTitle className="text-xl font-semibold text-gray-800">Detalhes da Guarnição</DialogTitle>
-            <DialogDescription className="text-sm">Policiais envolvidos na ocorrência do TCO.</DialogDescription>
+            <DialogDescription className="text-sm text-gray-500">Policiais envolvidos na ocorrência do TCO.</DialogDescription> {/* Cor ajustada */}
           </DialogHeader>
-          <div className="py-4 space-y-4 text-sm max-h-[60vh] overflow-y-auto pr-2">
+          <div className="py-2 space-y-4 text-sm max-h-[60vh] overflow-y-auto px-2"> {/* px-2 para scrollbar */}
             {currentGupmToDisplay?.conductor && (
-              <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
-                <p className="font-semibold text-gray-700 text-base mb-0.5">Condutor:</p>
-                <p className="text-gray-600">{`${currentGupmToDisplay.conductor.graduacao} ${currentGupmToDisplay.conductor.nome} (RGPM: ${currentGupmToDisplay.conductor.rgpm})`}</p>
+              <div className="p-3.5 bg-gray-50 rounded-md border border-gray-200 shadow-sm">
+                <p className="font-semibold text-gray-700 text-md mb-1 flex items-center">
+                  {/* <UserCog className="h-5 w-5 mr-2 text-gray-600" /> */}
+                  Condutor da Viatura
+                </p>
+                <div className="text-gray-600 pl-1">
+                  <p>{`${currentGupmToDisplay.conductor.graduacao} ${currentGupmToDisplay.conductor.nome}`}</p>
+                  <p className="text-xs text-gray-500">{`RGPM: ${currentGupmToDisplay.conductor.rgpm}`}</p>
+                </div>
               </div>
             )}
             {currentGupmToDisplay && currentGupmToDisplay.mainTeam.length > 0 && (
-              <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
-                <p className="font-semibold text-gray-700 text-base mb-1.5">Guarnição Principal:</p>
-                <ul className="space-y-1.5 text-gray-600">
-                  {currentGupmToDisplay.mainTeam.map((officer, index) => <li key={`main-${index}`}>{`${officer.graduacao} ${officer.nome} (RGPM: ${officer.rgpm})`}</li>)}
+              <div className="p-3.5 bg-gray-50 rounded-md border border-gray-200 shadow-sm">
+                <p className="font-semibold text-gray-700 text-md mb-2 flex items-center">
+                  {/* <Users className="h-5 w-5 mr-2 text-gray-600" /> */}
+                  Guarnição Principal
+                </p>
+                <ul className="space-y-2.5 text-gray-600 pl-1"> {/* Aumentado space-y */}
+                  {currentGupmToDisplay.mainTeam.map((officer, index) => (
+                    <li key={`main-${index}`}>
+                      <p>{`${officer.graduacao} ${officer.nome}`}</p>
+                      <p className="text-xs text-gray-500">{`RGPM: ${officer.rgpm}`}</p>
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}
             {currentGupmToDisplay && currentGupmToDisplay.supportTeam.length > 0 && (
-              <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
-                <p className="font-semibold text-blue-700 text-base mb-1.5">Equipe de Apoio:</p>
-                <ul className="space-y-1.5 text-blue-600">
-                  {currentGupmToDisplay.supportTeam.map((officer, index) => <li key={`support-${index}`}>{`${officer.graduacao} ${officer.nome} (RGPM: ${officer.rgpm})`}</li>)}
+              <div className="p-3.5 bg-blue-50 rounded-md border border-blue-200 shadow-sm">
+                <p className="font-semibold text-blue-700 text-md mb-2 flex items-center">
+                  {/* <UsersRound className="h-5 w-5 mr-2 text-blue-600" /> */}
+                  Equipe de Apoio
+                </p>
+                <ul className="space-y-2.5 text-blue-600 pl-1"> {/* Aumentado space-y */}
+                  {currentGupmToDisplay.supportTeam.map((officer, index) => (
+                    <li key={`support-${index}`}>
+                      <p>{`${officer.graduacao} ${officer.nome}`}</p>
+                      <p className="text-xs text-blue-500">{`RGPM: ${officer.rgpm}`}</p> {/* Cor do RGPM ajustada para equipe de apoio */}
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}
             {!currentGupmToDisplay?.conductor && (!currentGupmToDisplay || currentGupmToDisplay.mainTeam.length === 0) && (!currentGupmToDisplay || currentGupmToDisplay.supportTeam.length === 0) && (
-                <div className="text-center py-6">
-                    <Users className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-500">Nenhuma informação de guarnição disponível para este TCO.</p>
+                <div className="text-center py-8"> {/* Aumentado py */}
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" /> {/* Ícone maior e mais margem */}
+                    <p className="text-gray-500 text-base">Nenhuma informação de guarnição disponível para este TCO.</p> {/* Texto um pouco maior */}
                 </div>
             )}
           </div>
-           <DialogFooter className="pt-4">
+           <DialogFooter className="pt-4 mt-2 border-t"> {/* Adicionado mt-2 e border-t */}
             <Button variant="outline" onClick={() => setIsGupmDetailModalOpen(false)} className="w-full sm:w-auto">Fechar</Button>
           </DialogFooter>
         </DialogContent>
