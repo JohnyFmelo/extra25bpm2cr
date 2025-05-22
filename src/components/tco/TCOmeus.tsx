@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Trash2, Download, Eye, MoreHorizontal, RefreshCw, Users, FileText, Info } from "lucide-react";
 import { format } from "date-fns";
-import { useToast as useShadcnToast } from "@/hooks/use-toast"; // Renamed to avoid conflict if you pass a prop named toast
+import { useToast as useShadcnToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,12 +11,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { deleteTCO } from "@/lib/supabaseStorage";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import PDFViewer from "./PDFViewer";
+
 interface TCOmeusProps {
   user: {
     id: string;
     registration?: string;
   };
-  toast: ReturnType<typeof useShadcnToast>["toast"]; // Use the renamed import
+  toast: ReturnType<typeof useShadcnToast>["toast"];
   setSelectedTco: (tco: TcoData | null) => void;
   selectedTco: TcoData | null;
 }
@@ -72,7 +74,7 @@ const extractTcoNatureFromFilename = (fileName: string | undefined | null): stri
     naturezaParts.push(lastNaturePart);
   }
   if (naturezaParts.length === 0) return "Não especificada";
-  return naturezaParts.join('_').replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ') || "Não especificada";
+  return naturezaParts.join('_').replace(/_/g, ' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ') || "Não especificada";
 };
 const extractRGPMsFromFilename = (fileName: string | undefined | null): ExtractedRgpms => {
   const emptyResult: ExtractedRgpms = {
@@ -516,22 +518,19 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                 <p className="text-gray-700 text-md font-medium">Carregando PDF...</p>
                 <p className="text-gray-500 text-sm">Por favor, aguarde.</p>
               </div>}
-            {selectedPdfUrl ? <iframe src={selectedPdfUrl} className={`w-full h-full transition-opacity duration-300 ${pdfLoading ? 'opacity-0' : 'opacity-100'}`} title="PDF Viewer" style={{
-            border: "none"
-          }} onLoad={() => setTimeout(() => setPdfLoading(false), 300)} // Add slight delay to perceive loading
-          onError={() => {
-            setPdfLoading(false);
-            toast({
-              variant: "destructive",
-              title: "Erro",
-              description: "Não foi possível carregar o PDF."
-            });
-            setSelectedPdfUrl(null);
-          }} /> : !pdfLoading && <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                <Info className="h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-lg">Nenhum PDF selecionado</p>
-                <p className="text-sm">Ocorreu um erro ou o PDF não pôde ser carregado.</p>
-              </div>}
+            <PDFViewer
+              pdfUrl={selectedPdfUrl}
+              onLoadSuccess={() => setTimeout(() => setPdfLoading(false), 300)}
+              onLoadError={() => {
+                setPdfLoading(false);
+                toast({
+                  variant: "destructive",
+                  title: "Erro",
+                  description: "Não foi possível carregar o PDF."
+                });
+                setSelectedPdfUrl(null);
+              }}
+            />
           </div>
         </DialogContent>
       </Dialog>
