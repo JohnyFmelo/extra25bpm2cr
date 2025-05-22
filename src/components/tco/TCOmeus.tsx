@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): stri
 
   // Padrão: TCO-NUMERO_OPCIONAL_EXTRA ou TCO-NUMERO-OPCIONAL_EXTRA
   // Queremos extrair NUMERO.
-  const match = fullTcoNumber.match(/^TCO-([^_ -]+)/i);
+  const match = fullTcoNumber.match(/^TCO[-_]([^_-]+)/i);
   if (match && match[1]) {
     numberPart = match[1];
   } else if (fullTcoNumber.toUpperCase().startsWith("TCO-")) {
@@ -179,7 +180,6 @@ const extractRGPMsFromFilename = (fileName: string | undefined | null): string =
   return result || "Não disponível";
 };
 
-
 const TCOmeus: React.FC<TCOmeusProps> = ({
   user,
   toast,
@@ -215,7 +215,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         const fileName = file.name;
         console.log("Processando arquivo:", fileName);
         
-        const tcoMatch = fileName.match(/TCO[-_]([^_ -]+)/i);
+        const tcoMatch = fileName.match(/TCO[-_]([^_-]+)/i);
         let tcoIdentifierPart = tcoMatch ? tcoMatch[1] : fileName.replace(/\.pdf$/i, "");
         
         let finalTcoNumber = tcoIdentifierPart;
