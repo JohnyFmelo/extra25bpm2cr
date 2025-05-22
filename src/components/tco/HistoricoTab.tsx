@@ -1,11 +1,9 @@
-
 import React, { useRef, useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { X } from "lucide-react";
-
 interface HistoricoTabProps {
   relatoPolicial: string;
   setRelatoPolicial: (value: string) => void;
@@ -26,7 +24,6 @@ interface HistoricoTabProps {
   videoLinks?: string[];
   setVideoLinks?: (value: string[]) => void;
 }
-
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
   relatoPolicial,
   setRelatoPolicial,
@@ -55,7 +52,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     id: string;
   }[]>([]);
   const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
-
   useEffect(() => {
     return () => {
       selectedFiles.forEach(({
@@ -65,13 +61,11 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       });
     };
   }, [selectedFiles]);
-
   const handleFileUploadClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -91,14 +85,12 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       console.log(`Selected files: ${fileNames}`);
     }
   };
-
   const handleRemoveFile = (id: string) => {
     setSelectedFiles(prev => {
       const newFiles = prev.filter(fileObj => fileObj.id !== id);
       return newFiles;
     });
   };
-
   const handleVideoUrlsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const urls = e.target.value;
     setVideoUrls(urls);
@@ -106,14 +98,11 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       setVideoLinks(urls.split("\n").filter(url => url.trim() !== ""));
     }
   };
-
   const truncateFileName = (name: string, maxLength: number = 15): string => {
     if (name.length <= maxLength) return name;
     return name.slice(0, maxLength - 3) + "...";
   };
-
-  return (
-    <div className="border rounded-lg shadow-sm bg-white">
+  return <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
         <h3 className="text-2xl font-semibold flex items-center">Histórico</h3>
       </div>
@@ -155,17 +144,9 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
         
         <div>
           <Label htmlFor="apreensoes">OBJETOS/DOCUMENTOS APREENDIDOS</Label>
-          <Textarea 
-            id="apreensoes" 
-            placeholder="Descreva os objetos ou documentos apreendidos, se houver" 
-            value={apreensoes} 
-            onChange={e => setApreensoes(e.target.value)} 
-            className="min-h-[100px]"
-          />
+          <Textarea id="apreensoes" placeholder="Descreva os objetos ou documentos apreendidos, se houver" value={apreensoes} onChange={e => setApreensoes(e.target.value)} className="min-h-[100px]" />
           <p className="text-xs text-muted-foreground mt-1">
-            {!isDrugCase ? 
-              "Se houver apreensões, o Termo de Apreensão será gerado automaticamente no PDF." : 
-              "Para casos de drogas, o Termo de Apreensão será gerado automaticamente."}
+            {!isDrugCase ? "Se houver apreensões, o Termo de Apreensão será gerado automaticamente no PDF." : "Para casos de drogas, o Termo de Apreensão será gerado automaticamente."}
           </p>
         </div>
         
@@ -175,22 +156,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
         </div>
         
         {/* Video Links Section */}
-        <div>
-          <Label htmlFor="videoLinks">LINKS PARA VÍDEOS</Label>
-          <Textarea
-            id="videoLinks"
-            placeholder="Insira links para vídeos (um por linha)"
-            value={videoUrls}
-            onChange={handleVideoUrlsChange}
-            className="min-h-[100px]"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Insira cada URL em uma linha separada. Códigos QR serão gerados automaticamente no PDF.
-          </p>
-        </div>
+        
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default HistoricoTab;
