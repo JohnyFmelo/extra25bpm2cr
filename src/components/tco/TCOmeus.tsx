@@ -55,6 +55,42 @@ const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): stri
   return "-"; // Se numberPart ficou vazio
 };
 
+// Nova função para extrair a natureza do nome do arquivo TCO
+const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
+  if (!fileName) return "Não especificada";
+  
+  // Formato esperado: TCO_[número]_[data]_[natureza]_[RGPMs]
+  const parts = fileName.split('_');
+  
+  // Verificamos se temos pelo menos 4 partes (TCO, número, data, natureza)
+  if (parts.length >= 4) {
+    // A natureza está na posição 3, mas pode conter outra parte do caminho
+    let natureza = parts[3];
+    
+    // Se houver mais partes, a parte 4+ até o último underscore ou ponto é a natureza
+    if (parts.length > 4) {
+      // Verifica se a última parte contém RGPMs (números)
+      const lastPart = parts[parts.length - 1];
+      const rgpmMatch = lastPart.match(/^\d+/);
+      
+      if (rgpmMatch) {
+        // Se a última parte começa com números, então é os RGPMs
+        // A natureza é tudo entre a parte 3 e a última parte
+        natureza = parts.slice(3, parts.length - 1).join('_');
+      } else {
+        // Se não, consideramos que a última parte também faz parte da natureza
+        natureza = parts.slice(3).join('_');
+      }
+    }
+    
+    // Remove a extensão .pdf ou outra se estiver presente
+    natureza = natureza.replace(/\.[^/.]+$/, "");
+    
+    return natureza || "Não especificada";
+  }
+  
+  return "Não especificada";
+};
 
 const TCOmeus: React.FC<TCOmeusProps> = ({
   user,
@@ -109,24 +145,41 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             finalTcoNumber = `TCO-${tcoIdentifierPart}`;
         }
 
+        // Extrair a natureza do nome do arquivo
+        const natureza = extractTcoNatureFromFilename(fileName);
+
         return {
           id: file.id || fileName,
           tcoNumber: finalTcoNumber, // Ex: TCO-2_2025-05-19 ou TCO-002_etc
           createdAt: new Date(file.created_at || Date.now()),
-          natureza: "Não especificada", 
+          natureza: natureza, // Agora estamos usando a natureza extraída do nome do arquivo
           pdfPath: `tcos/${user.id}/${fileName}`,
           source: 'storage'
         };
       }) || [];
       
-      const supabaseTcos = dbTcos.map(tco => ({
-        id: tco.id,
-        tcoNumber: tco.tcoNumber || `TCO-${tco.id.substring(0, 8)}`,
-        createdAt: new Date(tco.createdAt || tco.created_at),
-        natureza: tco.natureza || "Não especificada",
-        pdfPath: tco.pdfPath,
-        source: 'supabase'
-      })) || [];
+      const supabaseTcos = dbTcos.map(tco => {
+        // Para TCOs do banco de dados, verificar se podemos extrair natureza do arquivo
+        let natureza = tco.natureza || "Não especificada";
+        
+        // Se temos um caminho para o PDF, tentamos extrair a natureza do nome do arquivo
+        if (tco.pdfPath) {
+          const fileName = tco.pdfPath.split('/').pop();
+          const extractedNature = extractTcoNatureFromFilename(fileName);
+          if (extractedNature !== "Não especificada") {
+            natureza = extractedNature;
+          }
+        }
+        
+        return {
+          id: tco.id,
+          tcoNumber: tco.tcoNumber || `TCO-${tco.id.substring(0, 8)}`,
+          createdAt: new Date(tco.createdAt || tco.created_at),
+          natureza: natureza,
+          pdfPath: tco.pdfPath,
+          source: 'supabase'
+        };
+      }) || [];
       
       consolidatedTcos = [...supabaseTcos];
       for (const storageTco of filesFromStorage) {
