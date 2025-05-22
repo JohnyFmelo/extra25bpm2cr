@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Trash2, Download, Eye, MoreHorizontal, RefreshCw, Users, FileText, Info, X } from "lucide-react"; // Added X for close
+import { Trash2, Download, Eye, MoreHorizontal, RefreshCw, Users, FileText, Info } from "lucide-react";
 import { format } from "date-fns";
 import { useToast as useShadcnToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { deleteTCO } from "@/lib/supabaseStorage";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import PDFViewer from "./PDFViewer"; // Assuming PDFViewer.tsx is in the same directory
+import PDFViewer from "./PDFViewer";
 
 interface TCOmeusProps {
   user: {
@@ -120,12 +120,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [tcoToDelete, setTcoToDelete] = useState<TcoData | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [pdfUrlLoading, setPdfUrlLoading] = useState(false); // Renamed from pdfLoading to be more specific
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
   const [gupmDetailsCache, setGupmDetailsCache] = useState<Record<string, StructuredGupm | null>>({});
   const [isGupmDetailModalOpen, setIsGupmDetailModalOpen] = useState(false);
   const [currentGupmToDisplay, setCurrentGupmToDisplay] = useState<StructuredGupm | null>(null);
-
   const fetchAndStructureGupmForTco = useCallback(async (rgpms: ExtractedRgpms): Promise<StructuredGupm | null> => {
     if (rgpms.main.length === 0 && rgpms.support.length === 0) return null;
     const allRgpms = [...new Set([...rgpms.main, ...rgpms.support])];
@@ -169,7 +168,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       return null;
     }
   }, []);
-
   const fetchUserTcos = useCallback(async () => {
     if (!user.id) return;
     setIsLoading(true);
@@ -220,13 +218,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       setIsLoading(false);
     }
   }, [user.id, toast, fetchAndStructureGupmForTco]);
-  
   const confirmDelete = (tco: TcoData) => {
     setTcoToDelete(tco);
     setDeletionMessage(null);
     setIsDeleteDialogOpen(true);
   };
-
   const handleDeleteTco = async () => {
     if (!tcoToDelete) return;
     try {
@@ -244,7 +240,9 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         if (tcoToDelete.pdfPath) {
           await supabase.storage.from(BUCKET_NAME).remove([tcoToDelete.pdfPath]);
         }
+        // Attempt to delete from DB if source indicates it might be there
         if (tcoToDelete.source === 'database') {
+          // Assuming you might add this field later
           await supabase.from('tco_pdfs').delete().eq('id', tcoToDelete.id);
         }
       }
@@ -268,25 +266,22 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       setDeletionMessage(null);
     }
   };
-
   const handleViewPdf = async (tco: TcoData) => {
     try {
-      setPdfUrlLoading(true); // Start loading for URL
-      setIsPdfDialogOpen(true); // Open dialog, PDFViewer will show its own loading/content
+      setPdfLoading(true);
       if (tco.pdfPath) {
         const {
           data,
           error
-        } = await supabase.storage.from(BUCKET_NAME).createSignedUrl(tco.pdfPath, 60 * 60); // URL válida por 1 hora
-        setPdfUrlLoading(false); // URL fetched
+        } = await supabase.storage.from(BUCKET_NAME).createSignedUrl(tco.pdfPath, 60 * 5); // URL válida por 5 minutos
         if (error || !data?.signedUrl) {
+          setPdfLoading(false);
           throw new Error(error?.message || "URL assinada não encontrada");
         }
         setSelectedPdfUrl(data.signedUrl);
-        // PDFViewer will take over loading the actual PDF content
+        setIsPdfDialogOpen(true);
       } else {
-        setPdfUrlLoading(false);
-        setSelectedPdfUrl(null); // Ensure no old URL is shown
+        setPdfLoading(false);
         toast({
           variant: "destructive",
           title: "PDF não encontrado",
@@ -294,18 +289,15 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         });
       }
     } catch (error) {
-      setPdfUrlLoading(false);
-      setSelectedPdfUrl(null);
-      //setIsPdfDialogOpen(false); // Optionally close dialog on major error
-      console.error("Erro ao buscar URL do PDF:", error);
+      setPdfLoading(false);
+      console.error("Erro ao buscar PDF:", error);
       toast({
         variant: "destructive",
-        title: "Erro ao carregar PDF",
-        description: `Falha ao obter o link para o PDF. Detalhe: ${error instanceof Error ? error.message : String(error)}`
+        title: "Erro",
+        description: `Falha ao carregar o PDF do TCO. Detalhe: ${error instanceof Error ? error.message : String(error)}`
       });
     }
   };
-
   const handleDownloadPdf = async (tco: TcoData) => {
     try {
       if (tco.pdfPath) {
@@ -345,7 +337,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       });
     }
   };
-  
   const openGupmDetailsModal = (tcoId: string) => {
     const details = gupmDetailsCache[tcoId];
     if (details) {
@@ -359,12 +350,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       });
     }
   };
-
   useEffect(() => {
     if (user?.id) {
       fetchUserTcos();
     }
-  }, [user?.id, fetchUserTcos]);
+  }, [user?.id, fetchUserTcos]); // Added fetchUserTcos to dependency array due to useCallback
 
   return <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 flex-grow overflow-hidden flex flex-col">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
@@ -455,7 +445,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           </div>
 
           {/* Mobile Card View */}
-          <div className="md:hidden space-y-3 flex-grow overflow-y-auto p-1 custom-scrollbar"> {/* Added custom-scrollbar */}
+          <div className="md:hidden space-y-3 flex-grow overflow-y-auto p-1">
             {tcoList.map(tco => {
           const gupmInfo = gupmDetailsCache[tco.id];
           const conductorDisplay = gupmInfo?.conductor ? `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}` : gupmInfo === undefined && isLoading ? "Carregando GUPM..." : "N/D";
@@ -513,47 +503,39 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
 
       {/* PDF Viewer Dialog */}
       <Dialog open={isPdfDialogOpen} onOpenChange={open => {
-          setIsPdfDialogOpen(open);
-          if (!open) {
-            setSelectedPdfUrl(null); // Clear URL when dialog closes
-            // pdfUrlLoading is reset when handleViewPdf is called or on error
-          }
-        }}>
-        <DialogContent className="max-w-4xl w-[95vw] h-[90vh] p-0 flex flex-col overflow-hidden rounded-lg sm:max-w-screen-lg md:max-w-screen-xl lg:max-w-[1600px]"> {/* Adjust max width for larger screens */}
-          <DialogHeader className="p-3 border-b flex flex-row justify-between items-center shrink-0 bg-white">
+      setIsPdfDialogOpen(open);
+      if (!open) {
+        setSelectedPdfUrl(null);
+        setPdfLoading(false);
+      }
+    }}>
+        <DialogContent className="max-w-4xl w-[95vw] h-[90vh] p-0 flex flex-col overflow-hidden rounded-lg">
+          <DialogHeader className="p-4 border-b flex flex-row justify-between items-center shrink-0">
             <DialogTitle className="text-lg font-semibold text-gray-800">Visualizador de PDF</DialogTitle>
             <Button variant="ghost" size="icon" onClick={() => setIsPdfDialogOpen(false)} className="h-8 w-8 rounded-full text-gray-500 hover:text-gray-700 hover:bg-slate-100">
-              <X className="h-5 w-5" /> {/* Changed to X icon */}
+              <MoreHorizontal className="h-4 w-4 rotate-45" /> {/* Using MoreHorizontal rotated as a close icon */}
                <span className="sr-only">Fechar</span>
             </Button>
           </DialogHeader>
-          <div className="flex-grow bg-gray-100 relative"> {/* Changed background for PDF area */}
-            {pdfUrlLoading && ( // This loader is for fetching the signed URL
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 z-20 backdrop-blur-sm">
+          <div className="flex-grow bg-gray-100 relative">
+            {pdfLoading && <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 z-20 backdrop-blur-sm">
                 <RefreshCw className="animate-spin h-10 w-10 text-blue-600 mb-4" />
-                <p className="text-gray-700 text-md font-medium">Obtendo link seguro do PDF...</p>
+                <p className="text-gray-700 text-md font-medium">Carregando PDF...</p>
                 <p className="text-gray-500 text-sm">Por favor, aguarde.</p>
-              </div>
-            )}
-            {/* PDFViewer will show its own loading/error for the PDF content itself, only if !pdfUrlLoading */}
-            {!pdfUrlLoading && (
-                <PDFViewer
-                pdfUrl={selectedPdfUrl}
-                onLoadSuccess={() => {
-                    /* The PDF has loaded successfully within PDFViewer */
-                    console.log("PDF content loaded by PDFViewer");
-                }}
-                onLoadError={(error) => {
-                    /* PDFViewer failed to load content */
-                    toast({
-                    variant: "destructive",
-                    title: "Erro ao renderizar PDF",
-                    description: `Não foi possível exibir o conteúdo do PDF. ${error.message}`
-                    });
-                    // Optionally: setSelectedPdfUrl(null); to clear and show "No PDF" message in viewer
-                }}
-                />
-            )}
+              </div>}
+            <PDFViewer
+              pdfUrl={selectedPdfUrl}
+              onLoadSuccess={() => setTimeout(() => setPdfLoading(false), 300)}
+              onLoadError={() => {
+                setPdfLoading(false);
+                toast({
+                  variant: "destructive",
+                  title: "Erro",
+                  description: "Não foi possível carregar o PDF."
+                });
+                setSelectedPdfUrl(null);
+              }}
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -590,7 +572,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             <DialogTitle className="text-xl font-semibold text-gray-800">Detalhes da Guarnição</DialogTitle>
             <DialogDescription className="text-sm">Policiais envolvidos na ocorrência do TCO.</DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-4 text-sm max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar"> {/* Added custom-scrollbar */}
+          <div className="py-4 space-y-4 text-sm max-h-[60vh] overflow-y-auto pr-2">
             {currentGupmToDisplay?.conductor && <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
                 <p className="font-semibold text-gray-700 text-base mb-0.5">Condutor:</p>
                 <p className="text-gray-600">{`${currentGupmToDisplay.conductor.graduacao} ${currentGupmToDisplay.conductor.nome} (RGPM: ${currentGupmToDisplay.conductor.rgpm})`}</p>
@@ -617,24 +599,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Global styles for custom scrollbar if not already globally defined */}
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #a0a0a0;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #7d7d7d;
-        }
-      `}</style>
     </div>;
 };
 export default TCOmeus;
