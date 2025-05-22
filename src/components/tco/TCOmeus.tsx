@@ -74,7 +74,7 @@ const extractTcoNatureFromFilename = (fileName: string | undefined | null): stri
     naturezaParts.push(lastNaturePart);
   }
   if (naturezaParts.length === 0) return "Não especificada";
-  return naturezaParts.join('_').replace(/_/g, ' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ') || "Não especificada";
+  return naturezaParts.join('_').replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ') || "Não especificada";
 };
 const extractRGPMsFromFilename = (fileName: string | undefined | null): ExtractedRgpms => {
   const emptyResult: ExtractedRgpms = {
@@ -87,7 +87,10 @@ const extractRGPMsFromFilename = (fileName: string | undefined | null): Extracte
   const rgpmSegmentWithExtension = parts[parts.length - 1];
   const rgpmStringWithoutExtension = rgpmSegmentWithExtension.replace(/\.pdf$/i, "");
   if (!rgpmStringWithoutExtension.match(/^\d/)) return emptyResult;
-  const [mainRgpmsStr, supportRgpmsStr] = rgpmStringWithoutExtension.split('.');
+  const rgpmParts = rgpmStringWithoutExtension.split('.');
+  const mainRgpmsStr = rgpmParts[0];
+  const supportRgpmsStr = rgpmParts.length > 1 ? rgpmParts[1] : "";
+  
   const parseRgpmsFromString = (rgpmStr: string | undefined): string[] => {
     if (!rgpmStr) return [];
     const rgpmsList: string[] = [];
@@ -97,11 +100,13 @@ const extractRGPMsFromFilename = (fileName: string | undefined | null): Extracte
     }
     return rgpmsList;
   };
+  
   return {
     main: parseRgpmsFromString(mainRgpmsStr),
     support: parseRgpmsFromString(supportRgpmsStr)
   };
 };
+
 const TCOmeus: React.FC<TCOmeusProps> = ({
   user,
   toast,
