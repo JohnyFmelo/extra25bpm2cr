@@ -4,61 +4,6 @@ import { supabase } from './supabaseClient';
 const BUCKET_NAME = 'tco-pdfs';
 
 /**
- * Generates a standardized filename for TCO PDFs
- * @param tcoNumber The TCO number
- * @param date Date string for the file
- * @param natureza The nature of occurrence
- * @param componentesGuarnicao Array of police officers involved
- * @returns A formatted filename string
- */
-export function generateTCOFilename(tcoNumber: string, date: string, natureza: string, componentesGuarnicao: any[]): string {
-  // Format basic parts
-  const formattedTcoNumber = tcoNumber.trim();
-  const formattedDate = date.replace(/-/g, ".");
-  const formattedNatureza = natureza.trim().replace(/\s+/g, "_");
-  
-  // Filter officers with valid RG
-  const validOfficers = componentesGuarnicao.filter(comp => comp.rg && comp.rg.trim());
-  
-  if (validOfficers.length === 0) {
-    return `TCO_${formattedTcoNumber}_${formattedDate}_${formattedNatureza}`;
-  }
-  
-  // Separate main officers and support officers
-  const mainOfficers = validOfficers.filter(comp => !comp.apoio);
-  const supportOfficers = validOfficers.filter(comp => comp.apoio);
-  
-  // Format RG part
-  let rgPart = '';
-  
-  // Add condutor (first main officer) if available
-  if (mainOfficers.length > 0) {
-    // Clean RG number (remove non-numeric characters)
-    const cleanRg = mainOfficers[0].rg.replace(/\D/g, '');
-    rgPart += cleanRg.padStart(6, '0').substring(0, 6);
-    
-    // Add other main officers
-    if (mainOfficers.length > 1) {
-      for (let i = 1; i < mainOfficers.length; i++) {
-        const cleanRg = mainOfficers[i].rg.replace(/\D/g, '');
-        rgPart += cleanRg.padStart(6, '0').substring(0, 6);
-      }
-    }
-  }
-  
-  // Add support officers separated by dot if any
-  if (supportOfficers.length > 0) {
-    rgPart += '.';
-    supportOfficers.forEach((officer, index) => {
-      const cleanRg = officer.rg.replace(/\D/g, '');
-      rgPart += cleanRg.padStart(6, '0').substring(0, 6);
-    });
-  }
-  
-  return `TCO_${formattedTcoNumber}_${formattedDate}_${formattedNatureza}_${rgPart}`;
-}
-
-/**
  * Uploads a PDF file to Supabase Storage
  * @param filePath The path where the file will be stored in the bucket
  * @param fileBlob The file blob to be uploaded
