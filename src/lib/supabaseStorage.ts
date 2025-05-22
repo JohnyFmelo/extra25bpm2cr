@@ -22,7 +22,6 @@ export async function uploadPDF(filePath: string, fileBlob: Blob, metadata?: Rec
     
     // Get current user
     const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
     
     // Upload the file to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -148,302 +147,25 @@ export async function deletePDF(filePath: string): Promise<{
 }
 
 /**
- * Deletes TCO metadata from Supabase database
- * @param tcoId The ID of the TCO to delete
- */
-export async function deleteTCOMetadata(tcoId: string): Promise<{
-  success: boolean;
-  error: Error | null;
-}> {
-  if (!tcoId) {
-    console.error('Invalid TCO ID provided for deletion:', tcoId);
-    return { 
-      success: false, 
-      error: new Error('Invalid TCO ID provided for deletion')
-    };
-  }
-
-  try {
-    console.log('Deleting TCO metadata from database, ID:', tcoId);
-    
-    // First attempt - standard approach with direct delete by ID
-    const { error } = await supabase
-      .from('tco_pdfs')
-      .delete()
-      .eq('id', tcoId);
-
-    if (error) {
-      console.error('Error deleting TCO metadata by ID:', error);
-      return { success: false, error };
-    }
-
-    // Verify deletion
-    const { data: verifyData, error: verifyError } = await supabase
-      .from('tco_pdfs')
-      .select('id')
-      .eq('id', tcoId)
-      .maybeSingle();
-      
-    if (verifyError) {
-      console.warn('Error verifying deletion:', verifyError);
-    } else if (verifyData) {
-      console.warn('Verification indicates record still exists after deletion');
-      return { 
-        success: false, 
-        error: new Error('Failed to delete TCO from database. Record still exists.') 
-      };
-    }
-
-    console.log('TCO metadata deleted successfully from database');
-    return { success: true, error: null };
-  } catch (error) {
-    console.error('Exception deleting TCO metadata:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error : new Error(String(error)) 
-    };
-  }
-}
-
-/**
  * Deletes TCO by either ID, filepath, or multiple criteria
- * @param tcoData The TCO data containing id, pdfPath, or both
+ * Simplified version that only handles storage
+ * @param tcoData The TCO data containing id and pdfPath
  */
 export async function deleteTCO(tcoData: { id?: string; pdfPath?: string }): Promise<{
   success: boolean;
   error: Error | null;
 }> {
-  console.log('Starting full TCO deletion process:', tcoData);
+  console.log('Starting TCO deletion process:', tcoData);
   
-  let dbDeletionSuccess = false;
-  let storageDeletionSuccess = false;
-  
-  // 1. Delete from storage if path exists
+  // No database operations, only storage
   if (tcoData.pdfPath) {
-    const { success, error } = await deletePDF(tcoData.pdfPath);
-    storageDeletionSuccess = success;
-    
-    if (error) {
-      console.error('Error deleting PDF from storage:', error);
-    } else {
-      console.log('Successfully deleted PDF from storage');
-    }
+    return await deletePDF(tcoData.pdfPath);
   } else {
-    console.warn('No PDF path provided for deletion');
-  }
-  
-  // 2. Delete from database by ID if available
-  if (tcoData.id) {
-    const { success, error } = await deleteTCOMetadata(tcoData.id);
-    
-    if (error) {
-      console.error('Error deleting TCO from database by ID:', error);
-    } else {
-      console.log('Successfully deleted TCO from database by ID');
-      dbDeletionSuccess = true;
-    }
-  }
-  
-  // 3. If ID deletion failed or not available, try by pdfpath
-  if (!dbDeletionSuccess && tcoData.pdfPath) {
-    console.log('Attempting to delete TCO from database by pdfpath:', tcoData.pdfPath);
-    
-    // Try with lowercase field name
-    const { error } = await supabase
-      .from('tco_pdfs')
-      .delete()
-      .eq('pdfpath', tcoData.pdfPath);
-    
-    if (error) {
-      console.error('Error deleting TCO from database by pdfpath:', error);
-      
-      // Final attempt
-      console.log('Final attempt: trying alternative approaches');
-      
-      try {
-        // Try direct query
-        const { data: searchResult } = await supabase
-          .from('tco_pdfs')
-          .select('id, pdfpath')
-          .ilike('pdfpath', `%${tcoData.pdfPath.split('/').pop() || ''}%`);
-          
-        if (searchResult && searchResult.length > 0) {
-          console.log('Found matching records by filename:', searchResult);
-          
-          for (const record of searchResult) {
-            const { error: finalError } = await supabase
-              .from('tco_pdfs')
-              .delete()
-              .eq('id', record.id);
-              
-            if (!finalError) {
-              console.log('Successfully deleted record with ID:', record.id);
-              dbDeletionSuccess = true;
-            }
-          }
-        }
-      } catch (finalError) {
-        console.error('All deletion attempts failed. Final error:', finalError);
-      }
-    } else {
-      console.log('Successfully deleted TCO using pdfpath');
-      dbDeletionSuccess = true;
-    }
-  }
-  
-  // 4. Final verification
-  let verificationPassed = false;
-  
-  if (tcoData.pdfPath) {
-    // Verify storage deletion
-    try {
-      const dirPath = tcoData.pdfPath.substring(0, tcoData.pdfPath.lastIndexOf('/'));
-      const fileName = tcoData.pdfPath.substring(tcoData.pdfPath.lastIndexOf('/') + 1);
-      
-      const { data: filesData } = await supabase.storage
-        .from(BUCKET_NAME)
-        .list(dirPath);
-        
-      const fileExists = filesData?.some(file => file.name === fileName);
-      
-      if (fileExists) {
-        console.warn('Verification failed: File still exists in storage');
-      } else {
-        console.log('Verification passed: File no longer exists in storage');
-        verificationPassed = true;
-      }
-    } catch (error) {
-      console.error('Error during storage verification:', error);
-    }
-    
-    // Verify database deletion
-    const { data: verifyData } = await supabase
-      .from('tco_pdfs')
-      .select('id')
-      .eq('pdfpath', tcoData.pdfPath)
-      .maybeSingle();
-      
-    if (verifyData) {
-      console.warn('Verification failed: TCO still exists in database');
-    } else {
-      console.log('Verification passed: TCO no longer exists in database');
-      verificationPassed = true;
-    }
-  }
-  
-  return { 
-    success: storageDeletionSuccess || dbDeletionSuccess || verificationPassed, 
-    error: !storageDeletionSuccess && !dbDeletionSuccess && !verificationPassed ? 
-      new Error('Failed to delete TCO completely') : null
-  };
-}
-
-/**
- * Saves TCO metadata to Supabase database
- * @param tcoMetadata The metadata to save
- */
-export async function saveTCOMetadata(tcoMetadata: any) {
-  const TABLE_NAME = 'tco_pdfs';
-
-  try {
-    console.log('Preparing to save TCO metadata to database:', JSON.stringify(tcoMetadata, null, 2));
-    
-    // Get current user to ensure we're authenticated
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user || !user.id) {
-      console.error('No authenticated user found for saving TCO metadata');
-      return { data: null, error: new Error('User not authenticated') };
-    }
-
-    // Standardize field names to lowercase to match database column names
-    const standardizedMetadata: Record<string, any> = {};
-    
-    // Map the required fields with correct casing
-    if (tcoMetadata.tcoNumber) standardizedMetadata.tconumber = tcoMetadata.tcoNumber;
-    if (tcoMetadata.natureza) standardizedMetadata.natureza = tcoMetadata.natureza;
-    if (tcoMetadata.pdfPath) standardizedMetadata.pdfpath = tcoMetadata.pdfPath;
-    if (tcoMetadata.pdfUrl) standardizedMetadata.pdfurl = tcoMetadata.pdfUrl;
-    
-    // Ensure required fields are present
-    if (!standardizedMetadata.tconumber) {
-      console.error('TCO number is required but missing');
-      return { data: null, error: new Error('TCO number is required') };
-    }
-    
-    if (!standardizedMetadata.natureza) {
-      console.error('Natureza is required but missing');
-      return { data: null, error: new Error('Natureza is required') };
-    }
-    
-    if (!standardizedMetadata.pdfpath) {
-      console.error('PDF path is required but missing');
-      return { data: null, error: new Error('PDF path is required') };
-    }
-    
-    if (!standardizedMetadata.pdfurl) {
-      console.error('PDF URL is required but missing');
-      return { data: null, error: new Error('PDF URL is required') };
-    }
-
-    // Set creation timestamp and user
-    standardizedMetadata.createdat = new Date().toISOString();
-    standardizedMetadata.createdby = user.id;
-
-    // Handle policiais field (ensuring proper structure)
-    if (Array.isArray(tcoMetadata.componentesGuarnicao) && !tcoMetadata.policiais) {
-      standardizedMetadata.policiais = tcoMetadata.componentesGuarnicao.map(comp => ({
-        nome: comp.nome,
-        rgpm: comp.rg,
-        posto: comp.posto,
-        apoio: !!comp.apoio
-      }));
-    } else if (tcoMetadata.policiais) {
-      standardizedMetadata.policiais = tcoMetadata.policiais;
-    }
-
-    console.log('Standardized metadata ready to save:', standardizedMetadata);
-    
-    // Insert data into the database
-    const { data, error } = await supabase
-      .from(TABLE_NAME)
-      .insert([standardizedMetadata])
-      .select('id')
-      .single();
-
-    if (error) {
-      console.error('Error saving TCO metadata to database:', error);
-      
-      // Log more details about the error
-      if (error.code) {
-        console.error('Error code:', error.code);
-        console.error('Error message:', error.message);
-        console.error('Error details:', error.details);
-      }
-      
-      return { data: null, error };
-    }
-
-    console.log('TCO metadata saved successfully to database, returned ID:', data?.id);
-    
-    // Verify the insertion by fetching the newly created record
-    if (data?.id) {
-      const { data: verifyData, error: verifyError } = await supabase
-        .from(TABLE_NAME)
-        .select('*')
-        .eq('id', data.id)
-        .single();
-        
-      if (verifyError || !verifyData) {
-        console.warn('Could not verify TCO metadata insertion:', verifyError);
-      } else {
-        console.log('Verified TCO metadata successfully saved:', verifyData);
-      }
-    }
-    
-    return { data, error: null };
-  } catch (error) {
-    console.error('Exception saving TCO metadata:', error);
-    return { data: null, error };
+    console.error('No PDF path provided for deletion');
+    return { 
+      success: false, 
+      error: new Error('No PDF path provided for deletion') 
+    };
   }
 }
 
