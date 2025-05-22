@@ -13,7 +13,7 @@ import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
 import GuarnicaoTab from "./tco/GuarnicaoTab";
 import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
-import { generatePDF, generateTCOFilename } from "./tco/pdfGenerator"; // Presumo que pdfGenerator está em ./tco/
+import { generatePDF, generateTCOFilename } from "./tco/pdfGenerator";
 import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
 
 interface ComponenteGuarnicao {
