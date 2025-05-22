@@ -207,3 +207,16 @@ export async function ensureBucketExists(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Saves the TCO metadata to the database
+ * This is a stub function since we're not using database metadata anymore
+ * and instead extracting information from the filename
+ */
+export async function saveTCOMetadata(metadata: any): Promise<{ error: Error | null }> {
+  console.log('saveTCOMetadata called, but metadata storage is not being used');
+  console.log('Using filename for metadata extraction instead:', metadata);
+  
+  // Simply return success since we're not actually saving to a database
+  return { error: null };
+}
