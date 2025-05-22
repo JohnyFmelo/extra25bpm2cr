@@ -1,4 +1,5 @@
 
+
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak, formatarDataSimples
@@ -35,11 +36,12 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     const cor = data.drogaCor || "característica";
     const odor = data.drogaOdor || "característico";
     const nomeComum = data.drogaNomeComum || "entorpecente";
+    const lacreNumero = data.lacreNumero || "00000000";
 
     yPos = checkPageBreak(doc, yPos, 15, data);
     doc.setFont("helvetica", "normal"); doc.setFontSize(12);
     doc.text("-", MARGIN_LEFT, yPos);
-    const itemText = `${qtdeText} ${porcaoText} DE MAATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}, E CARACTERÍSTICAS SEMELHANTES AO ENTORPECENTE CONHECIDO COMO ${nomeComum.toUpperCase()}.`;
+    const itemText = `${qtdeText} ${porcaoText} DE MATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}, E CARACTERÍSTICAS SEMELHANTES AO ENTORPECENTE CONHECIDO COMO ${nomeComum.toUpperCase()}, SOB LACRE N° ${lacreNumero}.`;
     yPos = addWrappedText(doc, yPos, itemText, MARGIN_LEFT + 4, 12, "normal", MAX_LINE_WIDTH - 4, 'left', data);
     yPos += 5;
 
@@ -68,3 +70,4 @@ export const addTermoConstatacaoDroga = (doc, data) => {
 
     return yPos;
 };
+

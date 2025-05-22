@@ -1,9 +1,11 @@
+
 import React, { useRef, useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { X } from "lucide-react";
+
 interface HistoricoTabProps {
   relatoPolicial: string;
   setRelatoPolicial: (value: string) => void;
@@ -23,7 +25,10 @@ interface HistoricoTabProps {
   natureza: string;
   videoLinks?: string[];
   setVideoLinks?: (value: string[]) => void;
+  solicitarCorpoDelito?: string;
+  autorSexo?: string;
 }
+
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
   relatoPolicial,
   setRelatoPolicial,
@@ -42,7 +47,9 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   setRepresentacao,
   natureza,
   videoLinks = [],
-  setVideoLinks
+  setVideoLinks,
+  solicitarCorpoDelito = "Não",
+  autorSexo = "masculino"
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
@@ -52,6 +59,28 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     id: string;
   }[]>([]);
   const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
+  
+  // Determine the text based on solicitarCorpoDelito
+  useEffect(() => {
+    if (conclusaoPolicial) {
+      let updatedConclusion = conclusaoPolicial;
+      const generoSuffix = autorSexo?.toLowerCase() === "feminino" ? "A" : "O";
+      
+      // Replace the text based on conditional logic
+      if (solicitarCorpoDelito === "Sim") {
+        // Check if we need to replace the text about "sem lesões corporais"
+        if (updatedConclusion.includes("LIBERADO SEM LESÕES CORPORAIS APARENTES") || 
+            updatedConclusion.includes("liberado sem lesões corporais aparentes")) {
+          updatedConclusion = updatedConclusion.replace(
+            /LIBERADO SEM LESÕES CORPORAIS APARENTES|liberado sem lesões corporais aparentes/gi, 
+            `LIBERAD${generoSuffix} COM LESÕES CORPORAIS APARENTES CONFORME AUTO DE RESISTENCIA`
+          );
+          setConclusaoPolicial(updatedConclusion);
+        }
+      }
+    }
+  }, [solicitarCorpoDelito, conclusaoPolicial, autorSexo, setConclusaoPolicial]);
+
   useEffect(() => {
     return () => {
       selectedFiles.forEach(({
@@ -61,11 +90,13 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       });
     };
   }, [selectedFiles]);
+
   const handleFileUploadClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -85,12 +116,14 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       console.log(`Selected files: ${fileNames}`);
     }
   };
+
   const handleRemoveFile = (id: string) => {
     setSelectedFiles(prev => {
       const newFiles = prev.filter(fileObj => fileObj.id !== id);
       return newFiles;
     });
   };
+
   const handleVideoUrlsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const urls = e.target.value;
     setVideoUrls(urls);
@@ -98,10 +131,12 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       setVideoLinks(urls.split("\n").filter(url => url.trim() !== ""));
     }
   };
+
   const truncateFileName = (name: string, maxLength: number = 15): string => {
     if (name.length <= maxLength) return name;
     return name.slice(0, maxLength - 3) + "...";
   };
+
   return <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
         <h3 className="text-2xl font-semibold flex items-center">Histórico</h3>
@@ -153,6 +188,11 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
         <div>
           <Label htmlFor="conclusaoPolicial">CONCLUSÃO POLICIAL</Label>
           <Textarea id="conclusaoPolicial" placeholder="Descreva a conclusão policial" value={conclusaoPolicial} onChange={e => setConclusaoPolicial(e.target.value)} className="min-h-[150px]" />
+          {solicitarCorpoDelito === "Sim" && (
+            <p className="text-xs text-green-600 mt-1">
+              Observação: O texto será ajustado para indicar que o autor possui lesões corporais aparentes.
+            </p>
+          )}
         </div>
         
         {/* Video Links Section */}
@@ -160,4 +200,5 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       </div>
     </div>;
 };
+
 export default HistoricoTab;
