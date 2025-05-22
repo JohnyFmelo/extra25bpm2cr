@@ -55,8 +55,8 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     const qtdeText = qtdeNum <= 10 ? numberWords[qtdeNum] : qtdeNum.toString();
     const porcaoText = qtdeNum === 1 ? "PORÇÃO" : "PORÇÕES";
 
-    // Adiciona a descrição do material apreendido
-    const textoApenso = `APENSO: ${qtdeText} ${porcaoText} DE SUBSTÂNCIA ANÁLOGA A ${drogaNomeComum}.`.toUpperCase();
+    // Adiciona a descrição do material apreendido incluindo o número do lacre
+    const textoApenso = `APENSO: ${qtdeText} ${porcaoText} DE SUBSTÂNCIA ANÁLOGA A ${drogaNomeComum} SOB LACRE N° ${lacreNumero}.`.toUpperCase();
     yPos = addWrappedText(doc, yPos, textoApenso, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 5;
 

@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -127,7 +126,9 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 // Garante que os dados do juizado estão disponíveis para o termo de compromisso
                 juizadoEspecialData: juizadoData,
                 juizadoEspecialHora: juizadoHora,
-                videoLinks: processedVideoLinks
+                videoLinks: processedVideoLinks,
+                // Flag para desativar a paginação
+                hidePagination: true
             };
 
             // Pega as constantes da página
@@ -196,16 +197,18 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
 
                     addTermoEncerramentoRemessa(doc, data);
 
-                    // --- Finalização: Adiciona Números de Página e Salva ---
+                    // --- Finalização: Adiciona Números de Página apenas se hidePagination for false ---
                     const pageCount = doc.internal.pages.length - 1;
-                    for (let i = 1; i <= pageCount; i++) {
-                        doc.setPage(i);
-                        doc.setFont("helvetica", "normal");
-                        doc.setFontSize(8);
-                        doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
+                    if (!data.hidePagination) {
+                        for (let i = 1; i <= pageCount; i++) {
+                            doc.setPage(i);
+                            doc.setFont("helvetica", "normal");
+                            doc.setFontSize(8);
+                            doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
 
-                        if (i > 1) {
-                            addStandardFooterContent(doc);
+                            if (i > 1) {
+                                addStandardFooterContent(doc);
+                            }
                         }
                     }
 
