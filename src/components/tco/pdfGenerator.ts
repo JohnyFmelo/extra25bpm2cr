@@ -24,8 +24,6 @@ import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.j
  * TCO_[número]_[data]_[natureza]_[RGPM condutor][RGPMs outros].[RGPMs apoio]
  */
 export const generateTCOFilename = (data: any): string => {
-    console.log("Gerando nome do arquivo TCO", data);
-    
     // Processar o número do TCO
     const tcoNum = data.tcoNumber?.trim() || 'SEM_NUMERO';
     
@@ -36,13 +34,9 @@ export const generateTCOFilename = (data: any): string => {
         new Date().toLocaleDateString('pt-BR').replace(/\//g, '.');
     
     // Obter natureza
-    let natureza = data.natureza === "Outros" && data.customNatureza ? 
+    const natureza = data.natureza === "Outros" && data.customNatureza ? 
         data.customNatureza.trim() : 
         data.natureza || 'Sem_Natureza';
-        
-    // Substituir espaços na natureza por underscores para o nome do arquivo
-    natureza = natureza.replace(/\s+/g, '_');
-    console.log("Natureza formatada para o nome do arquivo:", natureza);
 
     // Processar RGPMs dos componentes da guarnição
     const componentes = Array.isArray(data.componentesGuarnicao) ? data.componentesGuarnicao : [];
@@ -60,9 +54,6 @@ export const generateTCOFilename = (data: any): string => {
     const rgsPrincipais = principais.map(p => p.rg.replace(/\D/g, ''));
     const rgsApoio = apoio.map(p => p.rg.replace(/\D/g, ''));
     
-    console.log("RGs Principais:", rgsPrincipais);
-    console.log("RGs Apoio:", rgsApoio);
-    
     // Construir a parte do código de barras do nome do arquivo
     let rgCode = rgsPrincipais.length > 0 ? rgsPrincipais.join('') : 'RG_INDISPONIVEL';
     
@@ -72,9 +63,7 @@ export const generateTCOFilename = (data: any): string => {
     }
     
     // Construir o nome do arquivo final
-    const fileName = `TCO_${tcoNum}_${formattedDate}_${natureza}_${rgCode}.pdf`;
-    console.log("Nome do arquivo TCO gerado:", fileName);
-    return fileName;
+    return `TCO_${tcoNum}_${formattedDate}_${natureza}_${rgCode}.pdf`;
 };
 
 // --- Função Principal de Geração ---
