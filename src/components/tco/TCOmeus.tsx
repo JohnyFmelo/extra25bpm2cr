@@ -378,7 +378,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold w-[120px] px-3">Nº</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">Data</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">Natureza</TableHead>
-                  <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">Condutor GUPM</TableHead>
+                  <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">Condutor</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold text-right pr-4 px-3">Ações</TableHead>
                 </TableRow>
               </TableHeader>
