@@ -36,104 +36,127 @@ const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): stri
   if (match && match[1]) {
     numberPart = match[1];
   } else if (fullTcoNumber.toUpperCase().startsWith("TCO-")) {
-    // Fallback: se o tcoNumber for apenas "TCO-X" ou "TCO-XX"
     numberPart = fullTcoNumber.substring(4);
   } else {
-    // Se não corresponder a nenhum padrão TCO, retorna o original (improvável se os dados estiverem corretos)
     return fullTcoNumber;
   }
 
-  // Tenta converter para número e formatar com zero à esquerda
   if (numberPart) {
     const num = parseInt(numberPart, 10);
     if (!isNaN(num)) {
-      return String(num).padStart(2, '0'); // Garante 2 dígitos com zero à esquerda
+      return String(num).padStart(2, '0');
     }
-    return numberPart; // Retorna a parte extraída se não for um número puro (ex: "A1")
+    return numberPart;
   }
   
-  return "-"; // Se numberPart ficou vazio
+  return "-";
 };
 
 // Função para extrair a natureza do nome do arquivo TCO e remover underscores
 const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
   if (!fileName) return "Não especificada";
   
-  // Formato esperado: TCO_[número]_[data]_[natureza]_[RGPMs]
+  // Formato esperado: TCO_[número]_[data]_[natureza1_natureza2]_[RGPMs...].pdf
   const parts = fileName.split('_');
   
-  // Verificamos se temos pelo menos 4 partes (TCO, número, data, natureza)
-  if (parts.length >= 4) {
-    // A natureza está na posição 3, mas pode conter outra parte do caminho
-    let natureza = parts[3];
-    
-    // Se houver mais partes, a parte 4+ até o último underscore ou ponto é a natureza
-    if (parts.length > 4) {
-      // Verifica se a última parte contém RGPMs (números)
-      const lastPart = parts[parts.length - 1];
-      const rgpmMatch = lastPart.match(/^\d+/);
-      
-      if (rgpmMatch) {
-        // Se a última parte começa com números, então é os RGPMs
-        // A natureza é tudo entre a parte 3 e a última parte
-        natureza = parts.slice(3, parts.length - 1).join(' ');
-      } else {
-        // Se não, consideramos que a última parte também faz parte da natureza
-        natureza = parts.slice(3).join(' ');
-      }
-    }
-    
-    // Remove a extensão .pdf ou outra se estiver presente
-    natureza = natureza.replace(/\.[^/.]+$/, "");
-    
-    // Substitui underscores por espaços e capitaliza a primeira letra de cada palavra
-    const formattedNatureza = natureza
-      .replace(/_/g, ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-      
-    return formattedNatureza || "Não especificada";
+  if (parts.length < 4) { // TCO, numero, data, natureza_minima
+    return "Não especificada";
+  }
+
+  let naturezaParts: string[];
+  
+  // O último segmento pode ser RGPMs. Verificamos se ele começa com um número.
+  const lastPart = parts[parts.length - 1];
+  const rgpmSegmentPotentially = lastPart.replace(/\.pdf$/i, ""); // Remove .pdf para checar
+  
+  if (parts.length >= 5 && /^\d/.test(rgpmSegmentPotentially)) {
+    // Se o último segmento começa com número, assumimos que são RGPMs.
+    // A natureza é tudo entre a data (parts[2]) e o segmento de RGPMs (parts[parts.length - 1]).
+    // Isso significa que a natureza está de parts[3] até parts[parts.length - 2].
+    naturezaParts = parts.slice(3, parts.length - 1);
+  } else {
+    // Se não houver segmento de RGPM no final (ou ele não começar com número),
+    // a natureza vai de parts[3] até o final (antes da extensão).
+    // Precisamos remover a extensão .pdf da última parte se ela fizer parte da natureza.
+    const lastNaturePart = parts[parts.length - 1].replace(/\.pdf$/i, "");
+    naturezaParts = parts.slice(3, parts.length - 1);
+    naturezaParts.push(lastNaturePart);
   }
   
-  return "Não especificada";
+  if (naturezaParts.length === 0) {
+    return "Não especificada";
+  }
+
+  const formattedNatureza = naturezaParts
+    .join(' ') // Junta as partes da natureza com espaço
+    .split(' ') // Re-split para capitalização correta
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+      
+  return formattedNatureza || "Não especificada";
 };
 
-// Função para extrair os RGPMs do nome do arquivo
+// Função para extrair os RGPMs do nome do arquivo com a lógica detalhada
 const extractRGPMsFromFilename = (fileName: string | undefined | null): string => {
   if (!fileName) return "Não disponível";
-  
-  // Formato esperado: TCO_[número]_[data]_[natureza]_[RGPMs].[RGPMs apoio]
+
+  // Formato esperado: TCO_[número]_[data]_[natureza]_[RGPMsPrincipais.RGPMsApoio].pdf
+  // ou TCO_[número]_[data]_[natureza]_[RGPMsPrincipais].pdf
   const parts = fileName.split('_');
-  
-  // Verificamos se temos pelo menos 5 partes (para ter RGPM no final)
-  if (parts.length >= 5) {
-    // O último elemento deve conter os RGPMs
-    const lastPart = parts[parts.length - 1];
-    
-    // Se for um número ou contiver números no início, é provável que seja o RGPM
-    if (lastPart.match(/^\d+/)) {
-      // Verifica se tem extensão .pdf ou ponto separando RGPMs principais e de apoio
-      const rgpmData = lastPart.split('.');
-      
-      if (rgpmData.length > 1) {
-        // Remove a extensão .pdf se existir
-        const lastRgpmPart = rgpmData[rgpmData.length - 1].replace(/\.pdf$/i, "");
-        
-        // Formata os RGPMs principais e de apoio
-        const principais = rgpmData[0].replace(/\.pdf$/i, "");
-        const apoio = lastRgpmPart !== "pdf" ? lastRgpmPart : "";
-        
-        return `${principais}${apoio ? ` • ${apoio}` : ''}`;
+
+  // Precisa de pelo menos 5 partes para ter: TCO, numero, data, natureza_minima, RGPMSegment
+  // Ex: TCO_1_data_Natureza_RGPM.pdf
+  if (parts.length < 5) {
+    return "Não disponível";
+  }
+
+  // O último segmento antes da extensão .pdf deve ser o RGPM
+  const rgpmSegmentWithExtension = parts[parts.length - 1];
+
+  // Verifica se o segmento de RGPM realmente começa com um número
+  if (!rgpmSegmentWithExtension.match(/^\d/)) {
+    return "Não disponível"; // Última parte não parece ser RGPMs
+  }
+
+  const rgpmStringWithoutExtension = rgpmSegmentWithExtension.replace(/\.pdf$/i, ""); // Remove .pdf
+
+  const [mainRgpmsStr, supportRgpmsStr] = rgpmStringWithoutExtension.split('.');
+
+  const parseRgpmsFromString = (rgpmStr: string | undefined): string[] => {
+    if (!rgpmStr) return [];
+    const rgpmsList: string[] = [];
+    for (let i = 0; i < rgpmStr.length; i += 6) {
+      const rgpm = rgpmStr.substring(i, i + 6);
+      if (rgpm.length === 6 && /^\d{6}$/.test(rgpm)) { // Verifica se são 6 dígitos numéricos
+        rgpmsList.push(rgpm);
       }
-      
-      // Caso não tenha ponto, apenas remove a extensão .pdf
-      return lastPart.replace(/\.pdf$/i, "");
+    }
+    return rgpmsList;
+  };
+
+  const mainRgpmsList = parseRgpmsFromString(mainRgpmsStr);
+  const supportRgpmsList = parseRgpmsFromString(supportRgpmsStr);
+
+  if (mainRgpmsList.length === 0 && supportRgpmsList.length === 0) {
+    return "Não disponível";
+  }
+
+  const outputParts: string[] = [];
+
+  if (mainRgpmsList.length > 0) {
+    outputParts.push(`Cond: ${mainRgpmsList[0]}`);
+    if (mainRgpmsList.length > 1) {
+      outputParts.push(`GU: ${mainRgpmsList.slice(1).join(', ')}`);
     }
   }
-  
-  return "Não disponível";
+
+  if (supportRgpmsList.length > 0) {
+    outputParts.push(`Apoio: ${supportRgpmsList.join(', ')}`);
+  }
+
+  return outputParts.join(' | ') || "Não disponível";
 };
+
 
 const TCOmeus: React.FC<TCOmeusProps> = ({
   user,
@@ -151,7 +174,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const [pdfLoading, setPdfLoading] = useState(false);
   const [deletionMessage, setDeletionMessage] = useState<string | null>(null);
 
-  // Função para buscar os TCOs do usuário do Supabase
   const fetchUserTcos = async () => {
     if (!user.id) return;
     setIsLoading(true);
@@ -188,37 +210,33 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             finalTcoNumber = `TCO-${tcoIdentifierPart}`;
         }
 
-        // Extrair a natureza do nome do arquivo
         const natureza = extractTcoNatureFromFilename(fileName);
-        
-        // Extrair os RGPMs do nome do arquivo
         const rgpms = extractRGPMsFromFilename(fileName);
 
         return {
-          id: file.id || fileName,
-          tcoNumber: finalTcoNumber, // Ex: TCO-2_2025-05-19 ou TCO-002_etc
+          id: file.id || fileName, // Use fileName as fallback id if file.id is null
+          tcoNumber: finalTcoNumber,
           createdAt: new Date(file.created_at || Date.now()),
-          natureza: natureza, // Formato limpo da natureza
-          rgpms: rgpms, // RGPMs extraídos do nome do arquivo
+          natureza: natureza,
+          rgpms: rgpms,
           pdfPath: `tcos/${user.id}/${fileName}`,
           source: 'storage'
         };
       }) || [];
       
       const supabaseTcos = dbTcos.map(tco => {
-        // Para TCOs do banco de dados, verificar se podemos extrair natureza do arquivo
         let natureza = tco.natureza || "Não especificada";
         let rgpms = "Não disponível";
         
-        // Se temos um caminho para o PDF, tentamos extrair a natureza e RGPMs do nome do arquivo
         if (tco.pdfPath) {
           const fileName = tco.pdfPath.split('/').pop();
-          const extractedNature = extractTcoNatureFromFilename(fileName);
-          if (extractedNature !== "Não especificada") {
-            natureza = extractedNature;
+          if (fileName) { // Ensure fileName is not undefined
+            const extractedNature = extractTcoNatureFromFilename(fileName);
+            if (extractedNature !== "Não especificada") {
+              natureza = extractedNature;
+            }
+            rgpms = extractRGPMsFromFilename(fileName);
           }
-          
-          rgpms = extractRGPMsFromFilename(fileName);
         }
         
         return {
@@ -234,7 +252,10 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       
       consolidatedTcos = [...supabaseTcos];
       for (const storageTco of filesFromStorage) {
-        const isDuplicate = consolidatedTcos.some(tco => tco.pdfPath === storageTco.pdfPath || tco.tcoNumber === storageTco.tcoNumber);
+        const isDuplicate = consolidatedTcos.some(
+          tco => (tco.pdfPath && tco.pdfPath === storageTco.pdfPath) || 
+                 (tco.tcoNumber && tco.tcoNumber === storageTco.tcoNumber)
+        );
         if (!isDuplicate) {
           consolidatedTcos.push(storageTco);
         }
@@ -253,6 +274,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       setIsLoading(false);
     }
   };
+
   const isValidUUID = (str: string) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
@@ -269,9 +291,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     try {
       setIsDeleting(true);
       setDeletionMessage("Iniciando processo de exclusão...");
-      console.log("Starting deletion process for TCO:", tcoToDelete);
       
-      // Use the new deleteTCO function that handles both storage and database
       const { success, error } = await deleteTCO({
         id: tcoToDelete.id,
         pdfPath: tcoToDelete.pdfPath
@@ -281,37 +301,27 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         setDeletionMessage("Erro na exclusão, tentando novamente...");
         console.error("Erro no processo de exclusão do TCO:", error);
         
-        // Force deletion with an additional attempt
         if (tcoToDelete.pdfPath) {
           setDeletionMessage("Tentando exclusão alternativa...");
-          
-          // Try explicit storage deletion first
           try {
             await supabase.storage
               .from(BUCKET_NAME)
               .remove([tcoToDelete.pdfPath]);
-              
-            console.log("Explicit storage deletion attempt completed");
           } catch (storageError) {
             console.warn("Explicit storage deletion attempt failed:", storageError);
           }
-          
-          // Try explicit database deletion
           try {
             await supabase
               .from('tco_pdfs')
               .delete()
-              .or(`id.eq.${tcoToDelete.id},pdfpath.eq.${tcoToDelete.pdfPath}`);
-              
-            console.log("Explicit database deletion attempt completed");
+              .or(`id.eq.${tcoToDelete.id},pdfPath.eq.${tcoToDelete.pdfPath}`); // Corrected pdfpath to pdfPath
           } catch (dbError) {
             console.warn("Explicit database deletion attempt failed:", dbError);
           }
         }
       }
       
-      // Update UI regardless of backend result
-      setTcoList(tcoList.filter(item => item.id !== tcoToDelete.id));
+      setTcoList(prevList => prevList.filter(item => item.id !== tcoToDelete.id));
       if (selectedTco?.id === tcoToDelete.id) setSelectedTco(null);
       
       toast({
@@ -397,8 +407,10 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   };
   
   useEffect(() => {
-    fetchUserTcos();
-  }, [user.id]);
+    if(user?.id) { // Ensure user.id exists before fetching
+      fetchUserTcos();
+    }
+  }, [user?.id]); // Add user.id as dependency
 
   return <div className="bg-white rounded-xl shadow-lg p-6 flex-grow overflow-hidden flex flex-col px-[14px]">
       <div className="flex items-center justify-between mb-6">
@@ -428,7 +440,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold w-[120px] px-3">Número</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">Data</TableHead>
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">Natureza</TableHead>
-                  <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">GUPM</TableHead>
+                  <TableHead className="bg-slate-100 text-gray-700 font-semibold px-3">GUPM</TableHead> {/* Alterado de RGPM para GUPM na interface se fizer mais sentido */}
                   <TableHead className="bg-slate-100 text-gray-700 font-semibold text-right pr-4 px-3">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -490,7 +502,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           </div>
         </div>}
 
-      {/* PDF Viewer Dialog */}
       <Dialog open={isPdfDialogOpen} onOpenChange={(open) => {
         setIsPdfDialogOpen(open);
         if (!open) {
@@ -539,7 +550,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="max-w-md rounded-lg">
           <AlertDialogHeader>
