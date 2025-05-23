@@ -271,13 +271,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addWrappedText(doc, yPos, data.relatoPolicial || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
-    // Dynamically create title based on autor's gender and if there are multiple autores
-    const tituloRelatoAutor = primeiroAutor ? 
-        (primeiroAutor.sexo?.toLowerCase() === 'feminino' ? 
-            `RELATO DA AUTORA${autoresValidos.length > 1 ? ` (${primeiroAutor.nome})` : ''}` : 
-            `RELATO DO AUTOR${autoresValidos.length > 1 ? ` (${primeiroAutor.nome})` : ''}`) :
-        "RELATO DO AUTOR DO FATO";
-    
+    const tituloRelatoAutor = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "RELATO DA AUTORA DO FATO" : "RELATO DO AUTOR DO FATO";
     yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, "3.2", 2, data);
     yPos = addWrappedText(doc, yPos, data.relatoAutor || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     if (primeiroAutor) {
@@ -286,52 +280,43 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 10;
     }
 
-    if (!isDrugCase && primeiraVitima) {
-        // Dynamically create title based on if there are multiple vitimas
-        const tituloRelatoVitima = vitimasValidas.length > 1 ? 
-            `RELATO DA VÍTIMA (${primeiraVitima.nome})` : 
-            "RELATO DA VÍTIMA";
-        
-        yPos = addSectionTitle(doc, yPos, tituloRelatoVitima, "3.3", 2, data);
-        const relatoVitimaText = data.relatoVitima || "Relato não fornecido pela vítima.";
+    if (!isDrugCase) {
+        yPos = addSectionTitle(doc, yPos, "RELATO DA VÍTIMA", "3.3", 2, data);
+        const relatoVitimaText = primeiraVitima ? (data.relatoVitima || "Relato não fornecido pela vítima.") : "Nenhuma vítima identificada para fornecer relato.";
         yPos = addWrappedText(doc, yPos, relatoVitimaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        yPos = addSignatureWithNameAndRole(doc, yPos, primeiraVitima?.nome, "VÍTIMA", data);
+        if (primeiraVitima) {
+            yPos = addSignatureWithNameAndRole(doc, yPos, primeiraVitima?.nome, "VÍTIMA", data);
+        } else {
+            yPos += 10;
+        }
     }
 
+    const testemunhaSectionNum = isDrugCase ? "3.3" : "3.4";
+    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", testemunhaSectionNum, 2, data);
+    let relatoTestText = "Nenhuma testemunha identificada.";
     if (primeiraTestemunha) {
-        const testemunhaSectionNum = isDrugCase ? "3.3" : "3.4";
-        
-        // Dynamically create title based on if there are multiple testemunhas
-        const tituloRelatoTestemunha = testemunhasValidas.length > 1 ? 
-            `RELATO DA TESTEMUNHA (${primeiraTestemunha.nome})` : 
-            "RELATO DA TESTEMUNHA";
-        
-        yPos = addSectionTitle(doc, yPos, tituloRelatoTestemunha, testemunhaSectionNum, 2, data);
-        const relatoTestText = data.relatoTestemunha || "Relato não fornecido pela testemunha.";
-        yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+        relatoTestText = data.relatoTestemunha || "Relato não fornecido pela testemunha.";
+    }
+    yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    if (primeiraTestemunha) {
         yPos = addSignatureWithNameAndRole(doc, yPos, primeiraTestemunha?.nome, "TESTEMUNHA", data);
+    } else {
+        yPos += 10;
     }
 
-    // Handle conclusion numbering based on previous sections
-    const conclusaoSectionNum = isDrugCase ? 
-        (primeiraTestemunha ? "3.4" : "3.3") : 
-        (primeiraTestemunha ? "3.5" : (primeiraVitima ? "3.4" : "3.3"));
-    
+    const conclusaoSectionNum = isDrugCase ? "3.4" : "3.5";
     yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", conclusaoSectionNum, 2, data);
     yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
-    // --- SEÇÃO 4: PROVIDÊNCIAS ---
     yPos = addSectionTitle(doc, yPos, "PROVIDÊNCIAS", "4", 1, data);
     yPos = addWrappedText(doc, yPos, data.providencias || "Não informado.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
-    // --- SEÇÃO 5: DOCUMENTOS ANEXOS ---
     yPos = addSectionTitle(doc, yPos, "DOCUMENTOS ANEXOS", "4.1", 2, data);
     yPos = addWrappedText(doc, yPos, data.documentosAnexos || "Nenhum.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
     yPos += 2;
 
-    // --- SEÇÃO 6: DESCRIÇÃO DOS OBJETOS/DOCUMENTOS APREENDIDOS ---
     yPos = addSectionTitle(doc, yPos, "DESCRIÇÃO DOS OBJETOS/DOCUMENTOS APREENDIDOS", "4.2", 2, data);
     yPos = addWrappedText(doc, yPos, data.apreensaoDescricao || data.apreensoes || "Nenhum.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
     yPos += 2;

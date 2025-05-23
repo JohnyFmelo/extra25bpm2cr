@@ -943,13 +943,15 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </div>
         )}
 
-        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
+        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0 px-0">
           <h2 className="text-xl font-semibold mb-4">Informações Básicas do TCO</h2>
           <BasicInformationTab
             tcoNumber={tcoNumber}
             setTcoNumber={setTcoNumber}
             natureza={natureza}
             setNatureza={setNatureza}
+            autor={autor}
+            setAutor={setAutor}
             penaDescricao={penaDescricao}
             naturezaOptions={naturezaOptions}
             customNatureza={customNatureza}
