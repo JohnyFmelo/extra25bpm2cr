@@ -565,12 +565,12 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     }
   };
   
-    const handleRelatoPolicialChange = (value: string) => {
-      setRelatoPolicial(value);
-      if (value !== relatoPolicialTemplate && !value.includes("[HORÁRIO]")) {
-        setIsRelatoPolicialManuallyEdited(true);
-      }
-    };
+  const handleRelatoPolicialChange = (value: string) => {
+    setRelatoPolicial(value);
+    if (value !== relatoPolicialTemplate && !value.includes("[HORÁRIO]")) {
+      setIsRelatoPolicialManuallyEdited(true);
+    }
+  };
 
   const handleAddVideoLink = () => {
     if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
@@ -785,6 +785,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         drogaQuantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : undefined,
         drogaTipo: natureza === "Porte de drogas para consumo" ? substancia : undefined,
         drogaCor: natureza === "Porte de drogas para consumo" ? cor : undefined,
+        drogaOdor: natureza === "Porte de drogas para consumo" ? odor : undefined, // Added odor property
         drogaNomeComum: natureza === "Porte de drogas para consumo" ? indicioFinalDroga : undefined,
         drogaCustomDesc: natureza === "Porte de drogas para consumo" && isUnknownMaterial ? customMaterialDesc.trim() : undefined,
         drogaIsUnknown: natureza === "Porte de drogas para consumo" ? isUnknownMaterial : undefined,
@@ -800,7 +801,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         downloadLocal: true,
         providencias: providencias,
         documentosAnexos: documentosAnexos,
-        lacreNumero: lacreNumero,
       };
       Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
       console.log("Dados para gerar PDF:", tcoDataParaPDF);
@@ -828,11 +828,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
         createdBy: userId || 'anonimo',
-        // Opcional: manter 'fileName' nos metadados se for útil para outras finalidades
-        // ou se o nome do arquivo no storage puder ser diferente por outras razões no futuro.
-        // Para este caso, com filePath usando desiredFileName, o metadado 'fileName' torna-se redundante
-        // mas não prejudica. Se quiser remover, pode fazê-lo.
-        // fileName: desiredFileName 
       });
       
       if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
@@ -852,10 +847,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         pdfurl: downloadURL,
         createdby: userId,
         createdat: new Date().toISOString(),
-        // Se 'desiredFileName' não for mais passado nos metadados do uploadPDF,
-        // e você ainda quiser registrar o nome completo no banco de dados,
-        // você pode adicionar aqui:
-        // userfacingfilename: desiredFileName 
       };
       console.log("Metadados para salvar no DB:", tcoMetadata);
 
