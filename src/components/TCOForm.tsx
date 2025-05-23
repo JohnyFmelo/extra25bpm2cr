@@ -195,6 +195,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const [quantidade, setQuantidade] = useState("");
   const [substancia, setSubstancia] = useState("");
   const [cor, setCor] = useState("");
+  const [odor, setOdor] = useState("");
   const [indicios, setIndicios] = useState("");
   const [customMaterialDesc, setCustomMaterialDesc] = useState("");
   const [isUnknownMaterial, setIsUnknownMaterial] = useState(false);
@@ -207,6 +208,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const [autores, setAutores] = useState<Pessoa[]>([{ ...initialPersonData }]);
   const [vitimas, setVitimas] = useState<Pessoa[]>([{ ...initialPersonData }]);
   const [testemunhas, setTestemunhas] = useState<Pessoa[]>([{ ...initialPersonData }]);
+  const [providencias, setProvidencias] = useState("");
+  const [documentosAnexos, setDocumentosAnexos] = useState("");
   const relatoPolicialTemplate = `POR VOLTA DAS [HORÁRIO] DO DIA [DATA], NESTA CIDADE DE VÁRZEA GRANDE-MT, A GUARNIÇÃO DA VIATURA [GUARNIÇÃO][OPERACAO_TEXT] COMPOSTA PELOS MILITARES [GUPM], DURANTE RONDAS NO BAIRRO [BAIRRO], FOI ACIONADA VIA [MEIO DE ACIONAMENTO] PARA ATENDER A UMA OCORRÊNCIA DE [NATUREZA] NO [LOCAL], ONDE [VERSÃO INICIAL]. CHEGANDO NO LOCAL, A EQUIPE [O QUE A PM DEPAROU]. A VERSÃO DAS PARTES FOI REGISTRADA EM CAMPO PRÓPRIO. [VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]. [DILIGÊNCIAS E APREENSÕES REALIZADAS]. DIANTE DISSO, [ENCAMINHAMENTO PARA REGISTRO DOS FATOS].`;
   const [relatoPolicial, setRelatoPolicial] = useState(relatoPolicialTemplate);
   const [relatoAutor, setRelatoAutor] = useState(formatarRelatoAutor(autores));
@@ -795,8 +798,10 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         relatoVitima: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' ? relatoVitima.trim() : undefined,
         representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined,
         downloadLocal: true,
+        providencias: providencias,
+        documentosAnexos: documentosAnexos,
+        lacreNumero: lacreNumero,
       };
-
       Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
       console.log("Dados para gerar PDF:", tcoDataParaPDF);
 
@@ -983,6 +988,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
                 setSubstancia={setSubstancia}
                 cor={cor}
                 setCor={setCor}
+                odor={odor}
+                setOdor={setOdor}
                 indicios={indicios}
                 customMaterialDesc={customMaterialDesc}
                 setCustomMaterialDesc={setCustomMaterialDesc}
@@ -1075,6 +1082,15 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
             representacao={representacao}
             setRepresentacao={setRepresentacao}
             natureza={natureza}
+            videoLinks={videoLinks}
+            setVideoLinks={setVideoLinks}
+            solicitarCorpoDelito={autores.length > 0 ? autores[0].laudoPericial : "Não"}
+            autorSexo={autores.length > 0 ? autores[0].sexo : "masculino"}
+            providencias={providencias}
+            setProvidencias={setProvidencias}
+            documentosAnexos={documentosAnexos}
+            setDocumentosAnexos={setDocumentosAnexos}
+            lacreNumero={lacreNumero}
           />
         </div>
 
