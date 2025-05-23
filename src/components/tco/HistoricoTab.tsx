@@ -32,6 +32,9 @@ interface HistoricoTabProps {
   documentosAnexos: string;
   setDocumentosAnexos: (value: string) => void;
   lacreNumero?: string;
+  autores?: any[];
+  vitimas?: any[];
+  testemunhas?: any[];
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
@@ -59,7 +62,10 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   setProvidencias,
   documentosAnexos,
   setDocumentosAnexos,
-  lacreNumero = ""
+  lacreNumero = "",
+  autores = [],
+  vitimas = [],
+  testemunhas = []
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
@@ -186,6 +192,21 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     return name.slice(0, maxLength - 3) + "...";
   };
 
+  // Get current autor name if available
+  const getAutorLabel = () => {
+    if (autores && autores.length > 0) {
+      const autorName = autores[0]?.nome || "";
+      return autorName ? `RELATO DO AUTOR - ${autorName}` : "RELATO DO AUTOR";
+    }
+    return "RELATO DO AUTOR";
+  };
+
+  // Hide victim section if no victims are registered
+  const showVitimaSection = vitimas && vitimas.length > 0;
+  
+  // Hide witness section if no witnesses are registered
+  const showTestemunhaSection = testemunhas && testemunhas.length > 0;
+
   return <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
         <h3 className="text-2xl font-semibold flex items-center">Histórico</h3>
@@ -197,14 +218,25 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
         </div>
         
         <div>
-          <Label htmlFor="relatoAutor">RELATO DO AUTOR</Label>
+          <Label htmlFor="relatoAutor">{getAutorLabel()}</Label>
           <Textarea id="relatoAutor" placeholder="Descreva o relato do autor" value={relatoAutor} onChange={e => setRelatoAutor(e.target.value)} className="min-h-[150px]" />
         </div>
         
-        {/* Only show victim fields if it's NOT a drug case */}
-        {!isDrugCase && <div>
-            <Label htmlFor="relatoVitima">RELATO DA VÍTIMA</Label>
-            <Textarea id="relatoVitima" placeholder="Descreva o relato da vítima" value={relatoVitima} onChange={e => setRelatoVitima(e.target.value)} className="min-h-[150px]" />
+        {/* Only show victim fields if it's NOT a drug case AND there are victims */}
+        {!isDrugCase && showVitimaSection && (
+          <div>
+            <Label htmlFor="relatoVitima">
+              {vitimas.length > 1 
+                ? `RELATO DA VÍTIMA - ${vitimas[0]?.nome || ""}` 
+                : "RELATO DA VÍTIMA"}
+            </Label>
+            <Textarea 
+              id="relatoVitima" 
+              placeholder="Descreva o relato da vítima" 
+              value={relatoVitima} 
+              onChange={e => setRelatoVitima(e.target.value)} 
+              className="min-h-[150px]" 
+            />
             
             {setRepresentacao && <div className="mt-4 p-4 border rounded-md">
                 <Label className="font-bold mb-2 block">Representação da Vítima</Label>
@@ -219,12 +251,26 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
                   </div>
                 </RadioGroup>
               </div>}
-          </div>}
+          </div>
+        )}
         
-        <div>
-          <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
-          <Textarea id="relatoTestemunha" placeholder="Descreva o relato da testemunha" value={relatoTestemunha} onChange={e => setRelatoTestemunha(e.target.value)} className="min-h-[150px]" />
-        </div>
+        {/* Only show witness section if there are witnesses */}
+        {showTestemunhaSection && (
+          <div>
+            <Label htmlFor="relatoTestemunha">
+              {testemunhas.length > 1 
+                ? `RELATO DA TESTEMUNHA - ${testemunhas[0]?.nome || ""}` 
+                : "RELATO DA TESTEMUNHA"}
+            </Label>
+            <Textarea 
+              id="relatoTestemunha" 
+              placeholder="Descreva o relato da testemunha" 
+              value={relatoTestemunha} 
+              onChange={e => setRelatoTestemunha(e.target.value)} 
+              className="min-h-[150px]" 
+            />
+          </div>
+        )}
         
         <div>
           <Label htmlFor="apreensoes">OBJETOS/DOCUMENTOS APREENDIDOS</Label>
@@ -256,9 +302,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
             </p>
           )}
         </div>
-        
-        {/* Video Links Section */}
-        
       </div>
     </div>;
 };

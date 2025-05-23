@@ -23,7 +23,18 @@ export async function uploadPDF(filePath: string, fileBlob: Blob, metadata?: Rec
     // Get current user
     const { data: { user } } = await supabase.auth.getUser();
     
-    // Upload the file to Supabase Storage
+    // Check if file exists before uploading (for replacement)
+    const { data: existingFiles } = await supabase.storage
+      .from(BUCKET_NAME)
+      .list(filePath.substring(0, filePath.lastIndexOf('/')), {
+        search: filePath.substring(filePath.lastIndexOf('/') + 1)
+      });
+      
+    if (existingFiles && existingFiles.length > 0) {
+      console.log('File already exists, will replace it:', existingFiles[0].name);
+    }
+    
+    // Upload the file to Supabase Storage - use upsert to replace if exists
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(filePath, fileBlob, {
