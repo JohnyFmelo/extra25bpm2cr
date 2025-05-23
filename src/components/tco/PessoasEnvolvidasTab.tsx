@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +53,12 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
+  
+  // Count valid entries (those with names)
+  const validVitimas = vitimas.filter(v => v?.nome && v.nome.trim() !== "").length;
+  const validTestemunhas = testemunhas.filter(t => t?.nome && t.nome.trim() !== "").length;
+  const validAutores = autores.filter(a => a?.nome && a.nome.trim() !== "").length;
+  
   return <Card>
       <CardHeader>
         <CardTitle className="flex items-center">
@@ -65,15 +72,15 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
           <TabsList className={`grid ${isDrugCase ? 'grid-cols-2' : 'grid-cols-3'} mb-6`}>
             <TabsTrigger value="autor">
               <User className="mr-2 h-4 w-4" />
-              Autores do Fato
+              Autores do Fato {validAutores > 0 && `(${validAutores})`}
             </TabsTrigger>
             {!isDrugCase && <TabsTrigger value="vitimas">
                 <User className="mr-2 h-4 w-4" />
-                Vítimas
+                Vítimas {validVitimas > 0 && `(${validVitimas})`}
               </TabsTrigger>}
             <TabsTrigger value="testemunhas">
               <Users className="mr-2 h-4 w-4" />
-              Testemunhas
+              Testemunhas {validTestemunhas > 0 && `(${validTestemunhas})`}
             </TabsTrigger>
           </TabsList>
           

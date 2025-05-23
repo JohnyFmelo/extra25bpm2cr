@@ -4,7 +4,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { X } from "lucide-react";
+import { X, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+interface PersonalInfo {
+  nome: string;
+  sexo: string;
+  [key: string]: any;
+}
 
 interface HistoricoTabProps {
   relatoPolicial: string;
@@ -32,6 +39,9 @@ interface HistoricoTabProps {
   documentosAnexos: string;
   setDocumentosAnexos: (value: string) => void;
   lacreNumero?: string;
+  autores?: PersonalInfo[];
+  vitimas?: PersonalInfo[];
+  testemunhas?: PersonalInfo[];
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
@@ -59,7 +69,10 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   setProvidencias,
   documentosAnexos,
   setDocumentosAnexos,
-  lacreNumero = ""
+  lacreNumero = "",
+  autores = [],
+  vitimas = [],
+  testemunhas = []
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
@@ -69,6 +82,16 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     id: string;
   }[]>([]);
   const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
+  
+  // Get the first valid author, victim, and witness (with name)
+  const primeiroAutor = autores.find(a => a?.nome);
+  const primeiraVitima = vitimas.find(v => v?.nome);
+  const primeiraTestemunha = testemunhas.find(t => t?.nome);
+
+  // Multiple people labels
+  const hasMultipleAutores = autores.filter(a => a?.nome).length > 1;
+  const hasMultipleVitimas = vitimas.filter(v => v?.nome).length > 1;
+  const hasMultipleTestemunhas = testemunhas.filter(t => t?.nome).length > 1;
   
   // Set default providencias text based on the case type
   useEffect(() => {
@@ -88,7 +111,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     let anexos = ["TERMO DE COMPROMISSO"];
     
     // Add terms based on conditions
-    if (!isDrugCase) {
+    if (!isDrugCase && vitimas.some(v => v?.nome)) {
       anexos.push("TERMO DE MANIFESTAÇÃO");
     }
     
@@ -107,7 +130,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     }
     
     setDocumentosAnexos(anexos.join("\n"));
-  }, [isDrugCase, apreensoes, solicitarCorpoDelito, autorSexo, setDocumentosAnexos, lacreNumero]);
+  }, [isDrugCase, apreensoes, solicitarCorpoDelito, autorSexo, setDocumentosAnexos, lacreNumero, vitimas]);
 
   // Update the conclusion text based on solicitarCorpoDelito
   useEffect(() => {
@@ -186,6 +209,25 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     return name.slice(0, maxLength - 3) + "...";
   };
 
+  // Generate labels based on available people
+  const autorLabel = primeiroAutor ? 
+    (primeiroAutor.sexo?.toLowerCase() === "feminino" 
+      ? `RELATO DA AUTORA${hasMultipleAutores ? ` (${primeiroAutor.nome})` : ""}`
+      : `RELATO DO AUTOR${hasMultipleAutores ? ` (${primeiroAutor.nome})` : ""}`) 
+    : "RELATO DO AUTOR";
+
+  const vitimaLabel = primeiraVitima ? 
+    `RELATO DA VÍTIMA${hasMultipleVitimas ? ` (${primeiraVitima.nome})` : ""}` 
+    : "RELATO DA VÍTIMA";
+
+  const testemunhaLabel = primeiraTestemunha ? 
+    `RELATO DA TESTEMUNHA${hasMultipleTestemunhas ? ` (${primeiraTestemunha.nome})` : ""}` 
+    : "RELATO DA TESTEMUNHA";
+
+  // Check if there are victims or witnesses
+  const hasVitimas = vitimas && vitimas.some(v => v?.nome);
+  const hasTestemunhas = testemunhas && testemunhas.some(t => t?.nome);
+
   return <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
         <h3 className="text-2xl font-semibold flex items-center">Histórico</h3>
@@ -197,14 +239,32 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
         </div>
         
         <div>
-          <Label htmlFor="relatoAutor">RELATO DO AUTOR</Label>
-          <Textarea id="relatoAutor" placeholder="Descreva o relato do autor" value={relatoAutor} onChange={e => setRelatoAutor(e.target.value)} className="min-h-[150px]" />
+          <Label htmlFor="relatoAutor">{autorLabel}</Label>
+          <Textarea id="relatoAutor" placeholder={`Descreva o relato d${primeiroAutor?.sexo?.toLowerCase() === "feminino" ? "a autora" : "o autor"}`} value={relatoAutor} onChange={e => setRelatoAutor(e.target.value)} className="min-h-[150px]" />
+          
+          {hasMultipleAutores && (
+            <Alert className="mt-2 bg-amber-50/50 border-amber-200">
+              <AlertCircle className="h-4 w-4 text-amber-500" />
+              <AlertDescription className="text-amber-700">
+                Há múltiplos autores cadastrados. Este relato será atribuído a {primeiroAutor?.nome}.
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
         
-        {/* Only show victim fields if it's NOT a drug case */}
-        {!isDrugCase && <div>
-            <Label htmlFor="relatoVitima">RELATO DA VÍTIMA</Label>
+        {/* Only show victim fields if it's NOT a drug case AND there are victims */}
+        {!isDrugCase && hasVitimas && <div>
+            <Label htmlFor="relatoVitima">{vitimaLabel}</Label>
             <Textarea id="relatoVitima" placeholder="Descreva o relato da vítima" value={relatoVitima} onChange={e => setRelatoVitima(e.target.value)} className="min-h-[150px]" />
+            
+            {hasMultipleVitimas && (
+              <Alert className="mt-2 bg-amber-50/50 border-amber-200">
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+                <AlertDescription className="text-amber-700">
+                  Há múltiplas vítimas cadastradas. Este relato será atribuído a {primeiraVitima?.nome}.
+                </AlertDescription>
+              </Alert>
+            )}
             
             {setRepresentacao && <div className="mt-4 p-4 border rounded-md">
                 <Label className="font-bold mb-2 block">Representação da Vítima</Label>
@@ -221,10 +281,20 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
               </div>}
           </div>}
         
-        <div>
-          <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
+        {/* Only show testimony fields if there are witnesses */}
+        {hasTestemunhas && <div>
+          <Label htmlFor="relatoTestemunha">{testemunhaLabel}</Label>
           <Textarea id="relatoTestemunha" placeholder="Descreva o relato da testemunha" value={relatoTestemunha} onChange={e => setRelatoTestemunha(e.target.value)} className="min-h-[150px]" />
-        </div>
+          
+          {hasMultipleTestemunhas && (
+            <Alert className="mt-2 bg-amber-50/50 border-amber-200">
+              <AlertCircle className="h-4 w-4 text-amber-500" />
+              <AlertDescription className="text-amber-700">
+                Há múltiplas testemunhas cadastradas. Este relato será atribuído a {primeiraTestemunha?.nome}.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>}
         
         <div>
           <Label htmlFor="apreensoes">OBJETOS/DOCUMENTOS APREENDIDOS</Label>
@@ -256,9 +326,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
             </p>
           )}
         </div>
-        
-        {/* Video Links Section */}
-        
       </div>
     </div>;
 };
