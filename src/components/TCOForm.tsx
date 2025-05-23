@@ -183,8 +183,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const [horaTerminoRegistro, setHoraTerminoRegistro] = useState(formattedTime);
   const [localFato, setLocalFato] = useState("");
   const [endereco, setEndereco] = useState("");
-  const [municipio, setMunicipio] = useState("Várzea Grande");
-  const [complemento, setComplemento] = useState("");
+  const [municipio] = useState("Várzea Grande");
   const [comunicante, setComunicante] = useState("CIOSP");
   const [guarnicao, setGuarnicao] = useState("");
   const [operacao, setOperacao] = useState("");
@@ -770,7 +769,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         localFato: localFato.trim(),
         endereco: endereco.trim(),
         municipio,
-        complemento,
         comunicante,
         autores: autoresValidos,
         vitimas: vitimasFiltradas,
@@ -945,37 +943,25 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </div>
         )}
 
-        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
+        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0 px-0">
           <h2 className="text-xl font-semibold mb-4">Informações Básicas do TCO</h2>
           <BasicInformationTab
             tcoNumber={tcoNumber}
             setTcoNumber={setTcoNumber}
             natureza={natureza}
             setNatureza={setNatureza}
+            autor={autor}
+            setAutor={setAutor}
+            penaDescricao={penaDescricao}
+            naturezaOptions={naturezaOptions}
             customNatureza={customNatureza}
             setCustomNatureza={setCustomNatureza}
-            dataFato={dataFato}
-            setDataFato={setDataFato}
-            horaFato={horaFato}
-            setHoraFato={setHoraFato}
-            municipio={municipio}
-            setMunicipio={function(value: string): void {
-              // This is just a placeholder since municipio is a constant in TCOForm
-              console.log("Municipality change requested to:", value);
-            }}
-            bairro={localFato}
-            setBairro={setLocalFato}
-            endereco={endereco}
-            setEndereco={setEndereco}
-            complemento={complemento}
-            setComplemento={function(value: string): void {
-              // This is just a placeholder as complemento doesn't seem to have a setter in TCOForm
-              console.log("Complemento change requested to:", value);
-            }}
-            dataAudiencia={juizadoEspecialData}
-            setDataAudiencia={setJuizadoEspecialData}
-            horaAudiencia={juizadoEspecialHora}
-            setHoraAudiencia={setJuizadoEspecialHora}
+            startTime={startTime}
+            isTimerRunning={isTimerRunning}
+            juizadoEspecialData={juizadoEspecialData}
+            setJuizadoEspecialData={setJuizadoEspecialData}
+            juizadoEspecialHora={juizadoEspecialHora}
+            setJuizadoEspecialHora={setJuizadoEspecialHora}
           />
         </div>
 
