@@ -13,6 +13,8 @@ interface DrugVerificationTabProps {
   setSubstancia: (value: string) => void;
   cor: string;
   setCor: (value: string) => void;
+  odor: string;
+  setOdor: (value: string) => void;
   indicios: string;
   setIndicios?: (value: string) => void;
   customMaterialDesc: string;
@@ -29,6 +31,8 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   setSubstancia,
   cor,
   setCor,
+  odor,
+  setOdor,
   indicios,
   customMaterialDesc,
   setCustomMaterialDesc,
@@ -76,6 +80,20 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                 <SelectItem value="Verde">Verde</SelectItem>
                 <SelectItem value="Amarelada">Amarelada</SelectItem>
                 <SelectItem value="Branca">Branca</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="odor">Odor *</Label>
+            <Select value={odor} onValueChange={setOdor}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o odor da substância" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Característico">Característico</SelectItem>
+                <SelectItem value="Forte">Forte</SelectItem>
+                <SelectItem value="Suave">Suave</SelectItem>
               </SelectContent>
             </Select>
           </div>

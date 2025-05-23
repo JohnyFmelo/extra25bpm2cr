@@ -1,3 +1,4 @@
+
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -127,7 +128,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 juizadoEspecialData: juizadoData,
                 juizadoEspecialHora: juizadoHora,
                 videoLinks: processedVideoLinks,
-                // Flag para desativar a paginação
+                // Flag para desativar a paginação - sempre definida como true para ocultar paginação
                 hidePagination: true
             };
 
@@ -141,65 +142,106 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             // --- RESTANTE DO TCO (PÁGINAS 2+) ---
             yPosition = addNewPage(doc, data);
 
+            // --- Preparar a lista de documentos anexos ---
+            const isDroga = data.natureza === "Porte de drogas para consumo";
+            const documentosAnexosList = ["TERMO DE COMPROMISSO"];
+            
+            // Adicionar termo de manifestação se não for caso de droga e tiver vítimas
+            if (!isDroga && data.vitimas && data.vitimas.length > 0) {
+                documentosAnexosList.push("TERMO DE MANIFESTAÇÃO");
+            }
+            
+            // Adicionar termo de apreensão se houver descrição
+            if ((data.apreensaoDescrição || data.apreensoes) && (isDroga || data.apreensoes)) {
+                const lacreTexto = data.lacreNumero ? ` LACRE Nº ${data.lacreNumero}` : '';
+                documentosAnexosList.push(`TERMO DE APREENSÃO${lacreTexto}`);
+            }
+            
+            // Adicionar documentos relacionados a drogas
+            if (data.drogaTipo || data.drogaNomeComum) {
+                const lacreTexto = data.lacreNumero ? ` LACRE Nº ${data.lacreNumero}` : '';
+                documentosAnexosList.push(`TERMO DE CONSTATAÇÃO PRELIMINAR DE DROGA${lacreTexto}`);
+                
+                if (isDroga) {
+                    documentosAnexosList.push("REQUISIÇÃO DE EXAME EM DROGAS DE ABUSO");
+                }
+            }
+            
+            // Adicionar requisição de exame de lesão corporal se necessário
+            const pessoasComLaudo = [
+                ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
+                ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
+            ].filter(p => p.nome && p.nome.trim());
+            
+            if (pessoasComLaudo.length > 0) {
+                pessoasComLaudo.forEach(pessoa => {
+                    const generoArtigo = pessoa.sexo?.toLowerCase() === 'feminino' ? 'DA' : 'DO';
+                    const generoTipo = pessoa.tipo === 'Autor' ? 
+                        (pessoa.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR') : 
+                        (pessoa.sexo?.toLowerCase() === 'feminino' ? 'VÍTIMA' : 'VÍTIMA');
+                    documentosAnexosList.push(`REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ${generoArtigo} ${generoTipo}`);
+                });
+            }
+            
+            // Atualizar os dados com a lista de documentos anexos
+            const updatedData = {
+                ...data,
+                documentosAnexos: documentosAnexosList.join('\n')
+            };
+
             // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
-            generateHistoricoContent(doc, yPosition, data)
+            generateHistoricoContent(doc, yPosition, updatedData)
                 .then(() => {
                     // --- ADIÇÃO DOS TERMOS ---
-                    if (data.autores && data.autores.length > 0) {
-                        addTermoCompromisso(doc, data);
+                    if (updatedData.autores && updatedData.autores.length > 0) {
+                        addTermoCompromisso(doc, updatedData);
                     } else {
                         console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
                     }
 
                     // Corrigindo a lógica para incluir o Termo de Manifestação
                     // Verifica se NÃO é um caso de droga para consumo OU se tem vítimas informadas
-                    if ((data.natureza !== "Porte de drogas para consumo") && (data.vitimas && data.vitimas.length > 0)) {
+                    if ((updatedData.natureza !== "Porte de drogas para consumo") && (updatedData.vitimas && updatedData.vitimas.length > 0)) {
                         console.log("Adicionando Termo de Manifestação da Vítima");
-                        addTermoManifestacao(doc, data);
+                        addTermoManifestacao(doc, updatedData);
                     } else {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível ou sem vítimas.");
                     }
 
                     // Incluir o termo de apreensão quando houver uma descrição de apreensão
-                    // e não for caso de droga para consumo
-                    const isDroga = data.natureza === "Porte de drogas para consumo";
-                    if ((data.apreensaoDescrição || data.apreensoes) && 
-                        (isDroga || data.apreensoes)) {
+                    if ((updatedData.apreensaoDescrição || updatedData.apreensoes) && 
+                        (isDroga || updatedData.apreensoes)) {
                         console.log("Adicionando Termo de Apreensão");
-                        addTermoApreensao(doc, data);
+                        addTermoApreensao(doc, updatedData);
                     } else {
                         console.log("Pulando Termo de Apreensão: sem descrição de apreensão.");
                     }
 
-                    if (data.drogaTipo || data.drogaNomeComum) {
-                        addTermoConstatacaoDroga(doc, data);
+                    if (updatedData.drogaTipo || updatedData.drogaNomeComum) {
+                        addTermoConstatacaoDroga(doc, updatedData);
                         
                         // Adiciona Requisição de Exame em Drogas logo após o Termo de Constatação de Droga
-                        if (data.natureza === "Porte de drogas para consumo") {
-                            addRequisicaoExameDrogas(doc, data);
+                        if (updatedData.natureza === "Porte de drogas para consumo") {
+                            addRequisicaoExameDrogas(doc, updatedData);
                         }
                     }
 
                     // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
-                    const pessoasComLaudo = [
-                        ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
-                        ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-                    ].filter(p => p.nome && p.nome.trim());
-
                     if (pessoasComLaudo.length > 0) {
                         pessoasComLaudo.forEach(pessoa => {
                             console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
-                            addRequisicaoExameLesao(doc, { ...data, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
+                            addRequisicaoExameLesao(doc, { ...updatedData, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
                         });
                     } else {
                         console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
                     }
 
-                    addTermoEncerramentoRemessa(doc, data);
+                    addTermoEncerramentoRemessa(doc, updatedData);
 
-                    // --- Finalização: Adiciona Números de Página apenas se hidePagination for false ---
+                    // --- Finalização: Adiciona Números de Página apenas se hidePagination for false (deixamos sempre oculto) ---
+                    // A paginação está desativada por padrão
                     const pageCount = doc.internal.pages.length - 1;
-                    if (!data.hidePagination) {
+                    if (!updatedData.hidePagination) {
                         for (let i = 1; i <= pageCount; i++) {
                             doc.setPage(i);
                             doc.setFont("helvetica", "normal");
@@ -213,9 +255,9 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     }
 
                     // Opcionalmente, gera um download local
-                    if (data.downloadLocal) {
+                    if (updatedData.downloadLocal) {
                         try {
-                            const fileName = generateTCOFilename(data);
+                            const fileName = generateTCOFilename(updatedData);
                             
                             doc.save(fileName);
                             console.log(`PDF salvo localmente: ${fileName}`);

@@ -27,6 +27,11 @@ interface HistoricoTabProps {
   setVideoLinks?: (value: string[]) => void;
   solicitarCorpoDelito?: string;
   autorSexo?: string;
+  providencias: string;
+  setProvidencias: (value: string) => void;
+  documentosAnexos: string;
+  setDocumentosAnexos: (value: string) => void;
+  lacreNumero?: string;
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
@@ -49,7 +54,12 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   videoLinks = [],
   setVideoLinks,
   solicitarCorpoDelito = "Não",
-  autorSexo = "masculino"
+  autorSexo = "masculino",
+  providencias,
+  setProvidencias,
+  documentosAnexos,
+  setDocumentosAnexos,
+  lacreNumero = ""
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
@@ -60,7 +70,46 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   }[]>([]);
   const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
   
-  // Determine the text based on solicitarCorpoDelito
+  // Set default providencias text based on the case type
+  useEffect(() => {
+    if (!providencias || providencias === "Não informado.") {
+      const generoAutor = autorSexo?.toLowerCase() === "feminino" ? "AUTORA" : "AUTOR";
+      
+      if (isDrugCase) {
+        setProvidencias(`${generoAutor} DO FATO CONDUZIDO ATÉ O CISC DO PARQUE DO LAGO PARA A CONFECÇÃO DESTE TCO.`);
+      } else {
+        setProvidencias(`${generoAutor} DO FATO E A VÍTIMA CONDUZIDOS ATÉ O CISC DO PARQUE DO LAGO PARA A CONFECÇÃO DESTE TCO.`);
+      }
+    }
+  }, [isDrugCase, autorSexo, providencias, setProvidencias]);
+  
+  // Update documentos anexos based on conditions
+  useEffect(() => {
+    let anexos = ["TERMO DE COMPROMISSO"];
+    
+    // Add terms based on conditions
+    if (!isDrugCase) {
+      anexos.push("TERMO DE MANIFESTAÇÃO");
+    }
+    
+    if (apreensoes && apreensoes.trim() !== "") {
+      anexos.push("TERMO DE APREENSÃO");
+    }
+    
+    if (isDrugCase) {
+      anexos.push(`TERMO DE CONSTATAÇÃO PRELIMINAR DE DROGA${lacreNumero ? ` LACRE Nº ${lacreNumero}` : ''}`);
+      anexos.push("REQUISIÇÃO DE EXAME EM DROGAS DE ABUSO");
+    }
+    
+    if (solicitarCorpoDelito === "Sim") {
+      const generoSuffix = autorSexo?.toLowerCase() === "feminino" ? "A" : "O";
+      anexos.push(`REQUISIÇÃO DE EXAME DE LESÃO CORPORAL D${generoSuffix} ${autorSexo?.toLowerCase() === "feminino" ? "AUTORA" : "AUTOR"}`);
+    }
+    
+    setDocumentosAnexos(anexos.join("\n"));
+  }, [isDrugCase, apreensoes, solicitarCorpoDelito, autorSexo, setDocumentosAnexos, lacreNumero]);
+
+  // Update the conclusion text based on solicitarCorpoDelito
   useEffect(() => {
     if (conclusaoPolicial) {
       let updatedConclusion = conclusaoPolicial;
@@ -182,6 +231,19 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea id="apreensoes" placeholder="Descreva os objetos ou documentos apreendidos, se houver" value={apreensoes} onChange={e => setApreensoes(e.target.value)} className="min-h-[100px]" />
           <p className="text-xs text-muted-foreground mt-1">
             {!isDrugCase ? "Se houver apreensões, o Termo de Apreensão será gerado automaticamente no PDF." : "Para casos de drogas, o Termo de Apreensão será gerado automaticamente."}
+          </p>
+        </div>
+        
+        <div>
+          <Label htmlFor="providencias">PROVIDÊNCIAS</Label>
+          <Textarea id="providencias" placeholder="Descreva as providências tomadas" value={providencias} onChange={e => setProvidencias(e.target.value)} className="min-h-[100px]" />
+        </div>
+        
+        <div>
+          <Label htmlFor="documentosAnexos">DOCUMENTOS ANEXOS</Label>
+          <Textarea id="documentosAnexos" placeholder="Documentos anexos ao TCO" value={documentosAnexos} onChange={e => setDocumentosAnexos(e.target.value)} className="min-h-[100px]" readOnly />
+          <p className="text-xs text-muted-foreground mt-1">
+            Lista de documentos gerada automaticamente com base nas informações do TCO.
           </p>
         </div>
         

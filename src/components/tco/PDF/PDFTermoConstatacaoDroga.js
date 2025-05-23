@@ -1,5 +1,4 @@
 
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak, formatarDataSimples
@@ -70,4 +69,3 @@ export const addTermoConstatacaoDroga = (doc, data) => {
 
     return yPos;
 };
-
