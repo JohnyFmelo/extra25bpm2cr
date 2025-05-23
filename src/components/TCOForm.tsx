@@ -36,6 +36,8 @@ interface Pessoa {
   celular: string;
   email: string;
   laudoPericial: string;
+  relato?: string; // Added for victim testimony
+  representacao?: string; // Added for victim representation
 }
 
 interface TCOFormProps {
