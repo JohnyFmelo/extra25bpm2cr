@@ -218,6 +218,22 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const [conclusaoPolicial, setConclusaoPolicial] = useState("");
   const [isRelatoPolicialManuallyEdited, setIsRelatoPolicialManuallyEdited] = useState(false);
 
+  const handleVitimaRelatoChange = (index: number, relato: string) => {
+    const newVitimas = [...vitimas];
+    if (newVitimas[index]) {
+      newVitimas[index] = { ...newVitimas[index], relato };
+      setVitimas(newVitimas);
+    }
+  };
+
+  const handleVitimaRepresentacaoChange = (index: number, novaRepresentacao: string) => {
+    const newVitimas = [...vitimas];
+    if (newVitimas[index]) {
+      newVitimas[index] = { ...newVitimas[index], representacao: novaRepresentacao };
+      setVitimas(newVitimas);
+    }
+  };
+
   useEffect(() => {
     if (tcoNumber && !isTimerRunning) {
       setStartTime(new Date());
@@ -1082,6 +1098,9 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
             documentosAnexos={documentosAnexos}
             setDocumentosAnexos={setDocumentosAnexos}
             lacreNumero={lacreNumero}
+            vitimas={vitimas}
+            setVitimaRelato={handleVitimaRelatoChange}
+            setVitimaRepresentacao={handleVitimaRepresentacaoChange}
           />
         </div>
 

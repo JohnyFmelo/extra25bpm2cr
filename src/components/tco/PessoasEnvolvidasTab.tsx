@@ -1,9 +1,11 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Trash2, User, Users } from "lucide-react";
 import PersonalInfoFields from "./PersonalInfoFields";
+
 interface PersonalInfo {
   nome: string;
   sexo: string;
@@ -19,7 +21,10 @@ interface PersonalInfo {
   celular: string;
   email: string;
   laudoPericial: string;
+  relato?: string; // Added for victim testimony
+  representacao?: string; // Added for victim representation
 }
+
 interface PessoasEnvolvidasTabProps {
   vitimas: PersonalInfo[];
   handleVitimaChange: (index: number, field: string, value: string) => void;
@@ -35,6 +40,7 @@ interface PessoasEnvolvidasTabProps {
   handleRemoveAutor: (index: number) => void;
   natureza: string;
 }
+
 const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
   vitimas,
   handleVitimaChange,
@@ -158,4 +164,5 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
       </CardContent>
     </Card>;
 };
+
 export default PessoasEnvolvidasTab;

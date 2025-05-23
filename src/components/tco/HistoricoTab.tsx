@@ -32,6 +32,27 @@ interface HistoricoTabProps {
   documentosAnexos: string;
   setDocumentosAnexos: (value: string) => void;
   lacreNumero?: string;
+  // Add new props for handling multiple victims
+  vitimas?: {
+    nome: string;
+    sexo: string;
+    estadoCivil: string;
+    profissao: string;
+    endereco: string;
+    dataNascimento: string;
+    naturalidade: string;
+    filiacaoMae: string;
+    filiacaoPai: string;
+    rg: string;
+    cpf: string;
+    celular: string;
+    email: string;
+    laudoPericial: string;
+    relato?: string;
+    representacao?: string;
+  }[];
+  setVitimaRelato?: (index: number, relato: string) => void;
+  setVitimaRepresentacao?: (index: number, representacao: string) => void;
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
@@ -59,7 +80,10 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   setProvidencias,
   documentosAnexos,
   setDocumentosAnexos,
-  lacreNumero = ""
+  lacreNumero = "",
+  vitimas = [],
+  setVitimaRelato,
+  setVitimaRepresentacao
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
@@ -186,6 +210,23 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     return name.slice(0, maxLength - 3) + "...";
   };
 
+  // Helper function to handle victim testimony changes
+  const handleVitimaRelatoChange = (index: number, value: string) => {
+    if (setVitimaRelato) {
+      setVitimaRelato(index, value);
+    }
+  };
+
+  // Helper function to handle victim representation changes
+  const handleVitimaRepresentacaoChange = (index: number, value: string) => {
+    if (setVitimaRepresentacao) {
+      setVitimaRepresentacao(index, value);
+    }
+  };
+
+  // Get valid victims (those with names)
+  const validVitimas = vitimas.filter(vitima => vitima.nome && vitima.nome.trim() !== "" && vitima.nome !== "O ESTADO");
+
   return <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
         <h3 className="text-2xl font-semibold flex items-center">Histórico</h3>
@@ -201,25 +242,40 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea id="relatoAutor" placeholder="Descreva o relato do autor" value={relatoAutor} onChange={e => setRelatoAutor(e.target.value)} className="min-h-[150px]" />
         </div>
         
-        {/* Only show victim fields if it's NOT a drug case */}
-        {!isDrugCase && <div>
-            <Label htmlFor="relatoVitima">RELATO DA VÍTIMA</Label>
-            <Textarea id="relatoVitima" placeholder="Descreva o relato da vítima" value={relatoVitima} onChange={e => setRelatoVitima(e.target.value)} className="min-h-[150px]" />
-            
-            {setRepresentacao && <div className="mt-4 p-4 border rounded-md">
-                <Label className="font-bold mb-2 block">Representação da Vítima</Label>
-                <RadioGroup value={representacao} onValueChange={setRepresentacao}>
+        {/* Only show victim fields if it's NOT a drug case AND we have valid victims */}
+        {!isDrugCase && validVitimas.length > 0 && 
+          validVitimas.map((vitima, index) => (
+            <div key={`vitima-relato-${index}`} className="space-y-4">
+              <div>
+                <Label htmlFor={`relatoVitima-${index}`}>RELATO DA VÍTIMA {vitima.nome}</Label>
+                <Textarea 
+                  id={`relatoVitima-${index}`} 
+                  placeholder={`Descreva o relato da vítima ${vitima.nome}`} 
+                  value={vitima.relato || "RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO."} 
+                  onChange={e => handleVitimaRelatoChange(index, e.target.value)} 
+                  className="min-h-[150px]" 
+                />
+              </div>
+              
+              <div className="mt-4 p-4 border rounded-md">
+                <Label className="font-bold mb-2 block">REPRESENTAÇÃO DA VÍTIMA {vitima.nome}</Label>
+                <RadioGroup 
+                  value={vitima.representacao || ""} 
+                  onValueChange={(value) => handleVitimaRepresentacaoChange(index, value)}
+                >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="representar" id="representa" />
-                    <Label htmlFor="representa">Vítima deseja representar</Label>
+                    <RadioGroupItem value="representar" id={`representa-${index}`} />
+                    <Label htmlFor={`representa-${index}`}>Vítima deseja representar</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="decidir_posteriormente" id="posteriormente" />
-                    <Label htmlFor="posteriormente">Representação posterior (6 meses)</Label>
+                    <RadioGroupItem value="decidir_posteriormente" id={`posteriormente-${index}`} />
+                    <Label htmlFor={`posteriormente-${index}`}>Representação posterior (6 meses)</Label>
                   </div>
                 </RadioGroup>
-              </div>}
-          </div>}
+              </div>
+            </div>
+          ))
+        }
         
         <div>
           <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
@@ -256,9 +312,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
             </p>
           )}
         </div>
-        
-        {/* Video Links Section */}
-        
       </div>
     </div>;
 };
