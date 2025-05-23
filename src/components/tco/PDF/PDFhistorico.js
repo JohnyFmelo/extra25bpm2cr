@@ -93,7 +93,7 @@ const addQRCodeToPDF = async (doc, x, y, url, label, size = 30) => {
  */
 export const generateHistoricoContent = async (doc, currentY, data) => {
     let yPos = currentY;
-    const { PAGE_WIDTH, MAX_LINE_WIDTH, PAGE_HEIGHT, MARGIN_TOP } = getPageConstants(doc); // Added MARGIN_TOP
+    const { PAGE_WIDTH, MAX_LINE_WIDTH, PAGE_HEIGHT, MARGIN_TOP } = getPageConstants(doc);
     const isDrugCase = data.natureza === "Porte de drogas para consumo";
 
     // Convert general information data to uppercase
