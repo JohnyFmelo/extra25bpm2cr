@@ -296,7 +296,7 @@ const Index = ({
                 <CardContent className="p-6 my-0 mx-0 px-[9px] py-[13px]">
                   <Tabs value={travelTab} onValueChange={setTravelTab} className="w-full">
                     <TabsList className="w-full mb-6 justify-between py-[20px] my-[11px] bg-slate-400">
-                      <TabsTrigger value="trips" className="flex-1">Viagens</TabsTrigger>
+                      <TabsTrigger value="trips" className="flex-1 text-zinc-50 bg-blue-600 hover:bg-blue-500">Viagens</TabsTrigger>
                       <TabsTrigger value="ranking" className="flex-1">Ranking</TabsTrigger>
                     </TabsList>
                     
