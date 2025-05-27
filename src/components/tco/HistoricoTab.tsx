@@ -254,8 +254,15 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   // Get valid victims (those with names)
   const validVitimas = vitimas.filter(vitima => vitima.nome && vitima.nome.trim() !== "" && vitima.nome !== "O ESTADO");
 
-  // Get valid witnesses (those with names)
-  const validTestemunhas = testemunhas.filter(testemunha => testemunha.nome && testemunha.nome.trim() !== "");
+  // Get valid witnesses (those with names) - FIX: Check for actual names, not empty strings
+  const validTestemunhas = testemunhas.filter(testemunha => 
+    testemunha.nome && 
+    testemunha.nome.trim() !== "" && 
+    testemunha.nome !== "Não informado."
+  );
+
+  console.log("Testemunhas array:", testemunhas);
+  console.log("Valid testemunhas:", validTestemunhas);
 
   return <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
@@ -307,7 +314,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           ))
         }
         
-        {/* Show individual witness testimony fields only for witnesses with names */}
+        {/* Show individual witness testimony fields ONLY when we have valid witnesses with names */}
         {validTestemunhas.length > 0 && 
           validTestemunhas.map((testemunha, index) => (
             <div key={`testemunha-relato-${index}`}>
@@ -322,14 +329,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
             </div>
           ))
         }
-        
-        {/* Keep the original witness field for backward compatibility ONLY if no individual witnesses */}
-        {validTestemunhas.length === 0 && (
-          <div>
-            <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
-            <Textarea id="relatoTestemunha" placeholder="Descreva o relato da testemunha" value={relatoTestemunha} onChange={e => setRelatoTestemunha(e.target.value)} className="min-h-[150px]" />
-          </div>
-        )}
         
         <div>
           <Label htmlFor="apreensoes">OBJETOS/DOCUMENTOS APREENDIDOS</Label>
