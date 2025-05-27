@@ -1,4 +1,3 @@
-// --- START OF FILE toast.tsx (Modified) ---
 
 import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
@@ -16,7 +15,6 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      // Alinhamento centralizado no topo
       "fixed top-4 left-1/2 z-[100] flex max-h-screen w-full -translate-x-1/2 flex-col-reverse p-4 sm:flex-col md:max-w-[420px]",
       className
     )}
@@ -26,12 +24,10 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  // Base styles for all toasts
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-lg border p-4 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full", // Ajustada animação de saída/entrada para centralizado no topo
+  "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-lg border p-4 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full",
   {
     variants: {
       variant: {
-        // Cores Sólidas
         default:
           "border-neutral-300 bg-neutral-100 text-neutral-800 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200",
         destructive:
@@ -39,7 +35,7 @@ const toastVariants = cva(
         success:
           "success group border-green-700 bg-green-600 text-white dark:border-green-800 dark:bg-green-700",
         warning:
-          "warning group border-yellow-600 bg-yellow-500 text-black dark:border-yellow-700 dark:bg-yellow-600 dark:text-yellow-950", // Amarelo geralmente fica melhor com texto preto
+          "warning group border-yellow-600 bg-yellow-500 text-black dark:border-yellow-700 dark:bg-yellow-600 dark:text-yellow-950",
         info:
           "info group border-blue-700 bg-blue-600 text-white dark:border-blue-800 dark:bg-blue-700",
       },
@@ -50,22 +46,18 @@ const toastVariants = cva(
   }
 )
 
-export const ToastIcon = ({ variant }: { variant?: VariantProps<typeof toastVariants>["variant"] }) => {
-  const iconSize = "h-5 w-5" // Tamanho do ícone pode ser ajustado conforme necessário
-  // Cores dos ícones podem precisar de ajuste para contrastar com os novos fundos sólidos
-  // Por exemplo, para fundos escuros, ícones brancos ou de cor clara.
-  // Atualmente, eles mantêm suas cores primárias (verde para sucesso, etc.)
+const ToastIcon = ({ variant }: { variant?: VariantProps<typeof toastVariants>["variant"] }) => {
+  const iconSize = "h-5 w-5"
   switch (variant) {
     case "success":
-      return <CheckCircle className={cn(iconSize, "text-green-100")} />; // Ajustado para contraste com bg-green-600
+      return <CheckCircle className={cn(iconSize, "text-green-100")} />;
     case "warning":
-      return <AlertTriangle className={cn(iconSize, "text-yellow-900 dark:text-yellow-100")} />; // Ajustado para contraste
+      return <AlertTriangle className={cn(iconSize, "text-yellow-900 dark:text-yellow-100")} />;
     case "destructive":
-      return <XCircle className={cn(iconSize, "text-red-100")} />; // Ajustado para contraste
+      return <XCircle className={cn(iconSize, "text-red-100")} />;
     case "info":
-      return <Info className={cn(iconSize, "text-blue-100")} />; // Ajustado para contraste
+      return <Info className={cn(iconSize, "text-blue-100")} />;
     default:
-      // Ícone para variante default, se desejado
       return <Info className={cn(iconSize, "text-neutral-500 dark:text-neutral-400")} />;
   }
 };
@@ -93,7 +85,6 @@ const ToastAction = React.forwardRef<
     ref={ref}
     className={cn(
       "inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-transparent bg-transparent px-3 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary hover:text-secondary-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-      // Ajustar cores do ToastAction para combinar com fundos sólidos e garantir contraste
       "group-[.default]:text-neutral-700 group-[.default]:hover:bg-neutral-200 dark:group-[.default]:text-neutral-300 dark:group-[.default]:hover:bg-neutral-700",
       "group-[.destructive]:text-red-100 group-[.destructive]:hover:border-transparent group-[.destructive]:hover:bg-red-700 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-500",
       "group-[.success]:text-green-100 group-[.success]:hover:border-transparent group-[.success]:hover:bg-green-700 group-[.success]:hover:text-green-50 group-[.success]:focus:ring-green-500",
@@ -114,7 +105,6 @@ const ToastClose = React.forwardRef<
     ref={ref}
     className={cn(
       "absolute right-2 top-1/2 -translate-y-1/2 transform rounded-md p-1 opacity-100 ring-offset-background transition-opacity hover:opacity-80 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 data-[state=open]:opacity-70 data-[state=open]:hover:opacity-100",
-      // Ajustar cores do ToastClose para contraste com fundos sólidos
       "group-[.default]:text-neutral-500 hover:text-neutral-700 dark:group-[.default]:text-neutral-400 dark:hover:text-neutral-200",
       "group-[.destructive]:text-red-200 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-700",
       "group-[.success]:text-green-200 group-[.success]:hover:text-green-50 group-[.success]:focus:ring-green-400 group-[.success]:focus:ring-offset-green-700",
@@ -136,7 +126,6 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    // A cor será herdada da variante do Toast
     className={cn("text-sm font-semibold", className)}
     {...props}
   />
@@ -149,7 +138,6 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    // A cor será herdada, opacidade leve
     className={cn("text-sm opacity-90", className)}
     {...props}
   />
@@ -170,7 +158,5 @@ export {
   ToastDescription,
   ToastClose,
   ToastAction,
-  ToastIcon, // Exportando o ToastIcon para ser usado no Toaster.tsx
+  ToastIcon,
 }
-
-// --- END OF FILE toast.tsx (Modified) ---
