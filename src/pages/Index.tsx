@@ -156,7 +156,7 @@ const Index = ({
   }, [initialActiveTab]);
   return <div className="relative min-h-screen w-full flex flex-col">
       <div className="flex-grow w-full">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow py-0">
           <TabsList className="hidden">
             <TabsTrigger value="main">Main</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
@@ -189,9 +189,7 @@ const Index = ({
           <TabsContent value="extra">
             <div className="relative">
               <div className="absolute right-0 -top-14">
-                <button onClick={handleBackClick} aria-label="Voltar para home" className="p-2 rounded-full hover:bg-gray-200 transition-colors text-blue-600">
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
+                
               </div>
               {user.userType === "admin" && <div className="fixed bottom-8 right-8 z-10">
                   <Button onClick={handleEditorClick} className="fixed bottom-6 right-6 rounded-full p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] py-[26px] bg-green-500 hover:bg-green-400">
