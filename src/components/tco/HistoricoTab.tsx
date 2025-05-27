@@ -249,7 +249,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     }
   };
 
-  // Get valid victims and witnesses
+  // Get valid victims and witnesses - only those with names filled
   const validVitimas = vitimas.filter(vitima => vitima.nome && vitima.nome.trim() !== "" && vitima.nome !== "O ESTADO");
   const validTestemunhas = testemunhas.filter(testemunha => testemunha.nome && testemunha.nome.trim() !== "");
 
@@ -303,7 +303,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           ))
         }
         
-        {/* Testemunhas section - now individual */}
+        {/* Individual witness testimony sections - only for witnesses with valid names */}
         {validTestemunhas.length > 0 && 
           validTestemunhas.map((testemunha, index) => (
             <div key={`testemunha-relato-${index}`} className="space-y-4">
@@ -321,7 +321,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           ))
         }
 
-        {/* Fallback for old single witness field if no individual witnesses */}
+        {/* Fallback for old single witness field only if no valid individual witnesses */}
         {validTestemunhas.length === 0 && (
           <div>
             <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
