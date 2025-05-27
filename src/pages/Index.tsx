@@ -26,12 +26,12 @@ import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
 import RankingChart from "@/components/RankingChart";
+
 interface IndexProps {
   initialActiveTab?: string;
 }
-const Index = ({
-  initialActiveTab = "main"
-}: IndexProps) => {
+
+const Index = ({ initialActiveTab = "main" }: IndexProps) => {
   const [activeTab, setActiveTab] = useState(initialActiveTab);
   const [isLocked, setIsLocked] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -42,9 +42,7 @@ const Index = ({
   const [hasNotifications, setHasNotifications] = useState(false);
   const [activeTrips, setActiveTrips] = useState<any[]>([]);
   const [travelTab, setTravelTab] = useState("trips");
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const unreadCount = useNotifications();
   const navigate = useNavigate();
@@ -52,6 +50,7 @@ const Index = ({
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
+
   useEffect(() => {
     const handleNotificationsChange = (count: number) => {
       setHasNotifications(count > 0);
@@ -60,15 +59,14 @@ const Index = ({
       setHasNotifications(true);
     }
     const notificationsChangeEvent = new CustomEvent('notificationsUpdate', {
-      detail: {
-        count: unreadCount
-      }
+      detail: { count: unreadCount }
     });
     window.addEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     return () => {
       window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     };
   }, [unreadCount]);
+
   useEffect(() => {
     const today = new Date();
     const travelsRef = collection(db, "travels");
@@ -88,6 +86,7 @@ const Index = ({
     });
     return () => unsubscribe();
   }, []);
+
   const handleRefresh = () => {
     window.location.reload();
     toast({
@@ -95,12 +94,15 @@ const Index = ({
       description: "Recarregando dados do sistema."
     });
   };
+
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
+
   const handleExtraClick = () => {
     setActiveTab("extra");
   };
+
   const handleBackClick = () => {
     if (activeTab === "editor") {
       setActiveTab("extra");
@@ -108,12 +110,15 @@ const Index = ({
       setActiveTab("main");
     }
   };
+
   const handleSettingsClick = () => {
     setActiveTab("settings");
   };
+
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
+
   const handleTCOClick = () => {
     if (user.userType === "admin") {
       setActiveTab("tco");
@@ -125,11 +130,13 @@ const Index = ({
       });
     }
   };
+
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
     setShowLogoutDialog(false);
   };
+
   const handleTabChange = (tab: string) => {
     if (tab === 'hours') {
       navigate('/hours');
@@ -155,13 +162,16 @@ const Index = ({
       setActiveTab(tab);
     }
   };
+
   useEffect(() => {
     // Update activeTab when initialActiveTab prop changes
     if (initialActiveTab && initialActiveTab !== activeTab) {
       setActiveTab(initialActiveTab);
     }
   }, [initialActiveTab]);
-  return <div className="relative min-h-screen w-full flex flex-col">
+
+  return (
+    <div className="relative min-h-screen w-full flex flex-col">
       <div className="flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow py-0">
           <TabsList className="hidden">
@@ -295,8 +305,8 @@ const Index = ({
               <Card className="shadow-md">
                 <CardContent className="p-6 my-0 mx-0 px-[9px] py-[13px]">
                   <Tabs value={travelTab} onValueChange={setTravelTab} className="w-full">
-                    <TabsList className="w-full mb-6 justify-between py-[20px] my-[11px] bg-slate-400">
-                      <TabsTrigger value="trips" className="flex-1 text-zinc-50 bg-blue-600 hover:bg-blue-500">Viagens</TabsTrigger>
+                    <TabsList className="w-full mb-6 justify-between py-[20px] my-[11px]">
+                      <TabsTrigger value="trips" className="flex-1">Viagens</TabsTrigger>
                       <TabsTrigger value="ranking" className="flex-1">Ranking</TabsTrigger>
                     </TabsList>
                     
@@ -374,6 +384,8 @@ const Index = ({
       </AlertDialog>
 
       <BottomMenuBar activeTab={activeTab} onTabChange={handleTabChange} isAdmin={user?.userType === 'admin'} />
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
