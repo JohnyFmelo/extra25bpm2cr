@@ -1,3 +1,4 @@
+
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -170,12 +171,19 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 2;
     }
 
+    // Calcular numeração dinâmica para seções subsequentes
+    let currentSectionNumber = 2.2;
+    
     if (!isDrugCase) {
         const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome) : [];
-        const vitimaTitle = vitimasValidas.length === 1 ? "VÍTIMA" : "VÍTIMAS";
-        yPos = addSectionTitle(doc, yPos, vitimaTitle, "2.2", 2, data);
+        
         if (vitimasValidas.length > 0) {
+            // Adicionar cada vítima individualmente com sua própria seção
             vitimasValidas.forEach((vitima, index) => {
+                const vitimaTitle = `VÍTIMA ${vitima.nome.toUpperCase()}`;
+                yPos = addSectionTitle(doc, yPos, vitimaTitle, currentSectionNumber.toFixed(1), 2, data);
+                currentSectionNumber += 0.1;
+                
                 const upperVitima = {
                     ...vitima,
                     nome: vitima.nome ? vitima.nome.toUpperCase() : 'NÃO INFORMADO',
@@ -191,12 +199,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                     celular: vitima.celular ? vitima.celular.toUpperCase() : 'NÃO INFORMADO',
                     email: vitima.email ? vitima.email.toUpperCase() : 'NÃO INFORMADO',
                 };
-                if (index > 0) {
-                    yPos += 3; yPos = checkPageBreak(doc, yPos, 5, data);
-                    doc.setLineWidth(0.1); doc.setDrawColor(150);
-                    doc.line(MARGIN_LEFT, yPos - 1, PAGE_WIDTH - MARGIN_RIGHT, yPos - 1);
-                    doc.setDrawColor(0); yPos += 2;
-                }
+                
                 yPos = addField(doc, yPos, "NOME", upperVitima.nome, data);
                 yPos = addField(doc, yPos, "SEXO", upperVitima.sexo, data);
                 yPos = addField(doc, yPos, "ESTADO CIVIL", upperVitima.estadoCivil, data);
@@ -210,8 +213,14 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 yPos = addField(doc, yPos, "CPF", upperVitima.cpf, data);
                 yPos = addField(doc, yPos, "CELULAR", upperVitima.celular, data);
                 yPos = addField(doc, yPos, "E-MAIL", upperVitima.email, data);
+                
+                if (index < vitimasValidas.length - 1) {
+                    yPos += 5; // Espaço entre vítimas
+                }
             });
         } else {
+            yPos = addSectionTitle(doc, yPos, "VÍTIMAS", currentSectionNumber.toFixed(1), 2, data);
+            currentSectionNumber += 0.1;
             yPos = addWrappedText(doc, yPos, "Nenhuma vítima informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
             yPos += 2;
         }
@@ -219,7 +228,9 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
     const testemunhasValidas = data.testemunhas ? data.testemunhas.filter(t => t?.nome) : [];
     const testemunhaTitle = testemunhasValidas.length === 1 ? "TESTEMUNHA" : "TESTEMUNHAS";
-    yPos = addSectionTitle(doc, yPos, testemunhaTitle, "2.3", 2, data);
+    yPos = addSectionTitle(doc, yPos, testemunhaTitle, currentSectionNumber.toFixed(1), 2, data);
+    currentSectionNumber += 0.1;
+    
     if (testemunhasValidas.length > 0) {
         testemunhasValidas.forEach((testemunha, index) => {
             const upperTestemunha = {
@@ -263,16 +274,21 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     }
 
     const primeiroAutor = data.autores && data.autores.length > 0 ? data.autores.find(a => a?.nome) : null;
-    const primeiraVitima = !isDrugCase ? (data.vitimas ? data.vitimas.find(v => v?.nome) : null) : null;
+    const vitimasComRelato = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome) : []) : [];
     const primeiraTestemunha = data.testemunhas && data.testemunhas.length > 0 ? data.testemunhas.find(t => t?.nome) : null;
 
+    // Calcular numeração das seções de histórico
+    let historicoSectionNumber = 3.1;
+
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
-    yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", "3.1", 2, data);
+    yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", historicoSectionNumber.toFixed(1), 2, data);
+    historicoSectionNumber += 0.1;
     yPos = addWrappedText(doc, yPos, data.relatoPolicial || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     const tituloRelatoAutor = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "RELATO DA AUTORA DO FATO" : "RELATO DO AUTOR DO FATO";
-    yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, "3.2", 2, data);
+    yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, historicoSectionNumber.toFixed(1), 2, data);
+    historicoSectionNumber += 0.1;
     yPos = addWrappedText(doc, yPos, data.relatoAutor || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     if (primeiroAutor) {
         yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor?.nome, autorTitle.replace("AUTORES", "AUTOR(A)"), data);
@@ -280,19 +296,21 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 10;
     }
 
-    if (!isDrugCase) {
-        yPos = addSectionTitle(doc, yPos, "RELATO DA VÍTIMA", "3.3", 2, data);
-        const relatoVitimaText = primeiraVitima ? (data.relatoVitima || "Relato não fornecido pela vítima.") : "Nenhuma vítima identificada para fornecer relato.";
-        yPos = addWrappedText(doc, yPos, relatoVitimaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        if (primeiraVitima) {
-            yPos = addSignatureWithNameAndRole(doc, yPos, primeiraVitima?.nome, "VÍTIMA", data);
-        } else {
-            yPos += 10;
-        }
+    if (!isDrugCase && vitimasComRelato.length > 0) {
+        // Adicionar relato individual para cada vítima
+        vitimasComRelato.forEach((vitima, index) => {
+            const tituloRelatoVitima = `RELATO DA VÍTIMA ${vitima.nome.toUpperCase()}`;
+            yPos = addSectionTitle(doc, yPos, tituloRelatoVitima, historicoSectionNumber.toFixed(1), 2, data);
+            historicoSectionNumber += 0.1;
+            
+            const relatoVitimaText = vitima.relato || "Relato não fornecido pela vítima.";
+            yPos = addWrappedText(doc, yPos, relatoVitimaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+            yPos = addSignatureWithNameAndRole(doc, yPos, vitima.nome, "VÍTIMA", data);
+        });
     }
 
-    const testemunhaSectionNum = isDrugCase ? "3.3" : "3.4";
-    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", testemunhaSectionNum, 2, data);
+    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", historicoSectionNumber.toFixed(1), 2, data);
+    historicoSectionNumber += 0.1;
     let relatoTestText = "Nenhuma testemunha identificada.";
     if (primeiraTestemunha) {
         relatoTestText = data.relatoTestemunha || "Relato não fornecido pela testemunha.";
@@ -304,8 +322,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 10;
     }
 
-    const conclusaoSectionNum = isDrugCase ? "3.4" : "3.5";
-    yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", conclusaoSectionNum, 2, data);
+    yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", historicoSectionNumber.toFixed(1), 2, data);
     yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
