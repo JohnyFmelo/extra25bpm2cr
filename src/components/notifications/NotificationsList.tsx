@@ -23,9 +23,10 @@ interface Notification {
 
 interface NotificationsListProps {
   showOnlyUnread?: boolean;
+  showCloseButton?: boolean;
 }
 
-const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) => {
+const NotificationsList = ({ showOnlyUnread = false, showCloseButton = false }: NotificationsListProps) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -78,6 +79,16 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
         description: "Não foi possível marcar como lido."
       });
     }
+  };
+  
+  const handleCloseNotification = async (notificationId: string) => {
+    // For regular users, just mark as read
+    await handleMarkAsRead(notificationId);
+    
+    toast({
+      title: "Notificação fechada",
+      description: "A notificação foi marcada como lida."
+    });
   };
   
   const handleDeleteNotification = async (notificationId: string) => {
@@ -135,14 +146,14 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
 
   if (notifications.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <span className="text-2xl">📫</span>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+          <span className="text-3xl">📫</span>
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <h3 className="text-xl font-bold text-gray-900 mb-3">
           {showOnlyUnread ? "Nenhuma notificação nova" : "Nenhuma notificação"}
         </h3>
-        <p className="text-gray-500 text-sm">
+        <p className="text-gray-600 text-base font-medium">
           {showOnlyUnread 
             ? "Você está em dia com suas notificações!" 
             : "Ainda não há notificações para exibir."
@@ -153,9 +164,9 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
   }
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full max-w-4xl mx-auto">
       <ScrollArea className="h-full">
-        <div className="space-y-3">
+        <div className="space-y-4 px-2">
           {notifications.map(notification => {
             const isUnread = !notification.readBy.includes(currentUser.id);
             const isExpanded = expandedId === notification.id;
@@ -168,6 +179,7 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
                 isExpanded={isExpanded}
                 onToggle={() => setExpandedId(isExpanded ? null : notification.id)}
                 onMarkAsRead={() => handleMarkAsRead(notification.id)}
+                onClose={showCloseButton ? () => handleCloseNotification(notification.id) : undefined}
                 onLongPress={() => {
                   setSelectedNotification(notification.id);
                   setDeleteDialogOpen(true);
