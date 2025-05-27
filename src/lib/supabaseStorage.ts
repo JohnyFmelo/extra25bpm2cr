@@ -1,3 +1,4 @@
+
 // supabaseStorage.ts
 import { supabase } from './supabaseClient';
 
@@ -213,41 +214,9 @@ export async function ensureBucketExists(): Promise<boolean> {
  * and instead extracting information from the filename
  */
 export async function saveTCOMetadata(metadata: any): Promise<{ error: Error | null }> {
-  try {
-    // Garantir que temos o campo normalized_tconumber
-    let updatedMetadata = { ...metadata };
-    if (!updatedMetadata.normalized_tconumber && updatedMetadata.tconumber) {
-      // Importar diretamente no escopo da função para evitar erros de importação circular
-      const { normalizeTcoNumber } = await import('../utils/tcoValidation');
-      updatedMetadata.normalized_tconumber = normalizeTcoNumber(updatedMetadata.tconumber);
-    }
-
-    // Verificar se já existe um TCO com este número normalizado e no mesmo ano
-    const currentYear = new Date().getFullYear();
-    const { data: existingTcos, error: checkError } = await supabase
-      .from('tco_metadata')
-      .select('*')
-      .eq('normalized_tconumber', updatedMetadata.normalized_tconumber)
-      .gte('createdat', `${currentYear}-01-01`)
-      .lt('createdat', `${currentYear + 1}-01-01`);
-
-    if (checkError) {
-      console.error('Erro ao verificar TCOs existentes:', checkError);
-    }
-
-    if (existingTcos && existingTcos.length > 0) {
-      // Se já existe, atualizar o registro em vez de criar um novo
-      console.log('TCO existente encontrado, atualizando:', existingTcos[0].id);
-      return await supabase
-        .from('tco_metadata')
-        .update(updatedMetadata)
-        .eq('id', existingTcos[0].id);
-    } else {
-      // Caso contrário, inserir um novo registro
-      return await supabase.from('tco_metadata').insert([updatedMetadata]);
-    }
-  } catch (error) {
-    console.error('Erro ao salvar metadados do TCO:', error);
-    return { error };
-  }
+  console.log('saveTCOMetadata called, but metadata storage is not being used');
+  console.log('Using filename for metadata extraction instead:', metadata);
+  
+  // Simply return success since we're not actually saving to a database
+  return { error: null };
 }
