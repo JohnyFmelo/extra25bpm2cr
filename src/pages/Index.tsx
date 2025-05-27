@@ -1,6 +1,5 @@
-import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut, CalendarDays, Clock, MapPin, Calendar, Navigation } from "lucide-react";
-// IconCard não está sendo usado diretamente, mas pode ser usado por subcomponentes. Mantendo por precaução.
-// import IconCard from "@/components/IconCard";
+import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
+import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
 import { useState, useEffect } from "react";
@@ -21,7 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { collection, query, onSnapshot, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-// Users as UsersIcon já está importado como Users. Mantendo apenas um.
+import { CalendarDays, Users as UsersIcon, Clock, MapPin, Calendar, Navigation } from "lucide-react";
 import UpcomingShifts from "@/components/UpcomingShifts";
 import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
@@ -48,6 +47,7 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
   const unreadCount = useNotifications();
   const navigate = useNavigate();
 
+  // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
 
@@ -58,10 +58,12 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
     if (unreadCount > 0) {
       setHasNotifications(true);
     }
-    const eventListener = (e: Event) => handleNotificationsChange((e as CustomEvent).detail.count);
-    window.addEventListener('notificationsUpdate', eventListener);
+    const notificationsChangeEvent = new CustomEvent('notificationsUpdate', {
+      detail: { count: unreadCount }
+    });
+    window.addEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     return () => {
-      window.removeEventListener('notificationsUpdate', eventListener);
+      window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     };
   }, [unreadCount]);
 
@@ -97,32 +99,26 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
     setActiveTab("editor");
   };
 
+  const handleExtraClick = () => {
+    setActiveTab("extra");
+  };
+
   const handleBackClick = () => {
     if (activeTab === "editor") {
       setActiveTab("extra");
-    } else if (activeTab === "users") {
-      setActiveTab("settings"); // Voltar de 'users' para 'settings'
-    } else if (activeTab === "settings" || activeTab === "travel" || activeTab === "tco" || activeTab === "notifications" /* Adicione outras abas que voltam para main */) {
-      setActiveTab("main");
     } else {
-      // Comportamento padrão de voltar para 'main' se não for um dos casos acima
-      // ou se já estiver em 'main' (o que não mudaria nada)
       setActiveTab("main");
     }
   };
 
-  // handleSettingsClick e handleTravelClick não são estritamente necessárias se o BottomMenuBar
-  // já chama handleTabChange com 'settings' ou 'travel'.
-  // Elas poderiam ser usadas por outros botões específicos se existirem.
-  // const handleSettingsClick = () => {
-  //   setActiveTab("settings");
-  // };
+  const handleSettingsClick = () => {
+    setActiveTab("settings");
+  };
 
-  // const handleTravelClick = () => {
-  //   setActiveTab("travel");
-  // };
+  const handleTravelClick = () => {
+    setActiveTab("travel");
+  };
 
-  // handleTCOClick é usado pelo BottomMenuBar para lógica específica de TCO
   const handleTCOClick = () => {
     if (user.userType === "admin") {
       setActiveTab("tco");
@@ -135,64 +131,44 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
     }
   };
 
-
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
     setShowLogoutDialog(false);
   };
 
-  const handleTabChange = (targetTab: string) => {
-    // !! PONTO CRÍTICO PARA DEBUG !!
-    // Verifique o valor de 'targetTab' no console do navegador quando você está na aba "editor"
-    // e clica no item "Extra" do BottomMenuBar.
-    //
-    // - Se o console mostrar: "handleTabChange: Tentando ir para 'extra'. Aba atual: 'editor'"
-    //   E a aba NÃO mudar para 'extra', então o problema pode estar no useEffect de initialActiveTab
-    //   (ver console.log lá) ou em alguma outra re-renderização que redefine a aba.
-    //
-    // - Se o console mostrar: "handleTabChange: Tentando ir para 'editor'. Aba atual: 'editor'"
-    //   Então o PROBLEMA ESTÁ NO COMPONENTE BottomMenuBar. Ele está enviando o nome da aba
-    //   ATUAL ('editor') em vez do nome da aba de DESTINO ('extra').
-    //   Nesse caso, você PRECISA CORRIGIR o BottomMenuBar para que, ao clicar em "Extra",
-    //   ele chame props.onTabChange('extra').
-    console.log(`handleTabChange: Tentando ir para '${targetTab}'. Aba atual: '${activeTab}'`);
-
-    if (targetTab === 'hours') {
+  const handleTabChange = (tab: string) => {
+    if (tab === 'hours') {
       navigate('/hours');
-    } else if (targetTab === 'extra') {
-      // Se o BottomMenuBar (ou outra fonte) chamou com 'extra', definimos a aba ativa como 'extra'.
-      setActiveTab('extra');
-    } else if (targetTab === 'tco') {
-      // A função handleTCOClick já tem essa lógica, mas se for chamada diretamente por
-      // handleTabChange (ex: BottomMenuBar passa 'tco' diretamente), precisa da verificação.
+    } else if (tab === 'extra') {
+      // Se estiver na aba editor e clicar em extra, retorna para extra
+      if (activeTab === 'editor') {
+        setActiveTab('extra');
+      } else {
+        setActiveTab(tab);
+      }
+    } else if (tab === 'tco') {
       if (user.userType === "admin") {
-        setActiveTab(targetTab);
+        setActiveTab(tab);
       } else {
         toast({
           variant: "warning",
           title: "Funcionalidade Restrita",
           description: "O módulo TCO está em desenvolvimento e disponível apenas para administradores."
         });
-        return; // Impede a mudança de aba se não for admin e o alvo for 'tco'
+        return;
       }
     } else {
-      // Para todas as outras abas ('main', 'settings', 'notifications', 'travel', 'users', 'editor')
-      setActiveTab(targetTab);
+      setActiveTab(tab);
     }
   };
 
   useEffect(() => {
-    // Este useEffect sincroniza o activeTab com a prop initialActiveTab.
-    // Se initialActiveTab mudar DEPOIS da montagem inicial, activeTab será atualizado.
-    // Se, após handleTabChange definir a aba para 'extra', esta prop initialActiveTab
-    // for (ou mudar para) 'editor', ela pode reverter a mudança.
-    // Verifique se initialActiveTab está se comportando como esperado.
+    // Update activeTab when initialActiveTab prop changes
     if (initialActiveTab && initialActiveTab !== activeTab) {
-      console.log(`useEffect[initialActiveTab, activeTab]: initialActiveTab ('${initialActiveTab}') é diferente de activeTab ('${activeTab}'). Mudando activeTab para initialActiveTab ('${initialActiveTab}').`);
       setActiveTab(initialActiveTab);
     }
-  }, [initialActiveTab, activeTab]);
+  }, [initialActiveTab]);
 
   return (
     <div className="relative min-h-screen w-full flex flex-col">
@@ -230,15 +206,13 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
           <TabsContent value="extra">
             <div className="relative">
               <div className="absolute right-0 -top-14">
-                {/* Espaço para botões, se necessário */}
+                
               </div>
-              {user.userType === "admin" && (
-                <div className="fixed bottom-8 right-8 z-10">
-                  <Button onClick={handleEditorClick} className="fixed bottom-6 right-6 rounded-full p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] py-[26px] bg-green-500 hover:bg-green-400" aria-label="Adicionar ou editar horários">
+              {user.userType === "admin" && <div className="fixed bottom-8 right-8 z-10">
+                  <Button onClick={handleEditorClick} className="fixed bottom-6 right-6 rounded-full p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] py-[26px] bg-green-500 hover:bg-green-400">
                     <Plus className="h-8 w-8" />
                   </Button>
-                </div>
-              )}
+                </div>}
               <TimeSlotsList />
             </div>
           </TabsContent>
@@ -246,7 +220,7 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
           <TabsContent value="settings">
             <div className="relative">
               <div className="absolute right-0 -top-14">
-                <button onClick={handleBackClick} aria-label="Voltar para tela principal" className="p-2 rounded-full hover:bg-gray-200 transition-colors text-blue-600">
+                <button onClick={handleBackClick} aria-label="Voltar para home" className="p-2 rounded-full hover:bg-gray-200 transition-colors text-blue-600">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
@@ -275,15 +249,13 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
                       </div>
                       <p className="text-sm text-gray-600">Recarregar dados do sistema</p>
                     </button>
-                    {user.userType === "admin" && (
-                      <button onClick={() => setActiveTab("users")} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                    {user.userType === "admin" && <button onClick={() => setActiveTab("users")} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
                         <div className="flex items-center gap-3">
                           <Users className="h-5 w-5 text-gray-600" />
                           <h3 className="font-semibold text-gray-800">Usuários</h3>
                         </div>
                         <p className="text-sm text-gray-600">Gerenciar usuários do sistema</p>
-                      </button>
-                    )}
+                      </button>}
                     <button onClick={() => setShowLogoutDialog(true)} className="p-4 text-left bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                       <div className="flex items-center gap-3">
                         <LogOut className="h-5 w-5 text-red-500" />
@@ -311,7 +283,7 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
           <TabsContent value="users">
             <div className="relative">
               <div className="absolute right-0 -top-14">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para configurações">
+                <button onClick={() => setActiveTab("settings")} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para configurações">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
@@ -326,7 +298,7 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
           <TabsContent value="travel">
             <div className="relative">
               <div className="absolute right-0 -top-14">
-                <button onClick={handleBackClick} aria-label="Voltar para tela principal" className="p-2 rounded-full hover:bg-gray-200 transition-colors text-blue-600">
+                <button onClick={handleBackClick} aria-label="Voltar para home" className="p-2 rounded-full hover:bg-gray-200 transition-colors text-blue-600">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
@@ -355,7 +327,7 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
             <div className="flex flex-col flex-grow">
               <div className="relative">
                 <div className="absolute right-0 -top-14">
-                  <button onClick={handleBackClick} aria-label="Voltar para tela principal" className="p-2 rounded-full hover:bg-gray-200 transition-colors text-blue-600">
+                  <button onClick={handleBackClick} aria-label="Voltar para home" className="p-2 rounded-full hover:bg-gray-200 transition-colors text-blue-600">
                     <ArrowLeft className="h-6 w-6" />
                   </button>
                 </div>
@@ -372,7 +344,7 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
                   <TabsContent value="list" className="flex-grow">
                     <Card className="shadow-md">
                       <CardContent className="p-6 px-[9px]">
-                        <TCOmeus user={user} toast={toast} setSelectedTco={setSelectedTco} selectedTco={selectedTco} setTcoTab={setTcoTab} />
+                        <TCOmeus user={user} toast={toast} setSelectedTco={setSelectedTco} selectedTco={selectedTco} />
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -380,7 +352,7 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
                   <TabsContent value="form" className="flex-grow">
                     <Card className="shadow-md">
                       <CardContent className="p-6 px-0">
-                        <TCOForm selectedTco={selectedTco} onFormSubmit={() => setTcoTab("list")} />
+                        <TCOForm selectedTco={selectedTco} />
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -411,19 +383,7 @@ const Index = ({ initialActiveTab = "main" }: IndexProps) => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/*
-        CRUCIAL: Verifique a implementação do BottomMenuBar.
-        Para o botão "Extra", ele DEVE chamar props.onTabChange('extra').
-        Use o console.log em handleTabChange para verificar o valor recebido.
-        A função handleTCOClick é específica para o botão TCO se ele tiver lógica especial.
-        Os outros botões do BottomMenuBar devem chamar onTabChange com o nome da aba destino.
-      */}
-      <BottomMenuBar 
-        activeTab={activeTab} 
-        onTabChange={handleTabChange} 
-        onTCOClick={handleTCOClick} // Se o TCO tiver um handler dedicado no BottomMenuBar
-        isAdmin={user?.userType === 'admin'} 
-      />
+      <BottomMenuBar activeTab={activeTab} onTabChange={handleTabChange} isAdmin={user?.userType === 'admin'} />
     </div>
   );
 };
