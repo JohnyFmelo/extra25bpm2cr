@@ -26,9 +26,11 @@ import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
 import RankingChart from "@/components/RankingChart";
+
 interface IndexProps {
   initialActiveTab?: string;
 }
+
 const Index = ({
   initialActiveTab = "main"
 }: IndexProps) => {
@@ -52,6 +54,7 @@ const Index = ({
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
+
   useEffect(() => {
     const handleNotificationsChange = (count: number) => {
       setHasNotifications(count > 0);
@@ -69,6 +72,7 @@ const Index = ({
       window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     };
   }, [unreadCount]);
+
   useEffect(() => {
     const today = new Date();
     const travelsRef = collection(db, "travels");
@@ -88,6 +92,7 @@ const Index = ({
     });
     return () => unsubscribe();
   }, []);
+
   const handleRefresh = () => {
     window.location.reload();
     toast({
@@ -95,12 +100,15 @@ const Index = ({
       description: "Recarregando dados do sistema."
     });
   };
+
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
+
   const handleExtraClick = () => {
     setActiveTab("extra");
   };
+
   const handleBackClick = () => {
     if (activeTab === "editor") {
       setActiveTab("extra");
@@ -108,12 +116,15 @@ const Index = ({
       setActiveTab("main");
     }
   };
+
   const handleSettingsClick = () => {
     setActiveTab("settings");
   };
+
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
+
   const handleTCOClick = () => {
     if (user.userType === "admin") {
       setActiveTab("tco");
@@ -125,11 +136,13 @@ const Index = ({
       });
     }
   };
+
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
     setShowLogoutDialog(false);
   };
+
   const handleTabChange = (tab: string) => {
     if (tab === 'hours') {
       navigate('/hours');
@@ -155,12 +168,18 @@ const Index = ({
       setActiveTab(tab);
     }
   };
+
   useEffect(() => {
     // Update activeTab when initialActiveTab prop changes
     if (initialActiveTab && initialActiveTab !== activeTab) {
       setActiveTab(initialActiveTab);
     }
   }, [initialActiveTab]);
+
+  // Standardized class strings
+  const tabListClasses = "w-full flex gap-1 rounded-lg p-1 bg-slate-200 mb-4";
+  const tabTriggerClasses = "flex-1 text-center py-2.5 px-4 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-700 hover:bg-slate-300/70 data-[state=active]:hover:bg-blue-700/90";
+
   return <div className="relative min-h-screen w-full flex flex-col">
       <div className="flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow py-0">
@@ -295,9 +314,9 @@ const Index = ({
               <Card className="shadow-md">
                 <CardContent className="p-6 my-0 mx-0 px-[9px] py-[13px]">
                   <Tabs value={travelTab} onValueChange={setTravelTab} className="w-full">
-                    <TabsList className="w-full mb-6 justify-between py-[20px] my-[11px] bg-slate-400">
-                      <TabsTrigger value="trips" className="flex-1">Viagens</TabsTrigger>
-                      <TabsTrigger value="ranking" className="flex-1">Ranking</TabsTrigger>
+                    <TabsList className={tabListClasses}>
+                      <TabsTrigger value="trips" className={tabTriggerClasses}>Viagens</TabsTrigger>
+                      <TabsTrigger value="ranking" className={tabTriggerClasses}>Ranking</TabsTrigger>
                     </TabsList>
                     
                     <TabsContent value="trips" className="mt-0">
@@ -322,11 +341,20 @@ const Index = ({
                   </button>
                 </div>
                 <Tabs value={tcoTab} onValueChange={setTcoTab} className="space-y-6 flex flex-col flex-grow">
-                  <TabsList className="shadow-md rounded-lg p-4 flex justify-center gap-4 py-[24px] px-[6px] bg-gray-100">
-                    <TabsTrigger value="list" aria-label="Visualizar Meus TCOs" className="flex-1 py-3 px-4 rounded-md text-gray-800 font-medium bg-gray-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors text-center">
+                  <TabsList className={tabListClasses}>
+                    <TabsTrigger 
+                      value="list" 
+                      aria-label="Visualizar Meus TCOs" 
+                      className={tabTriggerClasses}
+                    >
                       Meus TCOs
                     </TabsTrigger>
-                    <TabsTrigger value="form" aria-label="Criar ou editar TCO" onClick={() => setSelectedTco(null)} className="flex-1 py-3 px-4 rounded-md text-gray-800 font-medium bg-gray-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-colors text-center">
+                    <TabsTrigger 
+                      value="form" 
+                      aria-label="Criar ou editar TCO" 
+                      onClick={() => setSelectedTco(null)} 
+                      className={tabTriggerClasses}
+                    >
                       Novo TCO
                     </TabsTrigger>
                   </TabsList>
