@@ -170,15 +170,13 @@ const Index = ({
 
           <TabsContent value="main" className="flex-grow">
             <div className="space-y-8">
-              {hasNotifications && <Card className="shadow-lg hover:shadow-xl transition-shadow border-l-4 border-orange-500 bg-orange-50">
-                  <CardContent className="p-8">
-                    <div className="flex items-center justify-center mb-4">
-                      <CalendarDays className="h-6 w-6 text-orange-600 mr-3" />
-                      <h3 className="text-2xl font-bold text-gray-900 text-center">🔔 Novas Notificações</h3>
+              {hasNotifications && <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
+                  <CardContent className="p-6">
+                    <div className="flex items-center mb-2">
+                      <CalendarDays className="h-5 w-5 text-amber-500 mr-2" />
+                      <h3 className="text-lg font-semibold text-gray-800">Notificações</h3>
                     </div>
-                    <div className="max-w-4xl mx-auto">
-                      <NotificationsList showOnlyUnread={true} showCloseButton={true} />
-                    </div>
+                    <NotificationsList showOnlyUnread={true} />
                   </CardContent>
                 </Card>}
               <MonthlyHoursSummary />

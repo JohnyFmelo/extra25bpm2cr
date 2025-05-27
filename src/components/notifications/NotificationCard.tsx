@@ -6,8 +6,7 @@ import { Timestamp } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronUp, Clock, User, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp, Clock, User } from "lucide-react";
 
 interface NotificationCardProps {
   notification: {
@@ -25,7 +24,6 @@ interface NotificationCardProps {
   isExpanded: boolean;
   onToggle: () => void;
   onMarkAsRead: () => void;
-  onClose?: () => void;
   onLongPress?: () => void;
   showActions?: boolean;
 }
@@ -36,7 +34,6 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
   isExpanded,
   onToggle,
   onMarkAsRead,
-  onClose,
   onLongPress,
   showActions = false
 }) => {
@@ -60,13 +57,6 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
     onToggle();
   };
 
-  const handleClose = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onClose) {
-      onClose();
-    }
-  };
-
   const handleMouseDown = () => {
     if (onLongPress && showActions) {
       setTimeout(onLongPress, 1000);
@@ -76,91 +66,79 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
   return (
     <Card 
       className={cn(
-        "transition-all duration-200 cursor-pointer hover:shadow-lg relative",
+        "transition-all duration-200 cursor-pointer hover:shadow-md",
         isUnread 
-          ? "bg-blue-50 border-blue-300 shadow-md border-2" 
-          : "bg-white border-gray-200 border",
-        isExpanded && "shadow-xl"
+          ? "bg-blue-50 border-blue-200 shadow-sm" 
+          : "bg-white border-gray-200",
+        isExpanded && "shadow-lg"
       )}
       onClick={handleClick}
       onMouseDown={handleMouseDown}
     >
-      {/* Close button */}
-      {onClose && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute top-2 right-2 h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600 z-10"
-          onClick={handleClose}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      )}
-
-      <CardContent className="p-6 pr-12">
-        <div className="space-y-4">
+      <CardContent className="p-4">
+        <div className="space-y-3">
           {/* Header */}
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="flex-shrink-0">
                 <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold",
+                  "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
                   notification.isAdmin 
-                    ? "bg-red-500 text-white" 
-                    : "bg-blue-500 text-white"
+                    ? "bg-red-100 text-red-700" 
+                    : "bg-blue-100 text-blue-700"
                 )}>
-                  <User className="w-5 h-5" />
+                  <User className="w-4 h-4" />
                 </div>
               </div>
               
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="font-bold text-gray-900 text-base">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium text-gray-900 text-sm">
                     {notification.graduation} {notification.senderName}
                   </span>
                   <Badge 
                     variant={notification.isAdmin ? "destructive" : "secondary"}
-                    className="text-xs font-semibold"
+                    className="text-xs"
                   >
                     {notification.isAdmin ? "Admin" : "Usuário"}
                   </Badge>
                   {isUnread && (
-                    <Badge className="text-xs bg-orange-500 hover:bg-orange-600 font-bold text-white">
-                      NOVA
+                    <Badge variant="default" className="text-xs bg-blue-500">
+                      Nova
                     </Badge>
                   )}
                 </div>
                 
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Clock className="w-4 h-4" />
-                  <span className="font-medium">{formatTimestamp(notification.timestamp)}</span>
+                <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                  <Clock className="w-3 h-3" />
+                  {formatTimestamp(notification.timestamp)}
                 </div>
               </div>
             </div>
 
-            <div className="flex-shrink-0 mt-1">
+            <div className="flex-shrink-0">
               {isExpanded ? (
-                <ChevronUp className="w-5 h-5 text-gray-500" />
+                <ChevronUp className="w-4 h-4 text-gray-400" />
               ) : (
-                <ChevronDown className="w-5 h-5 text-gray-500" />
+                <ChevronDown className="w-4 h-4 text-gray-400" />
               )}
             </div>
           </div>
 
           {/* Content */}
-          <div className="pl-13">
-            <div className={cn(
-              "text-base text-gray-800 leading-relaxed font-medium",
-              isExpanded ? "whitespace-pre-wrap" : "line-clamp-3"
+          <div className="pl-10">
+            <p className={cn(
+              "text-sm text-gray-700 leading-relaxed",
+              isExpanded ? "whitespace-pre-wrap" : "line-clamp-2"
             )}>
               {notification.text}
-            </div>
+            </p>
           </div>
 
           {/* Read count for admins */}
           {showActions && notification.readBy.length > 0 && isExpanded && (
-            <div className="pl-13 pt-3 border-t border-gray-200">
-              <p className="text-sm text-gray-600 font-medium">
+            <div className="pl-10 pt-2 border-t border-gray-100">
+              <p className="text-xs text-gray-500">
                 Visualizado por {notification.readBy.length} pessoa{notification.readBy.length !== 1 ? 's' : ''}
               </p>
             </div>
