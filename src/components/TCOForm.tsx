@@ -323,7 +323,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
       console.log('Generating PDF...');
       const pdfBlob = await generatePDF(tcoDataParaPDF);
-      const filename = generateTCOFilename(normalizeTcoNumber(tcoNumber), natureza);
+      const filename = generateTCOFilename(tcoDataParaPDF);
       
       console.log('Uploading PDF...');
       const { url, error: uploadError } = await uploadPDF(filename, pdfBlob);
