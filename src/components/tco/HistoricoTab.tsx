@@ -315,7 +315,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
               <Textarea 
                 id={`relatoTestemunha-${index}`} 
                 placeholder={`Descreva o relato da testemunha ${testemunha.nome}`} 
-                value={testemunha.relato || "RELATOU A TESTEMUNHA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO."} 
+                value={testemunha.relato || "A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO."} 
                 onChange={e => handleTestemunhaRelatoChange(index, e.target.value)} 
                 className="min-h-[150px]" 
               />
@@ -323,7 +323,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           ))
         }
         
-        {/* Keep the original witness field for backward compatibility if no individual witnesses */}
+        {/* Keep the original witness field for backward compatibility ONLY if no individual witnesses */}
         {validTestemunhas.length === 0 && (
           <div>
             <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
