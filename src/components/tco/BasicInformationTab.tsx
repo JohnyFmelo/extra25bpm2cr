@@ -25,7 +25,6 @@ interface BasicInformationTabProps {
   setJuizadoEspecialData: (value: string) => void;
   juizadoEspecialHora: string;
   setJuizadoEspecialHora: (value: string) => void;
-  existingTcos: any[];
 }
 
 const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
@@ -42,8 +41,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   juizadoEspecialData,
   setJuizadoEspecialData,
   juizadoEspecialHora,
-  setJuizadoEspecialHora,
-  existingTcos
+  setJuizadoEspecialHora
 }) => {
   const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(false);
@@ -63,10 +61,13 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   const checkDuplicateTco = async (tcoNum: string) => {
     setIsChecking(true);
     try {
-      // Busca nos TCOs existentes primeiro (mais rápido)
-      const existingTco = existingTcos.find(tco => tco.tcoNumber === tcoNum);
+      // Busca na coleção de TCOs
+      const tcosRef = collection(db, "tcos");
+      const q = query(tcosRef, where("tcoNumber", "==", tcoNum));
+      const querySnapshot = await getDocs(q);
       
-      if (existingTco) {
+      if (!querySnapshot.empty) {
+        const existingTco = querySnapshot.docs[0].data();
         const createdAt = existingTco.createdAt?.toDate?.() || new Date(existingTco.createdAt);
         const formattedDate = createdAt.toLocaleDateString('pt-BR');
         
@@ -75,23 +76,6 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
           title: "TCO Duplicado",
           description: `Já existe um TCO com a numeração ${tcoNum}. Registrado em ${formattedDate}, Natureza: ${existingTco.natureza || 'Não informada'}.`
         });
-      } else {
-        // Se não encontrou nos existentes, busca no Firebase como fallback
-        const tcosRef = collection(db, "tcos");
-        const q = query(tcosRef, where("tcoNumber", "==", tcoNum));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          const firebaseTco = querySnapshot.docs[0].data();
-          const createdAt = firebaseTco.createdAt?.toDate?.() || new Date(firebaseTco.createdAt);
-          const formattedDate = createdAt.toLocaleDateString('pt-BR');
-          
-          toast({
-            variant: "destructive",
-            title: "TCO Duplicado",
-            description: `Já existe um TCO com a numeração ${tcoNum}. Registrado em ${formattedDate}, Natureza: ${firebaseTco.natureza || 'Não informada'}.`
-          });
-        }
       }
     } catch (error) {
       console.error("Erro ao verificar TCO duplicado:", error);
@@ -99,6 +83,17 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       setIsChecking(false);
     }
   };
+
+  // Verifica duplicatas quando o número do TCO muda (com debounce)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (tcoNumber) {
+        checkDuplicateTco(tcoNumber);
+      }
+    }, 1000); // Aguarda 1 segundo após parar de digitar
+
+    return () => clearTimeout(timeoutId);
+  }, [tcoNumber]);
 
   return (
     <Card>
