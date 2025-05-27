@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -47,16 +46,19 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(false);
 
-  const handleTcoNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTcoNumberChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     // Permite apenas números
     const numericValue = value.replace(/[^0-9]/g, '');
     setTcoNumber(numericValue);
+
+    // Verifica duplicata imediatamente se tiver pelo menos 3 dígitos
+    if (numericValue && numericValue.length >= 3) {
+      await checkDuplicateTco(numericValue);
+    }
   };
 
   const checkDuplicateTco = async (tcoNum: string) => {
-    if (!tcoNum || tcoNum.length < 3) return; // Só verifica se tiver pelo menos 3 dígitos
-    
     setIsChecking(true);
     try {
       // Busca na coleção de TCOs
