@@ -114,6 +114,42 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   }[]>([]);
   const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
   
+  // Get valid victims (those with names)
+  const validVitimas = vitimas.filter(vitima => vitima.nome && vitima.nome.trim() !== "" && vitima.nome !== "O ESTADO");
+
+  // Get valid witnesses (those with names)
+  const validTestemunhas = testemunhas.filter(testemunha => 
+    testemunha.nome && 
+    testemunha.nome.trim() !== "" && 
+    testemunha.nome !== "Não informado."
+  );
+
+  console.log("Testemunhas array completo:", testemunhas);
+  console.log("Valid testemunhas encontradas:", validTestemunhas);
+  console.log("Número de testemunhas válidas:", validTestemunhas.length);
+
+  // Helper function to handle victim testimony changes
+  const handleVitimaRelatoChange = (index: number, value: string) => {
+    if (setVitimaRelato) {
+      setVitimaRelato(index, value);
+    }
+  };
+
+  // Helper function to handle victim representation changes
+  const handleVitimaRepresentacaoChange = (index: number, value: string) => {
+    if (setVitimaRepresentacao) {
+      setVitimaRepresentacao(index, value);
+    }
+  };
+
+  // Helper function to handle witness testimony changes
+  const handleTestemunhaRelatoChange = (index: number, value: string) => {
+    console.log(`Alterando relato da testemunha ${index}:`, value);
+    if (setTestemunhaRelato) {
+      setTestemunhaRelato(index, value);
+    }
+  };
+
   // Set default providencias text based on the case type
   useEffect(() => {
     if (!providencias || providencias === "Não informado.") {
@@ -230,40 +266,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     return name.slice(0, maxLength - 3) + "...";
   };
 
-  // Helper function to handle victim testimony changes
-  const handleVitimaRelatoChange = (index: number, value: string) => {
-    if (setVitimaRelato) {
-      setVitimaRelato(index, value);
-    }
-  };
-
-  // Helper function to handle victim representation changes
-  const handleVitimaRepresentacaoChange = (index: number, value: string) => {
-    if (setVitimaRepresentacao) {
-      setVitimaRepresentacao(index, value);
-    }
-  };
-
-  // Helper function to handle witness testimony changes
-  const handleTestemunhaRelatoChange = (index: number, value: string) => {
-    if (setTestemunhaRelato) {
-      setTestemunhaRelato(index, value);
-    }
-  };
-
-  // Get valid victims (those with names)
-  const validVitimas = vitimas.filter(vitima => vitima.nome && vitima.nome.trim() !== "" && vitima.nome !== "O ESTADO");
-
-  // Get valid witnesses (those with names) - FIX: Check for actual names, not empty strings
-  const validTestemunhas = testemunhas.filter(testemunha => 
-    testemunha.nome && 
-    testemunha.nome.trim() !== "" && 
-    testemunha.nome !== "Não informado."
-  );
-
-  console.log("Testemunhas array:", testemunhas);
-  console.log("Valid testemunhas:", validTestemunhas);
-
   return <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
         <h3 className="text-2xl font-semibold flex items-center">Histórico</h3>
@@ -314,21 +316,26 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           ))
         }
         
-        {/* Show individual witness testimony fields ONLY when we have valid witnesses with names */}
-        {validTestemunhas.length > 0 && 
-          validTestemunhas.map((testemunha, index) => (
-            <div key={`testemunha-relato-${index}`}>
-              <Label htmlFor={`relatoTestemunha-${index}`}>RELATO DA TESTEMUNHA {testemunha.nome}</Label>
-              <Textarea 
-                id={`relatoTestemunha-${index}`} 
-                placeholder={`Descreva o relato da testemunha ${testemunha.nome}`} 
-                value={testemunha.relato || "A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO."} 
-                onChange={e => handleTestemunhaRelatoChange(index, e.target.value)} 
-                className="min-h-[150px]" 
-              />
-            </div>
-          ))
-        }
+        {/* Show individual witness testimony fields when we have valid witnesses with names */}
+        {validTestemunhas.length > 0 && (
+          <div>
+            {validTestemunhas.map((testemunha, index) => {
+              console.log(`Renderizando campo para testemunha ${index}:`, testemunha.nome);
+              return (
+                <div key={`testemunha-relato-${index}`} className="mb-6">
+                  <Label htmlFor={`relatoTestemunha-${index}`}>RELATO DA TESTEMUNHA {testemunha.nome}</Label>
+                  <Textarea 
+                    id={`relatoTestemunha-${index}`} 
+                    placeholder={`Descreva o relato da testemunha ${testemunha.nome}`} 
+                    value={testemunha.relato || "A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO."} 
+                    onChange={e => handleTestemunhaRelatoChange(index, e.target.value)} 
+                    className="min-h-[150px]" 
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
         
         <div>
           <Label htmlFor="apreensoes">OBJETOS/DOCUMENTOS APREENDIDOS</Label>
