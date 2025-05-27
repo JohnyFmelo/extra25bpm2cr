@@ -13,6 +13,7 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF, generateTCOFilename } from "./tco/pdfGenerator";
 import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
+import { normalizeTcoNumber } from "../utils/tcoValidation";
 
 interface ComponenteGuarnicao {
   rg: string;
@@ -734,15 +735,20 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     const completionTime = completionNow.toTimeString().slice(0, 5);
 
     const autoresValidos = autores.filter(a => a.nome?.trim());
-    if (!tcoNumber.trim()) {
+    
+    // Normalizar o número do TCO para validação
+    const normalizedTcoNumber = normalizeTcoNumber(tcoNumber);
+    
+    if (!normalizedTcoNumber) {
       toast({
         title: "Campo Obrigatório",
-        description: "O número do TCO é obrigatório.",
+        description: "O número do TCO é obrigatório e deve conter pelo menos um dígito numérico.",
         className: "bg-red-600 text-white border-red-700",
         duration: 7000
       });
       return;
     }
+    
     if (natureza === "Selecione...") {
       toast({
         title: "Campo Obrigatório",
@@ -794,29 +800,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
     try {
       const displayNaturezaReal = natureza === "Outros" ? customNatureza.trim() : natureza;
-      const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc.trim() : indicios) : "";
-
-      const vitimasFiltradas = vitimas.filter(v => v.nome?.trim() || v.cpf?.trim());
-      const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim() || t.cpf?.trim());
-      const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
-      const userId = userInfo.id || null;
-      const userRegistration = userInfo.registration || "";
-      const imageBase64Array: { name: string; data: string }[] = [];
-      for (const file of imageFiles) {
-        try {
-          const base64Data = await fileToBase64(file);
-          imageBase64Array.push({ name: file.name, data: base64Data });
-        } catch (error) {
-          console.error(`Erro ao converter imagem ${file.name} para base64:`, error);
-          toast({
-            title: "Erro ao Processar Imagem",
-            description: `Não foi possível processar a imagem ${file.name}. Ela não será incluída.`,
-            className: "bg-red-600 text-white border-red-700",
-            duration: 7000
-          });
-        }
-      }
-
+      
       // Consolidate individual author testimonies for PDF
       const relatoAutorConsolidado = autoresValidos
         .filter(a => a.relato && a.relato.trim() !== "")
@@ -824,7 +808,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         .join('\n\n') || relatoAutor;
 
       const tcoDataParaPDF: any = {
-        tcoNumber: tcoNumber.trim(),
+        tcoNumber: normalizedTcoNumber, // Usar número normalizado para consultas
         natureza: displayNaturezaReal,
         originalNatureza: natureza,
         customNatureza: customNatureza.trim(),
@@ -895,8 +879,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       }
 
       const { url: downloadURL, error: uploadError } = await uploadPDF(filePath, pdfBlob, {
-        tcoNumber: tcoNumber.trim(),
-        natureza: displayNaturezaReal,
+        tcoNumber: normalizedTcoNumber, // Usar número normalizado para consultas
         createdBy: userId || 'anonimo',
       });
       
@@ -906,6 +889,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
       const tcoMetadata = {
         tconumber: tcoNumber.trim(), // Corrigido para corresponder ao nome no DB se for 'tconumber'
+        normalized_tconumber: normalizedTcoNumber, // Adiciona campo normalizado para consultas
         natureza: displayNaturezaReal,
         policiais: componentesValidos.map(p => ({
           nome: p.nome,
@@ -1296,31 +1280,3 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         </Card>
 
         <div className="flex justify-end mt-8 pt-6 border-t border-gray-300">
-          <Button
-            type="submit"
-            disabled={isSubmitting || hasMinorAuthor.isMinor}
-            size="lg"
-            className="min-w-[200px]"
-          >
-            {isSubmitting ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Processando...
-              </>
-            ) : (
-              <>
-                <FileText className="mr-2 h-5 w-5" />
-                Finalizar e Salvar TCO
-              </>
-            )}
-          </Button>
-        </div>
-      </form>
-    </div>
-  );
-};
-
-export default TCOForm;
