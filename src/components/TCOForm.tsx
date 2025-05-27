@@ -236,6 +236,14 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     }
   };
 
+  const handleTestemunhaRelatoChange = (index: number, relato: string) => {
+    const newTestemunhas = [...testemunhas];
+    if (newTestemunhas[index]) {
+      newTestemunhas[index] = { ...newTestemunhas[index], relato };
+      setTestemunhas(newTestemunhas);
+    }
+  };
+
   useEffect(() => {
     if (tcoNumber && !isTimerRunning) {
       setStartTime(new Date());
@@ -961,7 +969,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </div>
         )}
 
-        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0 px-0">
+        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Básicas do TCO</h2>
           <BasicInformationTab
             tcoNumber={tcoNumber}
@@ -1103,6 +1111,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
             vitimas={vitimas}
             setVitimaRelato={handleVitimaRelatoChange}
             setVitimaRepresentacao={handleVitimaRepresentacaoChange}
+            testemunhas={testemunhas}
+            setTestemunhaRelato={handleTestemunhaRelatoChange}
           />
         </div>
 
