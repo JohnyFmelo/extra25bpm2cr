@@ -21,7 +21,7 @@ interface PersonalInfo {
   celular: string;
   email: string;
   laudoPericial: string;
-  relato?: string; // Added for victim testimony
+  relato?: string; // Added for victim and witness testimony
   representacao?: string; // Added for victim representation
 }
 
@@ -149,7 +149,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <PersonalInfoFields data={testemunha} onChangeHandler={handleTestemunhaChange} prefix={`testemunha_${index}_`} index={index} />
+                  <PersonalInfoFields data={testemunha} onChangeHandler={handleTestemunhaChange} prefix={`testemunha_${index}_`} index={index} isWitness={true} />
                 </CardContent>
               </Card>)}
             

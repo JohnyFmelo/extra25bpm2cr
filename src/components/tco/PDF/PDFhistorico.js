@@ -1,4 +1,3 @@
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -309,16 +308,26 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         });
     }
 
-    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", historicoSectionNumber.toFixed(1), 2, data);
-    historicoSectionNumber += 0.1;
-    let relatoTestText = "Nenhuma testemunha identificada.";
-    if (primeiraTestemunha) {
-        relatoTestText = data.relatoTestemunha || "Relato não fornecido pela testemunha.";
-    }
-    yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-    if (primeiraTestemunha) {
-        yPos = addSignatureWithNameAndRole(doc, yPos, primeiraTestemunha?.nome, "TESTEMUNHA", data);
+    // Add individual witness testimony sections
+    if (testemunhasComRelato.length > 0) {
+        testemunhasComRelato.forEach((testemunha, index) => {
+            const tituloRelatoTestemunha = `RELATO DA TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
+            yPos = addSectionTitle(doc, yPos, tituloRelatoTestemunha, historicoSectionNumber.toFixed(1), 2, data);
+            historicoSectionNumber += 0.1;
+            
+            const relatoTestemunhaText = testemunha.relato || "Relato não fornecido pela testemunha.";
+            yPos = addWrappedText(doc, yPos, relatoTestemunhaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+            yPos = addSignatureWithNameAndRole(doc, yPos, testemunha.nome, "TESTEMUNHA", data);
+        });
     } else {
+        // Keep the old single witness section for backward compatibility
+        yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", historicoSectionNumber.toFixed(1), 2, data);
+        historicoSectionNumber += 0.1;
+        let relatoTestText = "Nenhuma testemunha identificada.";
+        if (data.relatoTestemunha) {
+            relatoTestText = data.relatoTestemunha;
+        }
+        yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
         yPos += 10;
     }
 

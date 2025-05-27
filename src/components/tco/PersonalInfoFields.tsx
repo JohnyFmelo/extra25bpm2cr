@@ -20,12 +20,14 @@ interface PersonalInfoFieldsProps {
     celular: string;
     email: string;
     laudoPericial: string; // Novo campo: "Sim" ou "Não"
+    relato?: string; // For victim and witness testimony
   };
   onChangeHandler: (index: number | null, field: string, value: string) => void;
   prefix?: string;
   index: number;
   isAuthor?: boolean;
   isVictim?: boolean; // Novo prop para Vítimas
+  isWitness?: boolean; // New prop for witnesses
 }
 const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
   data,
@@ -33,7 +35,8 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
   prefix = "",
   index,
   isAuthor = false,
-  isVictim = false
+  isVictim = false,
+  isWitness = false
 }) => {
   const [ageWarning, setAgeWarning] = useState<string | null>(null);
   const [cpfError, setCpfError] = useState<string | null>(null);
