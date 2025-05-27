@@ -1,10 +1,14 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TCOTimer from "./TCOTimer";
+import { useToast } from "@/hooks/use-toast";
+import { collection, query, getDocs, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
 interface BasicInformationTabProps {
   tcoNumber: string;
   setTcoNumber: (value: string) => void;
@@ -23,13 +27,12 @@ interface BasicInformationTabProps {
   juizadoEspecialHora: string;
   setJuizadoEspecialHora: (value: string) => void;
 }
+
 const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   tcoNumber,
   setTcoNumber,
   natureza,
   setNatureza,
-  // autor, // Props mantidas na interface, mas não usadas diretamente aqui
-  // setAutor,
   penaDescricao,
   naturezaOptions,
   customNatureza,
@@ -41,7 +44,57 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   juizadoEspecialHora,
   setJuizadoEspecialHora
 }) => {
-  return <Card>
+  const { toast } = useToast();
+  const [isChecking, setIsChecking] = useState(false);
+
+  const handleTcoNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Permite apenas números
+    const numericValue = value.replace(/[^0-9]/g, '');
+    setTcoNumber(numericValue);
+  };
+
+  const checkDuplicateTco = async (tcoNum: string) => {
+    if (!tcoNum || tcoNum.length < 3) return; // Só verifica se tiver pelo menos 3 dígitos
+    
+    setIsChecking(true);
+    try {
+      // Busca na coleção de TCOs
+      const tcosRef = collection(db, "tcos");
+      const q = query(tcosRef, where("tcoNumber", "==", tcoNum));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const existingTco = querySnapshot.docs[0].data();
+        const createdAt = existingTco.createdAt?.toDate?.() || new Date(existingTco.createdAt);
+        const formattedDate = createdAt.toLocaleDateString('pt-BR');
+        
+        toast({
+          variant: "destructive",
+          title: "TCO Duplicado",
+          description: `Já existe um TCO com a numeração ${tcoNum}. Registrado em ${formattedDate}, Natureza: ${existingTco.natureza || 'Não informada'}.`
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao verificar TCO duplicado:", error);
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  // Verifica duplicatas quando o número do TCO muda (com debounce)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (tcoNumber) {
+        checkDuplicateTco(tcoNumber);
+      }
+    }, 1000); // Aguarda 1 segundo após parar de digitar
+
+    return () => clearTimeout(timeoutId);
+  }, [tcoNumber]);
+
+  return (
+    <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -54,12 +107,25 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
         </div>
       </CardHeader>
       <CardContent className="px-[5px]">
-        <div className="space-y-4"> {/* Container principal para todos os campos, com espaçamento vertical */}
+        <div className="space-y-4">
           
           {/* Número do TCO */}
           <div>
             <Label htmlFor="tcoNumber">Número do TCO *</Label>
-            <Input id="tcoNumber" placeholder="Informe o número do TCO" value={tcoNumber} onChange={e => setTcoNumber(e.target.value)} />
+            <div className="relative">
+              <Input 
+                id="tcoNumber" 
+                placeholder="Informe o número do TCO (apenas números)" 
+                value={tcoNumber} 
+                onChange={handleTcoNumberChange}
+                className={isChecking ? "border-yellow-300" : ""}
+              />
+              {isChecking && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500"></div>
+                </div>
+              )}
+            </div>
           </div>
           
           {/* Natureza */}
@@ -70,40 +136,61 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
                 <SelectValue placeholder="Selecione a natureza" />
               </SelectTrigger>
               <SelectContent>
-                {naturezaOptions.map(option => <SelectItem key={option} value={option}>
+                {naturezaOptions.map(option => (
+                  <SelectItem key={option} value={option}>
                     {option}
-                  </SelectItem>)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
           {/* Natureza Personalizada */}
-          {natureza === "Outros" && <div>
+          {natureza === "Outros" && (
+            <div>
               <Label htmlFor="customNatureza">Especifique a Natureza *</Label>
-              <Input id="customNatureza" placeholder="Digite a natureza específica" value={customNatureza} onChange={e => setCustomNatureza(e.target.value)} />
-            </div>}
+              <Input 
+                id="customNatureza" 
+                placeholder="Digite a natureza específica" 
+                value={customNatureza} 
+                onChange={e => setCustomNatureza(e.target.value)} 
+              />
+            </div>
+          )}
 
           {/* Pena da Tipificação - Ocultada quando natureza é "Outros" */}
-          {penaDescricao && natureza !== "Outros" && <div>
+          {penaDescricao && natureza !== "Outros" && (
+            <div>
               <Label>Pena da Tipificação</Label>
               <Input readOnly value={penaDescricao} className="bg-gray-100" />
-            </div>}
+            </div>
+          )}
 
           {/* Apresentação em Juizado Especial VG */}
-          <div className="space-y-2"> {/* Cria um sub-grupo para o rótulo "Apresentação..." e seus campos, com um espaçamento interno menor */}
-            <Label>Apresentação em Juizado Especial VG</Label> {/* Rótulo principal da seção */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4"> {/* Grid para os campos Data e Hora */}
+          <div className="space-y-2">
+            <Label>Apresentação em Juizado Especial VG</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
               
               {/* Campo Data */}
-              <div className="space-y-1"> {/* Agrupa o rótulo "Data" com seu input */}
+              <div className="space-y-1">
                 <Label htmlFor="juizadoData">Data</Label>
-                <Input id="juizadoData" type="date" value={juizadoEspecialData} onChange={e => setJuizadoEspecialData(e.target.value)} />
+                <Input 
+                  id="juizadoData" 
+                  type="date" 
+                  value={juizadoEspecialData} 
+                  onChange={e => setJuizadoEspecialData(e.target.value)} 
+                />
               </div>
               
               {/* Campo Hora */}
-              <div className="space-y-1"> {/* Agrupa o rótulo "Hora" com seu input */}
+              <div className="space-y-1">
                 <Label htmlFor="juizadoHora">Hora</Label>
-                <Input id="juizadoHora" type="time" value={juizadoEspecialHora} onChange={e => setJuizadoEspecialHora(e.target.value)} />
+                <Input 
+                  id="juizadoHora" 
+                  type="time" 
+                  value={juizadoEspecialHora} 
+                  onChange={e => setJuizadoEspecialHora(e.target.value)} 
+                />
               </div>
             </div>
           </div>
@@ -112,6 +199,8 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       <CardFooter className="flex justify-between">
         {/* Conteúdo do rodapé, se houver */}
       </CardFooter>
-    </Card>;
+    </Card>
+  );
 };
+
 export default BasicInformationTab;
