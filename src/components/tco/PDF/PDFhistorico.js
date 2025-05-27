@@ -274,7 +274,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
     const primeiroAutor = data.autores && data.autores.length > 0 ? data.autores.find(a => a?.nome) : null;
     const vitimasComRelato = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome) : []) : [];
-    const primeiraTestemunha = data.testemunhas && data.testemunhas.length > 0 ? data.testemunhas.find(t => t?.nome) : null;
+    const testemunhasComRelato = data.testemunhas ? data.testemunhas.filter(t => t?.nome) : [];
 
     // Calcular numeração das seções de histórico
     let historicoSectionNumber = 3.1;
