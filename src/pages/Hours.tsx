@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,6 @@ import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
@@ -23,10 +21,10 @@ const Hours = () => {
   const [userData, setUserData] = useState<any>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [activeConsult, setActiveConsult] = useState<'individual' | 'general'>('individual');
-  
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const navigate = useNavigate();
-  
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
     setUserData(storedUser);
@@ -39,13 +37,11 @@ const Hours = () => {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
-  
   useEffect(() => {
     if (userData?.userType === 'admin') {
       fetchUsersList();
     }
   }, [userData?.userType]);
-  
   const fetchUsersList = async () => {
     try {
       const fetchedUsers = await fetchAllUsers();
@@ -59,7 +55,6 @@ const Hours = () => {
       });
     }
   };
-  
   const handleConsult = async () => {
     if (!userData?.registration) {
       toast({
@@ -104,7 +99,6 @@ const Hours = () => {
       setLoading(false);
     }
   };
-  
   const handleGeneralConsult = async () => {
     if (!selectedGeneralMonth) {
       toast({
@@ -180,7 +174,6 @@ const Hours = () => {
       setLoadingGeneral(false);
     }
   };
-  
   const getSelectedMonthYear = (selectedMonth: string) => {
     const monthMap: {
       [key: string]: number;
@@ -202,9 +195,7 @@ const Hours = () => {
     const year = new Date().getFullYear();
     return `${month}/${year}`;
   };
-  
-  return (
-    <div className="bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
+  return <div className="bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
       <div className="pb-2 flex flex-col flex-grow w-full">
         <Tabs defaultValue="hours" className="space-y-6 flex flex-col flex-grow">
           <TabsList className="hidden">
@@ -212,13 +203,7 @@ const Hours = () => {
           </TabsList>
 
           <TabsContent value="hours" className="flex-grow">
-            <div className="relative h-12">
-              <div className="absolute right-0 top-0">
-                <button onClick={() => navigate('/')} className="p-2 rounded-full hover:bg-white/80 transition-colors text-primary" aria-label="Voltar para home">
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
+            
 
             <Tabs defaultValue="individual" value={activeConsult} onValueChange={value => setActiveConsult(value as 'individual' | 'general')} className="w-full flex-grow">
               <TabsList className="grid w-full grid-cols-2 bg-white/50 rounded-xl mb-6">
@@ -283,8 +268,6 @@ const Hours = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Hours;
