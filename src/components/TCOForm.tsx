@@ -244,6 +244,14 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     }
   };
 
+  const handleAutorRelatoChange = (index: number, relato: string) => {
+    const newAutores = [...autores];
+    if (newAutores[index]) {
+      newAutores[index] = { ...newAutores[index], relato };
+      setAutores(newAutores);
+    }
+  };
+
   useEffect(() => {
     if (tcoNumber && !isTimerRunning) {
       setStartTime(new Date());
@@ -406,6 +414,36 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       setAutor(currentFirstAutorName);
     }
   }, [autores, autor]);
+
+  useEffect(() => {
+    const updatedAutores = autores.map(autor => {
+      if (autor.nome.trim() !== "" && !autor.relato) {
+        const sexo = autor.sexo.toLowerCase();
+        const pronome = sexo === "feminino" ? "A AUTORA" : "O AUTOR";
+        return {
+          ...autor,
+          relato: `${pronome} DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.`
+        };
+      }
+      return autor;
+    });
+    
+    const hasChanges = updatedAutores.some((autor, index) => autor.relato !== autores[index].relato);
+    if (hasChanges) {
+      setAutores(updatedAutores);
+    }
+  }, [autores]);
+
+  useEffect(() => {
+    const autoresComRelato = autores.filter(a => a.nome.trim() !== "" && a.relato);
+    if (autoresComRelato.length > 0) {
+      const relatosConsolidados = autoresComRelato.map(a => a.relato).join('\n\n');
+      setRelatoAutor(relatosConsolidados);
+    } else {
+      const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
+      setRelatoAutor(novoRelatoAutor);
+    }
+  }, [autores]);
 
   const handleAddPolicialToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
     const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
@@ -779,6 +817,12 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         }
       }
 
+      // Consolidate individual author testimonies for PDF
+      const relatoAutorConsolidado = autoresValidos
+        .filter(a => a.relato && a.relato.trim() !== "")
+        .map(a => a.relato)
+        .join('\n\n') || relatoAutor;
+
       const tcoDataParaPDF: any = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaReal,
@@ -803,7 +847,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         operacao: operacao.trim(),
         componentesGuarnicao: componentesValidos,
         relatoPolicial: relatoPolicial.trim(),
-        relatoAutor: relatoAutor.trim(),
+        relatoAutor: relatoAutorConsolidado.trim(),
         relatoTestemunha: relatoTestemunha.trim(),
         apreensoes: apreensoes.trim(),
         conclusaoPolicial: conclusaoPolicial.trim(),
@@ -811,7 +855,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         drogaQuantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : undefined,
         drogaTipo: natureza === "Porte de drogas para consumo" ? substancia : undefined,
         drogaCor: natureza === "Porte de drogas para consumo" ? cor : undefined,
-        drogaOdor: natureza === "Porte de drogas para consumo" ? odor : undefined, // Added odor property
+        drogaOdor: natureza === "Porte de drogas para consumo" ? odor : undefined,
         drogaNomeComum: natureza === "Porte de drogas para consumo" ? indicioFinalDroga : undefined,
         drogaCustomDesc: natureza === "Porte de drogas para consumo" && isUnknownMaterial ? customMaterialDesc.trim() : undefined,
         drogaIsUnknown: natureza === "Porte de drogas para consumo" ? isUnknownMaterial : undefined,
@@ -1113,6 +1157,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
             setVitimaRepresentacao={handleVitimaRepresentacaoChange}
             testemunhas={testemunhas}
             setTestemunhaRelato={handleTestemunhaRelatoChange}
+            autores={autores}
+            setAutorRelato={handleAutorRelatoChange}
           />
         </div>
 

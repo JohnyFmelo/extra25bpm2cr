@@ -71,6 +71,25 @@ interface HistoricoTabProps {
     relato?: string;
   }[];
   setTestemunhaRelato?: (index: number, relato: string) => void;
+  // Add new props for handling multiple authors
+  autores?: {
+    nome: string;
+    sexo: string;
+    estadoCivil: string;
+    profissao: string;
+    endereco: string;
+    dataNascimento: string;
+    naturalidade: string;
+    filiacaoMae: string;
+    filiacaoPai: string;
+    rg: string;
+    cpf: string;
+    celular: string;
+    email: string;
+    laudoPericial: string;
+    relato?: string;
+  }[];
+  setAutorRelato?: (index: number, relato: string) => void;
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
@@ -103,7 +122,9 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   setVitimaRelato,
   setVitimaRepresentacao,
   testemunhas = [],
-  setTestemunhaRelato
+  setTestemunhaRelato,
+  autores = [],
+  setAutorRelato
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
@@ -124,9 +145,16 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     testemunha.nome !== "Não informado."
   );
 
-  console.log("Testemunhas array completo:", testemunhas);
-  console.log("Valid testemunhas encontradas:", validTestemunhas);
-  console.log("Número de testemunhas válidas:", validTestemunhas.length);
+  // Get valid authors (those with names)
+  const validAutores = autores.filter(autor => 
+    autor.nome && 
+    autor.nome.trim() !== "" && 
+    autor.nome !== "Não informado."
+  );
+
+  console.log("Autores array completo:", autores);
+  console.log("Valid autores encontrados:", validAutores);
+  console.log("Número de autores válidos:", validAutores.length);
 
   // Helper function to handle victim testimony changes
   const handleVitimaRelatoChange = (index: number, value: string) => {
@@ -147,6 +175,14 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     console.log(`Alterando relato da testemunha ${index}:`, value);
     if (setTestemunhaRelato) {
       setTestemunhaRelato(index, value);
+    }
+  };
+
+  // Helper function to handle author testimony changes
+  const handleAutorRelatoChange = (index: number, value: string) => {
+    console.log(`Alterando relato do autor ${index}:`, value);
+    if (setAutorRelato) {
+      setAutorRelato(index, value);
     }
   };
 
@@ -276,10 +312,26 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea id="relatoPolicial" placeholder="Descreva o relato policial" value={relatoPolicial} onChange={e => setRelatoPolicial(e.target.value)} className="min-h-[150px]" />
         </div>
         
-        <div>
-          <Label htmlFor="relatoAutor">RELATO DO AUTOR</Label>
-          <Textarea id="relatoAutor" placeholder="Descreva o relato do autor" value={relatoAutor} onChange={e => setRelatoAutor(e.target.value)} className="min-h-[150px]" />
-        </div>
+        {/* Show individual author testimony fields when we have valid authors with names */}
+        {validAutores.length > 0 && (
+          <div>
+            {validAutores.map((autor, index) => {
+              console.log(`Renderizando campo para autor ${index}:`, autor.nome);
+              return (
+                <div key={`autor-relato-${index}`} className="mb-6">
+                  <Label htmlFor={`relatoAutor-${index}`}>RELATO DO AUTOR {autor.nome}</Label>
+                  <Textarea 
+                    id={`relatoAutor-${index}`} 
+                    placeholder={`Descreva o relato do autor ${autor.nome}`} 
+                    value={autor.relato || "O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO."} 
+                    onChange={e => handleAutorRelatoChange(index, e.target.value)} 
+                    className="min-h-[150px]" 
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
         
         {/* Only show victim fields if it's NOT a drug case AND we have valid victims */}
         {!isDrugCase && validVitimas.length > 0 && 
