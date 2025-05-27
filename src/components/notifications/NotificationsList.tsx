@@ -70,6 +70,10 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
       await updateDoc(notifRef, {
         readBy: arrayUnion(currentUser.id)
       });
+      toast({
+        title: "Sucesso",
+        description: "Notificação marcada como lida."
+      });
     } catch (error) {
       console.error("Error marking notification as read:", error);
       toast({
@@ -77,6 +81,15 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
         title: "Erro",
         description: "Não foi possível marcar como lido."
       });
+    }
+  };
+
+  const handleCloseNotification = async (notificationId: string) => {
+    try {
+      await handleMarkAsRead(notificationId);
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    } catch (error) {
+      console.error("Error closing notification:", error);
     }
   };
   
@@ -135,17 +148,17 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
 
   if (notifications.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <span className="text-2xl">📫</span>
+      <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-50 rounded-lg mx-4">
+        <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+          <span className="text-3xl">📬</span>
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <h3 className="text-xl font-semibold text-gray-900 mb-3">
           {showOnlyUnread ? "Nenhuma notificação nova" : "Nenhuma notificação"}
         </h3>
-        <p className="text-gray-500 text-sm">
+        <p className="text-gray-600 text-base max-w-md">
           {showOnlyUnread 
-            ? "Você está em dia com suas notificações!" 
-            : "Ainda não há notificações para exibir."
+            ? "Você está em dia com suas notificações! Continue assim." 
+            : "Ainda não há notificações para exibir. Elas aparecerão aqui quando chegarem."
           }
         </p>
       </div>
@@ -153,9 +166,9 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
   }
   
   return (
-    <div className="space-y-4">
+    <div className="w-full max-w-4xl mx-auto px-4">
       <ScrollArea className="h-full">
-        <div className="space-y-3">
+        <div className="space-y-4 py-2">
           {notifications.map(notification => {
             const isUnread = !notification.readBy.includes(currentUser.id);
             const isExpanded = expandedId === notification.id;
@@ -172,6 +185,7 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
                   setSelectedNotification(notification.id);
                   setDeleteDialogOpen(true);
                 }}
+                onClose={() => handleCloseNotification(notification.id)}
                 showActions={isAdmin}
               />
             );

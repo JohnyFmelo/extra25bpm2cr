@@ -1,149 +1,172 @@
 
-import React from "react";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Timestamp } from "firebase/firestore";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { Clock, X, User, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronUp, Clock, User } from "lucide-react";
+import { Timestamp } from "firebase/firestore";
+
+interface Notification {
+  id: string;
+  text: string;
+  timestamp: Timestamp | null;
+  senderName: string;
+  graduation: string;
+  isAdmin: boolean;
+  readBy: string[];
+  type: 'all' | 'individual';
+  recipientId: string | null;
+}
 
 interface NotificationCardProps {
-  notification: {
-    id: string;
-    text: string;
-    timestamp: Timestamp | null;
-    senderName: string;
-    graduation: string;
-    isAdmin: boolean;
-    readBy: string[];
-    type: 'all' | 'individual';
-    recipientId: string | null;
-  };
+  notification: Notification;
   isUnread: boolean;
   isExpanded: boolean;
   onToggle: () => void;
   onMarkAsRead: () => void;
-  onLongPress?: () => void;
-  showActions?: boolean;
+  onLongPress: () => void;
+  showActions: boolean;
+  onClose?: () => void;
 }
 
-const NotificationCard: React.FC<NotificationCardProps> = ({
+const NotificationCard = ({
   notification,
   isUnread,
   isExpanded,
   onToggle,
   onMarkAsRead,
   onLongPress,
-  showActions = false
-}) => {
-  const formatTimestamp = (timestamp: Timestamp | null) => {
-    if (!timestamp) return "Data desconhecida";
-    
-    try {
-      return formatDistanceToNow(timestamp.toDate(), {
-        addSuffix: true,
-        locale: ptBR
-      });
-    } catch (error) {
-      return "Data inválida";
-    }
-  };
-
-  const handleClick = () => {
-    if (isUnread) {
-      onMarkAsRead();
-    }
-    onToggle();
-  };
+  showActions,
+  onClose
+}: NotificationCardProps) => {
+  const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
 
   const handleMouseDown = () => {
-    if (onLongPress && showActions) {
-      setTimeout(onLongPress, 1000);
+    const timer = setTimeout(() => {
+      onLongPress();
+    }, 800);
+    setPressTimer(timer);
+  };
+
+  const handleMouseUp = () => {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      setPressTimer(null);
+    }
+  };
+
+  const formatTimestamp = (timestamp: Timestamp | null) => {
+    if (!timestamp) return "Data indisponível";
+    
+    try {
+      const date = timestamp.toDate();
+      const now = new Date();
+      const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+      
+      if (diffInHours < 1) {
+        const minutes = Math.floor(diffInHours * 60);
+        return minutes <= 1 ? "Agora" : `${minutes}min atrás`;
+      } else if (diffInHours < 24) {
+        return `${Math.floor(diffInHours)}h atrás`;
+      } else {
+        return date.toLocaleDateString('pt-BR');
+      }
+    } catch (error) {
+      return "Data indisponível";
+    }
+  };
+
+  const handleClose = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onClose) {
+      onClose();
     }
   };
 
   return (
     <Card 
-      className={cn(
-        "transition-all duration-200 cursor-pointer hover:shadow-md",
-        isUnread 
-          ? "bg-blue-50 border-blue-200 shadow-sm" 
-          : "bg-white border-gray-200",
-        isExpanded && "shadow-lg"
-      )}
-      onClick={handleClick}
+      className={`
+        relative transition-all duration-200 cursor-pointer border-l-4 hover:shadow-md
+        ${isUnread 
+          ? 'border-l-blue-500 bg-blue-50 shadow-sm' 
+          : 'border-l-gray-300 bg-white'
+        }
+        ${isExpanded ? 'shadow-lg' : ''}
+      `}
       onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onClick={onToggle}
     >
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="flex-shrink-0">
-                <div className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                  notification.isAdmin 
-                    ? "bg-red-100 text-red-700" 
-                    : "bg-blue-100 text-blue-700"
-                )}>
-                  <User className="w-4 h-4" />
-                </div>
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-gray-900 text-sm">
-                    {notification.graduation} {notification.senderName}
-                  </span>
-                  <Badge 
-                    variant={notification.isAdmin ? "destructive" : "secondary"}
-                    className="text-xs"
-                  >
-                    {notification.isAdmin ? "Admin" : "Usuário"}
-                  </Badge>
-                  {isUnread && (
-                    <Badge variant="default" className="text-xs bg-blue-500">
-                      Nova
-                    </Badge>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                  <Clock className="w-3 h-3" />
-                  {formatTimestamp(notification.timestamp)}
-                </div>
-              </div>
-            </div>
+      {/* Botão de fechar */}
+      {onClose && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-2 right-2 h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600 z-10"
+          onClick={handleClose}
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      )}
 
-            <div className="flex-shrink-0">
-              {isExpanded ? (
-                <ChevronUp className="w-4 h-4 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-gray-400" />
-              )}
-            </div>
+      <CardContent className="p-4 pr-10">
+        {/* Header da notificação */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            {notification.isAdmin ? (
+              <Shield className="h-4 w-4 text-red-500" />
+            ) : (
+              <User className="h-4 w-4 text-blue-500" />
+            )}
+            <span className="font-semibold text-gray-900 text-sm">
+              {notification.graduation} {notification.senderName}
+            </span>
+            {isUnread && (
+              <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+            )}
           </div>
+          
+          <div className="flex items-center gap-1 text-xs text-gray-500">
+            <Clock className="h-3 w-3" />
+            {formatTimestamp(notification.timestamp)}
+          </div>
+        </div>
 
-          {/* Content */}
-          <div className="pl-10">
-            <p className={cn(
-              "text-sm text-gray-700 leading-relaxed",
-              isExpanded ? "whitespace-pre-wrap" : "line-clamp-2"
-            )}>
+        {/* Conteúdo da mensagem */}
+        <div className="text-gray-800 text-sm leading-relaxed">
+          {isExpanded ? (
+            <p className="whitespace-pre-wrap break-words">{notification.text}</p>
+          ) : (
+            <p className="line-clamp-2 whitespace-pre-wrap break-words">
               {notification.text}
             </p>
-          </div>
-
-          {/* Read count for admins */}
-          {showActions && notification.readBy.length > 0 && isExpanded && (
-            <div className="pl-10 pt-2 border-t border-gray-100">
-              <p className="text-xs text-gray-500">
-                Visualizado por {notification.readBy.length} pessoa{notification.readBy.length !== 1 ? 's' : ''}
-              </p>
-            </div>
           )}
         </div>
+
+        {/* Ações */}
+        {isExpanded && (
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
+            <div className="flex gap-2">
+              {isUnread && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkAsRead();
+                  }}
+                  className="text-xs"
+                >
+                  Marcar como lida
+                </Button>
+              )}
+            </div>
+            
+            <div className="text-xs text-gray-500">
+              {notification.type === 'individual' ? 'Mensagem pessoal' : 'Mensagem geral'}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

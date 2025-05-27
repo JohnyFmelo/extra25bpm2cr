@@ -10,13 +10,14 @@ interface NotificationsDialogProps {
 const NotificationsDialog = ({ open, onOpenChange }: NotificationsDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-gray-900">
-            Mensagens
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] flex flex-col p-6">
+        <DialogHeader className="pb-4 border-b border-gray-200">
+          <DialogTitle className="text-2xl font-bold text-gray-900 text-center">
+            📢 Central de Mensagens
           </DialogTitle>
         </DialogHeader>
-        <div className="overflow-y-auto flex-grow p-2">
+        
+        <div className="flex-1 overflow-hidden mt-4">
           <NotificationsList showOnlyUnread={false} />
         </div>
       </DialogContent>
