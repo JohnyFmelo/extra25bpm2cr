@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -149,7 +148,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <PersonalInfoFields data={testemunha} onChangeHandler={handleTestemunhaChange} prefix={`testemunha_${index}_`} index={index} />
+                  <PersonalInfoFields data={testemunha} onChangeHandler={handleTestemunhaChange} prefix={`testemunha_${index}_`} index={index} isWitness={true} />
                 </CardContent>
               </Card>)}
             
