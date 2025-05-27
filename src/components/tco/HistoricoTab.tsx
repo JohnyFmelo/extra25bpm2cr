@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +32,7 @@ interface HistoricoTabProps {
   documentosAnexos: string;
   setDocumentosAnexos: (value: string) => void;
   lacreNumero?: string;
+  // Add new props for handling multiple victims
   vitimas?: {
     nome: string;
     sexo: string;
@@ -49,26 +51,8 @@ interface HistoricoTabProps {
     relato?: string;
     representacao?: string;
   }[];
-  testemunhas?: {
-    nome: string;
-    sexo: string;
-    estadoCivil: string;
-    profissao: string;
-    endereco: string;
-    dataNascimento: string;
-    naturalidade: string;
-    filiacaoMae: string;
-    filiacaoPai: string;
-    rg: string;
-    cpf: string;
-    celular: string;
-    email: string;
-    laudoPericial: string;
-    relato?: string;
-  }[];
   setVitimaRelato?: (index: number, relato: string) => void;
   setVitimaRepresentacao?: (index: number, representacao: string) => void;
-  setTestemunhaRelato?: (index: number, relato: string) => void;
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
@@ -98,10 +82,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   setDocumentosAnexos,
   lacreNumero = "",
   vitimas = [],
-  testemunhas = [],
   setVitimaRelato,
-  setVitimaRepresentacao,
-  setTestemunhaRelato
+  setVitimaRepresentacao
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
@@ -242,16 +224,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     }
   };
 
-  // Helper function to handle witness testimony changes
-  const handleTestemunhaRelatoChange = (index: number, value: string) => {
-    if (setTestemunhaRelato) {
-      setTestemunhaRelato(index, value);
-    }
-  };
-
-  // Get valid victims and witnesses
+  // Get valid victims (those with names)
   const validVitimas = vitimas.filter(vitima => vitima.nome && vitima.nome.trim() !== "" && vitima.nome !== "O ESTADO");
-  const validTestemunhas = testemunhas.filter(testemunha => testemunha.nome && testemunha.nome.trim() !== "");
 
   return <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
@@ -303,31 +277,10 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           ))
         }
         
-        {/* Testemunhas section - now individual */}
-        {validTestemunhas.length > 0 && 
-          validTestemunhas.map((testemunha, index) => (
-            <div key={`testemunha-relato-${index}`} className="space-y-4">
-              <div>
-                <Label htmlFor={`relatoTestemunha-${index}`}>RELATO DA TESTEMUNHA {testemunha.nome}</Label>
-                <Textarea 
-                  id={`relatoTestemunha-${index}`} 
-                  placeholder={`Descreva o relato da testemunha ${testemunha.nome}`} 
-                  value={testemunha.relato || "RELATOU A TESTEMUNHA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO."} 
-                  onChange={e => handleTestemunhaRelatoChange(index, e.target.value)} 
-                  className="min-h-[150px]" 
-                />
-              </div>
-            </div>
-          ))
-        }
-
-        {/* Fallback for old single witness field if no individual witnesses */}
-        {validTestemunhas.length === 0 && (
-          <div>
-            <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
-            <Textarea id="relatoTestemunha" placeholder="Descreva o relato da testemunha" value={relatoTestemunha} onChange={e => setRelatoTestemunha(e.target.value)} className="min-h-[150px]" />
-          </div>
-        )}
+        <div>
+          <Label htmlFor="relatoTestemunha">RELATO DA TESTEMUNHA</Label>
+          <Textarea id="relatoTestemunha" placeholder="Descreva o relato da testemunha" value={relatoTestemunha} onChange={e => setRelatoTestemunha(e.target.value)} className="min-h-[150px]" />
+        </div>
         
         <div>
           <Label htmlFor="apreensoes">OBJETOS/DOCUMENTOS APREENDIDOS</Label>

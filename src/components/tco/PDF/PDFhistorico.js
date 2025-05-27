@@ -1,3 +1,4 @@
+
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -226,14 +227,12 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     }
 
     const testemunhasValidas = data.testemunhas ? data.testemunhas.filter(t => t?.nome) : [];
+    const testemunhaTitle = testemunhasValidas.length === 1 ? "TESTEMUNHA" : "TESTEMUNHAS";
+    yPos = addSectionTitle(doc, yPos, testemunhaTitle, currentSectionNumber.toFixed(1), 2, data);
+    currentSectionNumber += 0.1;
     
     if (testemunhasValidas.length > 0) {
-        // Adicionar cada testemunha individualmente com sua própria seção
         testemunhasValidas.forEach((testemunha, index) => {
-            const testemunhaTitle = `TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
-            yPos = addSectionTitle(doc, yPos, testemunhaTitle, currentSectionNumber.toFixed(1), 2, data);
-            currentSectionNumber += 0.1;
-            
             const upperTestemunha = {
                 ...testemunha,
                 nome: testemunha.nome ? testemunha.nome.toUpperCase() : 'NÃO INFORMADO',
@@ -249,7 +248,12 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 celular: testemunha.celular ? testemunha.celular.toUpperCase() : 'NÃO INFORMADO',
                 email: testemunha.email ? testemunha.email.toUpperCase() : 'NÃO INFORMADO',
             };
-            
+            if (index > 0) {
+                yPos += 3; yPos = checkPageBreak(doc, yPos, 5, data);
+                doc.setLineWidth(0.1); doc.setDrawColor(150);
+                doc.line(MARGIN_LEFT, yPos - 1, PAGE_WIDTH - MARGIN_RIGHT, yPos - 1);
+                doc.setDrawColor(0); yPos += 2;
+            }
             yPos = addField(doc, yPos, "NOME", upperTestemunha.nome, data);
             yPos = addField(doc, yPos, "SEXO", upperTestemunha.sexo, data);
             yPos = addField(doc, yPos, "ESTADO CIVIL", upperTestemunha.estadoCivil, data);
@@ -263,15 +267,8 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             yPos = addField(doc, yPos, "CPF", upperTestemunha.cpf, data);
             yPos = addField(doc, yPos, "CELULAR", upperTestemunha.celular, data);
             yPos = addField(doc, yPos, "E-MAIL", upperTestemunha.email, data);
-            
-            if (index < testemunhasValidas.length - 1) {
-                yPos += 5; // Espaço entre testemunhas
-            }
         });
     } else {
-        const testemunhaTitle = "TESTEMUNHAS";
-        yPos = addSectionTitle(doc, yPos, testemunhaTitle, currentSectionNumber.toFixed(1), 2, data);
-        currentSectionNumber += 0.1;
         yPos = addWrappedText(doc, yPos, "Nenhuma testemunha informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
         yPos += 2;
     }
@@ -312,32 +309,17 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         });
     }
 
-    // Relatos individuais das testemunhas
-    if (testemunhasValidas.length > 0) {
-        testemunhasValidas.forEach((testemunha, index) => {
-            const tituloRelatoTestemunha = `RELATO DA TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
-            yPos = addSectionTitle(doc, yPos, tituloRelatoTestemunha, historicoSectionNumber.toFixed(1), 2, data);
-            historicoSectionNumber += 0.1;
-            
-            const relatoTestemunhaText = testemunha.relato || "Relato não fornecido pela testemunha.";
-            yPos = addWrappedText(doc, yPos, relatoTestemunhaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-            yPos = addSignatureWithNameAndRole(doc, yPos, testemunha.nome, "TESTEMUNHA", data);
-        });
+    yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", historicoSectionNumber.toFixed(1), 2, data);
+    historicoSectionNumber += 0.1;
+    let relatoTestText = "Nenhuma testemunha identificada.";
+    if (primeiraTestemunha) {
+        relatoTestText = data.relatoTestemunha || "Relato não fornecido pela testemunha.";
+    }
+    yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    if (primeiraTestemunha) {
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiraTestemunha?.nome, "TESTEMUNHA", data);
     } else {
-        // Fallback para relato único de testemunha (compatibilidade)
-        yPos = addSectionTitle(doc, yPos, "RELATO DA TESTEMUNHA", historicoSectionNumber.toFixed(1), 2, data);
-        historicoSectionNumber += 0.1;
-        let relatoTestText = "Nenhuma testemunha identificada.";
-        const primeiraTestemunha = data.testemunhas && data.testemunhas.length > 0 ? data.testemunhas.find(t => t?.nome) : null;
-        if (primeiraTestemunha || data.relatoTestemunha) {
-            relatoTestText = data.relatoTestemunha || "Relato não fornecido pela testemunha.";
-        }
-        yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        if (primeiraTestemunha) {
-            yPos = addSignatureWithNameAndRole(doc, yPos, primeiraTestemunha?.nome, "TESTEMUNHA", data);
-        } else {
-            yPos += 10;
-        }
+        yPos += 10;
     }
 
     yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", historicoSectionNumber.toFixed(1), 2, data);

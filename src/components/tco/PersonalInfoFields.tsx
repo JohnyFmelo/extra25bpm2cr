@@ -2,10 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-
 interface PersonalInfoFieldsProps {
   data: {
     nome: string;
@@ -21,26 +19,21 @@ interface PersonalInfoFieldsProps {
     cpf: string;
     celular: string;
     email: string;
-    laudoPericial: string;
-    relato?: string;
-    representacao?: string;
+    laudoPericial: string; // Novo campo: "Sim" ou "Não"
   };
   onChangeHandler: (index: number | null, field: string, value: string) => void;
   prefix?: string;
   index: number;
   isAuthor?: boolean;
-  isVictim?: boolean;
-  isWitness?: boolean;
+  isVictim?: boolean; // Novo prop para Vítimas
 }
-
 const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
   data,
   onChangeHandler,
   prefix = "",
   index,
   isAuthor = false,
-  isVictim = false,
-  isWitness = false
+  isVictim = false
 }) => {
   const [ageWarning, setAgeWarning] = useState<string | null>(null);
   const [cpfError, setCpfError] = useState<string | null>(null);
@@ -241,19 +234,6 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
             </Select>
           </div>
         </div>}
-
-      {/* Campo de relato para testemunhas */}
-      {isWitness && <div className="space-y-2">
-          <Label htmlFor={`${prefix}relato_${index}`}>Relato da Testemunha</Label>
-          <Textarea 
-            id={`${prefix}relato_${index}`} 
-            placeholder="RELATOU A TESTEMUNHA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO." 
-            value={data.relato || "RELATOU A TESTEMUNHA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO."} 
-            onChange={e => onChangeHandler(index !== undefined ? index : null, 'relato', e.target.value)} 
-            className="min-h-[100px]" 
-          />
-        </div>}
     </div>;
 };
-
 export default PersonalInfoFields;
