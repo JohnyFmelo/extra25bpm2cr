@@ -253,6 +253,215 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Form submitted');
+    
+    if (!tcoNumber.trim()) {
+      toast({
+        title: "Erro",
+        description: "Número do TCO é obrigatório",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Consolidate individual author reports for PDF
+      const consolidatedRelatoAutor = autores
+        .filter(autor => autor.nome.trim() && autor.nome !== "Não informado.")
+        .map(autor => autor.relato || "")
+        .join("\n\n")
+        .trim() || relatoAutor;
+
+      const tcoDataParaPDF = {
+        tcoNumber: normalizeTcoNumber(tcoNumber),
+        natureza,
+        customNatureza,
+        tipificacao,
+        penaDescricao,
+        dataFato,
+        horaFato,
+        dataInicioRegistro,
+        horaInicioRegistro,
+        dataTerminoRegistro,
+        horaTerminoRegistro,
+        localFato,
+        endereco,
+        municipio,
+        comunicante,
+        guarnicao,
+        operacao,
+        apreensoes,
+        lacreNumero,
+        componentesGuarnicao,
+        autores,
+        vitimas,
+        testemunhas,
+        relatoPolicial,
+        relatoAutor: consolidatedRelatoAutor,
+        relatoVitima,
+        relatoTestemunha,
+        conclusaoPolicial,
+        providencias,
+        documentosAnexos,
+        videoLinks,
+        imageFiles,
+        juizadoEspecialData,
+        juizadoEspecialHora,
+        // Drug verification data
+        quantidade,
+        substancia,
+        cor,
+        odor,
+        indicios,
+        customMaterialDesc,
+        isUnknownMaterial
+      };
+
+      console.log('Generating PDF...');
+      const pdfBlob = await generatePDF(tcoDataParaPDF);
+      const filename = generateTCOFilename(normalizeTcoNumber(tcoNumber), natureza);
+      
+      console.log('Uploading PDF...');
+      await uploadPDF(pdfBlob, filename);
+      
+      console.log('Saving metadata...');
+      await saveTCOMetadata({
+        tcoNumber: normalizeTcoNumber(tcoNumber),
+        natureza: natureza === "Outros" ? customNatureza : natureza,
+        filename
+      });
+
+      toast({
+        title: "Sucesso!",
+        description: "TCO finalizado e salvo com sucesso",
+      });
+
+      navigate('/');
+    } catch (error) {
+      console.error('Error submitting TCO:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao finalizar TCO. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFormKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      handleSubmit(e as any);
+    }
+  };
+
+  // Vitima handlers
+  const handleVitimaChange = (index: number, field: string, value: string) => {
+    const newVitimas = [...vitimas];
+    if (newVitimas[index]) {
+      newVitimas[index] = { ...newVitimas[index], [field]: value };
+      setVitimas(newVitimas);
+    }
+  };
+
+  const handleAddVitima = () => {
+    setVitimas([...vitimas, { ...initialPersonData }]);
+  };
+
+  const handleRemoveVitima = (index: number) => {
+    if (vitimas.length > 1) {
+      const newVitimas = vitimas.filter((_, i) => i !== index);
+      setVitimas(newVitimas);
+    }
+  };
+
+  // Testemunha handlers
+  const handleTestemunhaChange = (index: number, field: string, value: string) => {
+    const newTestemunhas = [...testemunhas];
+    if (newTestemunhas[index]) {
+      newTestemunhas[index] = { ...newTestemunhas[index], [field]: value };
+      setTestemunhas(newTestemunhas);
+    }
+  };
+
+  const handleAddTestemunha = () => {
+    setTestemunhas([...testemunhas, { ...initialPersonData }]);
+  };
+
+  const handleRemoveTestemunha = (index: number) => {
+    if (testemunhas.length > 1) {
+      const newTestemunhas = testemunhas.filter((_, i) => i !== index);
+      setTestemunhas(newTestemunhas);
+    }
+  };
+
+  // Autor handlers
+  const handleAutorDetalhadoChange = (index: number, field: string, value: string) => {
+    const newAutores = [...autores];
+    if (newAutores[index]) {
+      newAutores[index] = { ...newAutores[index], [field]: value };
+      setAutores(newAutores);
+    }
+  };
+
+  const handleAddAutor = () => {
+    setAutores([...autores, { ...initialPersonData }]);
+  };
+
+  const handleRemoveAutor = (index: number) => {
+    if (autores.length > 1) {
+      const newAutores = autores.filter((_, i) => i !== index);
+      setAutores(newAutores);
+    }
+  };
+
+  // Guarnicao handlers
+  const handleAddPolicialToList = (policial: ComponenteGuarnicao) => {
+    setComponentesGuarnicao([...componentesGuarnicao, policial]);
+  };
+
+  const handleRemovePolicialFromList = (index: number) => {
+    const newComponentes = componentesGuarnicao.filter((_, i) => i !== index);
+    setComponentesGuarnicao(newComponentes);
+  };
+
+  const handleToggleApoioPolicial = (index: number) => {
+    const newComponentes = [...componentesGuarnicao];
+    if (newComponentes[index]) {
+      newComponentes[index] = { 
+        ...newComponentes[index], 
+        apoio: !newComponentes[index].apoio 
+      };
+      setComponentesGuarnicao(newComponentes);
+    }
+  };
+
+  // Image handlers
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setImageFiles(prev => [...prev, ...files]);
+  };
+
+  const handleRemoveImageFile = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Video handlers
+  const handleAddVideoLink = () => {
+    if (newVideoLink.trim()) {
+      setVideoLinks([...videoLinks, newVideoLink.trim()]);
+      setNewVideoLink("");
+    }
+  };
+
+  const handleRemoveVideoLink = (index: number) => {
+    setVideoLinks(prev => prev.filter((_, i) => i !== index));
+  };
+
   useEffect(() => {
     if (tcoNumber && !isTimerRunning) {
       setStartTime(new Date());
