@@ -326,14 +326,22 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       const filename = generateTCOFilename(normalizeTcoNumber(tcoNumber), natureza);
       
       console.log('Uploading PDF...');
-      await uploadPDF(pdfBlob, filename);
+      const { url, error: uploadError } = await uploadPDF(filename, pdfBlob);
+      
+      if (uploadError) {
+        throw uploadError;
+      }
       
       console.log('Saving metadata...');
-      await saveTCOMetadata({
+      const { error: metadataError } = await saveTCOMetadata({
         tcoNumber: normalizeTcoNumber(tcoNumber),
         natureza: natureza === "Outros" ? customNatureza : natureza,
         filename
       });
+
+      if (metadataError) {
+        throw metadataError;
+      }
 
       toast({
         title: "Sucesso!",
