@@ -103,7 +103,7 @@ const UsersList = () => {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-7">
         <CardTitle className="text-2xl font-bold">
           Usuários Cadastrados
-          <span className="ml-2 text-sm text-muted-foreground">
+          <span className="ml-2 text-sm text-muted-foreground text-slate-500">
             ({users.length})
           </span>
         </CardTitle>
