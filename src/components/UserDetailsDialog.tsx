@@ -26,6 +26,7 @@ interface UserDetailsDialogProps {
     registration?: string;
     userType?: string;
     service?: string;
+    rgpm?: string;
   } | null;
   onUserUpdated: () => void;
 }
@@ -37,6 +38,7 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
   const [registration, setRegistration] = useState("");
   const [userType, setUserType] = useState("");
   const [service, setService] = useState("");
+  const [rgpm, setRgpm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -48,8 +50,14 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
       setRegistration(userData.registration || "");
       setUserType(userData.userType || "");
       setService(userData.service || "");
+      setRgpm(userData.rgpm || "");
     }
   }, [userData, open]);
+
+  const handleRgpmChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Remove non-numeric characters
+    setRgpm(value);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +73,7 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
         registration,
         userType,
         service,
+        rgpm,
         updatedAt: new Date().toISOString(),
       };
 
@@ -78,8 +87,11 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
           ...updatedData,
         };
         localStorage.setItem("user", JSON.stringify(updatedUser));
-        // Force a page reload to update all components with new user data
-        window.location.reload();
+        
+        // Dispatch custom event to update TopBar and other components
+        window.dispatchEvent(new CustomEvent('userDataUpdated', { 
+          detail: updatedUser 
+        }));
       }
 
       toast({
@@ -125,6 +137,16 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
               value={warName}
               onChange={(e) => setWarName(e.target.value)}
               required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="rgpm">RGPM</Label>
+            <Input
+              id="rgpm"
+              value={rgpm}
+              onChange={handleRgpmChange}
+              placeholder="Digite apenas números"
+              maxLength={10}
             />
           </div>
           <div className="space-y-2">

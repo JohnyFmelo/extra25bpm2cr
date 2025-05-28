@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { MessageSquare, BellDot, Bell, User } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
 import NotificationsDialog from "./NotificationsDialog";
@@ -14,9 +14,24 @@ const TopBar = () => {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showMessagesDialog, setShowMessagesDialog] = useState(false);
   const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
+  const [userData, setUserData] = useState(() => 
+    JSON.parse(localStorage.getItem('user') || '{}')
+  );
 
-  const userData = JSON.parse(localStorage.getItem('user') || '{}');
   const unreadCount = useNotifications();
+  
+  // Listen for user data updates
+  useEffect(() => {
+    const handleUserDataUpdate = (event: CustomEvent) => {
+      setUserData(event.detail);
+    };
+
+    window.addEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
+    };
+  }, []);
   
   // Get user initials for avatar
   const getInitials = (name: string) => {
@@ -37,7 +52,12 @@ const TopBar = () => {
             <h2 className="text-base font-semibold text-white">
               {userData.rank} {userData.warName}
             </h2>
-            <p className="text-xs text-white/80">{userData.userType === "admin" ? "Administrador" : "Usuário"}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-white/80">{userData.userType === "admin" ? "Administrador" : "Usuário"}</p>
+              {userData.rgpm && (
+                <span className="text-xs text-white/60">• RGPM: {userData.rgpm}</span>
+              )}
+            </div>
           </div>
         </div>
         

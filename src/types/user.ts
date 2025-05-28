@@ -8,6 +8,7 @@ export interface User {
   service?: string;
   warName?: string;
   rank?: string;
+  rgpm?: string;
 }
 
 export interface TimeSlot {
