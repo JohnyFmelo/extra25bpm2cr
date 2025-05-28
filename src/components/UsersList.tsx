@@ -94,7 +94,6 @@ const UsersList = () => {
     try {
       const userRef = doc(db, "users", user.id);
       const newBlockedStatus = !user.blocked;
-      
       await updateDoc(userRef, {
         blocked: newBlockedStatus
       });
@@ -102,7 +101,7 @@ const UsersList = () => {
       // Se o usuário está sendo bloqueado, verificar se é o usuário logado
       if (newBlockedStatus) {
         const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        
+
         // Se for o usuário atual sendo bloqueado, fazer logout imediato
         if (currentUser.id === user.id) {
           localStorage.removeItem('user');
@@ -110,12 +109,10 @@ const UsersList = () => {
           return;
         }
       }
-
       toast({
         title: "Status atualizado",
         description: `Usuário foi ${user.blocked ? "desbloqueado" : "bloqueado"} com sucesso.`
       });
-      
       fetchUsers();
     } catch (error) {
       console.error("Error toggling user block status:", error);
@@ -197,7 +194,7 @@ const UsersList = () => {
 
       {/* Card Principal */}
       <Card className="w-full">
-        <CardHeader className="space-y-4">
+        <CardHeader className="space-y-4 px-[5px]">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <CardTitle className="text-2xl font-bold flex items-center gap-2">
               <Users className="h-6 w-6" />
@@ -227,7 +224,7 @@ const UsersList = () => {
           </div>
         </CardHeader>
         
-        <CardContent>
+        <CardContent className="px-[2px]">
           {filteredUsers.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
               <UserCircle className="w-16 h-16 text-muted-foreground mb-4" />
               <p className="text-lg font-medium">

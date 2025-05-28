@@ -27,11 +27,9 @@ import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
 import RankingChart from "@/components/RankingChart";
 import ManualUserRegistration from "@/components/ManualUserRegistration";
-
 interface IndexProps {
   initialActiveTab?: string;
 }
-
 const Index = ({
   initialActiveTab = "main"
 }: IndexProps) => {
@@ -55,7 +53,6 @@ const Index = ({
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
-
   useEffect(() => {
     const handleNotificationsChange = (count: number) => {
       setHasNotifications(count > 0);
@@ -73,7 +70,6 @@ const Index = ({
       window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     };
   }, [unreadCount]);
-
   useEffect(() => {
     const today = new Date();
     const travelsRef = collection(db, "travels");
@@ -93,7 +89,6 @@ const Index = ({
     });
     return () => unsubscribe();
   }, []);
-
   const handleRefresh = () => {
     window.location.reload();
     toast({
@@ -101,15 +96,12 @@ const Index = ({
       description: "Recarregando dados do sistema."
     });
   };
-
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
-
   const handleExtraClick = () => {
     setActiveTab("extra");
   };
-
   const handleBackClick = () => {
     if (activeTab === "editor") {
       setActiveTab("extra");
@@ -119,15 +111,12 @@ const Index = ({
       setActiveTab("main");
     }
   };
-
   const handleSettingsClick = () => {
     setActiveTab("settings");
   };
-
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
-
   const handleTCOClick = () => {
     if (user.userType === "admin") {
       setActiveTab("tco");
@@ -139,13 +128,11 @@ const Index = ({
       });
     }
   };
-
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
     setShowLogoutDialog(false);
   };
-
   const handleTabChange = (tab: string) => {
     if (tab === 'hours') {
       navigate('/hours');
@@ -171,7 +158,6 @@ const Index = ({
       setActiveTab(tab);
     }
   };
-
   useEffect(() => {
     // Update activeTab when initialActiveTab prop changes
     if (initialActiveTab && initialActiveTab !== activeTab) {
@@ -182,7 +168,6 @@ const Index = ({
   // Standardized class strings
   const tabListClasses = "w-full flex gap-1 rounded-lg p-1 bg-slate-200 mb-4";
   const tabTriggerClasses = "flex-1 text-center py-2.5 px-4 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-700 hover:bg-slate-300/70 data-[state=active]:hover:bg-blue-700/90";
-
   return <div className="relative min-h-screen w-full flex flex-col">
       <div className="flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow py-0">
@@ -262,8 +247,7 @@ const Index = ({
                       </div>
                       <p className="text-sm text-gray-600">Recarregar dados do sistema</p>
                     </button>
-                    {user.userType === "admin" && (
-                      <>
+                    {user.userType === "admin" && <>
                         <button onClick={() => setActiveTab("users")} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
                           <div className="flex items-center gap-3">
                             <Users className="h-5 w-5 text-gray-600" />
@@ -278,8 +262,7 @@ const Index = ({
                           </div>
                           <p className="text-sm text-gray-600">Cadastrar novos usuários manualmente</p>
                         </button>
-                      </>
-                    )}
+                      </>}
                     <button onClick={() => setShowLogoutDialog(true)} className="p-4 text-left bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                       <div className="flex items-center gap-3">
                         <LogOut className="h-5 w-5 text-red-500" />
@@ -312,7 +295,7 @@ const Index = ({
                 </button>
               </div>
               <Card className="shadow-md">
-                <CardContent className="p-6">
+                <CardContent className="p-6 px-[10px] my-0">
                   <UsersList />
                 </CardContent>
               </Card>
@@ -368,19 +351,10 @@ const Index = ({
                 </div>
                 <Tabs value={tcoTab} onValueChange={setTcoTab} className="space-y-6 flex flex-col flex-grow">
                   <TabsList className={tabListClasses}>
-                    <TabsTrigger 
-                      value="list" 
-                      aria-label="Visualizar Meus TCOs" 
-                      className={tabTriggerClasses}
-                    >
+                    <TabsTrigger value="list" aria-label="Visualizar Meus TCOs" className={tabTriggerClasses}>
                       Meus TCOs
                     </TabsTrigger>
-                    <TabsTrigger 
-                      value="form" 
-                      aria-label="Criar ou editar TCO" 
-                      onClick={() => setSelectedTco(null)} 
-                      className={tabTriggerClasses}
-                    >
+                    <TabsTrigger value="form" aria-label="Criar ou editar TCO" onClick={() => setSelectedTco(null)} className={tabTriggerClasses}>
                       Novo TCO
                     </TabsTrigger>
                   </TabsList>
