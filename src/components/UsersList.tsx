@@ -93,13 +93,29 @@ const UsersList = () => {
   const handleToggleBlock = async (user: User) => {
     try {
       const userRef = doc(db, "users", user.id);
+      const newBlockedStatus = !user.blocked;
+      
       await updateDoc(userRef, {
-        blocked: !user.blocked
+        blocked: newBlockedStatus
       });
+
+      // Se o usuário está sendo bloqueado, verificar se é o usuário logado
+      if (newBlockedStatus) {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        // Se for o usuário atual sendo bloqueado, fazer logout imediato
+        if (currentUser.id === user.id) {
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          return;
+        }
+      }
+
       toast({
         title: "Status atualizado",
         description: `Usuário foi ${user.blocked ? "desbloqueado" : "bloqueado"} com sucesso.`
       });
+      
       fetchUsers();
     } catch (error) {
       console.error("Error toggling user block status:", error);

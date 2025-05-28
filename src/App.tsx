@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -9,6 +10,7 @@ import Login from "./pages/Login";
 import Hours from "./pages/Hours";
 import TopBar from "./components/TopBar";
 import BottomMenuBar from "./components/BottomMenuBar";
+import { useUserBlockListener } from "./hooks/useUserBlockListener";
 
 // Protected Route component
 const ProtectedRoute = ({
@@ -17,6 +19,10 @@ const ProtectedRoute = ({
   children: React.ReactNode;
 }) => {
   const user = localStorage.getItem('user');
+  
+  // Use o hook para escutar bloqueios
+  useUserBlockListener();
+  
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -42,6 +48,7 @@ const Layout = ({
       <BottomMenuBar activeTab={activeTab} onTabChange={onTabChange} isAdmin={user?.userType === 'admin'} />
     </div>;
 };
+
 const App = () => {
   const [activeTab, setActiveTab] = useState<string>("main");
   const queryClient = new QueryClient({
@@ -82,4 +89,5 @@ const App = () => {
       </QueryClientProvider>
     </React.StrictMode>;
 };
+
 export default App;
