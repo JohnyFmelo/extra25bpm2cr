@@ -1,4 +1,3 @@
-
 // TCOmeus (7).tsx
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -91,7 +90,7 @@ const extractTcoNatureFromFilename = (fileName: string | undefined | null): stri
     naturezaParts.push(lastNaturePart);
   }
   if (naturezaParts.length === 0) return "Não especificada";
-  return naturezaParts.join('_').replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ') || "Não especificada";
+  return naturezaParts.join('_').replace(/_/g, ' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ') || "Não especificada";
 };
 
 const extractRGPMsFromFilename = (fileName: string | undefined | null): ExtractedRgpms => {
@@ -276,26 +275,16 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     }
   }, [toast, fetchAndStructureGupmForTco, gupmDetailsCache]);
 
-  // Set up real-time updates for storage changes
+  // Set up periodic refresh every 30 seconds to check for new TCOs
   useEffect(() => {
-    const channel = supabase
-      .channel('tco-updates')
-      .on('postgres_changes',
-        {
-          event: '*',
-          schema: 'storage',
-          table: 'objects'
-        },
-        (payload) => {
-          console.log('Storage change detected:', payload);
-          // Refresh TCO list when storage changes
-          fetchAllTcos();
-        }
-      )
-      .subscribe();
+    fetchAllTcos();
+    
+    const interval = setInterval(() => {
+      fetchAllTcos();
+    }, 30000);
 
     return () => {
-      supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, [fetchAllTcos]);
 
