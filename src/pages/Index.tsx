@@ -1,4 +1,4 @@
-import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
+import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut, UserPlus } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import TimeSlotsList from "@/components/TimeSlotsList";
@@ -26,6 +26,7 @@ import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
 import RankingChart from "@/components/RankingChart";
+import ManualUserRegistration from "@/components/ManualUserRegistration";
 
 interface IndexProps {
   initialActiveTab?: string;
@@ -112,6 +113,8 @@ const Index = ({
   const handleBackClick = () => {
     if (activeTab === "editor") {
       setActiveTab("extra");
+    } else if (activeTab === "register") {
+      setActiveTab("settings");
     } else {
       setActiveTab("main");
     }
@@ -192,6 +195,7 @@ const Index = ({
             <TabsTrigger value="travel">Travel</TabsTrigger>
             <TabsTrigger value="tco">TCO</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="register">Register</TabsTrigger>
           </TabsList>
 
           <TabsContent value="main" className="flex-grow">
@@ -258,13 +262,24 @@ const Index = ({
                       </div>
                       <p className="text-sm text-gray-600">Recarregar dados do sistema</p>
                     </button>
-                    {user.userType === "admin" && <button onClick={() => setActiveTab("users")} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
-                        <div className="flex items-center gap-3">
-                          <Users className="h-5 w-5 text-gray-600" />
-                          <h3 className="font-semibold text-gray-800">Usuários</h3>
-                        </div>
-                        <p className="text-sm text-gray-600">Gerenciar usuários do sistema</p>
-                      </button>}
+                    {user.userType === "admin" && (
+                      <>
+                        <button onClick={() => setActiveTab("users")} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Users className="h-5 w-5 text-gray-600" />
+                            <h3 className="font-semibold text-gray-800">Usuários</h3>
+                          </div>
+                          <p className="text-sm text-gray-600">Gerenciar usuários do sistema</p>
+                        </button>
+                        <button onClick={() => setActiveTab("register")} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                          <div className="flex items-center gap-3">
+                            <UserPlus className="h-5 w-5 text-gray-600" />
+                            <h3 className="font-semibold text-gray-800">Cadastro</h3>
+                          </div>
+                          <p className="text-sm text-gray-600">Cadastrar novos usuários manualmente</p>
+                        </button>
+                      </>
+                    )}
                     <button onClick={() => setShowLogoutDialog(true)} className="p-4 text-left bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                       <div className="flex items-center gap-3">
                         <LogOut className="h-5 w-5 text-red-500" />
@@ -301,6 +316,17 @@ const Index = ({
                   <UsersList />
                 </CardContent>
               </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="register">
+            <div className="relative">
+              <div className="absolute right-0 -top-14">
+                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para configurações">
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              </div>
+              <ManualUserRegistration />
             </div>
           </TabsContent>
 
