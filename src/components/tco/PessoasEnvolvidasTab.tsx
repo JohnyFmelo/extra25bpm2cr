@@ -1,9 +1,11 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Trash2, User, Users } from "lucide-react";
 import PersonalInfoFields from "./PersonalInfoFields";
+
 interface PersonalInfo {
   nome: string;
   sexo: string;
@@ -22,6 +24,7 @@ interface PersonalInfo {
   relato?: string; // Added for victim and witness testimony
   representacao?: string; // Added for victim representation
 }
+
 interface PessoasEnvolvidasTabProps {
   vitimas: PersonalInfo[];
   handleVitimaChange: (index: number, field: string, value: string) => void;
@@ -37,6 +40,7 @@ interface PessoasEnvolvidasTabProps {
   handleRemoveAutor: (index: number) => void;
   natureza: string;
 }
+
 const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
   vitimas,
   handleVitimaChange,
@@ -64,7 +68,20 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
       <CardContent className="px-[4px]">
         <Tabs defaultValue="autor" className="w-full px-0">
           {/* Dynamically adjust the grid columns based on whether victims should be shown */}
-          
+          <TabsList className={`grid ${isDrugCase ? 'grid-cols-2' : 'grid-cols-3'} mb-6`}>
+            <TabsTrigger value="autor">
+              <User className="mr-2 h-4 w-4" />
+              Autores do Fato
+            </TabsTrigger>
+            {!isDrugCase && <TabsTrigger value="vitimas">
+                <User className="mr-2 h-4 w-4" />
+                Vítimas
+              </TabsTrigger>}
+            <TabsTrigger value="testemunhas">
+              <Users className="mr-2 h-4 w-4" />
+              Testemunhas
+            </TabsTrigger>
+          </TabsList>
           
           <TabsContent value="autor" className="space-y-6">
             {autores.map((autor, index) => <Card key={`autor_${index}`} className="border-dashed mb-6">
@@ -147,4 +164,5 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
       </CardContent>
     </Card>;
 };
+
 export default PessoasEnvolvidasTab;
