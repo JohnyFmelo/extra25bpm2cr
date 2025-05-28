@@ -1,7 +1,5 @@
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LoginForm from "@/components/LoginForm";
-import RegisterForm from "@/components/RegisterForm";
 
 const Login = () => {
   return (
@@ -17,37 +15,12 @@ const Login = () => {
             Bem-vindo ao Sistema Extra+
           </h1>
           <p className="text-gray-600 text-center max-w-sm">
-            Faça login ou cadastre-se para acessar
+            Faça login para acessar o sistema
           </p>
         </div>
 
-        <div className="bg-white/50 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-1">
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-white/50 rounded-xl mb-2">
-              <TabsTrigger 
-                value="login" 
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300"
-              >
-                Login
-              </TabsTrigger>
-              <TabsTrigger 
-                value="register" 
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300"
-              >
-                Cadastro
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="login">
-              <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
-                <LoginForm />
-              </div>
-            </TabsContent>
-            <TabsContent value="register">
-              <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
-                <RegisterForm />
-              </div>
-            </TabsContent>
-          </Tabs>
+        <div className="bg-white/50 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+          <LoginForm />
         </div>
 
         <div className="text-center text-sm text-gray-600">
