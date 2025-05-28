@@ -62,10 +62,10 @@ const initialPersonData: Pessoa = {
   laudoPericial: "Não"
 };
 
-// Constants for Natureza options
-const PORTE_DE_DROGAS_NATUREZA = "PORTE/POSSE DE DROGA (ART. 28, LEI 11.343/06)";
+// Constants for Natureza options - simplified and title-cased
+const PORTE_DE_DROGAS_NATUREZA = "Porte/Posse de Droga";
 const OUTROS_NATUREZA = "Outros";
-const VIAS_DE_FATO_NATUREZA = "VIAS DE FATO (ART. 21, LCP)";
+const VIAS_DE_FATO_NATUREZA = "Vias de Fato";
 
 const formatRepresentacao = (representacao: string): string => {
   if (representacao === "representar") return "representar";
@@ -176,12 +176,12 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const formattedDate = now.toISOString().split('T')[0];
   const formattedTime = now.toTimeString().slice(0, 5);
   const [tcoNumber, setTcoNumber] = useState("");
-  const [natureza, setNatureza] = useState(VIAS_DE_FATO_NATUREZA); // Default to a common specific option
+  const [natureza, setNatureza] = useState(VIAS_DE_FATO_NATUREZA); // Default to "Vias de Fato"
   const [customNatureza, setCustomNatureza] = useState("");
   const [autor, setAutor] = useState("");
   const [representacao, setRepresentacao] = useState("");
-  const [tipificacao, setTipificacao] = useState("ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS");
-  const [penaDescricao, setPenaDescricao] = useState("");
+  const [tipificacao, setTipificacao] = useState("ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS"); // Initial for "Vias de Fato"
+  const [penaDescricao, setPenaDescricao] = useState("PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA"); // Initial for "Vias de Fato"
   const [dataFato, setDataFato] = useState(formattedDate);
   const [horaFato, setHoraFato] = useState(formattedTime);
   const [dataInicioRegistro, setDataInicioRegistro] = useState(formattedDate);
@@ -321,95 +321,95 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     let penaAtual = "";
 
     if (natureza === OUTROS_NATUREZA) {
-      tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
-      penaAtual = penaDescricao || "";
+      tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]"; // Keep current custom tipificação if any
+      penaAtual = penaDescricao || ""; // Keep current custom pena if any
     } else {
       switch (natureza) {
-        case "AMEAÇA (ART. 147, CP)":
+        case "Ameaça":
           tipificacaoAtual = "ART. 147 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
           break;
-        case VIAS_DE_FATO_NATUREZA: // "VIAS DE FATO (ART. 21, LCP)"
+        case VIAS_DE_FATO_NATUREZA: // "Vias de Fato"
           tipificacaoAtual = "ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS";
           penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA";
           break;
-        case "LESÃO CORPORAL (ART. 129, CP)":
+        case "Lesão Corporal":
           tipificacaoAtual = "ART. 129 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO";
           break;
-        case "DANO SIMPLES (ART. 163, CAPUT, CP)":
+        case "Dano Simples":
           tipificacaoAtual = "ART. 163, CAPUT, DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
           break;
-        case "INJÚRIA (ART. 140, CP)":
+        case "Injúria":
           tipificacaoAtual = "ART. 140 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
           break;
-        case "Difamação": // Kept from old list, assuming Art. 139 CP
+        case "Difamação":
           tipificacaoAtual = "ART. 139 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO, E MULTA";
           break;
-        case "Calúnia": // Kept from old list, assuming Art. 138 CP
+        case "Calúnia":
           tipificacaoAtual = "ART. 138 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 6 MESES A 2 ANOS, E MULTA";
           break;
-        case "PERTURBAÇÃO AO SOSSEGO ALHEIO (ART. 42, LCP)":
+        case "Perturbação ao Sossego Alheio":
           tipificacaoAtual = "ART. 42 DA LEI DE CONTRAVENÇÕES PENAIS";
           penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA";
           break;
-        case PORTE_DE_DROGAS_NATUREZA: // "PORTE/POSSE DE DROGA (ART. 28, LEI 11.343/06)"
+        case PORTE_DE_DROGAS_NATUREZA: // "Porte/Posse de Droga"
           tipificacaoAtual = "ART. 28 DA LEI Nº 11.343/2006 (LEI DE DROGAS)";
           penaAtual = "ADVERTÊNCIA SOBRE OS EFEITOS DAS DROGAS, PRESTAÇÃO DE SERVIÇOS À COMUNIDADE OU MEDIDA EDUCATIVA DE COMPARECIMENTO A PROGRAMA OU CURSO EDUCATIVO.";
           break;
-        case "CONDUZIR VEÍCULO SEM CNH GERANDO PERIGO DE DANO (art. 309, CTB)":
+        case "Conduzir Veículo sem CNH Gerando Perigo de Dano":
           tipificacaoAtual = "ART. 309 DO CÓDIGO DE TRÂNSITO BRASILEIRO";
           penaAtual = "DETENÇÃO, DE SEIS MESES A UM ANO, OU MULTA.";
           break;
-        case "ENTREGAR VEÍCULO AUTOMOTOR A PESSOA NÃO HABILITADA (ART. 310, CTB)":
+        case "Entregar Veículo Automotor a Pessoa Não Habilitada":
           tipificacaoAtual = "ART. 310 DO CÓDIGO DE TRÂNSITO BRASILEIRO";
           penaAtual = "DETENÇÃO, DE SEIS MESES A UM ANO, OU MULTA.";
           break;
-        case "TRAFEGAR EM VELOCIDADE INCOMPATÍVEL COM A SEGURANÇA NAS PROXIMIDADES DE ESCOLAS, HOSPITAIS, ESTAÇÕES DE EMBARQUE E DESEMBARQUE DE PASSAGEIROS, LOGRADOUROS ESTREITOS, OU ONDE HAJA GRANDE MOVIMENTAÇÃO OU CONCENTRAÇÃO DE PESSOAS, GERANDO PERIGO DE DANO (ART. 311, CTB)":
+        case "Trafegar em Velocidade Incompatível Gerando Perigo de Dano":
           tipificacaoAtual = "ART. 311 DO CÓDIGO DE TRÂNSITO BRASILEIRO";
           penaAtual = "DETENÇÃO, DE SEIS MESES A UM ANO, OU MULTA.";
           break;
-        case "OMISSÃO DE SOCORRO (ART. 135, CP)":
+        case "Omissão de Socorro":
           tipificacaoAtual = "ART. 135 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO, DE UM A SEIS MESES, OU MULTA.";
           break;
-        case "RIXA (ART. 137, CP)":
+        case "Rixa":
           tipificacaoAtual = "ART. 137 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO, DE QUINZE DIAS A DOIS MESES, OU MULTA.";
           break;
-        case "INVASÃO DE DOMICÍLIO (ART. 150, CP)":
+        case "Invasão de Domicílio":
           tipificacaoAtual = "ART. 150 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO, DE UM A TRÊS MESES, OU MULTA.";
           break;
-        case "FRAUDE EM COMÉRCIO (NEGAR A PAGAR DESPESA) (ART. 176, CP)":
+        case "Fraude em Comércio (Negar a Pagar Despesa)":
           tipificacaoAtual = "ART. 176 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO, DE QUINZE DIAS A DOIS MESES, OU MULTA.";
           break;
-        case "ATO OBSCENO (ART. 233, CP)":
+        case "Ato Obsceno":
           tipificacaoAtual = "ART. 233 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO, DE TRÊS MESES A UM ANO, OU MULTA.";
           break;
-        case "FALSA IDENTIDADE (ART. 307, CP)":
+        case "Falsa Identidade":
           tipificacaoAtual = "ART. 307 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO, DE TRÊS MESES A UM ANO, OU MULTA.";
           break;
-        case "RESISTÊNCIA (ART. 329, CP)":
+        case "Resistência":
           tipificacaoAtual = "ART. 329 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO, DE DOIS MESES A DOIS ANOS.";
           break;
-        case "DESOBEDIÊNCIA (ART. 330, CP)":
+        case "Desobediência":
           tipificacaoAtual = "ART. 330 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO, DE QUINZE DIAS A SEIS MESES, E MULTA.";
           break;
-        case "DESACATO (ART. 331, CP)":
+        case "Desacato":
           tipificacaoAtual = "ART. 331 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO, DE SEIS MESES A DOIS ANOS, OU MULTA.";
           break;
-        case "EXERCÍCIO ARBITRÁRIO DAS PRÓPRIAS RAZÕES (ART. 345, CP)":
+        case "Exercício Arbitrário das Próprias Razões":
           tipificacaoAtual = "ART. 345 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO, DE QUINZE DIAS A UM MÊS, OU MULTA, ALÉM DA PENA CORRESPONDENTE À VIOLÊNCIA.";
           break;
@@ -417,9 +417,11 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           tipificacaoAtual = "[TIPIFICAÇÃO NÃO MAPEADA]";
           penaAtual = "";
       }
+      // Only update if not "Outros", otherwise custom values are preserved by the if block above
       setTipificacao(tipificacaoAtual);
       setPenaDescricao(penaAtual);
     }
+
 
     const autoresValidos = autores.filter(a => a.nome.trim() !== "");
     const autorTexto = autoresValidos.length === 0 ? "O(A) AUTOR(A)" : 
@@ -428,12 +430,11 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     const testemunhasValidas = testemunhas.filter(t => t.nome.trim() !== "");
     const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : testemunhasValidas.length === 1 ? "TESTEMUNHA" : "";
     
-    // Ensure displayNaturezaReal is a string before calling toUpperCase()
     const naturezaNomeParaConclusao = (typeof displayNaturezaReal === 'string' ? displayNaturezaReal : "[NATUREZA PENDENTE]").toUpperCase();
 
     const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${naturezaNomeParaConclusao}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
     setConclusaoPolicial(conclusaoBase);
-  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
+  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]); // tipificacao and penaDescricao included as they can be custom for "Outros"
 
 
   useEffect(() => {
@@ -444,7 +445,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     const displayNaturezaReal = natureza === OUTROS_NATUREZA ? customNatureza || "[NATUREZA PENDENTE]" : natureza;
     const operacaoText = operacao ? `, DURANTE A ${operacao.toUpperCase()},` : "";
     
-    // Ensure displayNaturezaReal is a string before calling toUpperCase()
     const naturezaNomeParaRelato = (typeof displayNaturezaReal === 'string' ? displayNaturezaReal : "[NATUREZA PENDENTE]").toUpperCase();
 
     updatedRelato = updatedRelato
@@ -811,7 +811,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       });
       return;
     }
-    if (natureza === "Selecione...") { // Should not happen with new default
+    if (natureza === "Selecione...") { // This should not be hit if default is set properly
       toast({
         title: "Campo Obrigatório",
         description: "Selecione a Natureza da Ocorrência.",
@@ -885,7 +885,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         }
       }
 
-      // Consolidate individual author testimonies for PDF
       const relatoAutorConsolidado = autoresValidos
         .filter(a => a.relato && a.relato.trim() !== "")
         .map(a => a.relato)
@@ -893,8 +892,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
       const tcoDataParaPDF: any = {
         tcoNumber: tcoNumber.trim(),
-        natureza: displayNaturezaReal,
-        originalNatureza: natureza, // Stores the full string, e.g. "PORTE/POSSE DE DROGA (ART. 28, LEI 11.343/06)"
+        natureza: displayNaturezaReal, // This will be the simplified name like "Vias de Fato" or customNatureza
+        originalNatureza: natureza, // This will also be the simplified name (or customNatureza if "Outros")
         customNatureza: customNatureza.trim(),
         tipificacao: tipificacao.trim(),
         penaDescricao: penaDescricao.trim(),
@@ -971,7 +970,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
       const tcoMetadata = {
         tconumber: tcoNumber.trim(),
-        natureza: displayNaturezaReal,
+        natureza: displayNaturezaReal, // This will be the simplified name
         policiais: componentesValidos.map(p => ({
           nome: p.nome,
           rgpm: p.rg,
@@ -1051,30 +1050,29 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   };
 
   const naturezaOptions = [
-    "AMEAÇA (ART. 147, CP)",
-    VIAS_DE_FATO_NATUREZA, // "VIAS DE FATO (ART. 21, LCP)"
-    "LESÃO CORPORAL (ART. 129, CP)",
-    "DANO SIMPLES (ART. 163, CAPUT, CP)",
-    "INJÚRIA (ART. 140, CP)",
-    "Difamação", // Kept from original, corresponds to Art. 139 CP
-    "Calúnia",   // Kept from original, corresponds to Art. 138 CP
-    "PERTURBAÇÃO AO SOSSEGO ALHEIO (ART. 42, LCP)",
-    PORTE_DE_DROGAS_NATUREZA, // "PORTE/POSSE DE DROGA (ART. 28, LEI 11.343/06)"
+    "Ameaça",
+    VIAS_DE_FATO_NATUREZA, // "Vias de Fato"
+    "Lesão Corporal",
+    "Dano Simples",
+    "Injúria",
+    "Difamação", 
+    "Calúnia",   
+    "Perturbação ao Sossego Alheio",
+    PORTE_DE_DROGAS_NATUREZA, // "Porte/Posse de Droga"
     
-    // New additions from user list
-    "CONDUZIR VEÍCULO SEM CNH GERANDO PERIGO DE DANO (art. 309, CTB)",
-    "ENTREGAR VEÍCULO AUTOMOTOR A PESSOA NÃO HABILITADA (ART. 310, CTB)",
-    "TRAFEGAR EM VELOCIDADE INCOMPATÍVEL COM A SEGURANÇA NAS PROXIMIDADES DE ESCOLAS, HOSPITAIS, ESTAÇÕES DE EMBARQUE E DESEMBARQUE DE PASSAGEIROS, LOGRADOUROS ESTREITOS, OU ONDE HAJA GRANDE MOVIMENTAÇÃO OU CONCENTRAÇÃO DE PESSOAS, GERANDO PERIGO DE DANO (ART. 311, CTB)",
-    "OMISSÃO DE SOCORRO (ART. 135, CP)",
-    "RIXA (ART. 137, CP)",
-    "INVASÃO DE DOMICÍLIO (ART. 150, CP)",
-    "FRAUDE EM COMÉRCIO (NEGAR A PAGAR DESPESA) (ART. 176, CP)",
-    "ATO OBSCENO (ART. 233, CP)",
-    "FALSA IDENTIDADE (ART. 307, CP)",
-    "RESISTÊNCIA (ART. 329, CP)",
-    "DESOBEDIÊNCIA (ART. 330, CP)",
-    "DESACATO (ART. 331, CP)",
-    "EXERCÍCIO ARBITRÁRIO DAS PRÓPRIAS RAZÕES (ART. 345, CP)",
+    "Conduzir Veículo sem CNH Gerando Perigo de Dano",
+    "Entregar Veículo Automotor a Pessoa Não Habilitada",
+    "Trafegar em Velocidade Incompatível Gerando Perigo de Dano", // Shortened for UI
+    "Omissão de Socorro",
+    "Rixa",
+    "Invasão de Domicílio",
+    "Fraude em Comércio (Negar a Pagar Despesa)",
+    "Ato Obsceno",
+    "Falsa Identidade",
+    "Resistência",
+    "Desobediência",
+    "Desacato",
+    "Exercício Arbitrário das Próprias Razões",
     
     OUTROS_NATUREZA // "Outros"
   ];
