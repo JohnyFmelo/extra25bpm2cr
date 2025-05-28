@@ -62,11 +62,6 @@ const initialPersonData: Pessoa = {
   laudoPericial: "Não"
 };
 
-// Constants for Natureza options - simplified and title-cased
-const PORTE_DE_DROGAS_NATUREZA = "Porte/Posse de Droga";
-const OUTROS_NATUREZA = "Outros";
-const VIAS_DE_FATO_NATUREZA = "Vias de Fato";
-
 const formatRepresentacao = (representacao: string): string => {
   if (representacao === "representar") return "representar";
   if (representacao === "decidir_posteriormente") return "decidir_posteriormente";
@@ -176,12 +171,12 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const formattedDate = now.toISOString().split('T')[0];
   const formattedTime = now.toTimeString().slice(0, 5);
   const [tcoNumber, setTcoNumber] = useState("");
-  const [natureza, setNatureza] = useState(VIAS_DE_FATO_NATUREZA); // Default to "Vias de Fato"
+  const [natureza, setNatureza] = useState("Vias de Fato");
   const [customNatureza, setCustomNatureza] = useState("");
   const [autor, setAutor] = useState("");
   const [representacao, setRepresentacao] = useState("");
-  const [tipificacao, setTipificacao] = useState("ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS"); // Initial for "Vias de Fato"
-  const [penaDescricao, setPenaDescricao] = useState("PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA"); // Initial for "Vias de Fato"
+  const [tipificacao, setTipificacao] = useState("Art. 21 da Lei de Contravenções Penais");
+  const [penaDescricao, setPenaDescricao] = useState("");
   const [dataFato, setDataFato] = useState(formattedDate);
   const [horaFato, setHoraFato] = useState(formattedTime);
   const [dataInicioRegistro, setDataInicioRegistro] = useState(formattedDate);
@@ -281,7 +276,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   }, [substancia, cor]);
 
   useEffect(() => {
-    const isDrugCase = natureza === PORTE_DE_DROGAS_NATUREZA;
+    const isDrugCase = natureza === "Porte de drogas para consumo";
     if (isDrugCase) {
       if (indicios) {
         const indicioFinal = isUnknownMaterial && customMaterialDesc ? customMaterialDesc : indicios;
@@ -316,20 +311,19 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]);
 
   useEffect(() => {
-    const displayNaturezaReal = natureza === OUTROS_NATUREZA ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
+    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
     let tipificacaoAtual = "";
     let penaAtual = "";
-
-    if (natureza === OUTROS_NATUREZA) {
-      tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]"; 
-      penaAtual = penaDescricao || ""; 
+    if (natureza === "Outros") {
+      tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
+      penaAtual = penaDescricao || "";
     } else {
       switch (natureza) {
         case "Ameaça":
           tipificacaoAtual = "ART. 147 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
           break;
-        case VIAS_DE_FATO_NATUREZA: 
+        case "Vias de Fato":
           tipificacaoAtual = "ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS";
           penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA";
           break;
@@ -337,8 +331,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           tipificacaoAtual = "ART. 129 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO";
           break;
-        case "Dano Simples":
-          tipificacaoAtual = "ART. 163, CAPUT, DO CÓDIGO PENAL";
+        case "Dano":
+          tipificacaoAtual = "ART. 163 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
           break;
         case "Injúria":
@@ -353,65 +347,13 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           tipificacaoAtual = "ART. 138 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 6 MESES A 2 ANOS, E MULTA";
           break;
-        case "Perturbação ao Sossego Alheio":
+        case "Perturbação do Sossego":
           tipificacaoAtual = "ART. 42 DA LEI DE CONTRAVENÇÕES PENAIS";
           penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA";
           break;
-        case PORTE_DE_DROGAS_NATUREZA: 
+        case "Porte de drogas para consumo":
           tipificacaoAtual = "ART. 28 DA LEI Nº 11.343/2006 (LEI DE DROGAS)";
           penaAtual = "ADVERTÊNCIA SOBRE OS EFEITOS DAS DROGAS, PRESTAÇÃO DE SERVIÇOS À COMUNIDADE OU MEDIDA EDUCATIVA DE COMPARECIMENTO A PROGRAMA OU CURSO EDUCATIVO.";
-          break;
-        case "Conduzir Veículo sem CNH Gerando Perigo de Dano":
-          tipificacaoAtual = "ART. 309 DO CÓDIGO DE TRÂNSITO BRASILEIRO";
-          penaAtual = "DETENÇÃO, DE SEIS MESES A UM ANO, OU MULTA.";
-          break;
-        case "Entregar Veículo Automotor a Pessoa Não Habilitada":
-          tipificacaoAtual = "ART. 310 DO CÓDIGO DE TRÂNSITO BRASILEIRO";
-          penaAtual = "DETENÇÃO, DE SEIS MESES A UM ANO, OU MULTA.";
-          break;
-        case "Trafegar em Velocidade Incompatível Gerando Perigo de Dano":
-          tipificacaoAtual = "ART. 311 DO CÓDIGO DE TRÂNSITO BRASILEIRO";
-          penaAtual = "DETENÇÃO, DE SEIS MESES A UM ANO, OU MULTA.";
-          break;
-        case "Omissão de Socorro":
-          tipificacaoAtual = "ART. 135 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO, DE UM A SEIS MESES, OU MULTA.";
-          break;
-        case "Rixa":
-          tipificacaoAtual = "ART. 137 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO, DE QUINZE DIAS A DOIS MESES, OU MULTA.";
-          break;
-        case "Invasão de Domicílio":
-          tipificacaoAtual = "ART. 150 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO, DE UM A TRÊS MESES, OU MULTA.";
-          break;
-        case "Fraude em Comércio (Negar a Pagar Despesa)":
-          tipificacaoAtual = "ART. 176 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO, DE QUINZE DIAS A DOIS MESES, OU MULTA.";
-          break;
-        case "Ato Obsceno":
-          tipificacaoAtual = "ART. 233 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO, DE TRÊS MESES A UM ANO, OU MULTA.";
-          break;
-        case "Falsa Identidade":
-          tipificacaoAtual = "ART. 307 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO, DE TRÊS MESES A UM ANO, OU MULTA.";
-          break;
-        case "Resistência":
-          tipificacaoAtual = "ART. 329 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO, DE DOIS MESES A DOIS ANOS.";
-          break;
-        case "Desobediência":
-          tipificacaoAtual = "ART. 330 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO, DE QUINZE DIAS A SEIS MESES, E MULTA.";
-          break;
-        case "Desacato":
-          tipificacaoAtual = "ART. 331 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO, DE SEIS MESES A DOIS ANOS, OU MULTA.";
-          break;
-        case "Exercício Arbitrário das Próprias Razões":
-          tipificacaoAtual = "ART. 345 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO, DE QUINZE DIAS A UM MÊS, OU MULTA, ALÉM DA PENA CORRESPONDENTE À VIOLÊNCIA.";
           break;
         default:
           tipificacaoAtual = "[TIPIFICAÇÃO NÃO MAPEADA]";
@@ -420,31 +362,23 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       setTipificacao(tipificacaoAtual);
       setPenaDescricao(penaAtual);
     }
-
     const autoresValidos = autores.filter(a => a.nome.trim() !== "");
     const autorTexto = autoresValidos.length === 0 ? "O(A) AUTOR(A)" : 
       autoresValidos.length === 1 ? (autoresValidos[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR") : 
       autoresValidos.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
     const testemunhasValidas = testemunhas.filter(t => t.nome.trim() !== "");
     const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : testemunhasValidas.length === 1 ? "TESTEMUNHA" : "";
-    
-    const naturezaNomeParaConclusao = (typeof displayNaturezaReal === 'string' ? displayNaturezaReal : "[NATUREZA PENDENTE]").toUpperCase();
-
-    const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${naturezaNomeParaConclusao}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
+    const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
     setConclusaoPolicial(conclusaoBase);
-  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]); 
-
+  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
 
   useEffect(() => {
     if (isRelatoPolicialManuallyEdited) return;
     let updatedRelato = relatoPolicialTemplate;
     const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
     const gupm = formatarGuarnicao(componentesGuarnicao);
-    const displayNaturezaReal = natureza === OUTROS_NATUREZA ? customNatureza || "[NATUREZA PENDENTE]" : natureza;
+    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA PENDENTE]" : natureza;
     const operacaoText = operacao ? `, DURANTE A ${operacao.toUpperCase()},` : "";
-    
-    const naturezaNomeParaRelato = (typeof displayNaturezaReal === 'string' ? displayNaturezaReal : "[NATUREZA PENDENTE]").toUpperCase();
-
     updatedRelato = updatedRelato
       .replace("[HORÁRIO]", horaFato || "[HORÁRIO PENDENTE]")
       .replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : "[DATA PENDENTE]")
@@ -453,7 +387,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       .replace("[GUPM]", gupm)
       .replace("[BAIRRO]", bairro)
       .replace("[MEIO DE ACIONAMENTO]", comunicante || "[ACIONAMENTO PENDENTE]")
-      .replace("[NATUREZA]", naturezaNomeParaRelato)
+      .replace("[NATUREZA]", displayNaturezaReal.toUpperCase() || "[NATUREZA PENDENTE]")
       .replace("[LOCAL]", localFato || "[LOCAL PENDENTE]")
       .replace("[VERSÃO INICIAL]", "[VERSÃO INICIAL]")
       .replace("[O QUE A PM DEPAROU]", "[O QUE A PM DEPAROU]")
@@ -809,7 +743,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       });
       return;
     }
-    if (natureza === "Selecione...") { 
+    if (natureza === "Selecione...") {
       toast({
         title: "Campo Obrigatório",
         description: "Selecione a Natureza da Ocorrência.",
@@ -818,7 +752,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       });
       return;
     }
-    if (natureza === OUTROS_NATUREZA && !customNatureza.trim()) {
+    if (natureza === "Outros" && !customNatureza.trim()) {
       toast({
         title: "Campo Obrigatório",
         description: "Descreva a Natureza em 'Outros'.",
@@ -846,7 +780,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       });
       return;
     }
-    if (natureza === PORTE_DE_DROGAS_NATUREZA && (!quantidade.trim() || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc.trim()) || !lacreNumero.trim())) {
+    if (natureza === "Porte de drogas para consumo" && (!quantidade.trim() || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc.trim()) || !lacreNumero.trim())) {
       toast({
         title: "Dados da Droga Incompletos",
         description: "Para Porte de Drogas, preencha Quantidade, Substância, Cor, Número do Lacre e Descrição (se material desconhecido).",
@@ -859,8 +793,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     setIsTimerRunning(false);
 
     try {
-      const displayNaturezaReal = natureza === OUTROS_NATUREZA ? customNatureza.trim() : natureza;
-      const indicioFinalDroga = natureza === PORTE_DE_DROGAS_NATUREZA ? (isUnknownMaterial ? customMaterialDesc.trim() : indicios) : "";
+      const displayNaturezaReal = natureza === "Outros" ? customNatureza.trim() : natureza;
+      const indicioFinalDroga = natureza === "Porte de drogas para consumo" ? (isUnknownMaterial ? customMaterialDesc.trim() : indicios) : "";
 
       const vitimasFiltradas = vitimas.filter(v => v.nome?.trim() || v.cpf?.trim());
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim() || t.cpf?.trim());
@@ -883,6 +817,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         }
       }
 
+      // Consolidate individual author testimonies for PDF
       const relatoAutorConsolidado = autoresValidos
         .filter(a => a.relato && a.relato.trim() !== "")
         .map(a => a.relato)
@@ -890,8 +825,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
       const tcoDataParaPDF: any = {
         tcoNumber: tcoNumber.trim(),
-        natureza: displayNaturezaReal, 
-        originalNatureza: natureza, 
+        natureza: displayNaturezaReal,
+        originalNatureza: natureza,
         customNatureza: customNatureza.trim(),
         tipificacao: tipificacao.trim(),
         penaDescricao: penaDescricao.trim(),
@@ -916,14 +851,14 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         relatoTestemunha: relatoTestemunha.trim(),
         apreensoes: apreensoes.trim(),
         conclusaoPolicial: conclusaoPolicial.trim(),
-        lacreNumero: natureza === PORTE_DE_DROGAS_NATUREZA ? lacreNumero.trim() : undefined,
-        drogaQuantidade: natureza === PORTE_DE_DROGAS_NATUREZA ? quantidade.trim() : undefined,
-        drogaTipo: natureza === PORTE_DE_DROGAS_NATUREZA ? substancia : undefined,
-        drogaCor: natureza === PORTE_DE_DROGAS_NATUREZA ? cor : undefined,
-        drogaOdor: natureza === PORTE_DE_DROGAS_NATUREZA ? odor : undefined,
-        drogaNomeComum: natureza === PORTE_DE_DROGAS_NATUREZA ? indicioFinalDroga : undefined,
-        drogaCustomDesc: natureza === PORTE_DE_DROGAS_NATUREZA && isUnknownMaterial ? customMaterialDesc.trim() : undefined,
-        drogaIsUnknown: natureza === PORTE_DE_DROGAS_NATUREZA ? isUnknownMaterial : undefined,
+        lacreNumero: natureza === "Porte de drogas para consumo" ? lacreNumero.trim() : undefined,
+        drogaQuantidade: natureza === "Porte de drogas para consumo" ? quantidade.trim() : undefined,
+        drogaTipo: natureza === "Porte de drogas para consumo" ? substancia : undefined,
+        drogaCor: natureza === "Porte de drogas para consumo" ? cor : undefined,
+        drogaOdor: natureza === "Porte de drogas para consumo" ? odor : undefined,
+        drogaNomeComum: natureza === "Porte de drogas para consumo" ? indicioFinalDroga : undefined,
+        drogaCustomDesc: natureza === "Porte de drogas para consumo" && isUnknownMaterial ? customMaterialDesc.trim() : undefined,
+        drogaIsUnknown: natureza === "Porte de drogas para consumo" ? isUnknownMaterial : undefined,
         startTime: startTime?.toISOString(),
         endTime: completionNow.toISOString(),
         userRegistration: userRegistration,
@@ -948,7 +883,10 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
       
+      // Usar a função para gerar o nome do arquivo TCO com o formato especificado
       const desiredFileName = generateTCOFilename(tcoDataParaPDF);
+      
+      // MODIFICADO: filePath usará desiredFileName para o nome do arquivo no storage
       const filePath = `tcos/${userId || 'anonimo'}/${desiredFileName}`;
 
       const bucketExists = await ensureBucketExists();
@@ -967,15 +905,15 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       console.log('URL pública do arquivo:', downloadURL);
 
       const tcoMetadata = {
-        tconumber: tcoNumber.trim(),
-        natureza: displayNaturezaReal, 
+        tconumber: tcoNumber.trim(), // Corrigido para corresponder ao nome no DB se for 'tconumber'
+        natureza: displayNaturezaReal,
         policiais: componentesValidos.map(p => ({
           nome: p.nome,
           rgpm: p.rg,
           posto: p.posto,
           apoio: !!p.apoio
         })),
-        pdfpath: filePath,
+        pdfpath: filePath, // Storing the cloud storage path
         pdfurl: downloadURL,
         createdby: userId,
         createdat: new Date().toISOString(),
@@ -1004,7 +942,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           }
         } catch (error) {
           console.error(`Exceção na tentativa ${attempt}:`, error);
-          lastError = error;
+          lastError = error; // Atribui o erro capturado
           if (attempt < 3) {
             await new Promise(resolve => setTimeout(resolve, attempt * 1000));
           }
@@ -1012,6 +950,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       }
 
       if (!metadataSuccess) {
+        // Garante que lastError seja um objeto Error para acessar message
         const errorMessage = lastError instanceof Error ? lastError.message : String(lastError || 'Erro desconhecido');
         throw new Error(`Falha ao salvar metadados após ${attempt} tentativas: ${errorMessage}`);
       }
@@ -1047,39 +986,18 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     }
   };
 
-  // Define all naturezas (except "Outros") for sorting
-  const naturezaOptionValuesForSorting = [
+  const naturezaOptions = [
     "Ameaça",
-    VIAS_DE_FATO_NATUREZA, // "Vias de Fato"
+    "Vias de Fato",
     "Lesão Corporal",
-    "Dano Simples",
+    "Dano",
     "Injúria",
-    "Difamação", 
-    "Calúnia",   
-    "Perturbação ao Sossego Alheio",
-    PORTE_DE_DROGAS_NATUREZA, // "Porte/Posse de Droga"
-    "Conduzir Veículo sem CNH Gerando Perigo de Dano",
-    "Entregar Veículo Automotor a Pessoa Não Habilitada",
-    "Trafegar em Velocidade Incompatível Gerando Perigo de Dano", 
-    "Omissão de Socorro",
-    "Rixa",
-    "Invasão de Domicílio",
-    "Fraude em Comércio (Negar a Pagar Despesa)",
-    "Ato Obsceno",
-    "Falsa Identidade",
-    "Resistência",
-    "Desobediência",
-    "Desacato",
-    "Exercício Arbitrário das Próprias Razões",
+    "Difamação",
+    "Calúnia",
+    "Perturbação do Sossego",
+    "Porte de drogas para consumo",
+    "Outros"
   ];
-
-  // Sort the primary options alphabetically, ensuring uniqueness
-  const sortedPrimaryNaturezas = [...new Set(naturezaOptionValuesForSorting)]
-    .sort((a, b) => a.localeCompare(b)); 
-  
-  // Add "Outros" to the end
-  const naturezaOptions = [...sortedPrimaryNaturezas, OUTROS_NATUREZA];
-  
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
 
   return (
@@ -1105,7 +1023,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
             autor={autor}
             setAutor={setAutor}
             penaDescricao={penaDescricao}
-            naturezaOptions={naturezaOptions} // Pass the sorted options
+            naturezaOptions={naturezaOptions}
             customNatureza={customNatureza}
             setCustomNatureza={setCustomNatureza}
             startTime={startTime}
@@ -1117,7 +1035,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           />
         </div>
 
-        {natureza === PORTE_DE_DROGAS_NATUREZA && (
+        {natureza === "Porte de drogas para consumo" && (
           <Card className="mb-8">
             <CardHeader>
               <CardTitle>Verificação de Entorpecente</CardTitle>
@@ -1150,7 +1068,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
             natureza={natureza}
             tipificacao={tipificacao}
             setTipificacao={setTipificacao}
-            isCustomNatureza={natureza === OUTROS_NATUREZA}
+            isCustomNatureza={natureza === "Outros"}
             customNatureza={customNatureza}
             dataFato={dataFato}
             setDataFato={setDataFato}
@@ -1221,7 +1139,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
             setApreensoes={setApreensoes}
             conclusaoPolicial={conclusaoPolicial}
             setConclusaoPolicial={setConclusaoPolicial}
-            drugSeizure={natureza === PORTE_DE_DROGAS_NATUREZA}
+            drugSeizure={natureza === "Porte de drogas para consumo"}
             representacao={representacao}
             setRepresentacao={setRepresentacao}
             natureza={natureza}
