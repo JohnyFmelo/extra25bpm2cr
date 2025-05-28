@@ -321,15 +321,15 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     let penaAtual = "";
 
     if (natureza === OUTROS_NATUREZA) {
-      tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]"; // Keep current custom tipificação if any
-      penaAtual = penaDescricao || ""; // Keep current custom pena if any
+      tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]"; 
+      penaAtual = penaDescricao || ""; 
     } else {
       switch (natureza) {
         case "Ameaça":
           tipificacaoAtual = "ART. 147 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
           break;
-        case VIAS_DE_FATO_NATUREZA: // "Vias de Fato"
+        case VIAS_DE_FATO_NATUREZA: 
           tipificacaoAtual = "ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS";
           penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA";
           break;
@@ -357,7 +357,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           tipificacaoAtual = "ART. 42 DA LEI DE CONTRAVENÇÕES PENAIS";
           penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA";
           break;
-        case PORTE_DE_DROGAS_NATUREZA: // "Porte/Posse de Droga"
+        case PORTE_DE_DROGAS_NATUREZA: 
           tipificacaoAtual = "ART. 28 DA LEI Nº 11.343/2006 (LEI DE DROGAS)";
           penaAtual = "ADVERTÊNCIA SOBRE OS EFEITOS DAS DROGAS, PRESTAÇÃO DE SERVIÇOS À COMUNIDADE OU MEDIDA EDUCATIVA DE COMPARECIMENTO A PROGRAMA OU CURSO EDUCATIVO.";
           break;
@@ -417,11 +417,9 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           tipificacaoAtual = "[TIPIFICAÇÃO NÃO MAPEADA]";
           penaAtual = "";
       }
-      // Only update if not "Outros", otherwise custom values are preserved by the if block above
       setTipificacao(tipificacaoAtual);
       setPenaDescricao(penaAtual);
     }
-
 
     const autoresValidos = autores.filter(a => a.nome.trim() !== "");
     const autorTexto = autoresValidos.length === 0 ? "O(A) AUTOR(A)" : 
@@ -434,7 +432,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
     const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${naturezaNomeParaConclusao}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
     setConclusaoPolicial(conclusaoBase);
-  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]); // tipificacao and penaDescricao included as they can be custom for "Outros"
+  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]); 
 
 
   useEffect(() => {
@@ -811,7 +809,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       });
       return;
     }
-    if (natureza === "Selecione...") { // This should not be hit if default is set properly
+    if (natureza === "Selecione...") { 
       toast({
         title: "Campo Obrigatório",
         description: "Selecione a Natureza da Ocorrência.",
@@ -892,8 +890,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
       const tcoDataParaPDF: any = {
         tcoNumber: tcoNumber.trim(),
-        natureza: displayNaturezaReal, // This will be the simplified name like "Vias de Fato" or customNatureza
-        originalNatureza: natureza, // This will also be the simplified name (or customNatureza if "Outros")
+        natureza: displayNaturezaReal, 
+        originalNatureza: natureza, 
         customNatureza: customNatureza.trim(),
         tipificacao: tipificacao.trim(),
         penaDescricao: penaDescricao.trim(),
@@ -970,7 +968,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
       const tcoMetadata = {
         tconumber: tcoNumber.trim(),
-        natureza: displayNaturezaReal, // This will be the simplified name
+        natureza: displayNaturezaReal, 
         policiais: componentesValidos.map(p => ({
           nome: p.nome,
           rgpm: p.rg,
@@ -1049,7 +1047,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     }
   };
 
-  const naturezaOptions = [
+  // Define all naturezas (except "Outros") for sorting
+  const naturezaOptionValuesForSorting = [
     "Ameaça",
     VIAS_DE_FATO_NATUREZA, // "Vias de Fato"
     "Lesão Corporal",
@@ -1059,10 +1058,9 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     "Calúnia",   
     "Perturbação ao Sossego Alheio",
     PORTE_DE_DROGAS_NATUREZA, // "Porte/Posse de Droga"
-    
     "Conduzir Veículo sem CNH Gerando Perigo de Dano",
     "Entregar Veículo Automotor a Pessoa Não Habilitada",
-    "Trafegar em Velocidade Incompatível Gerando Perigo de Dano", // Shortened for UI
+    "Trafegar em Velocidade Incompatível Gerando Perigo de Dano", 
     "Omissão de Socorro",
     "Rixa",
     "Invasão de Domicílio",
@@ -1073,9 +1071,15 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     "Desobediência",
     "Desacato",
     "Exercício Arbitrário das Próprias Razões",
-    
-    OUTROS_NATUREZA // "Outros"
   ];
+
+  // Sort the primary options alphabetically, ensuring uniqueness
+  const sortedPrimaryNaturezas = [...new Set(naturezaOptionValuesForSorting)]
+    .sort((a, b) => a.localeCompare(b)); 
+  
+  // Add "Outros" to the end
+  const naturezaOptions = [...sortedPrimaryNaturezas, OUTROS_NATUREZA];
+  
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
 
   return (
@@ -1101,7 +1105,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
             autor={autor}
             setAutor={setAutor}
             penaDescricao={penaDescricao}
-            naturezaOptions={naturezaOptions}
+            naturezaOptions={naturezaOptions} // Pass the sorted options
             customNatureza={customNatureza}
             setCustomNatureza={setCustomNatureza}
             startTime={startTime}
