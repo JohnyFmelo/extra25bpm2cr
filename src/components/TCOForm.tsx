@@ -1,5 +1,3 @@
---- START OF FILE TCOForm (52).tsx ---
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -325,65 +323,29 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           tipificacaoAtual = "ART. 147 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
           break;
-        case "Ato Obsceno":
-          tipificacaoAtual = "ART. 233 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE TRÊS MESES A UM ANO, OU MULTA";
-          break;
-        case "Calúnia":
-          tipificacaoAtual = "ART. 138 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE 6 MESES A 2 ANOS, E MULTA";
-          break;
-        case "Conduzir veículo sem CNH gerando perigo de dano":
-          tipificacaoAtual = "ART. 309 DO CÓDIGO DE TRÂNSITO BRASILEIRO (CTB)";
-          penaAtual = "DETENÇÃO DE SEIS MESES A UM ANO, OU MULTA";
-          break;
-        case "Dano":
-          tipificacaoAtual = "ART. 163 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
-          break;
-        case "Desacato":
-          tipificacaoAtual = "ART. 331 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE SEIS MESES A DOIS ANOS, OU MULTA";
-          break;
-        case "Desobediência":
-          tipificacaoAtual = "ART. 330 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE QUINZE DIAS A SEIS MESES, E MULTA";
-          break;
-        case "Difamação":
-          tipificacaoAtual = "ART. 139 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO, E MULTA";
-          break;
-        case "Entregar veículo automotor a pessoa não habilitada":
-          tipificacaoAtual = "ART. 310 DO CÓDIGO DE TRÂNSITO BRASILEIRO (CTB)";
-          penaAtual = "DETENÇÃO DE SEIS MESES A UM ANO, OU MULTA";
-          break;
-        case "Exercício arbitrário das próprias razões":
-          tipificacaoAtual = "ART. 345 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE QUINZE DIAS A UM MÊS, OU MULTA, ALÉM DA PENA CORRESPONDENTE À VIOLÊNCIA";
-          break;
-        case "Falsa Identidade":
-          tipificacaoAtual = "ART. 307 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE TRÊS MESES A UM ANO, OU MULTA, SE O FATO NÃO CONSTITUI ELEMENTO DE CRIME MAIS GRAVE";
-          break;
-        case "Fraude em comércio (negar pagamento de despesa)":
-          tipificacaoAtual = "ART. 176 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE QUINZE DIAS A DOIS MESES, OU MULTA";
-          break;
-        case "Injúria":
-          tipificacaoAtual = "ART. 140 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
-          break;
-        case "Invasão de Domicílio":
-          tipificacaoAtual = "ART. 150 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE UM A TRÊS MESES, OU MULTA";
+        case "Vias de Fato":
+          tipificacaoAtual = "ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS";
+          penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA";
           break;
         case "Lesão Corporal":
           tipificacaoAtual = "ART. 129 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO";
           break;
-        case "Omissão de Socorro":
-          tipificacaoAtual = "ART. 135 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE UM A SEIS MESES, OU MULTA. A PENA É AUMENTADA DE METADE, SE DA OMISSÃO RESULTA LESÃO CORPORAL DE NATUREZA GRAVE, E TRIPLICADA, SE RESULTA A MORTE.";
+        case "Dano":
+          tipificacaoAtual = "ART. 163 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
+          break;
+        case "Injúria":
+          tipificacaoAtual = "ART. 140 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
+          break;
+        case "Difamação":
+          tipificacaoAtual = "ART. 139 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO, E MULTA";
+          break;
+        case "Calúnia":
+          tipificacaoAtual = "ART. 138 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 6 MESES A 2 ANOS, E MULTA";
           break;
         case "Perturbação do Sossego":
           tipificacaoAtual = "ART. 42 DA LEI DE CONTRAVENÇÕES PENAIS";
@@ -392,22 +354,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         case "Porte de drogas para consumo":
           tipificacaoAtual = "ART. 28 DA LEI Nº 11.343/2006 (LEI DE DROGAS)";
           penaAtual = "ADVERTÊNCIA SOBRE OS EFEITOS DAS DROGAS, PRESTAÇÃO DE SERVIÇOS À COMUNIDADE OU MEDIDA EDUCATIVA DE COMPARECIMENTO A PROGRAMA OU CURSO EDUCATIVO.";
-          break;
-        case "Resistência":
-          tipificacaoAtual = "ART. 329 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE DOIS MESES A DOIS ANOS";
-          break;
-        case "Rixa":
-          tipificacaoAtual = "ART. 137 DO CÓDIGO PENAL";
-          penaAtual = "DETENÇÃO DE QUINZE DIAS A DOIS MESES, OU MULTA. SE OCORRE MORTE OU LESÃO CORPORAL DE NATUREZA GRAVE, APLICA-SE, PELO FATO DA PARTICIPAÇÃO NA RIXA, A PENA DE DETENÇÃO, DE SEIS MESES A DOIS ANOS.";
-          break;
-        case "Trafegar em velocidade incompatível com segurança nas proximidades de escolas, hospitais, estações de embarque e desembarque de passageiros, logradouros estreitos ou onde haja grande movimentação ou concentração de pessoas, gerando perigo de dano":
-          tipificacaoAtual = "ART. 311 DO CÓDIGO DE TRÂNSITO BRASILEIRO (CTB)";
-          penaAtual = "DETENÇÃO DE SEIS MESES A UM ANO, OU MULTA";
-          break;
-        case "Vias de Fato":
-          tipificacaoAtual = "ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS";
-          penaAtual = "PRISÃO SIMPLES DE 15 DIAS A 3 MESES, OU MULTA";
           break;
         default:
           tipificacaoAtual = "[TIPIFICAÇÃO NÃO MAPEADA]";
@@ -1042,27 +988,14 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
   const naturezaOptions = [
     "Ameaça",
-    "Ato Obsceno",
-    "Calúnia",
-    "Conduzir veículo sem CNH gerando perigo de dano",
-    "Dano",
-    "Desacato",
-    "Desobediência",
-    "Difamação",
-    "Entregar veículo automotor a pessoa não habilitada",
-    "Exercício arbitrário das próprias razões",
-    "Falsa Identidade",
-    "Fraude em comércio (negar pagamento de despesa)",
-    "Injúria",
-    "Invasão de Domicílio",
+    "Vias de Fato",
     "Lesão Corporal",
-    "Omissão de Socorro",
+    "Dano",
+    "Injúria",
+    "Difamação",
+    "Calúnia",
     "Perturbação do Sossego",
     "Porte de drogas para consumo",
-    "Resistência",
-    "Rixa",
-    "Trafegar em velocidade incompatível com segurança nas proximidades de escolas, hospitais, estações de embarque e desembarque de passageiros, logradouros estreitos ou onde haja grande movimentação ou concentração de pessoas, gerando perigo de dano",
-    "Vias de Fato",
     "Outros"
   ];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
