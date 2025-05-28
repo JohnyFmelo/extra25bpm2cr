@@ -104,7 +104,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
             <div className="flex justify-center mt-4">
               <Button type="button" variant="outline" onClick={handleAddAutor} className="w-full md:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Adicionar mais Autores
+                Adicionar Autor
               </Button>
             </div>
           </TabsContent>
@@ -130,7 +130,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
               <div className="flex justify-center mt-4">
                 <Button type="button" variant="outline" onClick={handleAddVitima} className="w-full md:w-auto">
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Adicionar mais Vítimas
+                  Adicionar Vítima
                 </Button>
               </div>
             </TabsContent>}
@@ -156,7 +156,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
             <div className="flex justify-center mt-4">
               <Button type="button" variant="outline" onClick={handleAddTestemunha} className="w-full md:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Adicionar mais Testemunha
+                Adicionar Testemunha
               </Button>
             </div>
           </TabsContent>
