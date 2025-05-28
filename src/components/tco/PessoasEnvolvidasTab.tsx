@@ -71,7 +71,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
           <TabsList className={`grid ${isDrugCase ? 'grid-cols-2' : 'grid-cols-3'} mb-6`}>
             <TabsTrigger value="autor">
               <User className="mr-2 h-4 w-4" />
-              Autores do Fato
+              Autores
             </TabsTrigger>
             {!isDrugCase && <TabsTrigger value="vitimas">
                 <User className="mr-2 h-4 w-4" />
