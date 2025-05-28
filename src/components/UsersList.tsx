@@ -126,7 +126,7 @@ const UsersList = () => {
               <TableBody>
                 {users.map(user => <TableRow key={user.id} className="hover:bg-muted/50">
                     <TableCell>
-                      <button onClick={() => handleUserClick(user)} className="text-primary hover:underline text-left w-full">
+                      <button onClick={() => handleUserClick(user)} className="text-primary hover:underline text-left w-full text-blue-600">
                         {formatUserName(user)}
                       </button>
                     </TableCell>
