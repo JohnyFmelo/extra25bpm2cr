@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -8,7 +7,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import NotificationCard from "./NotificationCard";
 import { Timestamp } from "firebase/firestore";
-
 interface Notification {
   id: string;
   text: string;
@@ -20,23 +18,26 @@ interface Notification {
   type: 'all' | 'individual';
   recipientId: string | null;
 }
-
 interface NotificationsListProps {
   showOnlyUnread?: boolean;
 }
-
-const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) => {
+const NotificationsList = ({
+  showOnlyUnread = false
+}: NotificationsListProps) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<string | null>(null);
   const [viewersDialogOpen, setViewersDialogOpen] = useState(false);
-  const [viewers, setViewers] = useState<{name: string; graduation: string;}[]>([]);
-  
-  const { toast } = useToast();
+  const [viewers, setViewers] = useState<{
+    name: string;
+    graduation: string;
+  }[]>([]);
+  const {
+    toast
+  } = useToast();
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = currentUser.userType === "admin";
-  
   useEffect(() => {
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, snapshot => {
@@ -44,26 +45,20 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
         id: doc.id,
         ...doc.data(),
         readBy: doc.data().readBy || []
-      }) as Notification).filter(notif => 
-        notif.type === 'all' || notif.recipientId === currentUser.id
-      );
-      
-      const filteredNotifs = showOnlyUnread 
-        ? allNotifs.filter(n => !n.readBy.includes(currentUser.id))
-        : allNotifs;
-        
+      }) as Notification).filter(notif => notif.type === 'all' || notif.recipientId === currentUser.id);
+      const filteredNotifs = showOnlyUnread ? allNotifs.filter(n => !n.readBy.includes(currentUser.id)) : allNotifs;
       setNotifications(filteredNotifs);
-      
+
       // Dispatch event to notify about notifications count
       const unreadCount = allNotifs.filter(n => !n.readBy.includes(currentUser.id)).length;
-      window.dispatchEvent(new CustomEvent('notificationsUpdate', { 
-        detail: { count: unreadCount } 
+      window.dispatchEvent(new CustomEvent('notificationsUpdate', {
+        detail: {
+          count: unreadCount
+        }
       }));
     });
-    
     return () => unsubscribe();
   }, [currentUser.id, showOnlyUnread]);
-  
   const handleMarkAsRead = async (notificationId: string) => {
     try {
       const notifRef = doc(db, "recados", notificationId);
@@ -83,7 +78,6 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
       });
     }
   };
-
   const handleCloseNotification = async (notificationId: string) => {
     try {
       await handleMarkAsRead(notificationId);
@@ -92,7 +86,6 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
       console.error("Error closing notification:", error);
     }
   };
-  
   const handleDeleteNotification = async (notificationId: string) => {
     try {
       await deleteDoc(doc(db, "recados", notificationId));
@@ -110,7 +103,6 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
       });
     }
   };
-
   const handleViewers = async (readBy: string[]) => {
     try {
       const viewersPromises = readBy.map(async userId => {
@@ -128,12 +120,11 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
         }
         return null;
       });
-      
       const viewersData = await Promise.all(viewersPromises);
-      const validViewers = viewersData.filter((viewer): viewer is {name: string; graduation: string;} => 
-        viewer !== null && viewer.name && viewer.graduation
-      );
-      
+      const validViewers = viewersData.filter((viewer): viewer is {
+        name: string;
+        graduation: string;
+      } => viewer !== null && viewer.name && viewer.graduation);
       setViewers(validViewers);
       setViewersDialogOpen(true);
     } catch (error) {
@@ -145,10 +136,8 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
       });
     }
   };
-
   if (notifications.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-50 rounded-lg mx-4">
+    return <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-50 rounded-lg mx-4">
         <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-6">
           <span className="text-3xl">📬</span>
         </div>
@@ -156,40 +145,21 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
           {showOnlyUnread ? "Nenhuma notificação nova" : "Nenhuma notificação"}
         </h3>
         <p className="text-gray-600 text-base max-w-md">
-          {showOnlyUnread 
-            ? "Você está em dia com suas notificações! Continue assim." 
-            : "Ainda não há notificações para exibir. Elas aparecerão aqui quando chegarem."
-          }
+          {showOnlyUnread ? "Você está em dia com suas notificações! Continue assim." : "Ainda não há notificações para exibir. Elas aparecerão aqui quando chegarem."}
         </p>
-      </div>
-    );
+      </div>;
   }
-  
-  return (
-    <div className="w-full max-w-4xl mx-auto px-4">
+  return <div className="w-full max-w-4xl mx-auto px-0">
       <ScrollArea className="h-full">
         <div className="space-y-4 py-2">
           {notifications.map(notification => {
-            const isUnread = !notification.readBy.includes(currentUser.id);
-            const isExpanded = expandedId === notification.id;
-            
-            return (
-              <NotificationCard
-                key={notification.id}
-                notification={notification}
-                isUnread={isUnread}
-                isExpanded={isExpanded}
-                onToggle={() => setExpandedId(isExpanded ? null : notification.id)}
-                onMarkAsRead={() => handleMarkAsRead(notification.id)}
-                onLongPress={() => {
-                  setSelectedNotification(notification.id);
-                  setDeleteDialogOpen(true);
-                }}
-                onClose={() => handleCloseNotification(notification.id)}
-                showActions={isAdmin}
-              />
-            );
-          })}
+          const isUnread = !notification.readBy.includes(currentUser.id);
+          const isExpanded = expandedId === notification.id;
+          return <NotificationCard key={notification.id} notification={notification} isUnread={isUnread} isExpanded={isExpanded} onToggle={() => setExpandedId(isExpanded ? null : notification.id)} onMarkAsRead={() => handleMarkAsRead(notification.id)} onLongPress={() => {
+            setSelectedNotification(notification.id);
+            setDeleteDialogOpen(true);
+          }} onClose={() => handleCloseNotification(notification.id)} showActions={isAdmin} />;
+        })}
         </div>
       </ScrollArea>
 
@@ -203,10 +173,7 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => selectedNotification && handleDeleteNotification(selectedNotification)}
-              className="bg-red-500 hover:bg-red-600"
-            >
+            <AlertDialogAction onClick={() => selectedNotification && handleDeleteNotification(selectedNotification)} className="bg-red-500 hover:bg-red-600">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -222,32 +189,23 @@ const NotificationsList = ({ showOnlyUnread = false }: NotificationsListProps) =
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[300px]">
-            {viewers.length === 0 ? (
-              <div className="text-center py-8">
+            {viewers.length === 0 ? <div className="text-center py-8">
                 <p className="text-gray-500">Nenhuma visualização ainda</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {viewers.map((viewer, index) => (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
+              </div> : <div className="space-y-2">
+                {viewers.map((viewer, index) => <div key={index} className="p-3 bg-gray-50 rounded-lg">
                     <span className="font-medium text-gray-900">
                       {viewer.graduation} {viewer.name}
                     </span>
-                  </div>
-                ))}
-              </div>
-            )}
+                  </div>)}
+              </div>}
           </ScrollArea>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 };
-
 export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-  
   useEffect(() => {
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, snapshot => {
@@ -256,15 +214,11 @@ export const useNotifications = () => {
         type: doc.data().type,
         recipientId: doc.data().recipientId
       })).filter(notif => notif.type === 'all' || notif.recipientId === currentUser.id);
-      
       const count = notifs.filter(n => !n.readBy.includes(currentUser.id)).length;
       setUnreadCount(count);
     });
-    
     return () => unsubscribe();
   }, [currentUser.id]);
-  
   return unreadCount;
 };
-
 export default NotificationsList;
