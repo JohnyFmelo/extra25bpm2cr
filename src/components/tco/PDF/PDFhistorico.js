@@ -241,20 +241,21 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     // --- SEÇÃO 3: HISTÓRICO ---
     const primeiroAutor = data.autores && data.autores.length > 0 ? data.autores.find(a => a?.nome) : null;
     const vitimasComRelato = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome) : []) : [];
-    const testemunhasComRelato = data.testemunhas ? data.testemunhas.filter(t => t?.nome) : [];
+    // CORREÇÃO: Usar as testemunhas validadas que foram filtradas anteriormente
+    const testemunhasComRelato = testemunhasValidas; // Já filtradas por nome
 
     let historicoSectionNumber = 3.1;
 
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
     yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", historicoSectionNumber.toFixed(1), 2, data);
     historicoSectionNumber += 0.1;
-    yPos = addWrappedText(doc, yPos, data.relatoPolicial || "Não informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.relatoPolicial || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     const tituloRelatoAutor = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "RELATO DA AUTORA DO FATO" : "RELATO DO AUTOR DO FATO";
     yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, historicoSectionNumber.toFixed(1), 2, data);
     historicoSectionNumber += 0.1;
-    yPos = addWrappedText(doc, yPos, data.relatoAutor || "Não informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.relatoAutor || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     if (primeiroAutor) {
         yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor?.nome, "AUTOR(A) DO FATO", data);
     } else {
@@ -266,39 +267,57 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             const tituloRelatoVitima = `RELATO DA VÍTIMA ${vitima.nome.toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, tituloRelatoVitima, historicoSectionNumber.toFixed(1), 2, data);
             historicoSectionNumber += 0.1;
-            const relatoVitimaText = vitima.relato || "Relato não fornecido pela vítima.";
-            yPos = addWrappedText(doc, yPos, relatoVitimaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+            
+            const relatoIndividualVitima = vitima.relato;
+            let relatoVitimaParaPdf = "RELATO NÃO FORNECIDO PELA VÍTIMA."; 
+            
+            if (relatoIndividualVitima && 
+                relatoIndividualVitima.trim() !== "" && 
+                !relatoIndividualVitima.toUpperCase().includes("[INSIRA DECLARAÇÃO]")) {
+                relatoVitimaParaPdf = relatoIndividualVitima.toUpperCase();
+            }
+            
+            yPos = addWrappedText(doc, yPos, relatoVitimaParaPdf, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
             yPos = addSignatureWithNameAndRole(doc, yPos, vitima.nome, "VÍTIMA", data);
         });
     }
 
+    // --- Início da Lógica Corrigida para Relato de Testemunhas ---
     if (testemunhasComRelato.length > 0) {
         testemunhasComRelato.forEach((testemunha, index) => {
             const tituloRelatoTestemunha = `RELATO DA TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, tituloRelatoTestemunha, historicoSectionNumber.toFixed(1), 2, data);
             historicoSectionNumber += 0.1;
-            const relatoTestemunhaText = testemunha.relato || "Relato não fornecido pela testemunha.";
-            yPos = addWrappedText(doc, yPos, relatoTestemunhaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+            
+            const relatoIndividualTestemunha = testemunha.relato;
+            let relatoTestemunhaParaPdf = "RELATO NÃO FORNECIDO PELA TESTEMUNHA."; 
+
+            if (relatoIndividualTestemunha && 
+                relatoIndividualTestemunha.trim() !== "" && 
+                !relatoIndividualTestemunha.toUpperCase().includes("[INSIRA DECLARAÇÃO]")) {
+                relatoTestemunhaParaPdf = relatoIndividualTestemunha.toUpperCase();
+            }
+
+            yPos = addWrappedText(doc, yPos, relatoTestemunhaParaPdf, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
             yPos = addSignatureWithNameAndRole(doc, yPos, testemunha.nome, "TESTEMUNHA", data);
         });
     } else {
+        // Caso não haja testemunhas válidas (testemunhasComRelato.length === 0)
         yPos = addSectionTitle(doc, yPos, "RELATO DAS TESTEMUNHAS", historicoSectionNumber.toFixed(1), 2, data);
         historicoSectionNumber += 0.1;
-        let relatoTestText = "Nenhuma testemunha identificada.";
-        if (data.relatoTestemunha) {
-            relatoTestText = data.relatoTestemunha;
-        }
-        yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        yPos += 10;
+        const textoSemTestemunhas = "NÃO HÁ TESTEMUNHAS QUALIFICADAS OU PRESENTES PARA DEPOR NESTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA.";
+        yPos = addWrappedText(doc, yPos, textoSemTestemunhas.toUpperCase(), MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+        yPos += 10; // Espaçamento
     }
+    // --- Fim da Lógica Corrigida para Relato de Testemunhas ---
 
     yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", historicoSectionNumber.toFixed(1), 2, data);
-    yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "Não informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     // --- SEÇÃO 4: PROVIDÊNCIAS ---
     yPos = addSectionTitle(doc, yPos, "PROVIDÊNCIAS", "4", 1, data);
-    yPos = addWrappedText(doc, yPos, data.providencias || "Não informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.providencias || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     yPos = addSectionTitle(doc, yPos, "DOCUMENTOS ANEXOS", "4.1", 2, data);
