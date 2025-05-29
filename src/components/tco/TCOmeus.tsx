@@ -1,5 +1,4 @@
 // TCOmeus (7).tsx
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -134,6 +133,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const [currentGupmToDisplay, setCurrentGupmToDisplay] = useState<StructuredGupm | null>(null);
 
   const fetchAndStructureGupmForTco = useCallback(async (rgpms: ExtractedRgpms): Promise<StructuredGupm | null> => {
+    // Sem alterações aqui, a lógica parece sólida.
     if (rgpms.main.length === 0 && rgpms.support.length === 0) return null;
     const allRgpms = [...new Set([...rgpms.main, ...rgpms.support])];
     if (allRgpms.length === 0) return null;
@@ -175,12 +175,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       console.error("Exception fetching/structuring GUPM:", e);
       return null;
     }
-  }, []);
+  }, []); // supabase é uma constante importada, não precisa estar nas dependências.
 
   const fetchAllTcos = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Fetch all folders in the bucket to get all user TCOs
       const { data: folders, error: foldersError } = await supabase.storage
         .from(BUCKET_NAME)
         .list('tcos');
@@ -192,7 +191,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
 
       const allTcos: TcoData[] = [];
 
-      // For each user folder, fetch their TCOs
       for (const folder of folders || []) {
         if (folder.name && folder.name !== '.emptyFolderPlaceholder') {
           const userId = folder.name;
@@ -206,9 +204,9 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             continue;
           }
 
-          // Get user info from Firebase for display
           let userInfo = {};
           try {
+            // Atenção: Esta chamada pode necessitar de autenticação via headers para Firestore REST API
             const userDoc = await fetch(`https://firestore.googleapis.com/v1/projects/sistema-de-escala-4b6a3/databases/(default)/documents/users/${userId}`);
             if (userDoc.ok) {
               const userData = await userDoc.json();
@@ -216,9 +214,11 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                 warName: userData.fields?.warName?.stringValue || 'Usuário',
                 rank: userData.fields?.rank?.stringValue || ''
               };
+            } else {
+                console.log(`Não foi possível obter dados do usuário ${userId} do Firestore. Status: ${userDoc.status}`);
             }
           } catch (error) {
-            console.log(`Não foi possível obter dados do usuário ${userId}`);
+            console.log(`Erro na requisição para obter dados do usuário ${userId} do Firestore:`, error);
           }
 
           const userTcos = userFiles?.map(file => {
@@ -247,21 +247,43 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         }
       }
 
-      // Sort by creation date (newest first)
       allTcos.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
       setTcoList(allTcos);
 
-      // Preencher o cache de detalhes da GUPM
-      const newGupmDetailsCache: Record<string, StructuredGupm | null> = { ...gupmDetailsCache };
+      // Otimização: Buscar detalhes GUPM em paralelo e atualizar o cache de uma vez
+      const newGupmDetailsPromises: Promise<{ id: string; gupmInfo: StructuredGupm | null }>[] = [];
+      // Usar o estado atual do cache para evitar re-fetch desnecessário.
+      // É importante usar a forma funcional de setGupmDetailsCache para garantir que estamos usando o valor mais recente do cache.
+      
+      const currentCacheKeys = Object.keys(gupmDetailsCache);
+      
       for (const tco of allTcos) {
-        if (!newGupmDetailsCache[tco.id] && tco.rgpmsExtracted) {
-          const gupmInfo = await fetchAndStructureGupmForTco(tco.rgpmsExtracted);
-          newGupmDetailsCache[tco.id] = gupmInfo;
-        } else if (!tco.rgpmsExtracted) {
-          newGupmDetailsCache[tco.id] = null;
+        if (!currentCacheKeys.includes(tco.id)) { // Se não está no cache (incluindo os com valor null)
+          if (tco.rgpmsExtracted && (tco.rgpmsExtracted.main.length > 0 || tco.rgpmsExtracted.support.length > 0)) {
+            newGupmDetailsPromises.push(
+              fetchAndStructureGupmForTco(tco.rgpmsExtracted).then(gupmInfo => ({
+                id: tco.id,
+                gupmInfo,
+              }))
+            );
+          } else {
+            // Adiciona TCOs sem RGPMs diretamente ao cache como null se não estiverem lá
+            newGupmDetailsPromises.push(Promise.resolve({ id: tco.id, gupmInfo: null }));
+          }
         }
       }
-      setGupmDetailsCache(newGupmDetailsCache);
+
+      if (newGupmDetailsPromises.length > 0) {
+        const resolvedGupmDetails = await Promise.all(newGupmDetailsPromises);
+        // Usar forma funcional para garantir que está atualizando o estado mais recente
+        setGupmDetailsCache(prevCache => {
+            const updatedCache = { ...prevCache };
+            resolvedGupmDetails.forEach(detail => {
+                updatedCache[detail.id] = detail.gupmInfo;
+            });
+            return updatedCache;
+        });
+      }
 
     } catch (error) {
       console.error("Erro ao buscar TCOs:", error);
@@ -273,23 +295,29 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [toast, fetchAndStructureGupmForTco, gupmDetailsCache]);
+  // CORREÇÃO: Removido gupmDetailsCache das dependências para evitar loop
+  }, [toast, fetchAndStructureGupmForTco]); 
 
-  // Set up periodic refresh every 30 seconds to check for new TCOs
+
   useEffect(() => {
-    fetchAllTcos();
+    fetchAllTcos(); // Chamada inicial
     
     const interval = setInterval(() => {
-      fetchAllTcos();
-    }, 30000);
+      fetchAllTcos(); // Chamadas periódicas
+    }, 30000); // Atualiza a cada 30 segundos
 
     return () => {
-      clearInterval(interval);
+      clearInterval(interval); // Limpa o intervalo quando o componente desmonta
     };
-  }, [fetchAllTcos]);
+  }, [fetchAllTcos]); // A dependência fetchAllTcos está correta aqui
+
+  // CORREÇÃO: Removido o useEffect redundante que chamava fetchAllTcos
+  // useEffect(() => {
+  //   fetchAllTcos();
+  // }, [fetchAllTcos]);
+
 
   const confirmDelete = (tco: TcoData) => {
-    // Only allow deletion of own TCOs unless user is admin
     if (tco.userId !== user.id && user.userType !== 'admin') {
       toast({
         variant: "destructive",
@@ -308,21 +336,36 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     try {
       setIsDeleting(true);
       setDeletionMessage("Iniciando processo de exclusão...");
+      // A lógica de deleteTCO parece tratar tanto 'storage' quanto 'database'
       const { success, error } = await deleteTCO({
         id: tcoToDelete.id,
-        pdfPath: tcoToDelete.pdfPath
+        pdfPath: tcoToDelete.pdfPath 
       });
+      
       if (error || !success) {
-        setDeletionMessage("Erro na exclusão. Tentando exclusão direta...");
+        setDeletionMessage("Erro na exclusão via helper. Tentando exclusão direta...");
+        console.warn("Helper deleteTCO falhou, tentando fallback. Erro:", error);
+        // Fallback se deleteTCO falhar (caso não delete do storage por exemplo)
         if (tcoToDelete.pdfPath) {
-          await supabase.storage.from(BUCKET_NAME).remove([tcoToDelete.pdfPath]);
+          const { error: storageError } = await supabase.storage.from(BUCKET_NAME).remove([tcoToDelete.pdfPath]);
+          if (storageError) console.error("Erro na exclusão direta do storage:", storageError);
         }
-        if (tcoToDelete.source === 'database') {
-          await supabase.from('tco_pdfs').delete().eq('id', tcoToDelete.id);
-        }
+        // Se for TCO de database, também removeria da tabela do DB. O código original sugere
+        // que tco.source pode ser 'database', mas na listagem ele sempre define como 'storage'.
+        // Se houver tcos que vêm de 'database' com um 'id' de tabela, a lógica seria:
+        // if (tcoToDelete.source === 'database') {
+        //   await supabase.from('tco_pdfs').delete().eq('id', tcoToDelete.id);
+        // }
       }
+      
       setTcoList(prevList => prevList.filter(item => item.id !== tcoToDelete.id));
+      setGupmDetailsCache(prevCache => { // Limpa o cache do item excluído
+        const newCache = { ...prevCache };
+        delete newCache[tcoToDelete.id];
+        return newCache;
+      });
       if (selectedTco?.id === tcoToDelete.id) setSelectedTco(null);
+      
       toast({
         title: "TCO Excluído",
         description: "O TCO foi removido com sucesso."
@@ -347,7 +390,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       if (tco.pdfPath) {
         const { data, error } = await supabase.storage
           .from(BUCKET_NAME)
-          .createSignedUrl(tco.pdfPath, 60 * 5);
+          .createSignedUrl(tco.pdfPath, 60 * 5); // URL válida por 5 minutos
 
         if (error || !data?.signedUrl) {
           throw new Error(error?.message || "URL assinada não encontrada para visualização.");
@@ -407,25 +450,24 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
 
   const openGupmDetailsModal = (tcoId: string) => {
     const details = gupmDetailsCache[tcoId];
-    if (details) {
-      setCurrentGupmToDisplay(details);
-      setIsGupmDetailModalOpen(true);
-    } else if (gupmDetailsCache.hasOwnProperty(tcoId) && gupmDetailsCache[tcoId] === null) {
-      setCurrentGupmToDisplay(null);
-      setIsGupmDetailModalOpen(true);
+    // Verifique se a chave existe e se não está em processo de carregamento (undefined seria um estado intermediário)
+    if (gupmDetailsCache.hasOwnProperty(tcoId)) {
+        setCurrentGupmToDisplay(details); // details pode ser null ou StructuredGupm
+        setIsGupmDetailModalOpen(true);
     } else {
+      // Pode acontecer se o modal for aberto antes do cache ser preenchido
+      // ou se o TCO não tiver RGPMS e o cache ainda não foi populado com null para ele.
       toast({
         variant: "default",
         title: "GUPM",
-        description: "Detalhes da guarnição não disponíveis ou ainda carregando."
+        description: "Detalhes da guarnição ainda carregando ou não disponíveis."
       });
     }
   };
 
-  useEffect(() => {
-    fetchAllTcos();
-  }, [fetchAllTcos]);
-
+  // O JSX restante não necessita de grandes alterações para estas correções específicas
+  // mas a forma como gupmInfo é acessada pode ser simplificada agora que o cache é mais robusto
+  
   return <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 flex-grow overflow-hidden flex flex-col">
     {isLoading && tcoList.length === 0 ? (
       <div className="space-y-4 animate-pulse p-2">
@@ -459,11 +501,13 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             <TableBody>
               {tcoList.map(tco => {
                 const gupmInfo = gupmDetailsCache[tco.id];
-                const conductorDisplay = gupmInfo?.conductor 
-                  ? `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}` 
-                  : gupmInfo === undefined && isLoading || gupmInfo === undefined && !gupmDetailsCache.hasOwnProperty(tco.id) 
-                    ? "Carregando GUPM..." 
-                    : "N/D";
+                let conductorDisplay = "N/D";
+                if (gupmInfo === undefined && !gupmDetailsCache.hasOwnProperty(tco.id)) { // Ainda não carregado no cache
+                    conductorDisplay = "Carregando GUPM...";
+                } else if (gupmInfo?.conductor) {
+                    conductorDisplay = `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}`;
+                }
+                
                 const hasAnyOfficerForModal = gupmInfo && (gupmInfo.conductor || gupmInfo.mainTeam.length > 0 || gupmInfo.supportTeam.length > 0);
                 const canDelete = tco.userId === user.id || user.userType === 'admin';
                 
@@ -566,11 +610,13 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         <div className="md:hidden space-y-3 flex-grow overflow-y-auto p-1">
           {tcoList.map(tco => {
             const gupmInfo = gupmDetailsCache[tco.id];
-            const conductorDisplay = gupmInfo?.conductor 
-              ? `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}` 
-              : gupmInfo === undefined && isLoading || gupmInfo === undefined && !gupmDetailsCache.hasOwnProperty(tco.id) 
-                ? "Carregando GUPM..." 
-                : "N/D";
+            let conductorDisplay = "N/D";
+             if (gupmInfo === undefined && !gupmDetailsCache.hasOwnProperty(tco.id)) { // Ainda não carregado no cache
+                conductorDisplay = "Carregando GUPM...";
+            } else if (gupmInfo?.conductor) {
+                conductorDisplay = `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}`;
+            }
+
             const hasAnyOfficerForModal = gupmInfo && (gupmInfo.conductor || gupmInfo.mainTeam.length > 0 || gupmInfo.supportTeam.length > 0);
             const canDelete = tco.userId === user.id || user.userType === 'admin';
             
@@ -747,9 +793,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
               </ul>
             </div>
           )}
-          {!currentGupmToDisplay?.conductor && 
-           (!currentGupmToDisplay || currentGupmToDisplay.mainTeam.length === 0) && 
-           (!currentGupmToDisplay || currentGupmToDisplay.supportTeam.length === 0) && (
+          {(!currentGupmToDisplay || 
+           (!currentGupmToDisplay.conductor && currentGupmToDisplay.mainTeam.length === 0 && currentGupmToDisplay.supportTeam.length === 0)) && (
             <div className="text-center py-6">
               <Users className="h-10 w-10 text-gray-400 mx-auto mb-3" />
               <p className="text-gray-500">Nenhuma informação de guarnição disponível para este TCO.</p>
