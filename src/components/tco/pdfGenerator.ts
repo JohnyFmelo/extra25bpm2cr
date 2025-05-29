@@ -20,6 +20,18 @@ import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
 
 /**
+ * Remove acentos e caracteres especiais de uma string
+ */
+const removeAccents = (str: string): string => {
+    return str
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
+        .replace(/[^a-zA-Z0-9_-]/g, '_') // Substitui caracteres especiais por underscore
+        .replace(/_+/g, '_') // Remove underscores consecutivos
+        .replace(/^_|_$/g, ''); // Remove underscores no início e fim
+};
+
+/**
  * Gera o nome do arquivo TCO no formato específico pedido
  * TCO_[número]_[data]_[natureza]_[RGPM condutor][RGPMs outros].[RGPMs apoio]
  */
@@ -29,19 +41,19 @@ export const generateTCOFilename = (data: any): string => {
     // Processar o número do TCO
     const tcoNum = data.tcoNumber?.trim() || 'SEM_NUMERO';
     
-    // Formatar data do evento (DD.MM.YYYY)
+    // Formatar data do evento (DD-MM-YYYY) - usando hífen em vez de ponto
     const eventDate = data.dataFato ? data.dataFato.split('-') : [];
     const formattedDate = eventDate.length === 3 ? 
-        `${eventDate[2]}.${eventDate[1]}.${eventDate[0]}` : 
-        new Date().toLocaleDateString('pt-BR').replace(/\//g, '.');
+        `${eventDate[2]}-${eventDate[1]}-${eventDate[0]}` : 
+        new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
     
-    // Obter natureza
+    // Obter natureza e remover acentos/caracteres especiais
     let natureza = data.natureza === "Outros" && data.customNatureza ? 
         data.customNatureza.trim() : 
         data.natureza || 'Sem_Natureza';
         
-    // Substituir espaços na natureza por underscores para o nome do arquivo
-    natureza = natureza.replace(/\s+/g, '_');
+    // Limpar a natureza para o nome do arquivo
+    natureza = removeAccents(natureza);
     console.log("Natureza formatada para o nome do arquivo:", natureza);
 
     // Processar RGPMs dos componentes da guarnição
@@ -66,9 +78,9 @@ export const generateTCOFilename = (data: any): string => {
     // Construir a parte do código de barras do nome do arquivo
     let rgCode = rgsPrincipais.length > 0 ? rgsPrincipais.join('') : 'RG_INDISPONIVEL';
     
-    // Adicionar RGs de apoio com ponto separador, se existirem
+    // Adicionar RGs de apoio com hífen separador, se existirem
     if (rgsApoio.length > 0) {
-        rgCode += '.' + rgsApoio.join('');
+        rgCode += '-' + rgsApoio.join('');
     }
     
     // Construir o nome do arquivo final
