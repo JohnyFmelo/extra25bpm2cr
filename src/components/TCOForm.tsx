@@ -1101,30 +1101,26 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         </div>
 
         {natureza === "Porte de drogas para consumo" && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Verificação de Entorpecente</CardTitle>
-              <CardDescription>Detalhes sobre a substância apreendida.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DrugVerificationTab
-                quantidade={quantidade}
-                setQuantidade={setQuantidade}
-                substancia={substancia}
-                setSubstancia={setSubstancia}
-                cor={cor}
-                setCor={setCor}
-                odor={odor}
-                setOdor={setOdor}
-                indicios={indicios}
-                customMaterialDesc={customMaterialDesc}
-                setCustomMaterialDesc={setCustomMaterialDesc}
-                isUnknownMaterial={isUnknownMaterial}
-                lacreNumero={lacreNumero}
-                setLacreNumero={setLacreNumero}
-              />
-            </CardContent>
-          </Card>
+          <div className="mb-8"> {/* Retains bottom margin for consistency */}
+            {/* Optionally, add your desired title here if DrugVerificationTab doesn't provide one */}
+            {/* <h2 className="text-xl font-semibold mb-4">Constatação Preliminar de Droga</h2> */}
+            <DrugVerificationTab
+              quantidade={quantidade}
+              setQuantidade={setQuantidade}
+              substancia={substancia}
+              setSubstancia={setSubstancia}
+              cor={cor}
+              setCor={setCor}
+              odor={odor}
+              setOdor={setOdor}
+              indicios={indicios}
+              customMaterialDesc={customMaterialDesc}
+              setCustomMaterialDesc={setCustomMaterialDesc}
+              isUnknownMaterial={isUnknownMaterial}
+              lacreNumero={lacreNumero}
+              setLacreNumero={setLacreNumero}
+            />
+          </div>
         )}
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
