@@ -1,3 +1,4 @@
+
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -272,20 +273,23 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         });
     }
 
+    // Corrigir a lógica das testemunhas
     if (testemunhasComRelato.length > 0) {
         testemunhasComRelato.forEach((testemunha, index) => {
             const tituloRelatoTestemunha = `RELATO DA TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, tituloRelatoTestemunha, historicoSectionNumber.toFixed(1), 2, data);
             historicoSectionNumber += 0.1;
-            const relatoTestemunhaText = testemunha.relato || "Relato não fornecido pela testemunha.";
+            // Usar o relato específico da testemunha se existir, caso contrário usar texto padrão
+            const relatoTestemunhaText = testemunha.relato || "A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.";
             yPos = addWrappedText(doc, yPos, relatoTestemunhaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
             yPos = addSignatureWithNameAndRole(doc, yPos, testemunha.nome, "TESTEMUNHA", data);
         });
     } else {
+        // Quando não há testemunhas válidas, usar o relato genérico do campo relatoTestemunha
         yPos = addSectionTitle(doc, yPos, "RELATO DAS TESTEMUNHAS", historicoSectionNumber.toFixed(1), 2, data);
         historicoSectionNumber += 0.1;
         let relatoTestText = "Nenhuma testemunha identificada.";
-        if (data.relatoTestemunha) {
+        if (data.relatoTestemunha && data.relatoTestemunha.trim() !== "") {
             relatoTestText = data.relatoTestemunha;
         }
         yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
