@@ -182,7 +182,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 }
             });
         } else {
-            // Se não houver vítimas humanas (e não for caso de droga), indica "Nenhuma vítima informada".
              yPos = addSectionTitle(doc, yPos, "VÍTIMAS", currentSectionNumber.toFixed(1), 2, data);
              currentSectionNumber += 0.1;
              yPos = addWrappedText(doc, yPos, "Nenhuma vítima qualificada informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
@@ -233,12 +232,11 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             }
         });
     }
-    // Não há 'else' aqui para testemunhas. Se não houver, a seção não é adicionada.
 
     // --- SEÇÃO 3: HISTÓRICO ---
     const primeiroAutor = data.autores && data.autores.length > 0 ? data.autores.find(a => a?.nome) : null;
-    const vitimasComRelato = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome && v.nome.toUpperCase() !== "O ESTADO") : []) : [];
-    const testemunhasComRelatoComNome = testemunhasValidasComNome; // Reutiliza a lista já filtrada por nome
+    const vitimasComRelatoValidas = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome && v.nome.toUpperCase() !== "O ESTADO") : []) : [];
+    const testemunhasComRelatoValidas = testemunhasValidasComNome; // Reutiliza a lista já filtrada por nome
 
     let historicoSectionNumber = 3.1;
 
@@ -254,7 +252,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addWrappedText(doc, yPos, data.relatoAutor || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     
     if (primeiroAutor) {
-        let papelDoAutor = "AUTOR(A) DO FATO"; // Padrão
+        let papelDoAutor = "AUTOR(A) DO FATO";
         if (primeiroAutor.sexo) {
             const sexoAutorLower = primeiroAutor.sexo.toLowerCase();
             if (sexoAutorLower === 'feminino') {
@@ -268,8 +266,8 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 10;
     }
 
-    if (!isDrugCase && vitimasComRelato.length > 0) {
-        vitimasComRelato.forEach((vitima) => {
+    if (!isDrugCase && vitimasComRelatoValidas.length > 0) {
+        vitimasComRelatoValidas.forEach((vitima) => {
             const tituloRelatoVitima = `RELATO DA VÍTIMA ${vitima.nome.toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, tituloRelatoVitima, historicoSectionNumber.toFixed(1), 2, data);
             historicoSectionNumber += 0.1;
@@ -279,6 +277,8 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             
             if (relatoIndividualVitima && 
                 relatoIndividualVitima.trim() !== "" && 
+                // Checa se o relato da vítima NÃO É o placeholder
+                !relatoIndividualVitima.toUpperCase().includes("RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.".toUpperCase()) &&
                 !relatoIndividualVitima.toUpperCase().includes("[INSIRA DECLARAÇÃO]")) {
                 relatoVitimaParaPdf = relatoIndividualVitima.toUpperCase();
             }
@@ -288,9 +288,8 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         });
     }
 
-    // --- Início da Lógica Corrigida para Relato de Testemunhas ---
-    if (testemunhasComRelatoComNome.length > 0) {
-        testemunhasComRelatoComNome.forEach((testemunha) => {
+    if (testemunhasComRelatoValidas.length > 0) {
+        testemunhasComRelatoValidas.forEach((testemunha) => {
             const tituloRelatoTestemunha = `RELATO DA TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, tituloRelatoTestemunha, historicoSectionNumber.toFixed(1), 2, data);
             historicoSectionNumber += 0.1;
@@ -298,18 +297,20 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             const relatoIndividualTestemunha = testemunha.relato;
             let relatoTestemunhaParaPdf = "RELATO NÃO FORNECIDO PELA TESTEMUNHA."; 
 
+            // --- CORREÇÃO APLICADA AQUI ---
             if (relatoIndividualTestemunha && 
-                relatoIndividualTestemunha.trim() !== "" && 
+                relatoIndividualTestemunha.trim() !== "" &&
+                // Checa se o relato da testemunha NÃO É o placeholder
+                !relatoIndividualTestemunha.toUpperCase().includes("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.".toUpperCase()) &&
                 !relatoIndividualTestemunha.toUpperCase().includes("[INSIRA DECLARAÇÃO]")) {
                 relatoTestemunhaParaPdf = relatoIndividualTestemunha.toUpperCase();
             }
+            // --- FIM DA CORREÇÃO ---
 
             yPos = addWrappedText(doc, yPos, relatoTestemunhaParaPdf, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
             yPos = addSignatureWithNameAndRole(doc, yPos, testemunha.nome, "TESTEMUNHA", data);
         });
     }
-    // Se não houver testemunhasComRelatoComNome, nada será impresso para elas, incluindo título.
-    // --- Fim da Lógica Corrigida para Relato de Testemunhas ---
 
     yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", historicoSectionNumber.toFixed(1), 2, data);
     yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
