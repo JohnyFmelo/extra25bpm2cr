@@ -27,9 +27,11 @@ import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
 import RankingChart from "@/components/RankingChart";
 import ManualUserRegistration from "@/components/ManualUserRegistration";
+
 interface IndexProps {
   initialActiveTab?: string;
 }
+
 const Index = ({
   initialActiveTab = "main"
 }: IndexProps) => {
@@ -53,6 +55,7 @@ const Index = ({
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
+
   useEffect(() => {
     const handleNotificationsChange = (count: number) => {
       setHasNotifications(count > 0);
@@ -70,6 +73,7 @@ const Index = ({
       window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
     };
   }, [unreadCount]);
+
   useEffect(() => {
     const today = new Date();
     const travelsRef = collection(db, "travels");
@@ -89,6 +93,7 @@ const Index = ({
     });
     return () => unsubscribe();
   }, []);
+
   const handleRefresh = () => {
     window.location.reload();
     toast({
@@ -96,12 +101,15 @@ const Index = ({
       description: "Recarregando dados do sistema."
     });
   };
+
   const handleEditorClick = () => {
     setActiveTab("editor");
   };
+
   const handleExtraClick = () => {
     setActiveTab("extra");
   };
+
   const handleBackClick = () => {
     if (activeTab === "editor") {
       setActiveTab("extra");
@@ -111,64 +119,56 @@ const Index = ({
       setActiveTab("main");
     }
   };
+
   const handleSettingsClick = () => {
     setActiveTab("settings");
   };
+
   const handleTravelClick = () => {
     setActiveTab("travel");
   };
+
   const handleTCOClick = () => {
-    if (user.userType === "admin") {
-      setActiveTab("tco");
-    } else {
-      toast({
-        variant: "warning",
-        title: "Funcionalidade Restrita",
-        description: "O módulo TCO está em desenvolvimento e disponível apenas para administradores."
-      });
-    }
+    // REMOVIDA A VERIFICAÇÃO DE ADMIN - TCO agora é acessível por todos
+    setActiveTab("tco");
   };
+
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
     setShowLogoutDialog(false);
   };
+
   const handleTabChange = (tab: string) => {
     if (tab === 'hours') {
       navigate('/hours');
     } else if (tab === 'extra') {
-      // Se estiver na aba editor e clicar em extra, retorna para extra
       if (activeTab === 'editor') {
         setActiveTab('extra');
       } else {
         setActiveTab(tab);
       }
     } else if (tab === 'tco') {
-      if (user.userType === "admin") {
-        setActiveTab(tab);
-      } else {
-        toast({
-          variant: "warning",
-          title: "Funcionalidade Restrita",
-          description: "O módulo TCO está em desenvolvimento e disponível apenas para administradores."
-        });
-        return;
-      }
+      // REMOVIDA A VERIFICAÇÃO DE ADMIN - TCO agora é acessível por todos via tab change
+      setActiveTab(tab);
     } else {
       setActiveTab(tab);
     }
   };
+
   useEffect(() => {
     // Update activeTab when initialActiveTab prop changes
     if (initialActiveTab && initialActiveTab !== activeTab) {
       setActiveTab(initialActiveTab);
     }
-  }, [initialActiveTab]);
+  }, [initialActiveTab, activeTab]); // Adicionado activeTab às dependências
 
   // Standardized class strings
   const tabListClasses = "w-full flex gap-1 rounded-lg p-1 bg-slate-200 mb-4";
   const tabTriggerClasses = "flex-1 text-center py-2.5 px-4 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-700 hover:bg-slate-300/70 data-[state=active]:hover:bg-blue-700/90";
-  return <div className="relative min-h-screen w-full flex flex-col">
+
+  return (
+    <div className="relative min-h-screen w-full flex flex-col">
       <div className="flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow py-0">
           <TabsList className="hidden">
@@ -185,7 +185,8 @@ const Index = ({
 
           <TabsContent value="main" className="flex-grow">
             <div className="space-y-8">
-              {hasNotifications && <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
+              {hasNotifications && (
+                <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
                   <CardContent className="p-6">
                     <div className="flex items-center mb-2">
                       <CalendarDays className="h-5 w-5 text-amber-500 mr-2" />
@@ -193,7 +194,8 @@ const Index = ({
                     </div>
                     <NotificationsList showOnlyUnread={true} />
                   </CardContent>
-                </Card>}
+                </Card>
+              )}
               <MonthlyHoursSummary />
               <MonthlyExtraCalendar />
               <UpcomingShifts />
@@ -204,13 +206,15 @@ const Index = ({
           <TabsContent value="extra">
             <div className="relative">
               <div className="absolute right-0 -top-14">
-                
+                {/* Botão de voltar ou outras ações podem ser adicionados aqui se necessário */}
               </div>
-              {user.userType === "admin" && <div className="fixed bottom-8 right-8 z-10">
+              {user.userType === "admin" && (
+                <div className="fixed bottom-8 right-8 z-10">
                   <Button onClick={handleEditorClick} className="fixed bottom-6 right-6 rounded-full p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] py-[26px] bg-green-500 hover:bg-green-400">
                     <Plus className="h-8 w-8" />
                   </Button>
-                </div>}
+                </div>
+              )}
               <TimeSlotsList />
             </div>
           </TabsContent>
@@ -247,7 +251,8 @@ const Index = ({
                       </div>
                       <p className="text-sm text-gray-600">Recarregar dados do sistema</p>
                     </button>
-                    {user.userType === "admin" && <>
+                    {user.userType === "admin" && (
+                      <>
                         <button onClick={() => setActiveTab("users")} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
                           <div className="flex items-center gap-3">
                             <Users className="h-5 w-5 text-gray-600" />
@@ -262,7 +267,8 @@ const Index = ({
                           </div>
                           <p className="text-sm text-gray-600">Cadastrar novos usuários manualmente</p>
                         </button>
-                      </>}
+                      </>
+                    )}
                     <button onClick={() => setShowLogoutDialog(true)} className="p-4 text-left bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                       <div className="flex items-center gap-3">
                         <LogOut className="h-5 w-5 text-red-500" />
@@ -401,7 +407,22 @@ const Index = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      <BottomMenuBar activeTab={activeTab} onTabChange={handleTabChange} isAdmin={user?.userType === 'admin'} />
-    </div>;
+      {/* 
+        NOTA: A prop `isAdmin` para BottomMenuBar é mantida como `user?.userType === 'admin'`.
+        Se o componente BottomMenuBar usa `isAdmin` para CONDICIONALMENTE mostrar o botão/ícone TCO,
+        então o botão TCO PODE AINDA NÃO APARECER para usuários não-admin.
+        Para garantir que o botão TCO seja sempre visível no BottomMenuBar,
+        o componente `BottomMenuBar.jsx` (ou .tsx) precisaria ser modificado
+        para não depender de `isAdmin` para a renderização do item TCO.
+        As alterações feitas AQUI garantem que a LÓGICA de navegação para TCO está liberada.
+      */}
+      <BottomMenuBar 
+        activeTab={activeTab} 
+        onTabChange={handleTabChange} 
+        isAdmin={user?.userType === 'admin'} 
+      />
+    </div>
+  );
 };
+
 export default Index;
