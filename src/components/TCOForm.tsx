@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react";
+import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X, Trash2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import BasicInformationTab from "./tco/BasicInformationTab";
@@ -13,6 +13,8 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF, generateTCOFilename } from "./tco/pdfGenerator";
 import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
+import { useTCOPersistence } from '@/hooks/useTCOPersistence';
+
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
@@ -153,6 +155,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     toast
   } = useToast();
   const navigate = useNavigate();
+  const { saveToStorage, loadFromStorage, clearStorage, isLoaded } = useTCOPersistence();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasMinorAuthor, setHasMinorAuthor] = useState<{
     isMinor: boolean;
@@ -426,9 +429,9 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setTipificacao(tipificacaoAtual);
       setPenaDescricao(penaAtual);
     }
-    const autoresValidos = autores.filter(a => a.nome.trim() !== "");
+    const autoresValidos = autores.filter(a => a.nome?.trim());
     const autorTexto = autoresValidos.length === 0 ? "O(A) AUTOR(A)" : autoresValidos.length === 1 ? autoresValidos[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR" : autoresValidos.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
-    const testemunhasValidas = testemunhas.filter(t => t.nome.trim() !== "");
+    const testemunhasValidas = testemunhas.filter(t => t.nome?.trim());
     const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : testemunhasValidas.length === 1 ? "TESTEMUNHA" : "";
     const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
     setConclusaoPolicial(conclusaoBase);
@@ -1050,10 +1053,199 @@ const TCOForm: React.FC<TCOFormProps> = ({
   };
   const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Conduzir veículo sem CNH gerando perigo de dano", "Entregar veículo automotor a pessoa não habilitada", "Trafegar em velocidade incompatível com segurança", "Omissão de socorro", "Rixa", "Invasão de domicílio", "Fraude em comércio", "Ato obsceno", "Falsa identidade", "Resistência", "Desobediência", "Desacato", "Exercício arbitrário das próprias razões", "Outros"];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
+
+  // Load persisted data on component mount
+  useEffect(() => {
+    if (!isLoaded) return;
+    
+    const savedData = loadFromStorage();
+    if (savedData) {
+      // Restore all form fields from saved data
+      if (savedData.tcoNumber) setTcoNumber(savedData.tcoNumber);
+      if (savedData.natureza) setNatureza(savedData.natureza);
+      if (savedData.customNatureza) setCustomNatureza(savedData.customNatureza);
+      if (savedData.autor) setAutor(savedData.autor);
+      if (savedData.representacao) setRepresentacao(savedData.representacao);
+      if (savedData.tipificacao) setTipificacao(savedData.tipificacao);
+      if (savedData.penaDescricao) setPenaDescricao(savedData.penaDescricao);
+      if (savedData.dataFato) setDataFato(savedData.dataFato);
+      if (savedData.horaFato) setHoraFato(savedData.horaFato);
+      if (savedData.localFato) setLocalFato(savedData.localFato);
+      if (savedData.endereco) setEndereco(savedData.endereco);
+      if (savedData.comunicante) setComunicante(savedData.comunicante);
+      if (savedData.guarnicao) setGuarnicao(savedData.guarnicao);
+      if (savedData.operacao) setOperacao(savedData.operacao);
+      if (savedData.apreensoes) setApreensoes(savedData.apreensoes);
+      if (savedData.lacreNumero) setLacreNumero(savedData.lacreNumero);
+      if (savedData.componentesGuarnicao) setComponentesGuarnicao(savedData.componentesGuarnicao);
+      if (savedData.quantidade) setQuantidade(savedData.quantidade);
+      if (savedData.substancia) setSubstancia(savedData.substancia);
+      if (savedData.cor) setCor(savedData.cor);
+      if (savedData.odor) setOdor(savedData.odor);
+      if (savedData.indicios) setIndicios(savedData.indicios);
+      if (savedData.customMaterialDesc) setCustomMaterialDesc(savedData.customMaterialDesc);
+      if (savedData.isUnknownMaterial !== undefined) setIsUnknownMaterial(savedData.isUnknownMaterial);
+      if (savedData.juizadoEspecialData) setJuizadoEspecialData(savedData.juizadoEspecialData);
+      if (savedData.juizadoEspecialHora) setJuizadoEspecialHora(savedData.juizadoEspecialHora);
+      if (savedData.videoLinks) setVideoLinks(savedData.videoLinks);
+      if (savedData.autores) setAutores(savedData.autores);
+      if (savedData.vitimas) setVitimas(savedData.vitimas);
+      if (savedData.testemunhas) setTestemunhas(savedData.testemunhas);
+      if (savedData.providencias) setProvidencias(savedData.providencias);
+      if (savedData.documentosAnexos) setDocumentosAnexos(savedData.documentosAnexos);
+      if (savedData.relatoPolicial) setRelatoPolicial(savedData.relatoPolicial);
+      if (savedData.relatoAutor) setRelatoAutor(savedData.relatoAutor);
+      if (savedData.relatoVitima) setRelatoVitima(savedData.relatoVitima);
+      if (savedData.relatoTestemunha) setRelatoTestemunha(savedData.relatoTestemunha);
+      if (savedData.conclusaoPolicial) setConclusaoPolicial(savedData.conclusaoPolicial);
+      
+      toast({
+        title: "Dados Restaurados",
+        description: "Os dados do formulário foram carregados do armazenamento local.",
+        className: "bg-blue-600 text-white border-blue-700",
+        duration: 5000
+      });
+    }
+  }, [isLoaded, loadFromStorage, toast]);
+
+  // Save form data to localStorage whenever important fields change
+  useEffect(() => {
+    if (!isLoaded) return;
+    
+    const formData = {
+      tcoNumber,
+      natureza,
+      customNatureza,
+      autor,
+      representacao,
+      tipificacao,
+      penaDescricao,
+      dataFato,
+      horaFato,
+      localFato,
+      endereco,
+      comunicante,
+      guarnicao,
+      operacao,
+      apreensoes,
+      lacreNumero,
+      componentesGuarnicao,
+      quantidade,
+      substancia,
+      cor,
+      odor,
+      indicios,
+      customMaterialDesc,
+      isUnknownMaterial,
+      juizadoEspecialData,
+      juizadoEspecialHora,
+      videoLinks,
+      autores,
+      vitimas,
+      testemunhas,
+      providencias,
+      documentosAnexos,
+      relatoPolicial,
+      relatoAutor,
+      relatoVitima,
+      relatoTestemunha,
+      conclusaoPolicial
+    };
+    
+    saveToStorage(formData);
+  }, [
+    isLoaded, tcoNumber, natureza, customNatureza, autor, representacao, tipificacao, penaDescricao,
+    dataFato, horaFato, localFato, endereco, comunicante, guarnicao, operacao, apreensoes,
+    lacreNumero, componentesGuarnicao, quantidade, substancia, cor, odor, indicios,
+    customMaterialDesc, isUnknownMaterial, juizadoEspecialData, juizadoEspecialHora,
+    videoLinks, autores, vitimas, testemunhas, providencias, documentosAnexos,
+    relatoPolicial, relatoAutor, relatoVitima, relatoTestemunha, conclusaoPolicial,
+    saveToStorage
+  ]);
+
+  const handleClearForm = () => {
+    // Reset all form fields to initial values
+    setTcoNumber("");
+    setNatureza("Vias de Fato");
+    setCustomNatureza("");
+    setAutor("");
+    setRepresentacao("");
+    setTipificacao("Art. 21 da Lei de Contravenções Penais");
+    setPenaDescricao("");
+    setDataFato(formattedDate);
+    setHoraFato(formattedTime);
+    setLocalFato("");
+    setEndereco("");
+    setComunicante("CIOSP");
+    setGuarnicao("");
+    setOperacao("");
+    setApreensoes("");
+    setLacreNumero("");
+    setComponentesGuarnicao([]);
+    setQuantidade("");
+    setSubstancia("");
+    setCor("");
+    setOdor("");
+    setIndicios("");
+    setCustomMaterialDesc("");
+    setIsUnknownMaterial(false);
+    setJuizadoEspecialData("");
+    setJuizadoEspecialHora("");
+    setVideoLinks([]);
+    setNewVideoLink("");
+    setImageFiles([]);
+    setAutores([{ ...initialPersonData }]);
+    setVitimas([{ ...initialPersonData }]);
+    setTestemunhas([{ ...initialPersonData }]);
+    setProvidencias("");
+    setDocumentosAnexos("");
+    setRelatoPolicial(relatoPolicialTemplate);
+    setRelatoAutor(formatarRelatoAutor([{ ...initialPersonData }]));
+    setRelatoVitima("RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
+    setRelatoTestemunha("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.");
+    setConclusaoPolicial("");
+    setIsRelatoPolicialManuallyEdited(false);
+    setHasMinorAuthor({ isMinor: false });
+    setStartTime(null);
+    setIsTimerRunning(false);
+
+    // Clear localStorage
+    clearStorage();
+    
+    // Clear image input
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+
+    toast({
+      title: "Formulário Limpo",
+      description: "Todos os dados foram removidos e o formulário foi resetado.",
+      className: "bg-green-600 text-white border-green-700",
+      duration: 5000
+    });
+  };
+
   return <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
+        {/* Header with Clear Button */}
+        <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+          <h1 className="text-2xl font-bold text-gray-900">Novo TCO</h1>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleClearForm}
+            className="flex items-center gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            Limpar Formulário
+          </Button>
+        </div>
+
         {hasMinorAuthor.isMinor && hasMinorAuthor.details && <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
-            <p className="font-semibold">Atenção: Autor Menor de Idade Detectado</p>
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              <p className="font-semibold">Atenção: Autor Menor de Idade Detectado</p>
+            </div>
             <p>
               O autor {autores[hasMinorAuthor.details.index].nome || 'sem nome'} possui {hasMinorAuthor.details.years} anos,{' '}
               {hasMinorAuthor.details.months} meses e {hasMinorAuthor.details.days} dias. Não é permitido registrar TCO para menores de 18 anos.
@@ -1143,10 +1335,20 @@ const TCOForm: React.FC<TCOFormProps> = ({
                     <p className="text-sm font-medium text-gray-600 mb-1.5">Links adicionados:</p>
                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
                       {videoLinks.map((link, index) => <li key={`${index}-${link}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
-                          <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate mr-2 flex-1" title={`Abrir link: ${link}`}>
-                            {link}
-                          </a>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveVideoLink(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover link ${link}`}>
+                          <div className="flex-1 mr-2">
+                            <a 
+                              href={link} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-blue-600 hover:underline block"
+                              title={`Abrir link: ${link}`}
+                            >
+                              <span className="break-all line-clamp-2">
+                                {link}
+                              </span>
+                            </a>
+                          </div>
+                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveVideoLink(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7 shrink-0" aria-label={`Remover link ${link}`}>
                             <X className="h-4 w-4" />
                           </Button>
                         </li>)}

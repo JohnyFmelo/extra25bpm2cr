@@ -1,9 +1,11 @@
+
 import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toUpperCase } from "@/lib/utils";
+import OperacoesManager from "./OperacoesManager";
+
 interface GeneralInformationTabProps {
   natureza: string;
   tipificacao: string;
@@ -32,11 +34,8 @@ interface GeneralInformationTabProps {
   setGuarnicao: (value: string) => void;
   operacao: string;
   setOperacao: (value: string) => void;
-  juizadoEspecialData?: string;
-  setJuizadoEspecialData?: (value: string) => void;
-  juizadoEspecialHora?: string;
-  setJuizadoEspecialHora?: (value: string) => void;
 }
+
 const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   natureza,
   tipificacao,
@@ -75,10 +74,6 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
       setHoraFato(now.toTimeString().slice(0, 5));
     }
   }, [horaFato, setHoraFato]);
-
-  // The handleInputChange functions ensure we keep the values in uppercase in the PDF
-  // but we don't need to modify the inputs themselves since we're handling the uppercase
-  // conversion in the PDF generation
 
   return <Card>
       <CardHeader>
@@ -146,11 +141,12 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
           <Input id="guarnicao" placeholder="Ex: Viatura Duster ABC-1234" value={guarnicao} onChange={e => setGuarnicao(e.target.value)} />
         </div>
 
-        <div>
-          <Label htmlFor="operacao">OPERAÇÃO</Label>
-          <Input id="operacao" placeholder="Ex: Operação Asfixia IV" value={operacao} onChange={e => setOperacao(e.target.value)} />
-        </div>
+        <OperacoesManager 
+          onSelectOperacao={setOperacao}
+          valorAtual={operacao}
+        />
       </CardContent>
     </Card>;
 };
+
 export default GeneralInformationTab;
