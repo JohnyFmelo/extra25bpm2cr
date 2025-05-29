@@ -304,7 +304,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     
     const interval = setInterval(() => {
       fetchAllTcos(); // Chamadas periódicas
-    }, 10000); // Atualiza a cada 10 segundos
+    }, 5000); // Atualiza a cada 5 segundos
 
     return () => {
       clearInterval(interval); // Limpa o intervalo quando o componente desmonta
