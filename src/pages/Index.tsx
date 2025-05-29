@@ -118,15 +118,7 @@ const Index = ({
     setActiveTab("travel");
   };
   const handleTCOClick = () => {
-    if (user.userType === "admin") {
-      setActiveTab("tco");
-    } else {
-      toast({
-        variant: "warning",
-        title: "Funcionalidade Restrita",
-        description: "O módulo TCO está em desenvolvimento e disponível apenas para administradores."
-      });
-    }
+    setActiveTab("tco");
   };
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -144,16 +136,7 @@ const Index = ({
         setActiveTab(tab);
       }
     } else if (tab === 'tco') {
-      if (user.userType === "admin") {
-        setActiveTab(tab);
-      } else {
-        toast({
-          variant: "warning",
-          title: "Funcionalidade Restrita",
-          description: "O módulo TCO está em desenvolvimento e disponível apenas para administradores."
-        });
-        return;
-      }
+      setActiveTab(tab);
     } else {
       setActiveTab(tab);
     }

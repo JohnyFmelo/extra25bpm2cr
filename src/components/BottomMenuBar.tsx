@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Clock, Calendar, MapPinned, Scale, Settings, Home } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -79,17 +78,7 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
     } else if (tab === "hours") {
       navigate("/hours");
     } else if (tab === "tco") {
-      if (isAdmin) {
-        navigate("/", { state: { activeTab: tab } });
-      } else {
-        // Show notification for non-admin users
-        toast({
-          variant: "warning",
-          title: "Funcionalidade Restrita",
-          description: "O módulo TCO está em desenvolvimento e disponível apenas para administradores."
-        });
-        return;
-      }
+      navigate("/", { state: { activeTab: tab } });
     } else {
       // For tabs that don't have dedicated pages yet, navigate to home with state
       navigate("/", { state: { activeTab: tab } });
@@ -125,7 +114,6 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
           onClick={() => handleTabChange("travel")} 
           active={activeTab === "travel"} 
         />
-        {/* Now showing TCO for all users */}
         <BottomMenuItem 
           icon={<Scale className="h-5 w-5" />} 
           label="TCO" 
