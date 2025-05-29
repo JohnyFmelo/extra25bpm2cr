@@ -63,7 +63,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     const { PAGE_WIDTH, MAX_LINE_WIDTH, PAGE_HEIGHT, MARGIN_TOP } = getPageConstants(doc);
     const isDrugCase = data.natureza === "Porte de drogas para consumo";
 
-    // Convert general information data to uppercase
     const upperCaseData = {
         ...data,
         natureza: data.natureza ? data.natureza.toUpperCase() : '',
@@ -74,7 +73,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         comunicante: data.comunicante ? data.comunicante.toUpperCase() : '',
     };
 
-    // --- SEÇÃO 1: DADOS GERAIS ---
     yPos = addSectionTitle(doc, yPos, "DADOS GERAIS E IDENTIFICADORES DA OCORRÊNCIA", "1", 1, data);
     yPos = addField(doc, yPos, "NATUREZA DA OCORRÊNCIA", upperCaseData.natureza, data);
     yPos = addField(doc, yPos, "TIPIFICAÇÃO LEGAL", upperCaseData.tipificacao, data);
@@ -86,17 +84,14 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addField(doc, yPos, "MUNICÍPIO", upperCaseData.municipio, data);
     yPos = addField(doc, yPos, "COMUNICANTE", upperCaseData.comunicante, data);
 
-    // --- SEÇÃO 2: ENVOLVIDOS ---
     let currentSectionNumber = 2.1;
 
-    // Autores
     const autoresValidos = data.autores ? data.autores.filter(a => a?.nome) : [];
     if (autoresValidos.length > 0) {
         autoresValidos.forEach((autor, index) => {
             const autorTitle = `AUTOR ${autor.nome.toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, autorTitle, currentSectionNumber.toFixed(1), 2, data);
             currentSectionNumber += 0.1;
-
             const upperAutor = {
                 ...autor,
                 nome: autor.nome ? autor.nome.toUpperCase() : 'NÃO INFORMADO',
@@ -112,7 +107,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 celular: autor.celular ? autor.celular.toUpperCase() : 'NÃO INFORMADO',
                 email: autor.email ? autor.email.toUpperCase() : 'NÃO INFORMADO',
             };
-
             yPos = addField(doc, yPos, "NOME", upperAutor.nome, data);
             yPos = addField(doc, yPos, "SEXO", upperAutor.sexo, data);
             yPos = addField(doc, yPos, "ESTADO CIVIL", upperAutor.estadoCivil, data);
@@ -126,10 +120,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             yPos = addField(doc, yPos, "CPF", upperAutor.cpf, data);
             yPos = addField(doc, yPos, "CELULAR", upperAutor.celular, data);
             yPos = addField(doc, yPos, "E-MAIL", upperAutor.email, data);
-
-            if (index < autoresValidos.length - 1) {
-                yPos += 5; // Espaço entre autores
-            }
+            if (index < autoresValidos.length - 1) { yPos += 5; }
         });
     } else {
         yPos = addSectionTitle(doc, yPos, "AUTORES", currentSectionNumber.toFixed(1), 2, data);
@@ -138,7 +129,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 2;
     }
 
-    // Vítimas
     if (!isDrugCase) {
         const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome && v.nome.toUpperCase() !== "O ESTADO") : [];
         if (vitimasValidas.length > 0) {
@@ -146,8 +136,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 const vitimaTitle = `VÍTIMA ${vitima.nome.toUpperCase()}`;
                 yPos = addSectionTitle(doc, yPos, vitimaTitle, currentSectionNumber.toFixed(1), 2, data);
                 currentSectionNumber += 0.1;
-
-                const upperVitima = {
+                const upperVitima = { /* ... Campos da vítima em maiúsculas ... */
                     ...vitima,
                     nome: vitima.nome ? vitima.nome.toUpperCase() : 'NÃO INFORMADO',
                     sexo: vitima.sexo ? vitima.sexo.toUpperCase() : 'NÃO INFORMADO',
@@ -162,7 +151,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                     celular: vitima.celular ? vitima.celular.toUpperCase() : 'NÃO INFORMADO',
                     email: vitima.email ? vitima.email.toUpperCase() : 'NÃO INFORMADO',
                 };
-
                 yPos = addField(doc, yPos, "NOME", upperVitima.nome, data);
                 yPos = addField(doc, yPos, "SEXO", upperVitima.sexo, data);
                 yPos = addField(doc, yPos, "ESTADO CIVIL", upperVitima.estadoCivil, data);
@@ -176,10 +164,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 yPos = addField(doc, yPos, "CPF", upperVitima.cpf, data);
                 yPos = addField(doc, yPos, "CELULAR", upperVitima.celular, data);
                 yPos = addField(doc, yPos, "E-MAIL", upperVitima.email, data);
-
-                if (index < vitimasValidas.length - 1) {
-                    yPos += 5; // Espaço entre vítimas
-                }
+                if (index < vitimasValidas.length - 1) { yPos += 5; }
             });
         } else {
              yPos = addSectionTitle(doc, yPos, "VÍTIMAS", currentSectionNumber.toFixed(1), 2, data);
@@ -189,15 +174,13 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         }
     }
 
-    // Testemunhas
     const testemunhasValidasComNome = data.testemunhas ? data.testemunhas.filter(t => t?.nome && t.nome.trim() !== "") : [];
     if (testemunhasValidasComNome.length > 0) {
         testemunhasValidasComNome.forEach((testemunha, index) => {
             const testemunhaTitle = `TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, testemunhaTitle, currentSectionNumber.toFixed(1), 2, data);
             currentSectionNumber += 0.1;
-
-            const upperTestemunha = {
+            const upperTestemunha = { /* ... Campos da testemunha em maiúsculas ... */
                 ...testemunha,
                 nome: testemunha.nome ? testemunha.nome.toUpperCase() : 'NÃO INFORMADO',
                 sexo: testemunha.sexo ? testemunha.sexo.toUpperCase() : 'NÃO INFORMADO',
@@ -212,7 +195,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 celular: testemunha.celular ? testemunha.celular.toUpperCase() : 'NÃO INFORMADO',
                 email: testemunha.email ? testemunha.email.toUpperCase() : 'NÃO INFORMADO',
             };
-
             yPos = addField(doc, yPos, "NOME", upperTestemunha.nome, data);
             yPos = addField(doc, yPos, "SEXO", upperTestemunha.sexo, data);
             yPos = addField(doc, yPos, "ESTADO CIVIL", upperTestemunha.estadoCivil, data);
@@ -226,19 +208,12 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             yPos = addField(doc, yPos, "CPF", upperTestemunha.cpf, data);
             yPos = addField(doc, yPos, "CELULAR", upperTestemunha.celular, data);
             yPos = addField(doc, yPos, "E-MAIL", upperTestemunha.email, data);
-
-            if (index < testemunhasValidasComNome.length - 1) {
-                yPos += 5; // Espaço entre testemunhas
-            }
+            if (index < testemunhasValidasComNome.length - 1) { yPos += 5;}
         });
     }
 
-    // --- SEÇÃO 3: HISTÓRICO ---
-    const primeiroAutor = data.autores && data.autores.length > 0 ? data.autores.find(a => a?.nome) : null;
-    const vitimasComRelatoValidas = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome && v.nome.toUpperCase() !== "O ESTADO") : []) : [];
-    const testemunhasComRelatoValidas = testemunhasValidasComNome; // Reutiliza a lista já filtrada por nome
-
     let historicoSectionNumber = 3.1;
+    const primeiroAutor = autoresValidos.length > 0 ? autoresValidos[0] : null; // Pegar o primeiro autor válido
 
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
     yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", historicoSectionNumber.toFixed(1), 2, data);
@@ -249,10 +224,26 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     const tituloRelatoAutor = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "RELATO DA AUTORA DO FATO" : "RELATO DO AUTOR DO FATO";
     yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, historicoSectionNumber.toFixed(1), 2, data);
     historicoSectionNumber += 0.1;
-    yPos = addWrappedText(doc, yPos, data.relatoAutor || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    
+    // CONSOLIDAÇÃO DO RELATO DO AUTOR:
+    // Se houver múltiplos autores com relatos, concatená-los.
+    // Senão, usar o data.relatoAutor (que seria o consolidado do TCOForm se os individuais não estiverem preenchidos lá).
+    let relatoAutorConsolidado = "NÃO INFORMADO.";
+    if (autoresValidos.length > 0) {
+        const relatosIndividuaisAutor = autoresValidos
+            .map(a => a.relato)
+            .filter(r => r && r.trim() !== "" && !r.toUpperCase().includes("[INSIRA DECLARAÇÃO]"));
+        
+        if (relatosIndividuaisAutor.length > 0) {
+            relatoAutorConsolidado = relatosIndividuaisAutor.join("\n\n").toUpperCase();
+        } else if (data.relatoAutor && data.relatoAutor.trim() !== "" && !data.relatoAutor.toUpperCase().includes("[INSIRA DECLARAÇÃO]")) {
+            relatoAutorConsolidado = data.relatoAutor.toUpperCase();
+        }
+    }
+    yPos = addWrappedText(doc, yPos, relatoAutorConsolidado, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     
     if (primeiroAutor) {
-        let papelDoAutor = "AUTOR(A) DO FATO";
+        let papelDoAutor = "AUTOR(A) DO FATO"; // Default para caso o sexo não seja 'masculino' ou 'feminino'
         if (primeiroAutor.sexo) {
             const sexoAutorLower = primeiroAutor.sexo.toLowerCase();
             if (sexoAutorLower === 'feminino') {
@@ -266,6 +257,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 10;
     }
 
+    const vitimasComRelatoValidas = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome && v.nome.toUpperCase() !== "O ESTADO") : []) : [];
     if (!isDrugCase && vitimasComRelatoValidas.length > 0) {
         vitimasComRelatoValidas.forEach((vitima) => {
             const tituloRelatoVitima = `RELATO DA VÍTIMA ${vitima.nome.toUpperCase()}`;
@@ -275,57 +267,51 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             const relatoIndividualVitima = vitima.relato;
             let relatoVitimaParaPdf = "RELATO NÃO FORNECIDO PELA VÍTIMA."; 
             
-            // Se o relato individual existir e NÃO contiver o placeholder [INSIRA DECLARAÇÃO]
-            if (relatoIndividualVitima && typeof relatoIndividualVitima === 'string' && 
+            if (relatoIndividualVitima && typeof relatoIndividualVitima === 'string' &&
+                relatoIndividualVitima.trim() !== "" && 
                 !relatoIndividualVitima.toUpperCase().includes("[INSIRA DECLARAÇÃO]")) {
                 relatoVitimaParaPdf = relatoIndividualVitima.toUpperCase();
-            } else if (relatoIndividualVitima && typeof relatoIndividualVitima === 'string' && relatoIndividualVitima.trim() === "") {
-                // Caso o usuário apague o placeholder e deixe o campo vazio
-                 relatoVitimaParaPdf = "RELATO NÃO FORNECIDO PELA VÍTIMA.";
             }
-            // Se relatoIndividualVitima for undefined ou ainda for o placeholder com [INSIRA DECLARAÇÃO], mantém "RELATO NÃO FORNECIDO..."
             
             yPos = addWrappedText(doc, yPos, relatoVitimaParaPdf, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
             yPos = addSignatureWithNameAndRole(doc, yPos, vitima.nome, "VÍTIMA", data);
         });
     }
 
-    if (testemunhasComRelatoValidas.length > 0) {
-        testemunhasComRelatoValidas.forEach((testemunha) => {
-            const tituloRelatoTestemunha = `RELATO DA TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
-            yPos = addSectionTitle(doc, yPos, tituloRelatoTestemunha, historicoSectionNumber.toFixed(1), 2, data);
-            historicoSectionNumber += 0.1;
-            
-            const relatoIndividualTestemunha = testemunha.relato;
-            let relatoTestemunhaParaPdf = "RELATO NÃO FORNECIDO PELA TESTEMUNHA."; 
+    // CORREÇÃO: Testemunhas já foi filtrada em testemunhasValidasComNome.
+    // Vamos usar essa variável diretamente.
+    const testemunhasComRelatoEfetivas = testemunhasValidasComNome; 
+    if (testemunhasComRelatoEfetivas.length > 0) {
+        testemunhasComRelatoEfetivas.forEach((testemunha) => {
+            // Só processa se a testemunha realmente tiver um nome
+            if (testemunha.nome && testemunha.nome.trim() !== "") {
+                const tituloRelatoTestemunha = `RELATO DA TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
+                yPos = addSectionTitle(doc, yPos, tituloRelatoTestemunha, historicoSectionNumber.toFixed(1), 2, data);
+                historicoSectionNumber += 0.1;
+                
+                const relatoIndividualTestemunha = testemunha.relato;
+                let relatoTestemunhaParaPdf = "RELATO NÃO FORNECIDO PELA TESTEMUNHA."; 
 
-            // --- CORREÇÃO PRINCIPAL APLICADA AQUI ---
-            // Se o relato individual existir, não for apenas espaços em branco, E NÃO contiver o placeholder "[INSIRA DECLARAÇÃO]"
-            if (relatoIndividualTestemunha && typeof relatoIndividualTestemunha === 'string' &&
-                relatoIndividualTestemunha.trim() !== "" && 
-                !relatoIndividualTestemunha.toUpperCase().includes("[INSIRA DECLARAÇÃO]")) {
-                relatoTestemunhaParaPdf = relatoIndividualTestemunha.toUpperCase();
-            } else if (relatoIndividualTestemunha && typeof relatoIndividualTestemunha === 'string' && 
-                       relatoIndividualTestemunha.trim() === "" && 
-                       !relatoIndividualTestemunha.toUpperCase().includes("[INSIRA DECLARAÇÃO]")) {
-                // Caso o usuário tenha apagado o texto do placeholder, mas o [INSIRA DECLARAÇÃO] já tinha sido removido por alguma edição.
-                // Ou simplesmente o campo foi esvaziado.
-                 relatoTestemunhaParaPdf = "RELATO NÃO FORNECIDO PELA TESTEMUNHA.";
+                // Se o relato individual existir, não for só espaços em branco, E NÃO contiver o placeholder "[INSIRA DECLARAÇÃO]"
+                if (relatoIndividualTestemunha && typeof relatoIndividualTestemunha === 'string' &&
+                    relatoIndividualTestemunha.trim() !== "" && 
+                    !relatoIndividualTestemunha.toUpperCase().includes("[INSIRA DECLARAÇÃO]")) {
+                    relatoTestemunhaParaPdf = relatoIndividualTestemunha.toUpperCase();
+                }
+                
+                yPos = addWrappedText(doc, yPos, relatoTestemunhaParaPdf, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+                yPos = addSignatureWithNameAndRole(doc, yPos, testemunha.nome, "TESTEMUNHA", data);
             }
-            // Se relatoIndividualTestemunha for undefined ou ainda for o placeholder com [INSIRA DECLARAÇÃO], mantém "RELATO NÃO FORNECIDO..."
-            // Se for só espaços em branco (e não o placeholder), também será "RELATO NÃO FORNECIDO..."
-            // --- FIM DA CORREÇÃO ---
-
-            yPos = addWrappedText(doc, yPos, relatoTestemunhaParaPdf, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-            yPos = addSignatureWithNameAndRole(doc, yPos, testemunha.nome, "TESTEMUNHA", data);
         });
     }
 
     yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", historicoSectionNumber.toFixed(1), 2, data);
+    // Não precisa mais de `historicoSectionNumber += 0.1;` aqui se for o último da seção 3.
     yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     // --- SEÇÃO 4: PROVIDÊNCIAS ---
+    // (Mantida como estava, parece correta)
     yPos = addSectionTitle(doc, yPos, "PROVIDÊNCIAS", "4", 1, data);
     yPos = addWrappedText(doc, yPos, data.providencias || "Não informado.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
@@ -407,7 +393,9 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         yPos += 2;
     }
 
+
     // --- SEÇÃO 5: IDENTIFICAÇÃO DA GUARNIÇÃO ---
+    // (Mantida como estava)
     yPos = addSectionTitle(doc, yPos, "IDENTIFICAÇÃO DA GUARNIÇÃO", "5", 1, data);
     if (data.componentesGuarnicao && data.componentesGuarnicao.length > 0) {
         const componentesPrincipais = data.componentesGuarnicao.filter((comp, index) => index === 0 || !comp.apoio);
