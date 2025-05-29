@@ -458,7 +458,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   // O JSX restante não necessita de grandes alterações para estas correções específicas
   // mas a forma como gupmInfo é acessada pode ser simplificada agora que o cache é mais robusto
 
-  return <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 flex-grow overflow-hidden flex flex-col py-0 px-[6px]">
+  return <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 flex-grow overflow-hidden flex flex-col py-0 my-[15px] px-[6px]">
     {isLoading && tcoList.length === 0 ? <div className="space-y-4 animate-pulse p-2">
         {[...Array(3)].map((_, i) => <div key={i} className="h-28 bg-gray-200 rounded-lg w-full"></div>)}
       </div> : tcoList.length === 0 && !isLoading ? <div className="flex flex-col items-center justify-center py-16 text-gray-500 flex-grow bg-gray-50 rounded-lg">
@@ -467,7 +467,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         <p className="text-center text-sm text-gray-400 max-w-xs">
           Os TCOs registrados no sistema aparecerão listados aqui.
         </p>
-      </div> : <div className="flex-grow overflow-hidden flex flex-col">
+      </div> : <div className="flex-grow overflow-hidden flex flex-col px-0">
         {/* Desktop Table View */}
         <div className="hidden md:block overflow-x-auto flex-grow rounded-lg border border-gray-200">
           <Table className="min-w-full">
@@ -622,7 +622,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         })}
         </div>
         
-        <div className="mt-4 text-gray-600 text-sm text-right pr-1 my-[17px]">
+        <div className="mt-4 text-gray-600 text-sm text-right pr-1 my-0 py-0">
           Total: <span className="font-semibold">{tcoList.length}</span> {tcoList.length === 1 ? 'TCO' : 'TCOs'}
         </div>
       </div>}
