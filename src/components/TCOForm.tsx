@@ -1,3 +1,5 @@
+--- START OF FILE TCOForm (56).tsx ---
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1143,7 +1145,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
                     <p className="text-sm font-medium text-gray-600 mb-1.5">Links adicionados:</p>
                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
                       {videoLinks.map((link, index) => <li key={`${index}-${link}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
-                          <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate mr-2 flex-1" title={`Abrir link: ${link}`}>
+                          <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all line-clamp-2 mr-2 flex-1" title={`Abrir link: ${link}`}>
                             {link}
                           </a>
                           <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveVideoLink(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover link ${link}`}>
