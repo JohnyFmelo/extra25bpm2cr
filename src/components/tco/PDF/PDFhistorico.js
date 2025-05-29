@@ -99,18 +99,18 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
             const upperAutor = {
                 ...autor,
-                nome: autor.nome ? autor.nome.toUpperCase() : 'Não Informado',
-                sexo: autor.sexo ? autor.sexo.toUpperCase() : 'Não Informado',
-                estadoCivil: autor.estadoCivil ? autor.estadoCivil.toUpperCase() : 'Não Informado',
-                profissao: autor.profissao ? autor.profissao.toUpperCase() : 'Não Informado',
-                endereco: autor.endereco ? autor.endereco.toUpperCase() : 'Não Informado',
-                naturalidade: autor.naturalidade ? autor.naturalidade.toUpperCase() : 'Não Informado',
-                filiacaoMae: autor.filiacaoMae ? autor.filiacaoMae.toUpperCase() : 'Não Informado',
-                filiacaoPai: autor.filiacaoPai ? autor.filiacaoPai.toUpperCase() : 'Não Informado',
-                rg: autor.rg ? autor.rg.toUpperCase() : 'Não Informado',
-                cpf: autor.cpf ? autor.cpf.toUpperCase() : 'Não Informado',
-                celular: autor.celular ? autor.celular.toUpperCase() : 'Não Informado',
-                email: autor.email ? autor.email.toUpperCase() : 'Não Informado',
+                nome: autor.nome ? autor.nome.toUpperCase() : 'NÃO INFORMADO',
+                sexo: autor.sexo ? autor.sexo.toUpperCase() : 'NÃO INFORMADO',
+                estadoCivil: autor.estadoCivil ? autor.estadoCivil.toUpperCase() : 'NÃO INFORMADO',
+                profissao: autor.profissao ? autor.profissao.toUpperCase() : 'NÃO INFORMADO',
+                endereco: autor.endereco ? autor.endereco.toUpperCase() : 'NÃO INFORMADO',
+                naturalidade: autor.naturalidade ? autor.naturalidade.toUpperCase() : 'NÃO INFORMADO',
+                filiacaoMae: autor.filiacaoMae ? autor.filiacaoMae.toUpperCase() : 'NÃO INFORMADO',
+                filiacaoPai: autor.filiacaoPai ? autor.filiacaoPai.toUpperCase() : 'NÃO INFORMADO',
+                rg: autor.rg ? autor.rg.toUpperCase() : 'NÃO INFORMADO',
+                cpf: autor.cpf ? autor.cpf.toUpperCase() : 'NÃO INFORMADO',
+                celular: autor.celular ? autor.celular.toUpperCase() : 'NÃO INFORMADO',
+                email: autor.email ? autor.email.toUpperCase() : 'NÃO INFORMADO',
             };
 
             yPos = addField(doc, yPos, "NOME", upperAutor.nome, data);
@@ -140,7 +140,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
     // Vítimas
     if (!isDrugCase) {
-        const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome) : [];
+        const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome && v.nome.toUpperCase() !== "O ESTADO") : [];
         if (vitimasValidas.length > 0) {
             vitimasValidas.forEach((vitima, index) => {
                 const vitimaTitle = `VÍTIMA ${vitima.nome.toUpperCase()}`;
@@ -149,18 +149,18 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
                 const upperVitima = {
                     ...vitima,
-                    nome: vitima.nome ? vitima.nome.toUpperCase() : 'Não Informado',
-                    sexo: vitima.sexo ? vitima.sexo.toUpperCase() : 'Não Informado',
-                    estadoCivil: vitima.estadoCivil ? vitima.estadoCivil.toUpperCase() : 'Não Informado',
-                    profissao: vitima.profissao ? vitima.profissao.toUpperCase() : 'Não Informado',
-                    endereco: vitima.endereco ? vitima.endereco.toUpperCase() : 'Não Informado',
-                    naturalidade: vitima.naturalidade ? vitima.naturalidade.toUpperCase() : 'Não Informado',
-                    filiacaoMae: vitima.filiacaoMae ? vitima.filiacaoMae.toUpperCase() : 'Não Informado',
-                    filiacaoPai: vitima.filiacaoPai ? vitima.filiacaoPai.toUpperCase() : 'Não Informado',
-                    rg: vitima.rg ? vitima.rg.toUpperCase() : 'Não Informado',
-                    cpf: vitima.cpf ? vitima.cpf.toUpperCase() : 'Não Informado',
-                    celular: vitima.celular ? vitima.celular.toUpperCase() : 'Não Informado',
-                    email: vitima.email ? vitima.email.toUpperCase() : 'Não Informado',
+                    nome: vitima.nome ? vitima.nome.toUpperCase() : 'NÃO INFORMADO',
+                    sexo: vitima.sexo ? vitima.sexo.toUpperCase() : 'NÃO INFORMADO',
+                    estadoCivil: vitima.estadoCivil ? vitima.estadoCivil.toUpperCase() : 'NÃO INFORMADO',
+                    profissao: vitima.profissao ? vitima.profissao.toUpperCase() : 'NÃO INFORMADO',
+                    endereco: vitima.endereco ? vitima.endereco.toUpperCase() : 'NÃO INFORMADO',
+                    naturalidade: vitima.naturalidade ? vitima.naturalidade.toUpperCase() : 'NÃO INFORMADO',
+                    filiacaoMae: vitima.filiacaoMae ? vitima.filiacaoMae.toUpperCase() : 'NÃO INFORMADO',
+                    filiacaoPai: vitima.filiacaoPai ? vitima.filiacaoPai.toUpperCase() : 'NÃO INFORMADO',
+                    rg: vitima.rg ? vitima.rg.toUpperCase() : 'NÃO INFORMADO',
+                    cpf: vitima.cpf ? vitima.cpf.toUpperCase() : 'NÃO INFORMADO',
+                    celular: vitima.celular ? vitima.celular.toUpperCase() : 'NÃO INFORMADO',
+                    email: vitima.email ? vitima.email.toUpperCase() : 'NÃO INFORMADO',
                 };
 
                 yPos = addField(doc, yPos, "NOME", upperVitima.nome, data);
@@ -182,35 +182,36 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 }
             });
         } else {
-            yPos = addSectionTitle(doc, yPos, "VÍTIMAS", currentSectionNumber.toFixed(1), 2, data);
-            currentSectionNumber += 0.1;
-            yPos = addWrappedText(doc, yPos, "Nenhuma vítima informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
-            yPos += 2;
+            // Se não houver vítimas humanas (e não for caso de droga), indica "Nenhuma vítima informada".
+             yPos = addSectionTitle(doc, yPos, "VÍTIMAS", currentSectionNumber.toFixed(1), 2, data);
+             currentSectionNumber += 0.1;
+             yPos = addWrappedText(doc, yPos, "Nenhuma vítima qualificada informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
+             yPos += 2;
         }
     }
 
     // Testemunhas
-    const testemunhasValidas = data.testemunhas ? data.testemunhas.filter(t => t?.nome) : [];
-    if (testemunhasValidas.length > 0) {
-        testemunhasValidas.forEach((testemunha, index) => {
+    const testemunhasValidasComNome = data.testemunhas ? data.testemunhas.filter(t => t?.nome && t.nome.trim() !== "") : [];
+    if (testemunhasValidasComNome.length > 0) {
+        testemunhasValidasComNome.forEach((testemunha, index) => {
             const testemunhaTitle = `TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, testemunhaTitle, currentSectionNumber.toFixed(1), 2, data);
             currentSectionNumber += 0.1;
 
             const upperTestemunha = {
                 ...testemunha,
-                nome: testemunha.nome ? testemunha.nome.toUpperCase() : 'Não Informado',
-                sexo: testemunha.sexo ? testemunha.sexo.toUpperCase() : 'Não Informado',
-                estadoCivil: testemunha.estadoCivil ? testemunha.estadoCivil.toUpperCase() : 'Não Informado',
-                profissao: testemunha.profissao ? testemunha.profissao.toUpperCase() : 'Não Informado',
-                endereco: testemunha.endereco ? testemunha.endereco.toUpperCase() : 'Não Informado',
-                naturalidade: testemunha.naturalidade ? testemunha.naturalidade.toUpperCase() : 'Não Informado',
-                filiacaoMae: testemunha.filiacaoMae ? testemunha.filiacaoMae.toUpperCase() : 'Não Informado',
-                filiacaoPai: testemunha.filiacaoPai ? testemunha.filiacaoPai.toUpperCase() : 'Não Informado',
-                rg: testemunha.rg ? testemunha.rg.toUpperCase() : 'Não Informado',
-                cpf: testemunha.cpf ? testemunha.cpf.toUpperCase() : 'Não Informado',
-                celular: testemunha.celular ? testemunha.celular.toUpperCase() : 'Não Informado',
-                email: testemunha.email ? testemunha.email.toUpperCase() : 'Não Informado',
+                nome: testemunha.nome ? testemunha.nome.toUpperCase() : 'NÃO INFORMADO',
+                sexo: testemunha.sexo ? testemunha.sexo.toUpperCase() : 'NÃO INFORMADO',
+                estadoCivil: testemunha.estadoCivil ? testemunha.estadoCivil.toUpperCase() : 'NÃO INFORMADO',
+                profissao: testemunha.profissao ? testemunha.profissao.toUpperCase() : 'NÃO INFORMADO',
+                endereco: testemunha.endereco ? testemunha.endereco.toUpperCase() : 'NÃO INFORMADO',
+                naturalidade: testemunha.naturalidade ? testemunha.naturalidade.toUpperCase() : 'NÃO INFORMADO',
+                filiacaoMae: testemunha.filiacaoMae ? testemunha.filiacaoMae.toUpperCase() : 'NÃO INFORMADO',
+                filiacaoPai: testemunha.filiacaoPai ? testemunha.filiacaoPai.toUpperCase() : 'NÃO INFORMADO',
+                rg: testemunha.rg ? testemunha.rg.toUpperCase() : 'NÃO INFORMADO',
+                cpf: testemunha.cpf ? testemunha.cpf.toUpperCase() : 'NÃO INFORMADO',
+                celular: testemunha.celular ? testemunha.celular.toUpperCase() : 'NÃO INFORMADO',
+                email: testemunha.email ? testemunha.email.toUpperCase() : 'NÃO INFORMADO',
             };
 
             yPos = addField(doc, yPos, "NOME", upperTestemunha.nome, data);
@@ -227,43 +228,48 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             yPos = addField(doc, yPos, "CELULAR", upperTestemunha.celular, data);
             yPos = addField(doc, yPos, "E-MAIL", upperTestemunha.email, data);
 
-            if (index < testemunhasValidas.length - 1) {
+            if (index < testemunhasValidasComNome.length - 1) {
                 yPos += 5; // Espaço entre testemunhas
             }
         });
-    } else {
-        yPos = addSectionTitle(doc, yPos, "TESTEMUNHAS", currentSectionNumber.toFixed(1), 2, data);
-        currentSectionNumber += 0.1;
-        yPos = addWrappedText(doc, yPos, "Nenhuma testemunha informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
-        yPos += 2;
     }
+    // Não há 'else' aqui para testemunhas. Se não houver, a seção não é adicionada.
 
     // --- SEÇÃO 3: HISTÓRICO ---
     const primeiroAutor = data.autores && data.autores.length > 0 ? data.autores.find(a => a?.nome) : null;
-    const vitimasComRelato = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome) : []) : [];
-    // CORREÇÃO: Usar as testemunhas validadas que foram filtradas anteriormente
-    const testemunhasComRelato = testemunhasValidas; // Já filtradas por nome
+    const vitimasComRelato = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome && v.nome.toUpperCase() !== "O ESTADO") : []) : [];
+    const testemunhasComRelatoComNome = testemunhasValidasComNome; // Reutiliza a lista já filtrada por nome
 
     let historicoSectionNumber = 3.1;
 
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
     yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", historicoSectionNumber.toFixed(1), 2, data);
     historicoSectionNumber += 0.1;
-    yPos = addWrappedText(doc, yPos, data.relatoPolicial || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.relatoPolicial || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     const tituloRelatoAutor = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "RELATO DA AUTORA DO FATO" : "RELATO DO AUTOR DO FATO";
     yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, historicoSectionNumber.toFixed(1), 2, data);
     historicoSectionNumber += 0.1;
-    yPos = addWrappedText(doc, yPos, data.relatoAutor || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.relatoAutor || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    
     if (primeiroAutor) {
-        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor?.nome, "AUTOR(A) DO FATO", data);
+        let papelDoAutor = "AUTOR(A) DO FATO"; // Padrão
+        if (primeiroAutor.sexo) {
+            const sexoAutorLower = primeiroAutor.sexo.toLowerCase();
+            if (sexoAutorLower === 'feminino') {
+                papelDoAutor = "AUTORA DO FATO";
+            } else if (sexoAutorLower === 'masculino') {
+                papelDoAutor = "AUTOR DO FATO";
+            }
+        }
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor.nome, papelDoAutor.toUpperCase(), data);
     } else {
         yPos += 10;
     }
 
     if (!isDrugCase && vitimasComRelato.length > 0) {
-        vitimasComRelato.forEach((vitima, index) => {
+        vitimasComRelato.forEach((vitima) => {
             const tituloRelatoVitima = `RELATO DA VÍTIMA ${vitima.nome.toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, tituloRelatoVitima, historicoSectionNumber.toFixed(1), 2, data);
             historicoSectionNumber += 0.1;
@@ -283,8 +289,8 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     }
 
     // --- Início da Lógica Corrigida para Relato de Testemunhas ---
-    if (testemunhasComRelato.length > 0) {
-        testemunhasComRelato.forEach((testemunha, index) => {
+    if (testemunhasComRelatoComNome.length > 0) {
+        testemunhasComRelatoComNome.forEach((testemunha) => {
             const tituloRelatoTestemunha = `RELATO DA TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, tituloRelatoTestemunha, historicoSectionNumber.toFixed(1), 2, data);
             historicoSectionNumber += 0.1;
@@ -301,23 +307,17 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             yPos = addWrappedText(doc, yPos, relatoTestemunhaParaPdf, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
             yPos = addSignatureWithNameAndRole(doc, yPos, testemunha.nome, "TESTEMUNHA", data);
         });
-    } else {
-        // Caso não haja testemunhas válidas (testemunhasComRelato.length === 0)
-        yPos = addSectionTitle(doc, yPos, "RELATO DAS TESTEMUNHAS", historicoSectionNumber.toFixed(1), 2, data);
-        historicoSectionNumber += 0.1;
-        const textoSemTestemunhas = "NÃO HÁ TESTEMUNHAS QUALIFICADAS OU PRESENTES PARA DEPOR NESTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA.";
-        yPos = addWrappedText(doc, yPos, textoSemTestemunhas.toUpperCase(), MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        yPos += 10; // Espaçamento
     }
+    // Se não houver testemunhasComRelatoComNome, nada será impresso para elas, incluindo título.
     // --- Fim da Lógica Corrigida para Relato de Testemunhas ---
 
     yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", historicoSectionNumber.toFixed(1), 2, data);
-    yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     // --- SEÇÃO 4: PROVIDÊNCIAS ---
     yPos = addSectionTitle(doc, yPos, "PROVIDÊNCIAS", "4", 1, data);
-    yPos = addWrappedText(doc, yPos, data.providencias || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.providencias || "Não informado.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     yPos = addSectionTitle(doc, yPos, "DOCUMENTOS ANEXOS", "4.1", 2, data);
@@ -420,10 +420,10 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 doc.setDrawColor(0);
                 yPos += 5;
             }
-            let nomeDisplay = componente.nome ? componente.nome.toUpperCase() : "NOME Não Informado";
+            let nomeDisplay = componente.nome ? componente.nome.toUpperCase() : "NOME NÃO INFORMADO";
             yPos = addField(doc, yPos, "NOME COMPLETO", nomeDisplay, data);
-            yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto ? componente.posto.toUpperCase() : "POSTO Não Informado", data);
-            yPos = addField(doc, yPos, "RG PMMT", componente.rg || "RG Não Informado", data);
+            yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto ? componente.posto.toUpperCase() : "POSTO NÃO INFORMADO", data);
+            yPos = addField(doc, yPos, "RG PMMT", componente.rg || "RG NÃO INFORMADO", data);
             yPos = checkPageBreak(doc, yPos, 7, data);
             const sigLineY = yPos;
             doc.setFont("helvetica", "normal");
@@ -447,16 +447,16 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             doc.setFont("helvetica", "normal");
             componentesApoio.forEach((componente, index) => {
                 yPos = checkPageBreak(doc, yPos, 6, data);
-                const posto = componente.posto ? componente.posto.toUpperCase() : "POSTO Não Informado";
-                const nome = componente.nome ? componente.nome.toUpperCase() : "NOME Não Informado";
-                const rg = componente.rg || "RG Não Informado";
+                const posto = componente.posto ? componente.posto.toUpperCase() : "POSTO NÃO INFORMADO";
+                const nome = componente.nome ? componente.nome.toUpperCase() : "NOME NÃO INFORMADO";
+                const rg = componente.rg || "RG NÃO INFORMADO";
                 const textoApoio = `${posto} ${nome} - RG: ${rg}`;
                 doc.text(textoApoio, MARGIN_LEFT + 5, yPos);
                 yPos += 6;
             });
         }
     } else {
-        yPos = addWrappedText(doc, yPos, "Dados da Guarnição Não Informados.", MARGIN_LEFT, 12, 'italic', MAX_LINE_WIDTH, 'left', data);
+        yPos = addWrappedText(doc, yPos, "Dados da Guarnição não informados.", MARGIN_LEFT, 12, 'italic', MAX_LINE_WIDTH, 'left', data);
         yPos += 2;
     }
 
