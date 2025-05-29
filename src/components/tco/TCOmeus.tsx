@@ -1,5 +1,5 @@
 // TCOmeus (7).tsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react"; // Adicionado useRef
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Trash2, Download, Eye, MoreHorizontal, RefreshCw, Users, FileText, Info, X } from "lucide-react";
@@ -123,7 +123,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   selectedTco
 }) => {
   const [tcoList, setTcoList] = useState<TcoData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Controla o loading inicial ou manual
+  // const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false); // Opcional, para indicar refresh sutil
   const [isDeleting, setIsDeleting] = useState(false);
   const [tcoToDelete, setTcoToDelete] = useState<TcoData | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -131,9 +132,10 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const [gupmDetailsCache, setGupmDetailsCache] = useState<Record<string, StructuredGupm | null>>({});
   const [isGupmDetailModalOpen, setIsGupmDetailModalOpen] = useState(false);
   const [currentGupmToDisplay, setCurrentGupmToDisplay] = useState<StructuredGupm | null>(null);
+  
+  const isMounted = useRef(false); // Para controlar a primeira renderização
 
   const fetchAndStructureGupmForTco = useCallback(async (rgpms: ExtractedRgpms): Promise<StructuredGupm | null> => {
-    // Sem alterações aqui, a lógica parece sólida.
     if (rgpms.main.length === 0 && rgpms.support.length === 0) return null;
     const allRgpms = [...new Set([...rgpms.main, ...rgpms.support])];
     if (allRgpms.length === 0) return null;
@@ -144,11 +146,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         .in('rgpm', allRgpms);
       if (error) {
         console.error("Error fetching officer details for GUPM:", error);
-        const fallbackOfficer = (rgpm: string): OfficerInfo => ({
-          rgpm,
-          graduacao: "RGPM",
-          nome: rgpm
-        });
+        const fallbackOfficer = (rgpm: string): OfficerInfo => ({ rgpm, graduacao: "RGPM", nome: rgpm });
         return {
           conductor: rgpms.main.length > 0 ? fallbackOfficer(rgpms.main[0]) : undefined,
           mainTeam: rgpms.main.slice(1).map(fallbackOfficer),
@@ -166,19 +164,19 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         conductor = mainOfficersDetailed[0];
         mainTeamOther = mainOfficersDetailed.slice(1);
       }
-      return {
-        conductor,
-        mainTeam: mainTeamOther,
-        supportTeam: supportOfficersDetailed
-      };
+      return { conductor, mainTeam: mainTeamOther, supportTeam: supportOfficersDetailed };
     } catch (e) {
       console.error("Exception fetching/structuring GUPM:", e);
       return null;
     }
-  }, []); // supabase é uma constante importada, não precisa estar nas dependências.
+  }, []);
 
-  const fetchAllTcos = useCallback(async () => {
-    setIsLoading(true);
+  const fetchAllTcos = useCallback(async (isBackgroundRefresh = false) => {
+    if (!isBackgroundRefresh) {
+      setIsLoading(true);
+    }
+    // else { setIsBackgroundRefreshing(true); } // Opcional
+
     try {
       const { data: folders, error: foldersError } = await supabase.storage
         .from(BUCKET_NAME)
@@ -186,27 +184,25 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
 
       if (foldersError) {
         console.error("Erro ao listar pastas do storage:", foldersError);
+        if (!isBackgroundRefresh) toast({ variant: "destructive", title: "Erro", description: "Falha ao listar TCOs." });
         return;
       }
 
-      const allTcos: TcoData[] = [];
-
-      for (const folder of folders || []) {
-        if (folder.name && folder.name !== '.emptyFolderPlaceholder') {
+      const allTcosPromises = (folders || [])
+        .filter(folder => folder.name && folder.name !== '.emptyFolderPlaceholder')
+        .map(async folder => {
           const userId = folder.name;
-          
           const { data: userFiles, error: userFilesError } = await supabase.storage
             .from(BUCKET_NAME)
             .list(`tcos/${userId}/`);
 
           if (userFilesError) {
             console.error(`Erro ao listar arquivos do usuário ${userId}:`, userFilesError);
-            continue;
+            return []; // Retorna array vazio para este usuário em caso de erro
           }
 
           let userInfo = {};
           try {
-            // Atenção: Esta chamada pode necessitar de autenticação via headers para Firestore REST API
             const userDoc = await fetch(`https://firestore.googleapis.com/v1/projects/sistema-de-escala-4b6a3/databases/(default)/documents/users/${userId}`);
             if (userDoc.ok) {
               const userData = await userDoc.json();
@@ -215,13 +211,13 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                 rank: userData.fields?.rank?.stringValue || ''
               };
             } else {
-                console.log(`Não foi possível obter dados do usuário ${userId} do Firestore. Status: ${userDoc.status}`);
+              console.log(`Não foi possível obter dados do usuário ${userId} do Firestore. Status: ${userDoc.status}`);
             }
           } catch (error) {
             console.log(`Erro na requisição para obter dados do usuário ${userId} do Firestore:`, error);
           }
 
-          const userTcos = userFiles?.map(file => {
+          return userFiles?.map(file => {
             const fileName = file.name;
             const tcoMatch = fileName.match(/TCO[-_]([^_-]+)/i);
             let tcoIdentifierPart = tcoMatch ? tcoMatch[1] : fileName.replace(/\.pdf$/i, "");
@@ -230,7 +226,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             const rgpmsExtracted = extractRGPMsFromFilename(fileName);
             
             return {
-              id: file.id || fileName,
+              id: file.id || fileName, // fileName é mais estável como ID se file.id não estiver sempre presente.
               tcoNumber: finalTcoNumber,
               createdAt: new Date(file.created_at || Date.now()),
               natureza: natureza,
@@ -242,88 +238,85 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
               userInfo: userInfo
             } as TcoData;
           }) || [];
+        });
 
-          allTcos.push(...userTcos);
-        }
-      }
-
-      allTcos.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-      setTcoList(allTcos);
-
-      // Otimização: Buscar detalhes GUPM em paralelo e atualizar o cache de uma vez
-      const newGupmDetailsPromises: Promise<{ id: string; gupmInfo: StructuredGupm | null }>[] = [];
-      // Usar o estado atual do cache para evitar re-fetch desnecessário.
-      // É importante usar a forma funcional de setGupmDetailsCache para garantir que estamos usando o valor mais recente do cache.
+      const results = await Promise.all(allTcosPromises);
+      const allTcos = results.flat().sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
       
-      const currentCacheKeys = Object.keys(gupmDetailsCache);
-      
-      for (const tco of allTcos) {
-        if (!currentCacheKeys.includes(tco.id)) { // Se não está no cache (incluindo os com valor null)
-          if (tco.rgpmsExtracted && (tco.rgpmsExtracted.main.length > 0 || tco.rgpmsExtracted.support.length > 0)) {
-            newGupmDetailsPromises.push(
-              fetchAndStructureGupmForTco(tco.rgpmsExtracted).then(gupmInfo => ({
-                id: tco.id,
-                gupmInfo,
-              }))
-            );
-          } else {
-            // Adiciona TCOs sem RGPMs diretamente ao cache como null se não estiverem lá
-            newGupmDetailsPromises.push(Promise.resolve({ id: tco.id, gupmInfo: null }));
+      setTcoList(allTcos); // Atualiza a lista de TCOs
+
+      // Atualizar o cache da GUPM para novos TCOs
+      // Usar uma cópia do estado mais recente do cache
+      setGupmDetailsCache(currentCache => {
+        const newGupmPromises: Promise<{ id: string; gupmInfo: StructuredGupm | null }>[] = [];
+        const updatedCache = { ...currentCache };
+
+        for (const tco of allTcos) {
+          if (!updatedCache.hasOwnProperty(tco.id)) { // Só busca se não estiver no cache
+            if (tco.rgpmsExtracted && (tco.rgpmsExtracted.main.length > 0 || tco.rgpmsExtracted.support.length > 0)) {
+              newGupmPromises.push(
+                fetchAndStructureGupmForTco(tco.rgpmsExtracted).then(gupmInfo => ({
+                  id: tco.id,
+                  gupmInfo,
+                }))
+              );
+            } else {
+              updatedCache[tco.id] = null; // Adiciona TCOs sem RGPMs diretamente ao cache como null
+            }
           }
         }
-      }
 
-      if (newGupmDetailsPromises.length > 0) {
-        const resolvedGupmDetails = await Promise.all(newGupmDetailsPromises);
-        // Usar forma funcional para garantir que está atualizando o estado mais recente
-        setGupmDetailsCache(prevCache => {
-            const updatedCache = { ...prevCache };
-            resolvedGupmDetails.forEach(detail => {
-                updatedCache[detail.id] = detail.gupmInfo;
+        if (newGupmPromises.length > 0) {
+          Promise.all(newGupmPromises).then(resolvedGupmDetails => {
+            setGupmDetailsCache(prevCache => {
+              const finalCacheUpdate = { ...prevCache };
+              resolvedGupmDetails.forEach(detail => {
+                finalCacheUpdate[detail.id] = detail.gupmInfo;
+              });
+              return finalCacheUpdate;
             });
-            return updatedCache;
-        });
-      }
+          });
+        }
+        return updatedCache; // Retorna o cache potencialmente já atualizado para TCOs sem RGPM
+      });
 
     } catch (error) {
       console.error("Erro ao buscar TCOs:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Falha ao carregar os TCOs."
-      });
+      if (!isBackgroundRefresh) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Falha ao carregar os TCOs."
+        });
+      }
     } finally {
-      setIsLoading(false);
+      if (!isBackgroundRefresh) {
+        setIsLoading(false);
+      }
+      // else { setIsBackgroundRefreshing(false); } // Opcional
     }
-  // CORREÇÃO: Removido gupmDetailsCache das dependências para evitar loop
-  }, [toast, fetchAndStructureGupmForTco]); 
-
+  }, [toast, fetchAndStructureGupmForTco]);
 
   useEffect(() => {
-    fetchAllTcos(); // Chamada inicial
-    
+    isMounted.current = true;
+    fetchAllTcos(false); // Carga inicial, com indicador de loading
+
     const interval = setInterval(() => {
-      fetchAllTcos(); // Chamadas periódicas
-    }, 30000); // Atualiza a cada 30 segundos
+      if(isMounted.current) { // Só executa se o componente estiver montado
+         fetchAllTcos(true); // Atualizações subsequentes em background
+      }
+    }, 30000); // A cada 30 segundos
 
     return () => {
-      clearInterval(interval); // Limpa o intervalo quando o componente desmonta
+      isMounted.current = false; // Marcar como desmontado
+      clearInterval(interval);
     };
-  }, [fetchAllTcos]); // A dependência fetchAllTcos está correta aqui
-
-  // CORREÇÃO: Removido o useEffect redundante que chamava fetchAllTcos
-  // useEffect(() => {
-  //   fetchAllTcos();
-  // }, [fetchAllTcos]);
+  }, [fetchAllTcos]); // fetchAllTcos como dependência está correto
 
 
   const confirmDelete = (tco: TcoData) => {
     if (tco.userId !== user.id && user.userType !== 'admin') {
-      toast({
-        variant: "destructive",
-        title: "Acesso Negado",
-        description: "Você só pode excluir seus próprios TCOs."
-      });
+      toast({ variant: "destructive", title: "Acesso Negado", description: "Você só pode excluir seus próprios TCOs."});
       return;
     }
     setTcoToDelete(tco);
@@ -336,47 +329,29 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     try {
       setIsDeleting(true);
       setDeletionMessage("Iniciando processo de exclusão...");
-      // A lógica de deleteTCO parece tratar tanto 'storage' quanto 'database'
-      const { success, error } = await deleteTCO({
-        id: tcoToDelete.id,
-        pdfPath: tcoToDelete.pdfPath 
-      });
+      const { success, error } = await deleteTCO({ id: tcoToDelete.id, pdfPath: tcoToDelete.pdfPath });
       
       if (error || !success) {
-        setDeletionMessage("Erro na exclusão via helper. Tentando exclusão direta...");
+        setDeletionMessage("Erro na exclusão. Tentando exclusão direta do storage...");
         console.warn("Helper deleteTCO falhou, tentando fallback. Erro:", error);
-        // Fallback se deleteTCO falhar (caso não delete do storage por exemplo)
         if (tcoToDelete.pdfPath) {
           const { error: storageError } = await supabase.storage.from(BUCKET_NAME).remove([tcoToDelete.pdfPath]);
           if (storageError) console.error("Erro na exclusão direta do storage:", storageError);
         }
-        // Se for TCO de database, também removeria da tabela do DB. O código original sugere
-        // que tco.source pode ser 'database', mas na listagem ele sempre define como 'storage'.
-        // Se houver tcos que vêm de 'database' com um 'id' de tabela, a lógica seria:
-        // if (tcoToDelete.source === 'database') {
-        //   await supabase.from('tco_pdfs').delete().eq('id', tcoToDelete.id);
-        // }
       }
       
-      setTcoList(prevList => prevList.filter(item => item.id !== tcoToDelete.id));
-      setGupmDetailsCache(prevCache => { // Limpa o cache do item excluído
+      setTcoList(prevList => prevList.filter(item => item.id !== tcoToDelete!.id));
+      setGupmDetailsCache(prevCache => {
         const newCache = { ...prevCache };
-        delete newCache[tcoToDelete.id];
+        delete newCache[tcoToDelete!.id];
         return newCache;
       });
       if (selectedTco?.id === tcoToDelete.id) setSelectedTco(null);
       
-      toast({
-        title: "TCO Excluído",
-        description: "O TCO foi removido com sucesso."
-      });
+      toast({ title: "TCO Excluído", description: "O TCO foi removido com sucesso." });
     } catch (error) {
       console.error("Erro no processo de exclusão do TCO:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Falha ao excluir o TCO. Tente novamente."
-      });
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao excluir o TCO. Tente novamente." });
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
@@ -388,28 +363,15 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const handleViewPdf = async (tco: TcoData) => {
     try {
       if (tco.pdfPath) {
-        const { data, error } = await supabase.storage
-          .from(BUCKET_NAME)
-          .createSignedUrl(tco.pdfPath, 60 * 5); // URL válida por 5 minutos
-
-        if (error || !data?.signedUrl) {
-          throw new Error(error?.message || "URL assinada não encontrada para visualização.");
-        }
+        const { data, error } = await supabase.storage.from(BUCKET_NAME).createSignedUrl(tco.pdfPath, 300);
+        if (error || !data?.signedUrl) throw new Error(error?.message || "URL assinada não encontrada.");
         window.open(data.signedUrl, '_blank');
       } else {
-        toast({
-          variant: "destructive",
-          title: "PDF não encontrado",
-          description: "Este TCO não possui um PDF associado para visualização."
-        });
+        toast({ variant: "destructive", title: "PDF não encontrado" });
       }
     } catch (error) {
       console.error("Erro ao obter URL para visualizar PDF:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao Visualizar",
-        description: `Falha ao preparar o PDF para visualização. Detalhe: ${error instanceof Error ? error.message : String(error)}`
-      });
+      toast({ variant: "destructive", title: "Erro ao Visualizar", description: `Falha: ${error instanceof Error ? error.message : String(error)}` });
     }
   };
 
@@ -428,48 +390,31 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           a.click();
           window.URL.revokeObjectURL(url);
           a.remove();
-        } else {
-          throw new Error("Arquivo não encontrado para download.");
-        }
+        } else throw new Error("Arquivo não encontrado para download.");
       } else {
-        toast({
-          variant: "destructive",
-          title: "PDF não encontrado",
-          description: "Este TCO não possui um PDF para download."
-        });
+        toast({ variant: "destructive", title: "PDF não encontrado" });
       }
     } catch (error) {
       console.error("Erro ao baixar PDF:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Falha ao baixar o PDF do TCO."
-      });
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao baixar o PDF." });
     }
   };
 
   const openGupmDetailsModal = (tcoId: string) => {
-    const details = gupmDetailsCache[tcoId];
-    // Verifique se a chave existe e se não está em processo de carregamento (undefined seria um estado intermediário)
     if (gupmDetailsCache.hasOwnProperty(tcoId)) {
-        setCurrentGupmToDisplay(details); // details pode ser null ou StructuredGupm
-        setIsGupmDetailModalOpen(true);
+      setCurrentGupmToDisplay(gupmDetailsCache[tcoId]);
+      setIsGupmDetailModalOpen(true);
     } else {
-      // Pode acontecer se o modal for aberto antes do cache ser preenchido
-      // ou se o TCO não tiver RGPMS e o cache ainda não foi populado com null para ele.
-      toast({
-        variant: "default",
-        title: "GUPM",
-        description: "Detalhes da guarnição ainda carregando ou não disponíveis."
-      });
+      toast({ variant: "default", title: "GUPM", description: "Detalhes da guarnição ainda carregando." });
     }
   };
 
-  // O JSX restante não necessita de grandes alterações para estas correções específicas
-  // mas a forma como gupmInfo é acessada pode ser simplificada agora que o cache é mais robusto
-  
+  // O JSX renderiza com base em tcoList e gupmDetailsCache.
+  // `isLoading` só é true no carregamento inicial (ou refresh manual, se implementado).
+  // O "pulsar" do esqueleto de carregamento não deve mais ocorrer em atualizações de background.
+
   return <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 flex-grow overflow-hidden flex flex-col">
-    {isLoading && tcoList.length === 0 ? (
+    {isLoading && tcoList.length === 0 ? ( // Mostrar Skeleton APENAS se loading E não houver dados
       <div className="space-y-4 animate-pulse p-2">
         {[...Array(3)].map((_, i) => (
           <div key={i} className="h-28 bg-gray-200 rounded-lg w-full"></div>
@@ -485,7 +430,6 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       </div>
     ) : (
       <div className="flex-grow overflow-hidden flex flex-col">
-        {/* Desktop Table View */}
         <div className="hidden md:block overflow-x-auto flex-grow rounded-lg border border-gray-200">
           <Table className="min-w-full">
             <TableHeader>
@@ -502,10 +446,15 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
               {tcoList.map(tco => {
                 const gupmInfo = gupmDetailsCache[tco.id];
                 let conductorDisplay = "N/D";
-                if (gupmInfo === undefined && !gupmDetailsCache.hasOwnProperty(tco.id)) { // Ainda não carregado no cache
-                    conductorDisplay = "Carregando GUPM...";
-                } else if (gupmInfo?.conductor) {
-                    conductorDisplay = `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}`;
+                 // Verifica se a GUPM já foi carregada ou está definida como null (sem condutor)
+                if (gupmDetailsCache.hasOwnProperty(tco.id)) {
+                    if (gupmInfo?.conductor) {
+                        conductorDisplay = `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}`;
+                    }
+                } else {
+                    // Se ainda não estiver no cache, poderia mostrar "Carregando..." mas como atualizamos em bg, N/D é mais estável
+                    // Para TCOs novos, a GUPM será carregada em background e a UI atualizará
+                    conductorDisplay = (tco.rgpmsExtracted && (tco.rgpmsExtracted.main.length > 0 || tco.rgpmsExtracted.support.length > 0)) ? "Processando GUPM..." : "N/D";
                 }
                 
                 const hasAnyOfficerForModal = gupmInfo && (gupmInfo.conductor || gupmInfo.mainTeam.length > 0 || gupmInfo.supportTeam.length > 0);
@@ -548,51 +497,29 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            onClick={e => {
-                              e.stopPropagation();
-                              openGupmDetailsModal(tco.id);
-                            }} 
+                            onClick={e => { e.stopPropagation(); openGupmDetailsModal(tco.id); }} 
                             className="p-1 h-7 w-7 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full ml-2 flex-shrink-0" 
                             title="Ver guarnição completa"
-                          >
-                            <Users className="h-4 w-4" />
-                            <span className="sr-only">Ver guarnição</span>
-                          </Button>
+                          > <Users className="h-4 w-4" /> <span className="sr-only">Ver guarnição</span> </Button>
                         )}
                       </div>
                     </TableCell>
                     <TableCell className="px-4 py-3 whitespace-nowrap text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={e => e.stopPropagation()} 
-                            aria-label={`Ações para TCO ${tco.tcoNumber}`} 
-                            className="h-8 w-8 rounded-full data-[state=open]:bg-slate-100"
-                          >
-                            <MoreHorizontal className="h-5 w-5 text-gray-500" />
-                            <span className="sr-only">Abrir menu de ações</span>
+                          <Button variant="ghost" size="icon" onClick={e => e.stopPropagation()} aria-label={`Ações para TCO ${tco.tcoNumber}`} className="h-8 w-8 rounded-full data-[state=open]:bg-slate-100">
+                            <MoreHorizontal className="h-5 w-5 text-gray-500" /> <span className="sr-only">Abrir menu</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 p-1" onClick={e => e.stopPropagation()}>
-                          <DropdownMenuItem 
-                            onClick={() => handleViewPdf(tco)} 
-                            className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md"
-                          >
+                          <DropdownMenuItem onClick={() => handleViewPdf(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md">
                             <Eye className="h-4 w-4 text-blue-500" /> Visualizar PDF
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDownloadPdf(tco)} 
-                            className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md"
-                          >
+                          <DropdownMenuItem onClick={() => handleDownloadPdf(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md">
                             <Download className="h-4 w-4 text-green-500" /> Baixar PDF
                           </DropdownMenuItem>
                           {canDelete && (
-                            <DropdownMenuItem 
-                              onClick={() => confirmDelete(tco)} 
-                              className="flex items-center gap-2 p-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md mt-1"
-                            >
+                            <DropdownMenuItem onClick={() => confirmDelete(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md mt-1">
                               <Trash2 className="h-4 w-4" /> Excluir TCO
                             </DropdownMenuItem>
                           )}
@@ -606,100 +533,63 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           </Table>
         </div>
 
-        {/* Mobile Card View */}
         <div className="md:hidden space-y-3 flex-grow overflow-y-auto p-1">
           {tcoList.map(tco => {
-            const gupmInfo = gupmDetailsCache[tco.id];
-            let conductorDisplay = "N/D";
-             if (gupmInfo === undefined && !gupmDetailsCache.hasOwnProperty(tco.id)) { // Ainda não carregado no cache
-                conductorDisplay = "Carregando GUPM...";
-            } else if (gupmInfo?.conductor) {
-                conductorDisplay = `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}`;
-            }
+             const gupmInfo = gupmDetailsCache[tco.id];
+             let conductorDisplay = "N/D";
+             if (gupmDetailsCache.hasOwnProperty(tco.id)) {
+                 if (gupmInfo?.conductor) {
+                     conductorDisplay = `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}`;
+                 }
+             } else {
+                 conductorDisplay = (tco.rgpmsExtracted && (tco.rgpmsExtracted.main.length > 0 || tco.rgpmsExtracted.support.length > 0)) ? "Processando GUPM..." : "N/D";
+             }
 
             const hasAnyOfficerForModal = gupmInfo && (gupmInfo.conductor || gupmInfo.mainTeam.length > 0 || gupmInfo.supportTeam.length > 0);
             const canDelete = tco.userId === user.id || user.userType === 'admin';
             
             return (
-              <div 
-                key={`card-${tco.id}`} 
-                onClick={() => setSelectedTco(tco)} 
-                aria-selected={selectedTco?.id === tco.id} 
-                className={`bg-white p-4 rounded-lg border border-gray-200 shadow-sm cursor-pointer transition-all duration-150 ease-in-out ${selectedTco?.id === tco.id ? "ring-2 ring-primary ring-offset-1" : "hover:shadow-md"}`}
-              >
+              <div key={`card-${tco.id}`} onClick={() => setSelectedTco(tco)} aria-selected={selectedTco?.id === tco.id} 
+                   className={`bg-white p-4 rounded-lg border border-gray-200 shadow-sm cursor-pointer transition-all duration-150 ease-in-out ${selectedTco?.id === tco.id ? "ring-2 ring-primary ring-offset-1" : "hover:shadow-md"}`}>
                 <div className="flex justify-between items-start mb-2">
                   <Badge variant="outline" className="text-base font-semibold bg-blue-50 text-blue-700 border-blue-300 px-2.5 py-1">
                     TCO {extractTcoDisplayNumber(tco.tcoNumber)}
                   </Badge>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={e => e.stopPropagation()} 
-                        className="h-8 w-8 -mr-2 -mt-1 data-[state=open]:bg-slate-100"
-                      >
+                      <Button variant="ghost" size="icon" onClick={e => e.stopPropagation()} className="h-8 w-8 -mr-2 -mt-1 data-[state=open]:bg-slate-100">
                         <MoreHorizontal className="h-5 w-5 text-gray-500" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48 p-1" onClick={e => e.stopPropagation()}>
-                      <DropdownMenuItem 
-                        onClick={() => handleViewPdf(tco)} 
-                        className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md"
-                      >
+                      <DropdownMenuItem onClick={() => handleViewPdf(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md">
                         <Eye className="h-4 w-4 text-blue-500" /> Visualizar PDF
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDownloadPdf(tco)} 
-                        className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md"
-                      >
+                      <DropdownMenuItem onClick={() => handleDownloadPdf(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md">
                         <Download className="h-4 w-4 text-green-500" /> Baixar PDF
                       </DropdownMenuItem>
                       {canDelete && (
-                        <DropdownMenuItem 
-                          onClick={() => confirmDelete(tco)} 
-                          className="flex items-center gap-2 p-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md mt-1"
-                        >
+                        <DropdownMenuItem onClick={() => confirmDelete(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md mt-1">
                           <Trash2 className="h-4 w-4" /> Excluir TCO
                         </DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                
-                <p className="text-xs text-gray-500 mb-1">
-                  {tco.createdAt ? format(tco.createdAt, "dd/MM/yyyy 'às' HH:mm") : "-"}
-                </p>
-                <p className="text-sm font-medium text-gray-800 mb-2 truncate" title={tco.natureza || "Não especificada"}>
-                  {tco.natureza || "Não especificada"}
-                </p>
-                
+                <p className="text-xs text-gray-500 mb-1">{tco.createdAt ? format(tco.createdAt, "dd/MM/yyyy 'às' HH:mm") : "-"}</p>
+                <p className="text-sm font-medium text-gray-800 mb-2 truncate" title={tco.natureza || "Não especificada"}>{tco.natureza || "Não especificada"}</p>
                 <div className="text-xs text-gray-600 mb-2">
                   <span className="font-medium text-gray-500">Criado por:</span> 
-                  <span className="ml-1">
-                    {tco.userInfo?.rank && `${tco.userInfo.rank} `}{tco.userInfo?.warName || 'Usuário'}
-                  </span>
-                  {tco.userId === user.id && (
-                    <Badge variant="secondary" className="text-xs ml-2">Seu TCO</Badge>
-                  )}
+                  <span className="ml-1">{tco.userInfo?.rank && `${tco.userInfo.rank} `}{tco.userInfo?.warName || 'Usuário'}</span>
+                  {tco.userId === user.id && (<Badge variant="secondary" className="text-xs ml-2">Seu TCO</Badge>)}
                 </div>
-                
                 <div className="text-xs text-gray-600 flex items-center">
                   <span className="font-medium text-gray-500 mr-1">Condutor:</span> 
                   <span className="truncate" title={conductorDisplay}>{conductorDisplay}</span>
                   {hasAnyOfficerForModal && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={e => {
-                        e.stopPropagation();
-                        openGupmDetailsModal(tco.id);
-                      }} 
-                      className="p-1 h-6 w-6 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full ml-1.5 flex-shrink-0" 
-                      title="Ver guarnição completa"
-                    >
-                      <Users className="h-3.5 w-3.5" />
-                      <span className="sr-only">Ver guarnição</span>
+                    <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); openGupmDetailsModal(tco.id);}} 
+                            className="p-1 h-6 w-6 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full ml-1.5 flex-shrink-0" title="Ver guarnição">
+                      <Users className="h-3.5 w-3.5" /> <span className="sr-only">Ver guarnição</span>
                     </Button>
                   )}
                 </div>
@@ -707,53 +597,31 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             );
           })}
         </div>
-        
         <div className="mt-4 text-gray-600 text-sm text-right pr-1">
           Total: <span className="font-semibold">{tcoList.length}</span> {tcoList.length === 1 ? 'TCO' : 'TCOs'}
         </div>
       </div>
     )}
 
-    {/* Delete Confirmation Dialog */}
     <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
       <AlertDialogContent className="max-w-md rounded-lg">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-xl font-semibold">Confirmar Exclusão</AlertDialogTitle>
           <AlertDialogDescription className="text-gray-600 pt-2">
-            Tem certeza que deseja excluir este TCO? Esta ação não pode ser desfeita e o arquivo será removido permanentemente.
-            {deletionMessage && (
-              <div className="mt-3 p-3 bg-blue-50 text-blue-700 rounded-md text-sm border border-blue-200">
-                {deletionMessage}
-              </div>
-            )}
+            Tem certeza que deseja excluir este TCO? Esta ação não pode ser desfeita e o arquivo será removido.
+            {deletionMessage && (<div className="mt-3 p-3 bg-blue-50 text-blue-700 rounded-md text-sm border border-blue-200">{deletionMessage}</div>)}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2 pt-4 flex-col sm:flex-row">
-          <AlertDialogCancel disabled={isDeleting} className="w-full sm:w-auto">
-            Cancelar
-          </AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={handleDeleteTco} 
-            disabled={isDeleting} 
-            className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto transition-colors"
-          >
-            {isDeleting ? (
-              <div className="flex items-center gap-2 justify-center">
-                <RefreshCw className="animate-spin h-4 w-4" />
-                <span>Excluindo...</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 justify-center">
-                <Trash2 className="h-4 w-4" />
-                <span>Confirmar Exclusão</span>
-              </div>
-            )}
+          <AlertDialogCancel disabled={isDeleting} className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDeleteTco} disabled={isDeleting} className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto">
+            {isDeleting ? (<div className="flex items-center gap-2 justify-center"><RefreshCw className="animate-spin h-4 w-4" /><span>Excluindo...</span></div>) : 
+                           (<div className="flex items-center gap-2 justify-center"><Trash2 className="h-4 w-4" /><span>Confirmar</span></div>)}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
 
-    {/* GUPM Details Modal */}
     <Dialog open={isGupmDetailModalOpen} onOpenChange={setIsGupmDetailModalOpen}>
       <DialogContent className="max-w-lg rounded-lg">
         <DialogHeader className="pb-3">
@@ -764,20 +632,14 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           {currentGupmToDisplay?.conductor && (
             <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
               <p className="font-semibold text-gray-700 text-base mb-0.5">Condutor:</p>
-              <p className="text-gray-600">
-                {`${currentGupmToDisplay.conductor.graduacao} ${currentGupmToDisplay.conductor.nome} (RGPM: ${currentGupmToDisplay.conductor.rgpm})`}
-              </p>
+              <p className="text-gray-600">{`${currentGupmToDisplay.conductor.graduacao} ${currentGupmToDisplay.conductor.nome} (RGPM: ${currentGupmToDisplay.conductor.rgpm})`}</p>
             </div>
           )}
           {currentGupmToDisplay && currentGupmToDisplay.mainTeam.length > 0 && (
             <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
               <p className="font-semibold text-gray-700 text-base mb-1.5">Guarnição Principal:</p>
               <ul className="space-y-1.5 text-gray-600">
-                {currentGupmToDisplay.mainTeam.map((officer, index) => (
-                  <li key={`main-${index}`}>
-                    {`${officer.graduacao} ${officer.nome} (RGPM: ${officer.rgpm})`}
-                  </li>
-                ))}
+                {currentGupmToDisplay.mainTeam.map((officer, i) => (<li key={`main-${i}`}>{`${officer.graduacao} ${officer.nome} (RGPM: ${officer.rgpm})`}</li>))}
               </ul>
             </div>
           )}
@@ -785,30 +647,16 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
               <p className="font-semibold text-blue-700 text-base mb-1.5">Equipe de Apoio:</p>
               <ul className="space-y-1.5 text-blue-600">
-                {currentGupmToDisplay.supportTeam.map((officer, index) => (
-                  <li key={`support-${index}`}>
-                    {`${officer.graduacao} ${officer.nome} (RGPM: ${officer.rgpm})`}
-                  </li>
-                ))}
+                {currentGupmToDisplay.supportTeam.map((officer, i) => (<li key={`support-${i}`}>{`${officer.graduacao} ${officer.nome} (RGPM: ${officer.rgpm})`}</li>))}
               </ul>
             </div>
           )}
-          {(!currentGupmToDisplay || 
-           (!currentGupmToDisplay.conductor && currentGupmToDisplay.mainTeam.length === 0 && currentGupmToDisplay.supportTeam.length === 0)) && (
-            <div className="text-center py-6">
-              <Users className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-500">Nenhuma informação de guarnição disponível para este TCO.</p>
-            </div>
+          {(!currentGupmToDisplay || (!currentGupmToDisplay.conductor && currentGupmToDisplay.mainTeam.length === 0 && currentGupmToDisplay.supportTeam.length === 0)) && (
+            <div className="text-center py-6"><Users className="h-10 w-10 text-gray-400 mx-auto mb-3" /><p className="text-gray-500">Nenhuma informação de guarnição disponível.</p></div>
           )}
         </div>
         <DialogFooter className="pt-4">
-          <Button 
-            variant="outline" 
-            onClick={() => setIsGupmDetailModalOpen(false)} 
-            className="w-full sm:w-auto"
-          >
-            Fechar
-          </Button>
+          <Button variant="outline" onClick={() => setIsGupmDetailModalOpen(false)} className="w-full sm:w-auto">Fechar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
