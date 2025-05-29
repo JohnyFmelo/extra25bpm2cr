@@ -88,8 +88,8 @@ const MonthlyExtraCalendar = () => {
   }
   return <Card className="shadow-sm border border-gray-100 overflow-hidden">
       <CardContent className="p-0">
-        <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 px-[3px]">
-          <div className="flex items-center mb-4 px-[12px]">
+        <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10">
+          <div className="flex items-center mb-4">
             <CalendarDays className="h-5 w-5 text-primary mr-2" />
             <h2 className="text-lg font-semibold text-gray-800">Extras do Mês Atual</h2>
           </div>
