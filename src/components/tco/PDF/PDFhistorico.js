@@ -275,13 +275,15 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             const relatoIndividualVitima = vitima.relato;
             let relatoVitimaParaPdf = "RELATO NÃO FORNECIDO PELA VÍTIMA."; 
             
-            if (relatoIndividualVitima && 
-                relatoIndividualVitima.trim() !== "" && 
-                // Checa se o relato da vítima NÃO É o placeholder
-                !relatoIndividualVitima.toUpperCase().includes("RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.".toUpperCase()) &&
+            // Se o relato individual existir e NÃO contiver o placeholder [INSIRA DECLARAÇÃO]
+            if (relatoIndividualVitima && typeof relatoIndividualVitima === 'string' && 
                 !relatoIndividualVitima.toUpperCase().includes("[INSIRA DECLARAÇÃO]")) {
                 relatoVitimaParaPdf = relatoIndividualVitima.toUpperCase();
+            } else if (relatoIndividualVitima && typeof relatoIndividualVitima === 'string' && relatoIndividualVitima.trim() === "") {
+                // Caso o usuário apague o placeholder e deixe o campo vazio
+                 relatoVitimaParaPdf = "RELATO NÃO FORNECIDO PELA VÍTIMA.";
             }
+            // Se relatoIndividualVitima for undefined ou ainda for o placeholder com [INSIRA DECLARAÇÃO], mantém "RELATO NÃO FORNECIDO..."
             
             yPos = addWrappedText(doc, yPos, relatoVitimaParaPdf, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
             yPos = addSignatureWithNameAndRole(doc, yPos, vitima.nome, "VÍTIMA", data);
@@ -297,14 +299,21 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             const relatoIndividualTestemunha = testemunha.relato;
             let relatoTestemunhaParaPdf = "RELATO NÃO FORNECIDO PELA TESTEMUNHA."; 
 
-            // --- CORREÇÃO APLICADA AQUI ---
-            if (relatoIndividualTestemunha && 
-                relatoIndividualTestemunha.trim() !== "" &&
-                // Checa se o relato da testemunha NÃO É o placeholder
-                !relatoIndividualTestemunha.toUpperCase().includes("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.".toUpperCase()) &&
+            // --- CORREÇÃO PRINCIPAL APLICADA AQUI ---
+            // Se o relato individual existir, não for apenas espaços em branco, E NÃO contiver o placeholder "[INSIRA DECLARAÇÃO]"
+            if (relatoIndividualTestemunha && typeof relatoIndividualTestemunha === 'string' &&
+                relatoIndividualTestemunha.trim() !== "" && 
                 !relatoIndividualTestemunha.toUpperCase().includes("[INSIRA DECLARAÇÃO]")) {
                 relatoTestemunhaParaPdf = relatoIndividualTestemunha.toUpperCase();
+            } else if (relatoIndividualTestemunha && typeof relatoIndividualTestemunha === 'string' && 
+                       relatoIndividualTestemunha.trim() === "" && 
+                       !relatoIndividualTestemunha.toUpperCase().includes("[INSIRA DECLARAÇÃO]")) {
+                // Caso o usuário tenha apagado o texto do placeholder, mas o [INSIRA DECLARAÇÃO] já tinha sido removido por alguma edição.
+                // Ou simplesmente o campo foi esvaziado.
+                 relatoTestemunhaParaPdf = "RELATO NÃO FORNECIDO PELA TESTEMUNHA.";
             }
+            // Se relatoIndividualTestemunha for undefined ou ainda for o placeholder com [INSIRA DECLARAÇÃO], mantém "RELATO NÃO FORNECIDO..."
+            // Se for só espaços em branco (e não o placeholder), também será "RELATO NÃO FORNECIDO..."
             // --- FIM DA CORREÇÃO ---
 
             yPos = addWrappedText(doc, yPos, relatoTestemunhaParaPdf, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
