@@ -248,13 +248,13 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
     yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", historicoSectionNumber.toFixed(1), 2, data);
     historicoSectionNumber += 0.1;
-    yPos = addWrappedText(doc, yPos, data.relatoPolicial || "Não Informado.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.relatoPolicial || "Não informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     const tituloRelatoAutor = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "RELATO DA AUTORA DO FATO" : "RELATO DO AUTOR DO FATO";
     yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, historicoSectionNumber.toFixed(1), 2, data);
     historicoSectionNumber += 0.1;
-    yPos = addWrappedText(doc, yPos, data.relatoAutor || "Não Informado.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.relatoAutor || "Não informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     if (primeiroAutor) {
         yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor?.nome, "AUTOR(A) DO FATO", data);
     } else {
@@ -293,12 +293,12 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     }
 
     yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", historicoSectionNumber.toFixed(1), 2, data);
-    yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "Não Informado.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "Não informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     // --- SEÇÃO 4: PROVIDÊNCIAS ---
     yPos = addSectionTitle(doc, yPos, "PROVIDÊNCIAS", "4", 1, data);
-    yPos = addWrappedText(doc, yPos, data.providencias || "Não Informado.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, data.providencias || "Não informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     yPos = addSectionTitle(doc, yPos, "DOCUMENTOS ANEXOS", "4.1", 2, data);
