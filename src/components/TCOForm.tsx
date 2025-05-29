@@ -311,7 +311,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]);
 
   useEffect(() => {
-    const displayNaturezaReal = natureza === "Outros" ? customNatureza || "[NATUREZA NÃO ESPECIFICADA]" : natureza;
+    const displayNaturezaReal = natureza === "Outros" ? customNatureza.trim() : natureza;
     let tipificacaoAtual = "";
     let penaAtual = "";
     if (natureza === "Outros") {
@@ -354,6 +354,58 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         case "Porte de drogas para consumo":
           tipificacaoAtual = "ART. 28 DA LEI Nº 11.343/2006 (LEI DE DROGAS)";
           penaAtual = "ADVERTÊNCIA SOBRE OS EFEITOS DAS DROGAS, PRESTAÇÃO DE SERVIÇOS À COMUNIDADE OU MEDIDA EDUCATIVA DE COMPARECIMENTO A PROGRAMA OU CURSO EDUCATIVO.";
+          break;
+        case "Conduzir veículo sem CNH gerando perigo de dano":
+          tipificacaoAtual = "ART. 309 DO CÓDIGO DE TRÂNSITO BRASILEIRO";
+          penaAtual = "DETENÇÃO DE 6 MESES A 1 ANO, OU MULTA";
+          break;
+        case "Entregar veículo automotor a pessoa não habilitada":
+          tipificacaoAtual = "ART. 310 DO CÓDIGO DE TRÂNSITO BRASILEIRO";
+          penaAtual = "DETENÇÃO DE 6 MESES A 1 ANO, OU MULTA";
+          break;
+        case "Trafegar em velocidade incompatível com segurança":
+          tipificacaoAtual = "ART. 311 DO CÓDIGO DE TRÂNSITO BRASILEIRO";
+          penaAtual = "DETENÇÃO DE 6 MESES A 1 ANO, OU MULTA";
+          break;
+        case "Omissão de socorro":
+          tipificacaoAtual = "ART. 135 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
+          break;
+        case "Rixa":
+          tipificacaoAtual = "ART. 137 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 15 DIAS A 2 MESES, OU MULTA";
+          break;
+        case "Invasão de domicílio":
+          tipificacaoAtual = "ART. 150 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 1 A 3 MESES, OU MULTA";
+          break;
+        case "Fraude em comércio":
+          tipificacaoAtual = "ART. 176 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 6 MESES A 2 ANOS, OU MULTA";
+          break;
+        case "Ato obsceno":
+          tipificacaoAtual = "ART. 233 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO, OU MULTA";
+          break;
+        case "Falsa identidade":
+          tipificacaoAtual = "ART. 307 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 3 MESES A 1 ANO, OU MULTA";
+          break;
+        case "Resistência":
+          tipificacaoAtual = "ART. 329 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 2 MESES A 2 ANOS";
+          break;
+        case "Desobediência":
+          tipificacaoAtual = "ART. 330 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 15 DIAS A 6 MESES, OU MULTA";
+          break;
+        case "Desacato":
+          tipificacaoAtual = "ART. 331 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 6 MESES A 2 ANOS, OU MULTA";
+          break;
+        case "Exercício arbitrário das próprias razões":
+          tipificacaoAtual = "ART. 345 DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 15 DIAS A 1 MÊS, OU MULTA";
           break;
         default:
           tipificacaoAtual = "[TIPIFICAÇÃO NÃO MAPEADA]";
@@ -996,6 +1048,19 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     "Calúnia",
     "Perturbação do Sossego",
     "Porte de drogas para consumo",
+    "Conduzir veículo sem CNH gerando perigo de dano",
+    "Entregar veículo automotor a pessoa não habilitada",
+    "Trafegar em velocidade incompatível com segurança",
+    "Omissão de socorro",
+    "Rixa",
+    "Invasão de domicílio",
+    "Fraude em comércio",
+    "Ato obsceno",
+    "Falsa identidade",
+    "Resistência",
+    "Desobediência",
+    "Desacato",
+    "Exercício arbitrário das próprias razões",
     "Outros"
   ];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
