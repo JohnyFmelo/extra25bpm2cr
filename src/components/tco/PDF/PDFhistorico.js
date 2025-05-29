@@ -1,4 +1,3 @@
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -233,16 +232,19 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             }
         });
     } else {
-        yPos = addSectionTitle(doc, yPos, "TESTEMUNHAS", currentSectionNumber.toFixed(1), 2, data);
-        currentSectionNumber += 0.1;
-        yPos = addWrappedText(doc, yPos, "Nenhuma testemunha informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
-        yPos += 2;
+        // Se não houver testemunhas válidas, não exibir a seção de testemunhas
+        // currentSectionNumber não precisa ser incrementado se a seção não for adicionada.
+        // yPos = addSectionTitle(doc, yPos, "TESTEMUNHAS", currentSectionNumber.toFixed(1), 2, data);
+        // currentSectionNumber += 0.1;
+        // yPos = addWrappedText(doc, yPos, "Nenhuma testemunha informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
+        // yPos += 2;
     }
 
     // --- SEÇÃO 3: HISTÓRICO ---
-    const primeiroAutor = data.autores && data.autores.length > 0 ? data.autores.find(a => a?.nome) : null;
+    const primeiroAutor = autoresValidos.length > 0 ? autoresValidos[0] : null;
     const vitimasComRelato = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome) : []) : [];
-    const testemunhasComRelato = data.testemunhas ? data.testemunhas.filter(t => t?.nome) : [];
+    const testemunhasComRelato = data.testemunhas ? data.testemunhas.filter(t => t?.nome && t.nome.trim() !== "") : [];
+
 
     let historicoSectionNumber = 3.1;
 
@@ -252,12 +254,24 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addWrappedText(doc, yPos, data.relatoPolicial || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
-    const tituloRelatoAutor = primeiroAutor?.sexo?.toLowerCase() === 'feminino' ? "RELATO DA AUTORA DO FATO" : "RELATO DO AUTOR DO FATO";
+    // Determinar o título e o papel do autor com base no sexo do primeiro autor válido
+    let tituloRelatoAutor = "RELATO DO(A) AUTOR(A) DO FATO";
+    let autorRole = "AUTOR(A) DO FATO";
+    if (primeiroAutor && primeiroAutor.sexo) {
+        if (primeiroAutor.sexo.toLowerCase() === 'feminino') {
+            tituloRelatoAutor = "RELATO DA AUTORA DO FATO";
+            autorRole = "AUTORA DO FATO";
+        } else if (primeiroAutor.sexo.toLowerCase() === 'masculino') {
+            tituloRelatoAutor = "RELATO DO AUTOR DO FATO";
+            autorRole = "AUTOR DO FATO";
+        }
+    }
+    
     yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, historicoSectionNumber.toFixed(1), 2, data);
     historicoSectionNumber += 0.1;
     yPos = addWrappedText(doc, yPos, data.relatoAutor || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     if (primeiroAutor) {
-        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor?.nome, "AUTOR(A) DO FATO", data);
+        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor.nome, autorRole, data);
     } else {
         yPos += 10;
     }
@@ -273,28 +287,29 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         });
     }
 
-    // Corrigir a lógica das testemunhas
+    // Apenas adicionar a seção de relato de testemunhas se houver testemunhas com nome e relato
     if (testemunhasComRelato.length > 0) {
         testemunhasComRelato.forEach((testemunha, index) => {
             const tituloRelatoTestemunha = `RELATO DA TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, tituloRelatoTestemunha, historicoSectionNumber.toFixed(1), 2, data);
             historicoSectionNumber += 0.1;
-            // Usar o relato específico da testemunha se existir, caso contrário usar texto padrão
             const relatoTestemunhaText = testemunha.relato || "A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.";
             yPos = addWrappedText(doc, yPos, relatoTestemunhaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
             yPos = addSignatureWithNameAndRole(doc, yPos, testemunha.nome, "TESTEMUNHA", data);
         });
-    } else {
-        // Quando não há testemunhas válidas, usar o relato genérico do campo relatoTestemunha
-        yPos = addSectionTitle(doc, yPos, "RELATO DAS TESTEMUNHAS", historicoSectionNumber.toFixed(1), 2, data);
-        historicoSectionNumber += 0.1;
-        let relatoTestText = "Nenhuma testemunha identificada.";
-        if (data.relatoTestemunha && data.relatoTestemunha.trim() !== "") {
-            relatoTestText = data.relatoTestemunha;
-        }
-        yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        yPos += 10;
     }
+    // REMOVIDO: Não exibir nada se não houver testemunhas com nome e relato
+    // else {
+    //     yPos = addSectionTitle(doc, yPos, "RELATO DAS TESTEMUNHAS", historicoSectionNumber.toFixed(1), 2, data);
+    //     historicoSectionNumber += 0.1;
+    //     let relatoTestText = "Nenhuma testemunha identificada com relato.";
+    //     if (data.relatoTestemunha && data.relatoTestemunha.trim() !== "" && data.relatoTestemunha.toUpperCase() !== "NENHUMA TESTEMUNHA IDENTIFICADA.") {
+    //        // relatoTestText = data.relatoTestemunha; // This might be the generic one, avoid if no named witnesses
+    //     }
+    //     yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    //     yPos += 10;
+    // }
+
 
     yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", historicoSectionNumber.toFixed(1), 2, data);
     yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "NÃO INFORMADO.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
