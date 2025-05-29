@@ -1050,7 +1050,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
   };
   const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Conduzir veículo sem CNH gerando perigo de dano", "Entregar veículo automotor a pessoa não habilitada", "Trafegar em velocidade incompatível com segurança", "Omissão de socorro", "Rixa", "Invasão de domicílio", "Fraude em comércio", "Ato obsceno", "Falsa identidade", "Resistência", "Desobediência", "Desacato", "Exercício arbitrário das próprias razões", "Outros"];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
-  return <div className="container px-4 py-6 md:py-10 max-w-5xl mx-auto">
+  return <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
         {hasMinorAuthor.isMinor && hasMinorAuthor.details && <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
             <p className="font-semibold">Atenção: Autor Menor de Idade Detectado</p>
