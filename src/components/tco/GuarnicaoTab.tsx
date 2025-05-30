@@ -65,7 +65,7 @@ interface ComponenteGuarnicao {
   naturalidade?: string;
   cpf?: string;
   telefone?: string;
-  apoio?: boolean; // Novo campo para status de apoio
+  apoio?: boolean;
 }
 interface PoliceOfficerSearchResult {
   nome: string | null;
@@ -101,7 +101,7 @@ interface GuarnicaoTabProps {
   currentGuarnicaoList: ComponenteGuarnicao[];
   onAddPolicial: (policial: ComponenteGuarnicao) => void;
   onRemovePolicial: (index: number) => void;
-  onToggleApoioPolicial: (index: number) => void; // Nova prop para alternar status de apoio
+  onToggleApoioPolicial: (index: number) => void;
 }
 
 // --- Componente GuarnicaoTab ---
@@ -111,21 +111,23 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
   onRemovePolicial,
   onToggleApoioPolicial
 }) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [searchRgpm, setSearchRgpm] = useState<string>("");
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState<boolean>(false);
   const [newOfficerFormData, setNewOfficerFormData] = useState<PoliceOfficerFormData>(initialOfficerFormData);
+  const [isFetchingDialogDetails, setIsFetchingDialogDetails] = useState<boolean>(false); // NOVO ESTADO
+
   useEffect(() => {
     console.log("[GuarnicaoTab] Prop 'currentGuarnicaoList' recebida:", currentGuarnicaoList);
   }, [currentGuarnicaoList]);
+
   const handleSearchRgpmChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = event.target.value;
     const numeros = somenteNumeros(rawValue).slice(0, 6);
     setSearchRgpm(numeros);
   };
+
   const handleSearchAndAdd = useCallback(async () => {
     const rgpmToSearch = searchRgpm;
     console.log("[GuarnicaoTab] Iniciando busca por RGPM:", rgpmToSearch);
@@ -151,15 +153,14 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
     setIsSearching(true);
     console.log("[GuarnicaoTab] Buscando no Supabase...");
     try {
-      const {
-        data,
-        error
-      } = await supabase.from("police_officers").select("nome, graduacao, pai, mae, naturalidade, cpf, telefone").eq("rgpm", rgpmToSearch).single();
-      console.log("[GuarnicaoTab] Resposta Supabase:", {
-        data,
-        error
-      });
+      const { data, error } = await supabase
+        .from("police_officers")
+        .select("nome, graduacao, pai, mae, naturalidade, cpf, telefone")
+        .eq("rgpm", rgpmToSearch)
+        .single();
+      console.log("[GuarnicaoTab] Resposta Supabase:", { data, error });
       console.log("[GuarnicaoTab] Telefone retornado do Supabase:", data?.telefone);
+
       if (error && error.code === 'PGRST116') {
         toast({
           variant: "default",
@@ -179,7 +180,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
           naturalidade: officerData.naturalidade?.toUpperCase() || "NÃO INFORMADO",
           cpf: officerData.cpf ? formatarCPF(officerData.cpf) : "NÃO INFORMADO",
           telefone: officerData.telefone ? formatarCelular(officerData.telefone) : "NÃO INFORMADO",
-          apoio: false, // Inicializa como não sendo de apoio
+          apoio: false,
         };
         console.log("[GuarnicaoTab] Componente criado com telefone:", newComponente.telefone);
         console.log("[GuarnicaoTab] Policial encontrado. Chamando onAddPolicial:", newComponente);
@@ -216,12 +217,16 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
   const openRegisterDialog = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setNewOfficerFormData(initialOfficerFormData); // Reseta o formulário ao abrir
     setIsRegisterDialogOpen(true);
   };
+
   const closeRegisterDialog = () => {
     setIsRegisterDialogOpen(false);
     setNewOfficerFormData(initialOfficerFormData);
+    setIsFetchingDialogDetails(false); // Garante que o estado de busca do diálogo seja resetado
   };
+
   const handleRegisterInputChange = (field: keyof PoliceOfficerFormData, value: string) => {
     let processedValue = value;
     if (field === 'cpf') {
@@ -233,25 +238,99 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
     } else if (['nome', 'pai', 'mae', 'naturalidade'].includes(field)) {
       processedValue = value.toUpperCase();
     }
-    setNewOfficerFormData(prev => ({
-      ...prev,
-      [field]: processedValue
-    }));
+    setNewOfficerFormData(prev => ({ ...prev, [field]: processedValue }));
   };
+
+  // --- NOVA FUNÇÃO ---
+  const fetchOfficerDetailsForDialog = async (rgpmToSearch: string) => {
+    setIsFetchingDialogDetails(true);
+    console.log("[GuarnicaoTab Dialog] Buscando detalhes para RGPM:", rgpmToSearch);
+    try {
+      const { data, error } = await supabase
+        .from("police_officers")
+        .select("nome, graduacao, pai, mae, naturalidade, cpf, telefone")
+        .eq("rgpm", rgpmToSearch)
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        toast({
+          variant: "default",
+          title: "RGPM Não Cadastrado",
+          description: "Este RGPM não foi encontrado. Prossiga com o novo cadastro.",
+        });
+        // Mantém o RGPM digitado, limpa o resto se havia algo
+        setNewOfficerFormData(prev => ({
+          ...initialOfficerFormData,
+          rgpm: prev.rgpm,
+        }));
+      } else if (error) {
+        throw error;
+      } else if (data) {
+        const officerData = data as PoliceOfficerSearchResult;
+        setNewOfficerFormData({
+          rgpm: rgpmToSearch,
+          nome: officerData.nome?.toUpperCase() || "",
+          graduacao: officerData.graduacao || "",
+          pai: officerData.pai?.toUpperCase() || "",
+          mae: officerData.mae?.toUpperCase() || "",
+          naturalidade: officerData.naturalidade?.toUpperCase() || "",
+          cpf: officerData.cpf ? formatarCPF(officerData.cpf) : "",
+          telefone: officerData.telefone ? formatarCelular(officerData.telefone) : "",
+        });
+        toast({
+          title: "Dados Carregados",
+          description: "Informações do policial preenchidas para atualização.",
+        });
+      }
+    } catch (error: any) {
+      console.error("[GuarnicaoTab Dialog] Erro ao buscar detalhes do policial:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro na Busca de Detalhes",
+        description: `Falha ao buscar dados: ${error.message || 'Erro desconhecido'}`,
+      });
+       // Mantém o RGPM digitado, limpa o resto em caso de erro
+      setNewOfficerFormData(prev => ({
+        ...initialOfficerFormData,
+        rgpm: prev.rgpm,
+      }));
+    } finally {
+      setIsFetchingDialogDetails(false);
+    }
+  };
+
+  // --- NOVA FUNÇÃO ---
+  const handleRgpmDialogBlur = () => {
+    const rgpmValue = newOfficerFormData.rgpm; // Já está processado por handleRegisterInputChange
+    if (rgpmValue.length === 6) {
+      fetchOfficerDetailsForDialog(rgpmValue);
+    } else {
+      // Se o RGPM não tem 6 dígitos e há dados preenchidos (exceto RGPM), limpa-os
+      // Isso evita que dados de uma busca anterior permaneçam se o RGPM for editado para algo inválido
+      const { rgpm, ...otherFields } = newOfficerFormData;
+      const hasOtherData = Object.values(otherFields).some(value => !!value && value !== initialOfficerFormData[field as keyof PoliceOfficerFormData]);
+
+      if (hasOtherData) {
+          // Limpa outros campos, mas mantém o RGPM que o usuário está digitando
+          let fieldsToClear = { ...initialOfficerFormData };
+          delete fieldsToClear.rgpm; // Não queremos limpar o rgpm
+          setNewOfficerFormData(prev => ({
+            ...prev, // Mantém o rgpm atual
+            ...fieldsToClear, // Limpa os outros campos
+            nome: "", graduacao: "", pai: "", mae: "", naturalidade: "", cpf: "", telefone: "" // Explícito para clareza
+          }));
+      }
+    }
+  };
+
+
   const handleSaveNewOfficer = async () => {
     console.log("[GuarnicaoTab] Tentando salvar novo policial no BD:", newOfficerFormData);
-    const {
-      rgpm,
-      nome,
-      graduacao,
-      pai,
-      mae,
-      naturalidade,
-      cpf,
-      telefone
-    } = newOfficerFormData;
+    const { rgpm, nome, graduacao, pai, mae, naturalidade, cpf, telefone } = newOfficerFormData;
+
     const camposObrigatorios: (keyof PoliceOfficerFormData)[] = ['rgpm', 'nome', 'graduacao', 'pai', 'mae', 'naturalidade', 'cpf', 'telefone'];
     const camposFaltando = camposObrigatorios.filter(key => !newOfficerFormData[key]?.trim());
+
     if (camposFaltando.length > 0) {
       toast({
         variant: "destructive",
@@ -260,33 +339,23 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       });
       return;
     }
+
     const rgpmNumeros = somenteNumeros(rgpm);
     if (rgpmNumeros.length !== 6) {
-      toast({
-        variant: "destructive",
-        title: "RGPM Inválido",
-        description: "O RGPM deve ter 6 dígitos."
-      });
+      toast({ variant: "destructive", title: "RGPM Inválido", description: "O RGPM deve ter 6 dígitos." });
       return;
     }
     const cpfNumeros = somenteNumeros(cpf);
     if (cpfNumeros.length !== 11 || !validateCPF(cpf)) {
-      toast({
-        variant: "destructive",
-        title: "CPF Inválido",
-        description: "Verifique o CPF."
-      });
+      toast({ variant: "destructive", title: "CPF Inválido", description: "Verifique o CPF." });
       return;
     }
     const telefoneNumeros = somenteNumeros(telefone);
     if (telefoneNumeros.length !== 10 && telefoneNumeros.length !== 11) {
-      toast({
-        variant: "destructive",
-        title: "Telefone Inválido",
-        description: "Formato DDD + 8 ou 9 dígitos."
-      });
+      toast({ variant: "destructive", title: "Telefone Inválido", description: "Formato DDD + 8 ou 9 dígitos." });
       return;
     }
+
     try {
       const dataToSave = {
         rgpm: rgpmNumeros,
@@ -299,11 +368,11 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
         telefone: telefoneNumeros
       };
       console.log("[GuarnicaoTab] Dados a serem salvos/atualizados no BD com telefone:", dataToSave.telefone);
-      const {
-        error
-      } = await supabase.from("police_officers").upsert(dataToSave, {
-        onConflict: "rgpm"
-      });
+
+      const { error } = await supabase
+        .from("police_officers")
+        .upsert(dataToSave, { onConflict: "rgpm" });
+
       if (error) {
         throw error;
       }
@@ -321,17 +390,9 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       });
     }
   };
+
   const isSaveDisabled = useCallback((): boolean => {
-    const {
-      rgpm,
-      nome,
-      graduacao,
-      pai,
-      mae,
-      naturalidade,
-      cpf,
-      telefone
-    } = newOfficerFormData;
+    const { rgpm, nome, graduacao, pai, mae, naturalidade, cpf, telefone } = newOfficerFormData;
     if (!rgpm || !nome || !graduacao || !pai || !mae || !naturalidade || !cpf || !telefone) return true;
     if (somenteNumeros(rgpm).length !== 6) return true;
     if (somenteNumeros(cpf).length !== 11 || !validateCPF(cpf)) return true;
@@ -339,7 +400,9 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
     if (telNums.length !== 10 && telNums.length !== 11) return true;
     return false;
   }, [newOfficerFormData]);
-  return <Card>
+
+  return (
+    <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
@@ -349,27 +412,43 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
             <CardDescription>Adicione os componentes buscando por RGPM</CardDescription>
           </div>
           <Button variant="outline" size="sm" onClick={openRegisterDialog} type="button">
-            <UserPlus className="h-4 w-4 mr-2" /> 
+            <UserPlus className="h-4 w-4 mr-2" /> Cadastrar/Atualizar Policial
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 px-[8px]">
         <div className="space-y-2">
           <div className="flex gap-2 items-center">
-            <Input id="rgpmSearchInput" type="text" inputMode="numeric" placeholder="Digite o RGPM" value={searchRgpm} onChange={handleSearchRgpmChange} disabled={isSearching} className="flex-grow" maxLength={6} onKeyDown={e => {
-            if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
-          }} />
+            <Input
+              id="rgpmSearchInput"
+              type="text"
+              inputMode="numeric"
+              placeholder="Digite o RGPM para adicionar à guarnição"
+              value={searchRgpm}
+              onChange={handleSearchRgpmChange}
+              disabled={isSearching}
+              className="flex-grow"
+              maxLength={6}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
+              }}
+            />
             <Button onClick={handleSearchAndAdd} disabled={isSearching || searchRgpm.length !== 6}>
               {isSearching ? "Buscando..." : <><Search className="h-4 w-4 mr-1" /> Adicionar</>}
             </Button>
           </div>
         </div>
+
         <div className="space-y-2">
           <Label>Componentes da Guarnição Atual</Label>
-          {currentGuarnicaoList.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4 border rounded-md border-dashed">
+          {currentGuarnicaoList.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4 border rounded-md border-dashed">
               Nenhum componente adicionado. Use a busca acima.
-            </p> : <div className="border rounded-md overflow-hidden">
-              {currentGuarnicaoList.map((componente, index) => <div key={`${componente.rg}-${index}`} className={`flex items-center justify-between p-3 ${index > 0 ? "border-t" : ""} ${index === 0 ? "bg-blue-50" : "bg-background"}`}>
+            </p>
+          ) : (
+            <div className="border rounded-md overflow-hidden">
+              {currentGuarnicaoList.map((componente, index) => (
+                <div key={`${componente.rg}-${index}`} className={`flex items-center justify-between p-3 ${index > 0 ? "border-t" : ""} ${index === 0 ? "bg-blue-50" : "bg-background"}`}>
                   <div className="flex flex-col flex-grow mr-2 truncate">
                     <span className="text-sm font-medium truncate" title={`${componente.posto} ${componente.nome} (RGPM: ${componente.rg})`}>
                       {index === 0 && <span className="font-bold text-blue-800">(Condutor) </span>}
@@ -397,10 +476,13 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>)}
-            </div>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </CardContent>
+
       <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
@@ -410,11 +492,29 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="dlg-rgpm">RGPM* <Info className="inline h-3 w-3 text-muted-foreground ml-1" aria-label="Usado para buscar e identificar o policial" /></Label>
-                <Input id="dlg-rgpm" value={newOfficerFormData.rgpm} onChange={e => handleRegisterInputChange("rgpm", e.target.value)} placeholder="000000" required inputMode="numeric" maxLength={6} />
+                <Input
+                  id="dlg-rgpm"
+                  value={newOfficerFormData.rgpm}
+                  onChange={e => handleRegisterInputChange("rgpm", e.target.value)}
+                  onBlur={handleRgpmDialogBlur} // <<< ALTERAÇÃO AQUI
+                  placeholder="000000"
+                  required
+                  inputMode="numeric"
+                  maxLength={6}
+                  disabled={isFetchingDialogDetails} // <<< ALTERAÇÃO AQUI
+                />
+                {isFetchingDialogDetails && <p className="text-xs text-muted-foreground mt-1">Buscando dados do RGPM...</p>}
               </div>
               <div>
                 <Label htmlFor="dlg-graduacao">Graduação *</Label>
-                <select id="dlg-graduacao" value={newOfficerFormData.graduacao} onChange={e => handleRegisterInputChange("graduacao", e.target.value)} required className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                <select
+                  id="dlg-graduacao"
+                  value={newOfficerFormData.graduacao}
+                  onChange={e => handleRegisterInputChange("graduacao", e.target.value)}
+                  required
+                  className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  disabled={isFetchingDialogDetails} // <<< ALTERAÇÃO AQUI
+                >
                   <option value="">Selecione...</option>
                   {graduacoes.map(grad => <option key={grad} value={grad}>{grad}</option>)}
                 </select>
@@ -422,39 +522,87 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
             </div>
             <div>
               <Label htmlFor="dlg-nome">Nome Completo *</Label>
-              <Input id="dlg-nome" value={newOfficerFormData.nome} onChange={e => handleRegisterInputChange("nome", e.target.value)} placeholder="Nome completo" required />
+              <Input
+                id="dlg-nome"
+                value={newOfficerFormData.nome}
+                onChange={e => handleRegisterInputChange("nome", e.target.value)}
+                placeholder="Nome completo"
+                required
+                disabled={isFetchingDialogDetails} // <<< ALTERAÇÃO AQUI
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="dlg-cpf">CPF *</Label>
-                <Input id="dlg-cpf" value={newOfficerFormData.cpf} onChange={e => handleRegisterInputChange("cpf", e.target.value)} placeholder="000.000.000-00" required inputMode="numeric" maxLength={14} />
+                <Input
+                  id="dlg-cpf"
+                  value={newOfficerFormData.cpf}
+                  onChange={e => handleRegisterInputChange("cpf", e.target.value)}
+                  placeholder="000.000.000-00"
+                  required
+                  inputMode="numeric"
+                  maxLength={14}
+                  disabled={isFetchingDialogDetails} // <<< ALTERAÇÃO AQUI
+                />
               </div>
               <div>
                 <Label htmlFor="dlg-telefone">Telefone (com DDD) *</Label>
-                <Input id="dlg-telefone" value={newOfficerFormData.telefone} onChange={e => handleRegisterInputChange("telefone", e.target.value)} placeholder="(00) 00000-0000" required inputMode="tel" maxLength={15} />
+                <Input
+                  id="dlg-telefone"
+                  value={newOfficerFormData.telefone}
+                  onChange={e => handleRegisterInputChange("telefone", e.target.value)}
+                  placeholder="(00) 00000-0000"
+                  required
+                  inputMode="tel"
+                  maxLength={15}
+                  disabled={isFetchingDialogDetails} // <<< ALTERAÇÃO AQUI
+                />
               </div>
             </div>
             <div>
               <Label htmlFor="dlg-naturalidade">Naturalidade (Cidade/UF) *</Label>
-              <Input id="dlg-naturalidade" value={newOfficerFormData.naturalidade} onChange={e => handleRegisterInputChange("naturalidade", e.target.value)} placeholder="Ex: Cuiabá/MT" required />
+              <Input
+                id="dlg-naturalidade"
+                value={newOfficerFormData.naturalidade}
+                onChange={e => handleRegisterInputChange("naturalidade", e.target.value)}
+                placeholder="Ex: Cuiabá/MT"
+                required
+                disabled={isFetchingDialogDetails} // <<< ALTERAÇÃO AQUI
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="dlg-pai">Nome do Pai *</Label>
-                <Input id="dlg-pai" value={newOfficerFormData.pai} onChange={e => handleRegisterInputChange("pai", e.target.value)} required placeholder="Nome completo do pai" />
+                <Input
+                  id="dlg-pai"
+                  value={newOfficerFormData.pai}
+                  onChange={e => handleRegisterInputChange("pai", e.target.value)}
+                  required
+                  placeholder="Nome completo do pai"
+                  disabled={isFetchingDialogDetails} // <<< ALTERAÇÃO AQUI
+                />
               </div>
               <div>
                 <Label htmlFor="dlg-mae">Nome da Mãe *</Label>
-                <Input id="dlg-mae" value={newOfficerFormData.mae} onChange={e => handleRegisterInputChange("mae", e.target.value)} required placeholder="Nome completo da mãe" />
+                <Input
+                  id="dlg-mae"
+                  value={newOfficerFormData.mae}
+                  onChange={e => handleRegisterInputChange("mae", e.target.value)}
+                  required
+                  placeholder="Nome completo da mãe"
+                  disabled={isFetchingDialogDetails} // <<< ALTERAÇÃO AQUI
+                />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeRegisterDialog} type="button"> Cancelar </Button>
-            <Button onClick={handleSaveNewOfficer} disabled={isSaveDisabled()} type="button"> Salvar no Banco </Button>
+            <Button variant="outline" onClick={closeRegisterDialog} type="button" disabled={isFetchingDialogDetails}> Cancelar </Button>
+            <Button onClick={handleSaveNewOfficer} disabled={isSaveDisabled() || isFetchingDialogDetails} type="button"> Salvar no Banco </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>;
+    </Card>
+  );
 };
+
 export default GuarnicaoTab;
