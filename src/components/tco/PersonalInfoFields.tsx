@@ -164,7 +164,7 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
 
       <div>
         <Label htmlFor={`${prefix}endereco_${index}`}>Endereço</Label>
-        <Input id={`${prefix}endereco_${index}`} placeholder="RUA, NÚMERO/QUADRA/LOTE, BAIRRO" value={data.endereco} onChange={e => onChangeHandler(index !== undefined ? index : null, 'endereco', e.target.value)} />
+        <Input id={`${prefix}endereco_${index}`} placeholder="Ex: Rua, n°, Quadra, Bairro, Lote, Coordenadas..." value={data.endereco} onChange={e => onChangeHandler(index !== undefined ? index : null, 'endereco', e.target.value)} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -175,19 +175,19 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
         
         <div>
           <Label htmlFor={`${prefix}naturalidade_${index}`}>Naturalidade</Label>
-          <Input id={`${prefix}naturalidade_${index}`} placeholder="MUNICÍPIO" value={data.naturalidade} onChange={e => onChangeHandler(index !== undefined ? index : null, 'naturalidade', e.target.value)} />
+          <Input id={`${prefix}naturalidade_${index}`} placeholder="Município" value={data.naturalidade} onChange={e => onChangeHandler(index !== undefined ? index : null, 'naturalidade', e.target.value)} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}filiacaoMae_${index}`}>Filiação - Mãe</Label>
-          <Input id={`${prefix}filiacaoMae_${index}`} placeholder="NOME COMPLETO" value={data.filiacaoMae} onChange={e => onChangeHandler(index !== undefined ? index : null, 'filiacaoMae', e.target.value)} />
+          <Input id={`${prefix}filiacaoMae_${index}`} placeholder="Nome Completo" value={data.filiacaoMae} onChange={e => onChangeHandler(index !== undefined ? index : null, 'filiacaoMae', e.target.value)} />
         </div>
         
         <div>
           <Label htmlFor={`${prefix}filiacaoPai_${index}`}>Filiação - Pai</Label>
-          <Input id={`${prefix}filiacaoPai_${index}`} placeholder="NOME COMPLETO" value={data.filiacaoPai} onChange={e => onChangeHandler(index !== undefined ? index : null, 'filiacaoPai', e.target.value)} />
+          <Input id={`${prefix}filiacaoPai_${index}`} placeholder="Nome Completo" value={data.filiacaoPai} onChange={e => onChangeHandler(index !== undefined ? index : null, 'filiacaoPai', e.target.value)} />
         </div>
       </div>
 
