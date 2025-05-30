@@ -119,7 +119,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
         
         <div>
           <Label htmlFor="endereco">ENDEREÇO</Label>
-          <Input id="endereco" placeholder="RUA, NÚMERO/QUADRA/LOTE, BAIRRO, COORDENADAS" value={endereco} onChange={e => setEndereco(e.target.value)} />
+          <Input id="endereco" placeholder="Ex: Rua, N°, Quadra, Bairro, Lote, Coordenadas..." value={endereco} onChange={e => setEndereco(e.target.value)} />
         </div>
         
         <div>
