@@ -311,7 +311,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       const hasOtherData = Object.values(otherFields).some(value => !!value && value !== initialOfficerFormData[field as keyof PoliceOfficerFormData]);
 
       if (hasOtherData) {
-          // Limpa outros campos, mas mantém o RGPM que o usuário está digitando
+          // Limpa outros campos, mas mantém o RGMP que o usuário está digitando
           let fieldsToClear = { ...initialOfficerFormData };
           delete fieldsToClear.rgpm; // Não queremos limpar o rgpm
           setNewOfficerFormData(prev => ({
