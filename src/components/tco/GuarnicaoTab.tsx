@@ -301,28 +301,30 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
 
   // --- NOVA FUNÇÃO ---
   const handleRgpmDialogBlur = () => {
-    const rgpmValue = newOfficerFormData.rgpm; // Já está processado por handleRegisterInputChange
-    if (rgpmValue.length === 6) {
-      fetchOfficerDetailsForDialog(rgpmValue);
+    const rgmpValue = newOfficerFormData.rgpm; // Já está processado por handleRegisterInputChange
+    if (rgmpValue.length === 6) {
+      fetchOfficerDetailsForDialog(rgmpValue);
     } else {
       // Se o RGPM não tem 6 dígitos e há dados preenchidos (exceto RGPM), limpa-os
       // Isso evita que dados de uma busca anterior permaneçam se o RGPM for editado para algo inválido
       const { rgpm, ...otherFields } = newOfficerFormData;
-      const hasOtherData = Object.values(otherFields).some(value => !!value && value !== initialOfficerFormData[field as keyof PoliceOfficerFormData]);
+      const hasOtherData = Object.values(otherFields).some(value => !!value);
 
       if (hasOtherData) {
           // Limpa outros campos, mas mantém o RGMP que o usuário está digitando
-          let fieldsToClear = { ...initialOfficerFormData };
-          delete fieldsToClear.rgpm; // Não queremos limpar o rgpm
           setNewOfficerFormData(prev => ({
-            ...prev, // Mantém o rgpm atual
-            ...fieldsToClear, // Limpa os outros campos
-            nome: "", graduacao: "", pai: "", mae: "", naturalidade: "", cpf: "", telefone: "" // Explícito para clareza
+            rgpm: prev.rgpm, // Mantém o rgpm atual
+            nome: "",
+            graduacao: "",
+            pai: "",
+            mae: "",
+            naturalidade: "",
+            cpf: "",
+            telefone: ""
           }));
       }
     }
   };
-
 
   const handleSaveNewOfficer = async () => {
     console.log("[GuarnicaoTab] Tentando salvar novo policial no BD:", newOfficerFormData);
