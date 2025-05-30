@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -33,17 +32,17 @@ interface BasicInformationTabProps {
   setJuizadoEspecialHora: (value: string) => void;
 }
 
-// Mapeamento de naturezas para penas (em anos)
+// Mapeamento de naturezas para penas MÁXIMAS (em anos)
 const naturezaPenas: Record<string, number> = {
   "Porte de drogas para consumo": 0.5, // 6 meses
   "Lesão corporal": 1.0, // 1 ano
-  "Ameaça": 0.5, // 6 meses
+  "Ameaça": 0.5, // 6 meses (máxima)
   "Injúria": 0.5, // 6 meses
-  "Difamação": 0.5, // 6 meses
-  "Calúnia": 1.0, // 1 ano
+  "Difamação": 1.0, // 1 ano
+  "Calúnia": 2.0, // 2 anos (máxima)
   "Perturbação do trabalho ou do sossego alheios": 0.25, // 3 meses
   "Vias de fato": 0.5, // 6 meses
-  "Contravenção penal": 0.25, // 3 meses
+  "Contravenção penal": 0.5, // 6 meses
   // Adicione outras naturezas conforme necessário
 };
 
@@ -82,10 +81,10 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
     let total = 0;
     selectedNaturezas.forEach(nat => {
       if (nat === "Outros") {
-        // Para natureza customizada, assumir pena de 1 ano como padrão
-        total += 1.0;
+        // Para natureza customizada, assumir pena de 2 anos como padrão (máximo para TCO)
+        total += 2.0;
       } else {
-        total += naturezaPenas[nat] || 1.0; // Default 1 ano se não encontrado
+        total += naturezaPenas[nat] || 2.0; // Default 2 anos se não encontrado
       }
     });
     
@@ -96,7 +95,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       toast({
         variant: "warning",
         title: "Atenção: Pena Superior a 2 Anos",
-        description: `A soma das penas das naturezas selecionadas é de ${total} anos, excedendo o limite de 2 anos para TCO.`
+        description: `A soma das penas máximas das naturezas selecionadas é de ${total} anos, excedendo o limite de 2 anos para TCO.`
       });
     }
   }, [selectedNaturezas, toast]);
@@ -226,7 +225,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Atenção: Pena Superior a 2 Anos</AlertTitle>
               <AlertDescription>
-                A soma das penas das naturezas selecionadas é de {totalPenaAnos} anos, 
+                A soma das penas máximas das naturezas selecionadas é de {totalPenaAnos} anos, 
                 excedendo o limite de 2 anos para TCO. Verifique se o caso deve ser registrado como TCO.
               </AlertDescription>
             </Alert>
@@ -252,7 +251,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
                 ))}
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Pena total estimada: {totalPenaAnos} anos
+                Pena máxima total: {totalPenaAnos} anos
               </p>
             </div>
           )}
