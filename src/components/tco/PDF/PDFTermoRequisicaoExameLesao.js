@@ -1,4 +1,3 @@
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak, formatarDataSimples
@@ -45,7 +44,7 @@ export const addRequisicaoExameLesao = (doc, data) => {
     const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
     const condutor = data.componentesGuarnicao?.[0];
     const naturezaLesao = data.lesaoNatureza || data.natureza || "A APURAR";
-    const dataOcorrencia = formatarDataSimples(data.dataFato);
+    const dataOcorrencia = formatarDataSimples(data.dataFato); // Data do fato continua vindo de data.dataFato
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
@@ -80,8 +79,8 @@ export const addRequisicaoExameLesao = (doc, data) => {
     });
     yPos += 8;
 
-    // Usa dataTerminoRegistro ou a data atual como fallback
-    const dataRegistro = data.dataTerminoRegistro || new Date();
+    // MODIFICAÇÃO AQUI: Usa SEMPRE a data atual para a data de emissão do documento
+    const dataRegistro = new Date();
     const dataAtualFormatada = formatarDataPorExtenso(dataRegistro);
     const cidadeReq = (data.municipio || "VÁRZEA GRANDE").toUpperCase();
     doc.setFont("helvetica", "normal"); doc.setFontSize(12);
