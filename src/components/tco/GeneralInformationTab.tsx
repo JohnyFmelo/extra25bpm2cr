@@ -142,7 +142,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
         </div>
         
         <div>
-          <Label htmlFor="guarnicao">GUARNIÇÃO</Label>
+          <Label htmlFor="guarnicao">MODELO E PLACA DA VTR</Label>
           <Input id="guarnicao" placeholder="Ex: Viatura Duster ABC-1234" value={guarnicao} onChange={e => setGuarnicao(e.target.value)} />
         </div>
 
