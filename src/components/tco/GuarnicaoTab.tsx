@@ -356,7 +356,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
       <CardContent className="space-y-4 px-[8px]">
         <div className="space-y-2">
           <div className="flex gap-2 items-center">
-            <Input id="rgpmSearchInput" type="text" inputMode="numeric" placeholder="Buscar por RGPM (6 dígitos)" value={searchRgpm} onChange={handleSearchRgpmChange} disabled={isSearching} className="flex-grow" maxLength={6} onKeyDown={e => {
+            <Input id="rgpmSearchInput" type="text" inputMode="numeric" placeholder="Digite o RGPM" value={searchRgpm} onChange={handleSearchRgpmChange} disabled={isSearching} className="flex-grow" maxLength={6} onKeyDown={e => {
             if (e.key === 'Enter' && !isSearching && searchRgpm.length === 6) handleSearchAndAdd();
           }} />
             <Button onClick={handleSearchAndAdd} disabled={isSearching || searchRgpm.length !== 6}>
@@ -409,7 +409,7 @@ const GuarnicaoTab: React.FC<GuarnicaoTabProps> = ({
           <div className="grid gap-4 max-h-[70vh] overflow-y-auto pr-3 px-[5px] py-0 my-0">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="dlg-rgpm">RGPM (6 dígitos) * <Info className="inline h-3 w-3 text-muted-foreground ml-1" aria-label="Usado para buscar e identificar o policial" /></Label>
+                <Label htmlFor="dlg-rgpm">RGPM* <Info className="inline h-3 w-3 text-muted-foreground ml-1" aria-label="Usado para buscar e identificar o policial" /></Label>
                 <Input id="dlg-rgpm" value={newOfficerFormData.rgpm} onChange={e => handleRegisterInputChange("rgpm", e.target.value)} placeholder="000000" required inputMode="numeric" maxLength={6} />
               </div>
               <div>
