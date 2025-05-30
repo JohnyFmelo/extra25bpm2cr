@@ -147,7 +147,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
         </div>
 
         <div>
-          <Label htmlFor="operacao"></Label>
+          <Label htmlFor="operacao">OPERAÇÃO</Label>
           <Input id="operacao" placeholder="Ex: Operação Asfixia IV" value={operacao} onChange={e => setOperacao(e.target.value)} />
         </div>
       </CardContent>
