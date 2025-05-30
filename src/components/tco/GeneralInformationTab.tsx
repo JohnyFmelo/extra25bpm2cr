@@ -113,13 +113,13 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
         <input type="hidden" id="horaTerminoRegistro" value={horaTerminoRegistro} />
         
         <div>
-          <Label htmlFor="localFato">LOCAL DO FATO</Label>
-          <Input id="localFato" placeholder="RESIDENCIA, VIA PÚBLICA, PRAÇA..." value={localFato} onChange={e => setLocalFato(e.target.value)} />
+          <Label htmlFor="localFato">ONDE OCORREU O FATO</Label>
+          <Input id="localFato" placeholder="Residência, Via Pública, Praça..." value={localFato} onChange={e => setLocalFato(e.target.value)} />
         </div>
         
         <div>
-          <Label htmlFor="endereco">ENDEREÇO</Label>
-          <Input id="endereco" placeholder="Ex: Rua, N°, Quadra, Bairro, Lote, Coordenadas..." value={endereco} onChange={e => setEndereco(e.target.value)} />
+          <Label htmlFor="endereco">ENDEREÇO DO FATO</Label>
+          <Input id="endereco" placeholder="Ex: Rua, n°, Quadra, Bairro, Lote, Coordenadas..." value={endereco} onChange={e => setEndereco(e.target.value)} />
         </div>
         
         <div>
