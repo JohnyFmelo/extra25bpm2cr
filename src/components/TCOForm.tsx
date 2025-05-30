@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1308,14 +1307,21 @@ const TCOForm: React.FC<TCOFormProps> = ({
                       {videoLinks.map((link, index) => (
                         <li
                           key={`${index}-${link}`}
-                          className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm"
+                          className="flex justify-between items-start p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm gap-2"
                         >
                           <a
                             href={link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline break-all line-clamp-2 mr-2 flex-1"
+                            className="text-blue-600 hover:underline break-all min-w-0 flex-1 leading-relaxed"
                             title={`Abrir link: ${link}`}
+                            style={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              wordBreak: 'break-all'
+                            }}
                           >
                             {link}
                           </a>
@@ -1324,7 +1330,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
                             variant="ghost"
                             size="icon"
                             onClick={() => handleRemoveVideoLink(index)}
-                            className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7"
+                            className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7 shrink-0 mt-0.5"
                             aria-label={`Remover link ${link}`}
                           >
                             <X className="h-4 w-4" />
