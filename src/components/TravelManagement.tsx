@@ -551,8 +551,13 @@ export const TravelManagement = () => {
                     <div className="pt-3 border-t border-gray-200">
                         <div className="flex justify-between items-center mb-2">
                           <h4 className="font-medium text-sm text-gray-800">
-                            Voluntários ({travel.volunteers?.length || 0} inscritos 
-                            {isLocked ? `, ${displayVolunteersList.length} selecionados` : ''})
+                            { (travel.volunteers?.length || 0) === 1 ? "Voluntário" : "Voluntários" } ({travel.volunteers?.length || 0} { (travel.volunteers?.length || 0) === 1 ? "inscrito" : "inscritos" })
+                            {/* A informação de selecionados ainda pode ser útil aqui se a viagem estiver bloqueada,
+                                mas se a instrução é remover completamente desta linha específica: */}
+                            {/* {isLocked ? ` (${displayVolunteersList.filter(v => v.isSelected).length} selecionados)` : ''} */}
+                            {/* Se a intenção é remover TOTALMENTE o 'selecionados' daqui, deixe como acima.
+                                Se quiser mostrar os selecionados QUANDO a viagem estiver processada,
+                                pode-se adicionar de volta, mas o pedido foi para remover. */}
                           </h4>
                           {isAdmin && today < travelStart && !isLocked && (
                             <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs"
@@ -612,11 +617,14 @@ export const TravelManagement = () => {
 
                     {canUserVolunteer && (
                       <div className="mt-4 pt-3 border-t border-gray-200">
-                        <Button 
-                            onClick={(e) => { e.stopPropagation(); handleVolunteer(travel.id); }} 
+                        <Button
+                            onClick={(e) => { e.stopPropagation(); handleVolunteer(travel.id); }}
                             className={`w-full shadow-sm transition-colors ${isUserVolunteered ? "bg-red-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600"} text-white font-medium`}
-                            disabled={ (travel.volunteers && travel.volunteers.length >= travel.slots && !isUserVolunteered) }
-                            title={ (travel.volunteers && travel.volunteers.length >= travel.slots && !isUserVolunteered) ? "Vagas esgotadas" : (isUserVolunteered ? "Desistir da viagem" : "Quero ser voluntário")}
+                            // O botão só fica desabilitado se canUserVolunteer for false,
+                            // o que já é tratado pelo if que envolve este bloco.
+                            // Se o usuário já está voluntariado, o botão é para desistir.
+                            // Se não está, é para se voluntariar. Não há mais limite de vagas para inscrição.
+                            title={isUserVolunteered ? "Desistir da viagem" : "Quero ser voluntário"}
                         >
                           {isUserVolunteered ? "Desistir da Viagem" : "Quero ser Voluntário"}
                         </Button>
