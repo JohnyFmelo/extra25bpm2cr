@@ -77,7 +77,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     const rgCondutor = condutorAutuacao?.rg || "NÃO INFORMADO";
 
     const linhaNomePosto = `${nomeCondutor} - ${postoCondutor}`.toUpperCase();
-    const linhaRg = `RGPM: ${rgCondutor}`.toUpperCase();
+    const linhaRg = `RG PMMT: ${rgCondutor}`.toUpperCase();
 
     doc.setFont("helvetica", "normal"); doc.setFontSize(10);
     // Centraliza o texto da assinatura
