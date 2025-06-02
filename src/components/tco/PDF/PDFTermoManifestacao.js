@@ -1,4 +1,3 @@
-
 // src/components/tco/PDF/PDFTermoManifestacao.js
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
@@ -59,6 +58,15 @@ export const addTermoManifestacao = (doc, data) => {
 
         const option2Text = `${manifestacaoOption2} DECIDIR POSTERIORMENTE, ESTANDO CIENTE, PARA OS FINS PREVISTOS NO ART. 103 DO CÓDIGO PENAL E ART. 38 CÓDIGO DE PROCESSO PENAL QUE DEVO EXERCER O DIREITO DE REPRESENTAÇÃO OU DE QUEIXA, NO PRAZO DE 06 (SEIS) MESES, A CONTAR DESTA DATA, SENDO CERTO QUE MEU SILÊNCIO, ACARRETARÁ A EXTINÇÃO DE PUNIBILIDADE, NA FORMA DO ART. 107, INC. IV, DO CÓDIGO PENAL.`;
         yPos = addWrappedText(doc, yPos, option2Text, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+        yPos += 5;
+
+        // Novo parágrafo com informações da audiência
+        const apresentacaoJuizado = data.tco?.apresentacaoJuizadoEspecialVG;
+        const dataAudiencia = apresentacaoJuizado?.data || "[DATA NÃO INFORMADA]";
+        const horaAudiencia = apresentacaoJuizado?.hora || "[HORA NÃO INFORMADA]";
+        
+        const audienciaText = `ESTOU CIENTE DE QUE A AUDIENCIA OCORRERÁ NO DIA ${dataAudiencia}, ÀS ${horaAudiencia} HORAS, DAS DEPENDÊNCIAS DO JUIZADO ESPECIAL CRIMINAL DE VÁRZEA GRANDE NO BAIRRO CHAPÉU DO SOL, AVENIDA CHAPÉU DO SOL, S/N, E QUE O NÃO COMPARECIMENTO IMPORTARÁ EM RENUNCIA À REPRESENTAÇÃO E O ARQUIVAMENTO DO PROCESSO.`;
+        yPos = addWrappedText(doc, yPos, audienciaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
         yPos += 5;
 
         yPos = addSignatureWithNameAndRole(doc, yPos, vitima.nome, "VÍTIMA", data);
