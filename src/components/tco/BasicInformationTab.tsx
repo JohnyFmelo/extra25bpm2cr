@@ -12,6 +12,7 @@ import TCOTimer from "./TCOTimer";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, getDocs, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+
 interface BasicInformationTabProps {
   tcoNumber: string;
   setTcoNumber: (value: string) => void;
@@ -33,53 +34,30 @@ interface BasicInformationTabProps {
 
 // Mapeamento de naturezas para penas MÁXIMAS (em anos)
 const naturezaPenas: Record<string, number> = {
-  "Porte de drogas para consumo": 0,
-  // Não há pena de prisão, apenas medidas educativas
-  "Lesão Corporal": 1.0,
-  // 1 ano (máxima)
-  "Ameaça": 0.5,
-  // 6 meses (máxima)
-  "Injúria": 0.5,
-  // 6 meses
-  "Difamação": 1.0,
-  // 1 ano
-  "Calúnia": 2.0,
-  // 2 anos (máxima)
-  "Perturbação do trabalho ou do sossego alheios": 0.25,
-  // 3 meses
-  "Vias de Fato": 0.25,
-  // 3 meses (máxima)
-  "Contravenção penal": 0.25,
-  // 3 meses
-  "Dano": 0.5,
-  // 6 meses
-  "Perturbação do Sossego": 0.25,
-  // 3 meses
-  "Conduzir veículo sem CNH gerando perigo de dano": 1.0,
-  // 1 ano
-  "Entregar veículo automotor a pessoa não habilitada": 1.0,
-  // 1 ano
-  "Trafegar em velocidade incompatível com segurança": 1.0,
-  // 1 ano
-  "Omissão de socorro": 0.5,
-  // 6 meses
-  "Rixa": 0.17,
-  // 2 meses (máxima)
-  "Invasão de domicílio": 0.25,
-  // 3 meses
-  "Fraude em comércio": 2.0,
-  // 2 anos
-  "Ato obsceno": 1.0,
-  // 1 ano
-  "Falsa identidade": 1.0,
-  // 1 ano
-  "Resistência": 2.0,
-  // 2 anos
-  "Desobediência": 0.5,
-  // 6 meses
-  "Desacato": 2.0,
-  // 2 anos
-  "Exercício arbitrário das próprias razões": 0.08 // 1 mês
+  "Porte de drogas para consumo": 0, // Não há pena de prisão, apenas medidas educativas
+  "Lesão Corporal": 1.0, // 1 ano (máxima)
+  "Ameaça": 0.5, // 6 meses (máxima)
+  "Injúria": 0.5, // 6 meses
+  "Difamação": 1.0, // 1 ano
+  "Calúnia": 2.0, // 2 anos (máxima)
+  "Perturbação do trabalho ou do sossego alheios": 0.25, // 3 meses
+  "Vias de Fato": 0.25, // 3 meses (máxima)
+  "Contravenção penal": 0.25, // 3 meses
+  "Dano": 0.5, // 6 meses
+  "Perturbação do Sossego": 0.25, // 3 meses
+  "Conduzir veículo sem CNH gerando perigo de dano": 1.0, // 1 ano
+  "Entregar veículo automotor a pessoa não habilitada": 1.0, // 1 ano
+  "Trafegar em velocidade incompatível com segurança": 1.0, // 1 ano
+  "Omissão de socorro": 0.5, // 6 meses
+  "Rixa": 0.17, // 2 meses (máxima)
+  "Invasão de domicílio": 0.25, // 3 meses
+  "Fraude em comércio": 2.0, // 2 anos
+  "Ato obsceno": 1.0, // 1 ano
+  "Falsa identidade": 1.0, // 1 ano
+  "Resistência": 2.0, // 2 anos
+  "Desobediência": 0.5, // 6 meses
+  "Desacato": 2.0, // 2 anos
+  "Exercício arbitrário das próprias razões": 0.08, // 1 mês
 };
 
 // Mapeamento de naturezas para tipificações
@@ -105,8 +83,9 @@ const naturezaTipificacoes: Record<string, string> = {
   "Resistência": "ART. 329 DO CÓDIGO PENAL",
   "Desobediência": "ART. 330 DO CÓDIGO PENAL",
   "Desacato": "ART. 331 DO CÓDIGO PENAL",
-  "Exercício arbitrário das próprias razões": "ART. 345 DO CÓDIGO PENAL"
+  "Exercício arbitrário das próprias razões": "ART. 345 DO CÓDIGO PENAL",
 };
+
 const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   tcoNumber,
   setTcoNumber,
@@ -123,9 +102,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   juizadoEspecialHora,
   setJuizadoEspecialHora
 }) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(false);
   const [selectedNaturezas, setSelectedNaturezas] = useState<string[]>([]);
   const [selectedCustomNatureza, setSelectedCustomNatureza] = useState<string>("");
@@ -144,6 +121,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   useEffect(() => {
     let total = 0;
     const tipificacoes: string[] = [];
+    
     selectedNaturezas.forEach(nat => {
       if (nat === "Outros") {
         // Para natureza customizada, assumir pena de 2 anos como padrão (máximo para TCO)
@@ -154,9 +132,10 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
         tipificacoes.push(naturezaTipificacoes[nat] || "[TIPIFICAÇÃO NÃO MAPEADA]");
       }
     });
+    
     setTotalPenaAnos(total);
     setShowPenaAlert(total > 2);
-
+    
     // Formato da tipificação: usar vírgulas e "E" apenas antes do último item
     let tipificacaoFormatada = "";
     if (tipificacoes.length === 1) {
@@ -167,7 +146,9 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       const ultimoItem = tipificacoes.pop();
       tipificacaoFormatada = tipificacoes.join(", ") + " E " + ultimoItem;
     }
+    
     setTipificacaoCompleta(tipificacaoFormatada);
+    
     if (total > 2) {
       toast({
         variant: "warning",
@@ -176,24 +157,29 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       });
     }
   }, [selectedNaturezas, toast]);
+
   const handleTcoNumberChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const numericValue = value.replace(/[^0-9]/g, '');
     setTcoNumber(numericValue);
+
     if (numericValue && numericValue.length >= 3) {
       await checkDuplicateTco(numericValue);
     }
   };
+
   const checkDuplicateTco = async (tcoNum: string) => {
     setIsChecking(true);
     try {
       const tcosRef = collection(db, "tcos");
       const q = query(tcosRef, where("tcoNumber", "==", tcoNum));
       const querySnapshot = await getDocs(q);
+      
       if (!querySnapshot.empty) {
         const existingTco = querySnapshot.docs[0].data();
         const createdAt = existingTco.createdAt?.toDate?.() || new Date(existingTco.createdAt);
         const formattedDate = createdAt.toLocaleDateString('pt-BR');
+        
         toast({
           variant: "destructive",
           title: "TCO Duplicado",
@@ -206,11 +192,12 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       setIsChecking(false);
     }
   };
+
   const handleAddNatureza = (selectedNatureza: string) => {
     if (selectedNatureza && !selectedNaturezas.includes(selectedNatureza)) {
       const newNaturezas = [...selectedNaturezas, selectedNatureza];
       setSelectedNaturezas(newNaturezas);
-
+      
       // Atualizar a natureza principal (primeira selecionada define o comportamento do formulário)
       if (newNaturezas.length === 1) {
         setNatureza(selectedNatureza);
@@ -220,13 +207,16 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       }
     }
   };
+
   const handleRemoveNatureza = (naturezaToRemove: string) => {
     const newNaturezas = selectedNaturezas.filter(nat => nat !== naturezaToRemove);
     setSelectedNaturezas(newNaturezas);
+    
     if (naturezaToRemove === "Outros") {
       setSelectedCustomNatureza("");
       setCustomNatureza("");
     }
+    
     if (newNaturezas.length === 0) {
       setNatureza("");
     } else if (newNaturezas.length === 1) {
@@ -235,6 +225,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       setNatureza(newNaturezas.join(" + "));
     }
   };
+
   const handleCustomNaturezaChange = (value: string) => {
     setSelectedCustomNatureza(value);
     setCustomNatureza(value);
@@ -247,9 +238,12 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
         checkDuplicateTco(tcoNumber);
       }
     }, 1000);
+
     return () => clearTimeout(timeoutId);
   }, [tcoNumber]);
-  return <Card>
+
+  return (
+    <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -268,36 +262,57 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
           <div>
             <Label htmlFor="tcoNumber">Número do TCO *</Label>
             <div className="relative">
-              <Input id="tcoNumber" placeholder="Informe o número do TCO (apenas números)" value={tcoNumber} onChange={handleTcoNumberChange} className={isChecking ? "border-yellow-300" : ""} />
-              {isChecking && <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <Input 
+                id="tcoNumber" 
+                placeholder="Informe o número do TCO (apenas números)" 
+                value={tcoNumber} 
+                onChange={handleTcoNumberChange} 
+                className={isChecking ? "border-yellow-300" : ""} 
+              />
+              {isChecking && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500"></div>
-                </div>}
+                </div>
+              )}
             </div>
           </div>
           
           {/* Alert de Pena Superior a 2 Anos - Aparece no formulário */}
-          {showPenaAlert && <Alert variant="destructive" className="border-red-600 bg-red-50 dark:bg-red-950">
+          {showPenaAlert && (
+            <Alert variant="destructive" className="border-red-600 bg-red-50 dark:bg-red-950">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Atenção: Pena Superior a 2 Anos Detectada</AlertTitle>
               <AlertDescription>
                 A soma das penas máximas das naturezas selecionadas é de {totalPenaAnos} anos, 
                 excedendo o limite de 2 anos. Não é permitido registrar TCO quando a pena máxima total excede 2 anos.
               </AlertDescription>
-            </Alert>}
+            </Alert>
+          )}
 
           {/* Naturezas Selecionadas */}
-          {selectedNaturezas.length > 0 && <div>
+          {selectedNaturezas.length > 0 && (
+            <div>
               <Label>Naturezas Selecionadas</Label>
               <div className="flex flex-wrap gap-2 mt-2">
-                {selectedNaturezas.map((nat, index) => <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                {selectedNaturezas.map((nat, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
                     {nat === "Outros" ? selectedCustomNatureza || "Outros" : nat}
-                    <Button variant="ghost" size="sm" className="h-4 w-4 p-0 hover:bg-transparent" onClick={() => handleRemoveNatureza(nat)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 hover:bg-transparent"
+                      onClick={() => handleRemoveNatureza(nat)}
+                    >
                       <X className="h-3 w-3" />
                     </Button>
-                  </Badge>)}
+                  </Badge>
+                ))}
               </div>
-              
-            </div>}
+              <p className="text-xs text-gray-500 mt-1">
+                Pena máxima total: {totalPenaAnos} anos
+              </p>
+            </div>
+          )}
           
           {/* Seleção de Natureza */}
           <div>
@@ -307,30 +322,46 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
                 <SelectValue placeholder="Selecione uma natureza para adicionar" />
               </SelectTrigger>
               <SelectContent>
-                {naturezaOptions.filter(option => !selectedNaturezas.includes(option)).map(option => <SelectItem key={option} value={option}>
+                {naturezaOptions
+                  .filter(option => !selectedNaturezas.includes(option))
+                  .map(option => (
+                    <SelectItem key={option} value={option}>
                       {option}
-                    </SelectItem>)}
+                    </SelectItem>
+                  ))
+                }
               </SelectContent>
             </Select>
           </div>
 
           {/* Natureza Personalizada */}
-          {selectedNaturezas.includes("Outros") && <div>
+          {selectedNaturezas.includes("Outros") && (
+            <div>
               <Label htmlFor="customNatureza">Especifique a Natureza *</Label>
-              <Input id="customNatureza" placeholder="Digite a natureza específica" value={selectedCustomNatureza} onChange={e => handleCustomNaturezaChange(e.target.value)} />
-            </div>}
+              <Input 
+                id="customNatureza" 
+                placeholder="Digite a natureza específica" 
+                value={selectedCustomNatureza} 
+                onChange={(e) => handleCustomNaturezaChange(e.target.value)} 
+              />
+            </div>
+          )}
 
           {/* Tipificação Legal - Mostra a tipificação ordenada conforme ordem de inserção */}
-          {tipificacaoCompleta && <div>
+          {tipificacaoCompleta && (
+            <div>
               <Label>Tipificação Legal</Label>
               <Input readOnly value={tipificacaoCompleta} className="bg-gray-100" />
-            </div>}
+            </div>
+          )}
 
           {/* Pena da Tipificação - Ocultada quando há múltiplas naturezas ou "Outros" */}
-          {penaDescricao && selectedNaturezas.length === 1 && !selectedNaturezas.includes("Outros") && <div>
+          {penaDescricao && selectedNaturezas.length === 1 && !selectedNaturezas.includes("Outros") && (
+            <div>
               <Label>Pena da Tipificação</Label>
               <Input readOnly value={penaDescricao} className="bg-gray-100" />
-            </div>}
+            </div>
+          )}
 
           {/* Apresentação em Juizado Especial VG */}
           <div className="space-y-2">
@@ -340,13 +371,23 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
               {/* Campo Data */}
               <div className="space-y-1">
                 <Label htmlFor="juizadoData">Data</Label>
-                <Input id="juizadoData" type="date" value={juizadoEspecialData} onChange={e => setJuizadoEspecialData(e.target.value)} />
+                <Input 
+                  id="juizadoData" 
+                  type="date" 
+                  value={juizadoEspecialData} 
+                  onChange={(e) => setJuizadoEspecialData(e.target.value)} 
+                />
               </div>
               
               {/* Campo Hora */}
               <div className="space-y-1">
                 <Label htmlFor="juizadoHora">Hora</Label>
-                <Input id="juizadoHora" type="time" value={juizadoEspecialHora} onChange={e => setJuizadoEspecialHora(e.target.value)} />
+                <Input 
+                  id="juizadoHora" 
+                  type="time" 
+                  value={juizadoEspecialHora} 
+                  onChange={(e) => setJuizadoEspecialHora(e.target.value)} 
+                />
               </div>
             </div>
           </div>
@@ -355,6 +396,8 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       <CardFooter className="flex justify-between">
         {/* Conteúdo do rodapé, se houver */}
       </CardFooter>
-    </Card>;
+    </Card>
+  );
 };
+
 export default BasicInformationTab;

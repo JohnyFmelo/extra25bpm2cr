@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+
 interface PersonalInfoFieldsProps {
   data: {
     nome: string;
@@ -29,6 +30,7 @@ interface PersonalInfoFieldsProps {
   isVictim?: boolean; // Novo prop para Vítimas
   isWitness?: boolean; // New prop for witnesses
 }
+
 const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
   data,
   onChangeHandler,
@@ -62,12 +64,13 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
   // Validate CPF
   const validateCPF = (cpf: string) => {
     const stripped = cpf.replace(/\D/g, '');
-
+    
     // For authors, CPF is required
     if (isAuthor && stripped.length === 0) {
       setCpfError('CPF é obrigatório para o autor do fato');
       return;
     }
+    
     if (stripped.length > 0 && stripped.length !== 11) {
       setCpfError('CPF deve conter 11 dígitos');
       return;
@@ -123,22 +126,35 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
       validateCPF(data.cpf);
     }
   }, [data.cpf, isAuthor]);
-  return <div className="space-y-4">
-      {isAuthor && ageWarning && <Alert variant="destructive">
+
+  return (
+    <div className="space-y-4">
+      {isAuthor && ageWarning && (
+        <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Atenção</AlertTitle>
-          
-        </Alert>}
+          <AlertDescription>
+            {ageWarning}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}nome_${index}`}>Nome completo *</Label>
-          <Input id={`${prefix}nome_${index}`} value={data.nome} onChange={e => onChangeHandler(index !== undefined ? index : null, 'nome', e.target.value)} />
+          <Input 
+            id={`${prefix}nome_${index}`} 
+            value={data.nome} 
+            onChange={e => onChangeHandler(index !== undefined ? index : null, 'nome', e.target.value)} 
+          />
         </div>
         
         <div>
           <Label htmlFor={`${prefix}sexo_${index}`}>Sexo</Label>
-          <Select value={data.sexo || ""} onValueChange={value => onChangeHandler(index !== undefined ? index : null, 'sexo', value)}>
+          <Select 
+            value={data.sexo || ""} 
+            onValueChange={value => onChangeHandler(index !== undefined ? index : null, 'sexo', value)}
+          >
             <SelectTrigger id={`${prefix}sexo_${index}`}>
               <SelectValue placeholder="Selecione o sexo" />
             </SelectTrigger>
@@ -175,7 +191,12 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
 
       <div>
         <Label htmlFor={`${prefix}endereco_${index}`}>Endereço</Label>
-        <Input id={`${prefix}endereco_${index}`} placeholder="Ex: Rua, n°, Quadra, Bairro, Lote, Coordenadas..." value={data.endereco} onChange={e => onChangeHandler(index !== undefined ? index : null, 'endereco', e.target.value)} />
+        <Input 
+          id={`${prefix}endereco_${index}`} 
+          placeholder="Ex: Rua, n°, Quadra, Bairro, Lote, Coordenadas..." 
+          value={data.endereco} 
+          onChange={e => onChangeHandler(index !== undefined ? index : null, 'endereco', e.target.value)} 
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -205,17 +226,30 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor={`${prefix}rg_${index}`}>RG ou Documento</Label>
-          <Input id={`${prefix}rg_${index}`} placeholder="RG 00000000 UF" value={data.rg} onChange={e => onChangeHandler(index !== undefined ? index : null, 'rg', e.target.value)} />
+          <Input 
+            id={`${prefix}rg_${index}`} 
+            placeholder="RG 00000000 UF" 
+            value={data.rg} 
+            onChange={e => onChangeHandler(index !== undefined ? index : null, 'rg', e.target.value)} 
+          />
         </div>
         
         <div>
           <Label htmlFor={`${prefix}cpf_${index}`}>
             CPF {isAuthor && <span className="text-red-500">*</span>}
           </Label>
-          <Input id={`${prefix}cpf_${index}`} placeholder="000.000.000-00" value={data.cpf} onChange={e => {
-          const formatted = formatCPF(e.target.value);
-          onChangeHandler(index !== undefined ? index : null, 'cpf', formatted);
-        }} onBlur={() => validateCPF(data.cpf)} className={cpfError ? "border-red-500" : ""} required={isAuthor} />
+          <Input 
+            id={`${prefix}cpf_${index}`} 
+            placeholder="000.000.000-00" 
+            value={data.cpf} 
+            onChange={e => {
+              const formatted = formatCPF(e.target.value);
+              onChangeHandler(index !== undefined ? index : null, 'cpf', formatted);
+            }} 
+            onBlur={() => validateCPF(data.cpf)}
+            className={cpfError ? "border-red-500" : ""}
+            required={isAuthor}
+          />
           {cpfError && <p className="text-red-500 text-xs mt-1">{cpfError}</p>}
         </div>
       </div>
@@ -250,6 +284,8 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
             </Select>
           </div>
         </div>}
-    </div>;
+    </div>
+  );
 };
+
 export default PersonalInfoFields;
