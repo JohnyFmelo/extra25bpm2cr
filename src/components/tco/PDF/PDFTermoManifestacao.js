@@ -1,7 +1,9 @@
+
 // src/components/tco/PDF/PDFTermoManifestacao.js
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
-    addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak
+    addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak,
+    formatarDataSimples
 } from './pdfUtils.js';
 
 /** Adiciona Termo de Manifestação da Vítima (em página nova) */
@@ -60,10 +62,9 @@ export const addTermoManifestacao = (doc, data) => {
         yPos = addWrappedText(doc, yPos, option2Text, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
         yPos += 5;
 
-        // Novo parágrafo com informações da audiência
-        const apresentacaoJuizado = data.tco?.apresentacaoJuizadoEspecialVG;
-        const dataAudiencia = apresentacaoJuizado?.data || "[DATA NÃO INFORMADA]";
-        const horaAudiencia = apresentacaoJuizado?.hora || "[HORA NÃO INFORMADA]";
+        // Obter data e horário das informações básicas e formatar a data para DD/MM/YYYY (mesma lógica do Termo de Compromisso)
+        const dataAudiencia = data.juizadoEspecialData ? formatarDataSimples(data.juizadoEspecialData) : "___/___/______";
+        const horaAudiencia = data.juizadoEspecialHora || "__:__";
         
         const audienciaText = `ESTOU CIENTE DE QUE A AUDIENCIA OCORRERÁ NO DIA ${dataAudiencia}, ÀS ${horaAudiencia} HORAS, DAS DEPENDÊNCIAS DO JUIZADO ESPECIAL CRIMINAL DE VÁRZEA GRANDE NO BAIRRO CHAPÉU DO SOL, AVENIDA CHAPÉU DO SOL, S/N, E QUE O NÃO COMPARECIMENTO IMPORTARÁ EM RENUNCIA À REPRESENTAÇÃO E O ARQUIVAMENTO DO PROCESSO.`;
         yPos = addWrappedText(doc, yPos, audienciaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
