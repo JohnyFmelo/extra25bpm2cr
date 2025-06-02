@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from "react";
+// --- START OF FILE BasicInformationTab (5).tsx ---
+
+import React, { useEffect, useState, useCallback } from "react"; // Adicionado useCallback
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, AlertTriangle } from "lucide-react"; // AlertTriangle já estava, mas confirmando
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+// import { AlertTriangle } from "lucide-react"; // Removido duplicado
 import TCOTimer from "./TCOTimer";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, getDocs, where } from "firebase/firestore";
@@ -20,7 +22,7 @@ interface BasicInformationTabProps {
   setNatureza: (value: string) => void;
   autor: string;
   setAutor: (value: string) => void;
-  penaDescricao: string;
+  penaDescricao: string; // Usado para pena de natureza única
   naturezaOptions: string[];
   customNatureza: string;
   setCustomNatureza: (value: string) => void;
@@ -35,29 +37,29 @@ interface BasicInformationTabProps {
 // Mapeamento de naturezas para penas MÁXIMAS (em anos)
 const naturezaPenas: Record<string, number> = {
   "Porte de drogas para consumo": 0, // Não há pena de prisão, apenas medidas educativas
-  "Lesão Corporal": 1.0, // 1 ano (máxima)
-  "Ameaça": 0.5, // 6 meses (máxima)
-  "Injúria": 0.5, // 6 meses
-  "Difamação": 1.0, // 1 ano
-  "Calúnia": 2.0, // 2 anos (máxima)
-  "Perturbação do trabalho ou do sossego alheios": 0.25, // 3 meses
-  "Vias de Fato": 0.25, // 3 meses (máxima)
-  "Contravenção penal": 0.25, // 3 meses
-  "Dano": 0.5, // 6 meses
-  "Perturbação do Sossego": 0.25, // 3 meses
-  "Conduzir veículo sem CNH gerando perigo de dano": 1.0, // 1 ano
-  "Entregar veículo automotor a pessoa não habilitada": 1.0, // 1 ano
-  "Trafegar em velocidade incompatível com segurança": 1.0, // 1 ano
-  "Omissão de socorro": 0.5, // 6 meses
-  "Rixa": 0.17, // 2 meses (máxima)
-  "Invasão de domicílio": 0.25, // 3 meses
-  "Fraude em comércio": 2.0, // 2 anos
-  "Ato obsceno": 1.0, // 1 ano
-  "Falsa identidade": 1.0, // 1 ano
-  "Resistência": 2.0, // 2 anos
-  "Desobediência": 0.5, // 6 meses
-  "Desacato": 2.0, // 2 anos
-  "Exercício arbitrário das próprias razões": 0.08, // 1 mês
+  "Lesão Corporal": 1.0, 
+  "Ameaça": 0.5, 
+  "Injúria": 0.5, 
+  "Difamação": 1.0, 
+  "Calúnia": 2.0, 
+  "Perturbação do trabalho ou do sossego alheios": 0.25, 
+  "Vias de Fato": 0.25, 
+  "Contravenção penal": 0.25, // Genérico, pode variar. Assumindo um valor comum.
+  "Dano": 0.5, 
+  "Perturbação do Sossego": 0.25, 
+  "Conduzir veículo sem CNH gerando perigo de dano": 1.0, 
+  "Entregar veículo automotor a pessoa não habilitada": 1.0, 
+  "Trafegar em velocidade incompatível com segurança": 1.0, 
+  "Omissão de socorro": 0.5, 
+  "Rixa": 0.17, // approx 2 meses
+  "Invasão de domicílio": 0.25, 
+  "Fraude em comércio": 2.0, 
+  "Ato obsceno": 1.0, 
+  "Falsa identidade": 1.0, 
+  "Resistência": 2.0, 
+  "Desobediência": 0.5, 
+  "Desacato": 2.0, 
+  "Exercício arbitrário das próprias razões": 0.08, // approx 1 mês
 };
 
 // Mapeamento de naturezas para tipificações
@@ -86,6 +88,35 @@ const naturezaTipificacoes: Record<string, string> = {
   "Exercício arbitrário das próprias razões": "ART. 345 DO CÓDIGO PENAL",
 };
 
+// Função helper para formatar a pena em anos e meses
+const formatarPena = (anosDecimais: number): string => {
+  if (anosDecimais < 0) return "Pena indeterminada";
+  
+  // Caso especial para Porte de Drogas (pena 0) pode ser tratado no local da chamada se uma mensagem específica for necessária
+  if (anosDecimais === 0) return "0 meses";
+
+  const anosInteiros = Math.floor(anosDecimais);
+  const mesesResiduais = Math.round((anosDecimais - anosInteiros) * 12);
+
+  const partes = [];
+  if (anosInteiros > 0) {
+    partes.push(`${anosInteiros} ano${anosInteiros > 1 ? 's' : ''}`);
+  }
+  if (mesesResiduais > 0) {
+    partes.push(`${mesesResiduais} ${mesesResiduais > 1 ? 'meses' : 'mês'}`);
+  }
+
+  if (partes.length === 0) {
+    // Se anosDecimais > 0 mas resultou em 0 anos e 0 meses (ex: 0.01 anos)
+    // Para as penas do sistema, a menor é ~0.08 (1 mês), então isso não deve ocorrer.
+    if (anosDecimais > 0) return "menos de 1 mês"; // Ou "1 mês" como piso.
+    return "0 meses"; // Se anosDecimais era 0.
+  }
+
+  return partes.join(' e ');
+};
+
+
 const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   tcoNumber,
   setTcoNumber,
@@ -110,65 +141,63 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   const [showPenaAlert, setShowPenaAlert] = useState<boolean>(false);
   const [tipificacaoCompleta, setTipificacaoCompleta] = useState<string>("");
 
-  // Inicializar com a natureza atual se existir
+  // Inicializar com a natureza atual se existir e não estiver já em selectedNaturezas
+  // Isso é útil se o formulário for carregado com uma natureza pré-definida.
   useEffect(() => {
-    if (natureza && !selectedNaturezas.includes(natureza)) {
-      setSelectedNaturezas([natureza]);
+    if (natureza) {
+        // Se a 'natureza' prop é uma string com " + ", divida-a em um array
+        const naturezasIniciais = natureza.includes(" + ") ? natureza.split(" + ") : [natureza];
+        // Filtrar naturezas que já não estejam em selectedNaturezas para evitar duplicatas no estado inicial
+        const novasNaturezasParaAdicionar = naturezasIniciais.filter(nat => !selectedNaturezas.includes(nat));
+        if (novasNaturezasParaAdicionar.length > 0) {
+            setSelectedNaturezas(prev => [...prev, ...novasNaturezasParaAdicionar]);
+        }
     }
-  }, [natureza]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [natureza]); // Dependência apenas em 'natureza' para rodar na montagem/mudança da prop
 
   // Calcular pena total e tipificação sempre que as naturezas selecionadas mudarem
   useEffect(() => {
-    let total = 0;
+    let totalCalculado = 0;
     const tipificacoes: string[] = [];
     
     selectedNaturezas.forEach(nat => {
       if (nat === "Outros") {
-        // Para natureza customizada, assumir pena de 2 anos como padrão (máximo para TCO)
-        total += 2.0;
-        tipificacoes.push("[TIPIFICAÇÃO LEGAL A SER INSERIDA]");
+        totalCalculado += 2.0; // Para natureza customizada, assumir pena de 2 anos
+        tipificacoes.push(customNatureza ? `[${customNatureza.toUpperCase()}] - TIPIFICAÇÃO A SER INSERIDA MANUALMENTE` : "[TIPIFICAÇÃO LEGAL A SER INSERIDA]");
       } else {
-        total += naturezaPenas[nat] || 2.0; // Default 2 anos se não encontrado
-        tipificacoes.push(naturezaTipificacoes[nat] || "[TIPIFICAÇÃO NÃO MAPEADA]");
+        totalCalculado += naturezaPenas[nat] || 2.0; // Default 2 anos se não encontrado
+        tipificacoes.push(naturezaTipificacoes[nat] || `[${nat.toUpperCase()}] - TIPIFICAÇÃO NÃO MAPEADA`);
       }
     });
     
-    setTotalPenaAnos(total);
-    setShowPenaAlert(total > 2);
+    setTotalPenaAnos(totalCalculado);
+    const penaExcedeLimite = totalCalculado > 2;
+    setShowPenaAlert(penaExcedeLimite);
     
-    // Formato da tipificação: usar vírgulas e "E" apenas antes do último item
     let tipificacaoFormatada = "";
     if (tipificacoes.length === 1) {
       tipificacaoFormatada = tipificacoes[0];
     } else if (tipificacoes.length === 2) {
       tipificacaoFormatada = tipificacoes.join(" E ");
     } else if (tipificacoes.length > 2) {
-      const ultimoItem = tipificacoes.pop();
+      const ultimoItem = tipificacoes.pop() as string; // Assegura que pop() não é undefined
       tipificacaoFormatada = tipificacoes.join(", ") + " E " + ultimoItem;
     }
     
     setTipificacaoCompleta(tipificacaoFormatada);
     
-    if (total > 2) {
+    if (penaExcedeLimite) {
       toast({
-        variant: "warning",
-        title: "Atenção: Pena Superior a 2 Anos",
-        description: `A soma das penas máximas das naturezas selecionadas é de ${total} anos, excedendo o limite de 2 anos para TCO.`
+        variant: "destructive", // Alterado para destructive para maior impacto
+        title: "Atenção: Pena Máxima Superior a 2 Anos",
+        description: `A soma das penas (${formatarPena(totalCalculado)}) excede o limite de 2 anos para TCO. Revise as naturezas ou proceda com o registro adequado (não TCO).`
       });
     }
-  }, [selectedNaturezas, toast]);
+  }, [selectedNaturezas, customNatureza, toast]);
 
-  const handleTcoNumberChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const numericValue = value.replace(/[^0-9]/g, '');
-    setTcoNumber(numericValue);
-
-    if (numericValue && numericValue.length >= 3) {
-      await checkDuplicateTco(numericValue);
-    }
-  };
-
-  const checkDuplicateTco = async (tcoNum: string) => {
+  const checkDuplicateTco = useCallback(async (tcoNum: string) => {
+    if (!tcoNum || tcoNum.length < 3) return; // Adicionada verificação para evitar chamadas desnecessárias
     setIsChecking(true);
     try {
       const tcosRef = collection(db, "tcos");
@@ -177,34 +206,61 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       
       if (!querySnapshot.empty) {
         const existingTco = querySnapshot.docs[0].data();
-        const createdAt = existingTco.createdAt?.toDate?.() || new Date(existingTco.createdAt);
-        const formattedDate = createdAt.toLocaleDateString('pt-BR');
+        // Certifique-se de que createdAt existe e é um timestamp do Firebase ou uma string de data válida
+        let createdAtDate = new Date(); // Fallback para data atual se a conversão falhar
+        if (existingTco.createdAt?.toDate) { // Verifica se é um Timestamp do Firebase
+            createdAtDate = existingTco.createdAt.toDate();
+        } else if (typeof existingTco.createdAt === 'string' || typeof existingTco.createdAt === 'number') {
+            createdAtDate = new Date(existingTco.createdAt);
+        }
+        
+        const formattedDate = isNaN(createdAtDate.getTime()) ? "Data indisponível" : createdAtDate.toLocaleDateString('pt-BR');
         
         toast({
           variant: "destructive",
           title: "TCO Duplicado",
-          description: `Já existe um TCO com a numeração ${tcoNum}. Registrado em ${formattedDate}, Natureza: ${existingTco.natureza || 'Não informada'}.`
+          description: `Já existe um TCO com a numeração ${tcoNum}. Registrado em ${formattedDate}, Natureza(s): ${existingTco.natureza || 'Não informada'}.`
         });
       }
     } catch (error) {
       console.error("Erro ao verificar TCO duplicado:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro na Verificação",
+        description: "Não foi possível verificar a duplicidade do TCO no momento."
+      });
     } finally {
       setIsChecking(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast]); // db não é reativo, toast é estável
+
+  const handleTcoNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const numericValue = value.replace(/[^0-9]/g, '');
+    setTcoNumber(numericValue);
+    // A verificação de duplicidade agora é tratada pelo useEffect com debounce
   };
+  
+  // Debounce para verificar TCO duplicado
+  useEffect(() => {
+    if (tcoNumber && tcoNumber.length >= 3) {
+      const handler = setTimeout(() => {
+        checkDuplicateTco(tcoNumber);
+      }, 1000); // 1 segundo de delay
+
+      return () => {
+        clearTimeout(handler);
+      };
+    }
+  }, [tcoNumber, checkDuplicateTco]);
+
 
   const handleAddNatureza = (selectedNatureza: string) => {
     if (selectedNatureza && !selectedNaturezas.includes(selectedNatureza)) {
       const newNaturezas = [...selectedNaturezas, selectedNatureza];
       setSelectedNaturezas(newNaturezas);
-      
-      // Atualizar a natureza principal (primeira selecionada define o comportamento do formulário)
-      if (newNaturezas.length === 1) {
-        setNatureza(selectedNatureza);
-      } else {
-        // Para múltiplas naturezas, concatenar com " + "
-        setNatureza(newNaturezas.join(" + "));
-      }
+      setNatureza(newNaturezas.join(" + ")); // Atualiza a prop natureza com todas as selecionadas
     }
   };
 
@@ -213,34 +269,19 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
     setSelectedNaturezas(newNaturezas);
     
     if (naturezaToRemove === "Outros") {
-      setSelectedCustomNatureza("");
-      setCustomNatureza("");
+      // Limpar customNatureza se "Outros" for removido
+      setSelectedCustomNatureza(""); // Limpa o input local
+      setCustomNatureza(""); // Limpa a prop
     }
     
-    if (newNaturezas.length === 0) {
-      setNatureza("");
-    } else if (newNaturezas.length === 1) {
-      setNatureza(newNaturezas[0]);
-    } else {
-      setNatureza(newNaturezas.join(" + "));
-    }
+    setNatureza(newNaturezas.join(" + ")); // Atualiza a prop natureza
   };
 
   const handleCustomNaturezaChange = (value: string) => {
-    setSelectedCustomNatureza(value);
-    setCustomNatureza(value);
+    setSelectedCustomNatureza(value); // Atualiza o input local
+    setCustomNatureza(value); // Atualiza a prop
+    // A tipificação e pena serão recalculadas pelo useEffect de selectedNaturezas/customNatureza
   };
-
-  // Verificar duplicatas quando o número do TCO muda (com debounce)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (tcoNumber) {
-        checkDuplicateTco(tcoNumber);
-      }
-    }, 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [tcoNumber]);
 
   return (
     <Card>
@@ -255,10 +296,9 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
           <TCOTimer startTime={startTime} isRunning={isTimerRunning} />
         </div>
       </CardHeader>
-      <CardContent className="px-[5px]">
+      <CardContent className="px-[5px]"> {/* Mantido o padding customizado se necessário */}
         <div className="space-y-4">
           
-          {/* Número do TCO */}
           <div>
             <Label htmlFor="tcoNumber">Número do TCO *</Label>
             <div className="relative">
@@ -277,53 +317,60 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
             </div>
           </div>
           
-          {/* Alert de Pena Superior a 2 Anos - Aparece no formulário */}
+          {/* Alert de Pena Superior a 2 Anos - Aparece diretamente no formulário */}
           {showPenaAlert && (
             <Alert variant="destructive" className="border-red-600 bg-red-50 dark:bg-red-950">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Atenção: Pena Superior a 2 Anos Detectada</AlertTitle>
-              <AlertDescription>
-                A soma das penas máximas das naturezas selecionadas é de {totalPenaAnos} anos, 
-                excedendo o limite de 2 anos. Não é permitido registrar TCO quando a pena máxima total excede 2 anos.
+              <AlertTriangle className="h-4 w-4 text-red-700 dark:text-red-400" />
+              <AlertTitle className="text-red-800 dark:text-red-300">Atenção: Pena Máxima Superior a 2 Anos</AlertTitle>
+              <AlertDescription className="text-red-700 dark:text-red-400">
+                A soma das penas máximas ({formatarPena(totalPenaAnos)}) excede o limite de 2 anos. 
+                Não é permitido registrar TCO nesta situação. Proceda com o registro adequado.
               </AlertDescription>
             </Alert>
           )}
 
-          {/* Naturezas Selecionadas */}
+          {/* Naturezas Selecionadas e Soma das Penas */}
           {selectedNaturezas.length > 0 && (
             <div>
               <Label>Naturezas Selecionadas</Label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {selectedNaturezas.map((nat, index) => (
                   <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                    {nat === "Outros" ? selectedCustomNatureza || "Outros" : nat}
+                    {nat === "Outros" ? (selectedCustomNatureza || "Outros (não especificado)") : nat}
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-4 w-4 p-0 hover:bg-transparent"
+                      className="h-4 w-4 p-0 hover:bg-transparent text-muted-foreground hover:text-destructive"
                       onClick={() => handleRemoveNatureza(nat)}
+                      aria-label={`Remover ${nat}`}
                     >
                       <X className="h-3 w-3" />
                     </Button>
                   </Badge>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Pena máxima total: {totalPenaAnos} anos
-              </p>
+              {/* Exibir soma das penas APENAS se mais de uma natureza for selecionada */}
+              {selectedNaturezas.length > 1 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Soma das Penas: {
+                    (totalPenaAnos === 0 && selectedNaturezas.every(n => naturezaPenas[n] === 0)) 
+                    ? "Medidas educativas/alternativas (Pena total: 0)" 
+                    : formatarPena(totalPenaAnos)
+                  }
+                </p>
+              )}
             </div>
           )}
           
-          {/* Seleção de Natureza */}
           <div>
-            <Label htmlFor="natureza">Adicionar Natureza *</Label>
-            <Select onValueChange={handleAddNatureza}>
-              <SelectTrigger>
+            <Label htmlFor="naturezaAdd">Adicionar Natureza *</Label>
+            <Select onValueChange={handleAddNatureza} value=""> {/* Resetar valor do select após seleção */}
+              <SelectTrigger id="naturezaAdd">
                 <SelectValue placeholder="Selecione uma natureza para adicionar" />
               </SelectTrigger>
               <SelectContent>
                 {naturezaOptions
-                  .filter(option => !selectedNaturezas.includes(option))
+                  .filter(option => !selectedNaturezas.includes(option)) // Não mostrar opções já selecionadas
                   .map(option => (
                     <SelectItem key={option} value={option}>
                       {option}
@@ -334,10 +381,9 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
             </Select>
           </div>
 
-          {/* Natureza Personalizada */}
           {selectedNaturezas.includes("Outros") && (
             <div>
-              <Label htmlFor="customNatureza">Especifique a Natureza *</Label>
+              <Label htmlFor="customNatureza">Especifique a Natureza Personalizada *</Label>
               <Input 
                 id="customNatureza" 
                 placeholder="Digite a natureza específica" 
@@ -347,28 +393,24 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
             </div>
           )}
 
-          {/* Tipificação Legal - Mostra a tipificação ordenada conforme ordem de inserção */}
           {tipificacaoCompleta && (
             <div>
-              <Label>Tipificação Legal</Label>
-              <Input readOnly value={tipificacaoCompleta} className="bg-gray-100" />
+              <Label>Tipificação Legal Consolidada</Label>
+              <Input readOnly value={tipificacaoCompleta} className="bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
             </div>
           )}
 
-          {/* Pena da Tipificação - Ocultada quando há múltiplas naturezas ou "Outros" */}
+          {/* Pena da Tipificação individual (mostrada apenas para UMA natureza que não seja "Outros") */}
           {penaDescricao && selectedNaturezas.length === 1 && !selectedNaturezas.includes("Outros") && (
             <div>
-              <Label>Pena da Tipificação</Label>
-              <Input readOnly value={penaDescricao} className="bg-gray-100" />
+              <Label>Pena da Natureza Selecionada</Label>
+              <Input readOnly value={penaDescricao} className="bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
             </div>
           )}
 
-          {/* Apresentação em Juizado Especial VG */}
           <div className="space-y-2">
-            <Label>Apresentação em Juizado Especial VG</Label>
+            <Label>Apresentação em Juizado Especial VG (Opcional)</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-              
-              {/* Campo Data */}
               <div className="space-y-1">
                 <Label htmlFor="juizadoData">Data</Label>
                 <Input 
@@ -378,8 +420,6 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
                   onChange={(e) => setJuizadoEspecialData(e.target.value)} 
                 />
               </div>
-              
-              {/* Campo Hora */}
               <div className="space-y-1">
                 <Label htmlFor="juizadoHora">Hora</Label>
                 <Input 
@@ -401,3 +441,5 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
 };
 
 export default BasicInformationTab;
+
+// --- END OF FILE BasicInformationTab (5).tsx ---
