@@ -13,6 +13,7 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF, generateTCOFilename } from "./tco/pdfGenerator";
 import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
+
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
@@ -275,6 +276,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     // A primeira natureza define as regras do formulário
     const primeiraNatureza = natureza.split(' + ')[0];
     const isDrugCase = primeiraNatureza === "Porte de drogas para consumo";
+    
     if (isDrugCase) {
       if (indicios) {
         const indicioFinal = isUnknownMaterial && customMaterialDesc ? customMaterialDesc : indicios;
@@ -318,6 +320,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
     const displayNaturezaReal = primeiraNatureza === "Outros" ? customNatureza.trim() : primeiraNatureza;
     let tipificacaoAtual = "";
     let penaAtual = "";
+    
     if (primeiraNatureza === "Outros") {
       tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
       penaAtual = penaDescricao || "";
@@ -1042,38 +1045,162 @@ const TCOForm: React.FC<TCOFormProps> = ({
   };
   const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Conduzir veículo sem CNH gerando perigo de dano", "Entregar veículo automotor a pessoa não habilitada", "Trafegar em velocidade incompatível com segurança", "Omissão de socorro", "Rixa", "Invasão de domicílio", "Fraude em comércio", "Ato obsceno", "Falsa identidade", "Resistência", "Desobediência", "Desacato", "Exercício arbitrário das próprias razões", "Outros"];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
-  return <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
+
+  return (
+    <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
-        {hasMinorAuthor.isMinor && hasMinorAuthor.details}
+        {hasMinorAuthor.isMinor && hasMinorAuthor.details && (
+          <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
+            <p className="font-semibold">Atenção: Autor Menor de Idade Detectado</p>
+            <p>
+              O autor {autores[hasMinorAuthor.details.index].nome || 'sem nome'} possui {hasMinorAuthor.details.years} anos,{' '}
+              {hasMinorAuthor.details.months} meses e {hasMinorAuthor.details.days} dias. Não é permitido registrar TCO para menores de 18 anos.
+            </p>
+          </div>
+        )}
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Básicas</h2>
-          <BasicInformationTab tcoNumber={tcoNumber} setTcoNumber={setTcoNumber} natureza={natureza} setNatureza={setNatureza} autor={autor} setAutor={setAutor} penaDescricao={penaDescricao} naturezaOptions={naturezaOptions} customNatureza={customNatureza} setCustomNatureza={setCustomNatureza} startTime={startTime} isTimerRunning={isTimerRunning} juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData} juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora} />
+          <BasicInformationTab
+            tcoNumber={tcoNumber}
+            setTcoNumber={setTcoNumber}
+            natureza={natureza}
+            setNatureza={setNatureza}
+            autor={autor}
+            setAutor={setAutor}
+            penaDescricao={penaDescricao}
+            naturezaOptions={naturezaOptions}
+            customNatureza={customNatureza}
+            setCustomNatureza={setCustomNatureza}
+            startTime={startTime}
+            isTimerRunning={isTimerRunning}
+            juizadoEspecialData={juizadoEspecialData}
+            setJuizadoEspecialData={setJuizadoEspecialData}
+            juizadoEspecialHora={juizadoEspecialHora}
+            setJuizadoEspecialHora={setJuizadoEspecialHora}
+          />
         </div>
 
         {/* A primeira natureza define se mostra a aba de drogas */}
-        {natureza.split(' + ')[0] === "Porte de drogas para consumo" && <div className="mb-8">
-            <DrugVerificationTab quantidade={quantidade} setQuantidade={setQuantidade} substancia={substancia} setSubstancia={setSubstancia} cor={cor} setCor={setCor} odor={odor} setOdor={setOdor} indicios={indicios} customMaterialDesc={customMaterialDesc} setCustomMaterialDesc={setCustomMaterialDesc} isUnknownMaterial={isUnknownMaterial} lacreNumero={lacreNumero} setLacreNumero={setLacreNumero} />
-          </div>}
+        {natureza.split(' + ')[0] === "Porte de drogas para consumo" && (
+          <div className="mb-8">
+            <DrugVerificationTab
+              quantidade={quantidade}
+              setQuantidade={setQuantidade}
+              substancia={substancia}
+              setSubstancia={setSubstancia}
+              cor={cor}
+              setCor={setCor}
+              odor={odor}
+              setOdor={setOdor}
+              indicios={indicios}
+              customMaterialDesc={customMaterialDesc}
+              setCustomMaterialDesc={setCustomMaterialDesc}
+              isUnknownMaterial={isUnknownMaterial}
+              lacreNumero={lacreNumero}
+              setLacreNumero={setLacreNumero}
+            />
+          </div>
+        )}
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Gerais da Ocorrência</h2>
-          <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza === "Outros"} customNatureza={customNatureza} dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
+          <GeneralInformationTab
+            natureza={natureza}
+            tipificacao={tipificacao}
+            setTipificacao={setTipificacao}
+            isCustomNatureza={natureza === "Outros"}
+            customNatureza={customNatureza}
+            dataFato={dataFato}
+            setDataFato={setDataFato}
+            horaFato={horaFato}
+            setHoraFato={setHoraFato}
+            dataInicioRegistro={dataInicioRegistro}
+            horaInicioRegistro={horaInicioRegistro}
+            dataTerminoRegistro={dataTerminoRegistro}
+            horaTerminoRegistro={horaTerminoRegistro}
+            localFato={localFato}
+            setLocalFato={setLocalFato}
+            endereco={endereco}
+            setEndereco={setEndereco}
+            municipio={municipio}
+            comunicante={comunicante}
+            setComunicante={setComunicante}
+            guarnicao={guarnicao}
+            setGuarnicao={setGuarnicao}
+            operacao={operacao}
+            setOperacao={setOperacao}
+            condutorNome={condutorParaDisplay?.nome || ""}
+            condutorPosto={condutorParaDisplay?.posto || ""}
+            condutorRg={condutorParaDisplay?.rg || ""}
+          />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Pessoas Envolvidas</h2>
-          <PessoasEnvolvidasTab vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima} testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha} autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor} natureza={natureza} />
+          <PessoasEnvolvidasTab
+            vitimas={vitimas}
+            handleVitimaChange={handleVitimaChange}
+            handleAddVitima={handleAddVitima}
+            handleRemoveVitima={handleRemoveVitima}
+            testemunhas={testemunhas}
+            handleTestemunhaChange={handleTestemunhaChange}
+            handleAddTestemunha={handleAddTestemunha}
+            handleRemoveTestemunha={handleRemoveTestemunha}
+            autores={autores}
+            handleAutorDetalhadoChange={handleAutorDetalhadoChange}
+            handleAddAutor={handleAddAutor}
+            handleRemoveAutor={handleRemoveAutor}
+            natureza={natureza}
+          />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Guarnição Policial</h2>
-          <GuarnicaoTab currentGuarnicaoList={componentesGuarnicao} onAddPolicial={handleAddPolicialToList} onRemovePolicial={handleRemovePolicialFromList} onToggleApoioPolicial={handleToggleApoioPolicial} />
+          <GuarnicaoTab
+            currentGuarnicaoList={componentesGuarnicao}
+            onAddPolicial={handleAddPolicialToList}
+            onRemovePolicial={handleRemovePolicialFromList}
+            onToggleApoioPolicial={handleToggleApoioPolicial}
+          />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Histórico e Narrativas</h2>
-          <HistoricoTab relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange} relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor} relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima} relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha} apreensoes={apreensoes} setApreensoes={setApreensoes} conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial} drugSeizure={natureza === "Porte de drogas para consumo"} representacao={representacao} setRepresentacao={setRepresentacao} natureza={natureza} videoLinks={videoLinks} setVideoLinks={setVideoLinks} solicitarCorpoDelito={autores.length > 0 ? autores[0].laudoPericial : "Não"} autorSexo={autores.length > 0 ? autores[0].sexo : "masculino"} providencias={providencias} setProvidencias={setProvidencias} documentosAnexos={documentosAnexos} setDocumentosAnexos={setDocumentosAnexos} lacreNumero={lacreNumero} vitimas={vitimas} setVitimaRelato={handleVitimaRelatoChange} setVitimaRepresentacao={handleVitimaRepresentacaoChange} testemunhas={testemunhas} setTestemunhaRelato={handleTestemunhaRelatoChange} autores={autores} setAutorRelato={handleAutorRelatoChange} />
+          <HistoricoTab
+            relatoPolicial={relatoPolicial}
+            setRelatoPolicial={handleRelatoPolicialChange}
+            relatoAutor={relatoAutor}
+            setRelatoAutor={setRelatoAutor}
+            relatoVitima={relatoVitima}
+            setRelatoVitima={setRelatoVitima}
+            relatoTestemunha={relatoTestemunha}
+            setRelatoTestemunha={setRelatoTestemunha}
+            apreensoes={apreensoes}
+            setApreensoes={setApreensoes}
+            conclusaoPolicial={conclusaoPolicial}
+            setConclusaoPolicial={setConclusaoPolicial}
+            drugSeizure={natureza === "Porte de drogas para consumo"}
+            representacao={representacao}
+            setRepresentacao={setRepresentacao}
+            natureza={natureza}
+            videoLinks={videoLinks}
+            setVideoLinks={setVideoLinks}
+            solicitarCorpoDelito={autores.length > 0 ? autores[0].laudoPericial : "Não"}
+            autorSexo={autores.length > 0 ? autores[0].sexo : "masculino"}
+            providencias={providencias}
+            setProvidencias={setProvidencias}
+            documentosAnexos={documentosAnexos}
+            setDocumentosAnexos={setDocumentosAnexos}
+            lacreNumero={lacreNumero}
+            vitimas={vitimas}
+            setVitimaRelato={handleVitimaRelatoChange}
+            setVitimaRepresentacao={handleVitimaRepresentacaoChange}
+            testemunhas={testemunhas}
+            setTestemunhaRelato={handleTestemunhaRelatoChange}
+            autores={autores}
+            setAutorRelato={handleAutorRelatoChange}
+          />
         </div>
 
         <Card className="mb-8">
@@ -1091,25 +1218,55 @@ const TCOForm: React.FC<TCOFormProps> = ({
                     Anexe imagens relevantes (JPG, PNG, GIF). Serão incluídas no PDF.
                   </p>
                 </div>
-                <input type="file" multiple accept="image/jpeg, image/png, image/gif" ref={imageInputRef} onChange={handleImageFileChange} className="hidden" id="imageUpload" />
-                <Button type="button" variant="outline" onClick={() => imageInputRef.current?.click()} className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto mx-auto" aria-label="Selecionar imagens para anexar">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/jpeg, image/png, image/gif"
+                  ref={imageInputRef}
+                  onChange={handleImageFileChange}
+                  className="hidden"
+                  id="imageUpload"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => imageInputRef.current?.click()}
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto mx-auto"
+                  aria-label="Selecionar imagens para anexar"
+                >
                   <Plus className="mr-2 h-5 w-5" />
                   Selecionar Fotos
                 </Button>
-                {imageFiles.length > 0 && <div className="w-full pt-2">
+                {imageFiles.length > 0 && (
+                  <div className="w-full pt-2">
                     <p className="text-sm font-medium text-gray-600 mb-1.5">Arquivos selecionados:</p>
                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
-                      {imageFiles.map((file, index) => <li key={`${file.name}-${index}-${file.lastModified}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
+                      {imageFiles.map((file, index) => (
+                        <li
+                          key={`${file.name}-${index}-${file.lastModified}`}
+                          className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm"
+                        >
                           <span className="truncate mr-2 flex-1 text-gray-700" title={file.name}>
                             {file.name} <span className="text-gray-400 text-xs">({(file.size / 1024).toFixed(1)} KB)</span>
                           </span>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveImageFile(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover imagem ${file.name}`}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveImageFile(index)}
+                            className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7"
+                            aria-label={`Remover imagem ${file.name}`}
+                          >
                             <X className="h-4 w-4" />
                           </Button>
-                        </li>)}
+                        </li>
+                      ))}
                     </ul>
-                  </div>}
-                {imageFiles.length === 0 && <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p>}
+                  </div>
+                )}
+                {imageFiles.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p>
+                )}
               </div>
 
               <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-green-500 transition-colors duration-200 ease-in-out">
@@ -1119,51 +1276,115 @@ const TCOForm: React.FC<TCOFormProps> = ({
                   <p className="text-sm text-gray-500 px-4 mt-1">Adicione links para vídeos online (YouTube, Drive, etc.).</p>
                 </div>
                 <div className="flex w-full space-x-2 items-center pt-1">
-                  <Input type="url" value={newVideoLink} onChange={e => setNewVideoLink(e.target.value)} placeholder="https://..." aria-label="Link do vídeo" className="flex-1 text-sm" />
-                  <Button type="button" onClick={handleAddVideoLink} className="bg-green-600 hover:bg-green-700 text-white shrink-0" size="icon" aria-label="Adicionar link de vídeo" disabled={!newVideoLink.trim()}>
+                  <Input
+                    type="url"
+                    value={newVideoLink}
+                    onChange={(e) => setNewVideoLink(e.target.value)}
+                    placeholder="https://..."
+                    aria-label="Link do vídeo"
+                    className="flex-1 text-sm"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddVideoLink}
+                    className="bg-green-600 hover:bg-green-700 text-white shrink-0"
+                    size="icon"
+                    aria-label="Adicionar link de vídeo"
+                    disabled={!newVideoLink.trim()}
+                  >
                     <Plus className="h-5 w-5" />
                   </Button>
                 </div>
-                {videoLinks.length > 0 && <div className="w-full pt-2">
+                {videoLinks.length > 0 && (
+                  <div className="w-full pt-2">
                     <p className="text-sm font-medium text-gray-600 mb-1.5">Links adicionados:</p>
                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
-                      {videoLinks.map((link, index) => <li key={`${index}-${link}`} className="flex justify-between items-start p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm gap-2">
-                          <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all min-w-0 flex-1 leading-relaxed" title={`Abrir link: ${link}`} style={{
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      wordBreak: 'break-all'
-                    }}>
+                      {videoLinks.map((link, index) => (
+                        <li
+                          key={`${index}-${link}`}
+                          className="flex justify-between items-start p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm gap-2"
+                        >
+                          <a
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline break-all min-w-0 flex-1 leading-relaxed"
+                            title={`Abrir link: ${link}`}
+                            style={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              wordBreak: 'break-all'
+                            }}
+                          >
                             {link}
                           </a>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveVideoLink(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7 shrink-0 mt-0.5" aria-label={`Remover link ${link}`}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveVideoLink(index)}
+                            className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7 shrink-0 mt-0.5"
+                            aria-label={`Remover link ${link}`}
+                          >
                             <X className="h-4 w-4" />
                           </Button>
-                        </li>)}
+                        </li>
+                      ))}
                     </ul>
-                  </div>}
-                {videoLinks.length === 0 && <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p>}
+                  </div>
+                )}
+                {videoLinks.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
 
         <div className="flex justify-end mt-8 pt-6 border-t border-gray-300">
-          <Button type="submit" disabled={isSubmitting || hasMinorAuthor.isMinor} size="lg" className="min-w-[200px]">
-            {isSubmitting ? <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          <Button
+            type="submit"
+            disabled={isSubmitting || hasMinorAuthor.isMinor}
+            size="lg"
+            className="min-w-[200px]"
+          >
+            {isSubmitting ? (
+              <>
+                <svg
+                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
                 Processando...
-              </> : <>
+              </>
+            ) : (
+              <>
                 <FileText className="mr-2 h-5 w-5" />
                 Finalizar e Salvar TCO
-              </>}
+              </>
+            )}
           </Button>
         </div>
       </form>
-    </div>;
+    </div>
+  );
 };
+
 export default TCOForm;
