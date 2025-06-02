@@ -1,4 +1,3 @@
-
 // src/components/tco/PDF/PDFTermoManifestacao.js
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
@@ -61,9 +60,10 @@ export const addTermoManifestacao = (doc, data) => {
         yPos = addWrappedText(doc, yPos, option2Text, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
         yPos += 5;
 
-        // Corrigir para usar os campos corretos da data e hora
-        const dataAudiencia = data.apresentacaoJuizadoData || "[DATA NÃO INFORMADA]";
-        const horaAudiencia = data.apresentacaoJuizadoHora || "[HORA NÃO INFORMADA]";
+        // Novo parágrafo com informações da audiência
+        const apresentacaoJuizado = data.tco?.apresentacaoJuizadoEspecialVG;
+        const dataAudiencia = apresentacaoJuizado?.data || "[DATA NÃO INFORMADA]";
+        const horaAudiencia = apresentacaoJuizado?.hora || "[HORA NÃO INFORMADA]";
         
         const audienciaText = `ESTOU CIENTE DE QUE A AUDIENCIA OCORRERÁ NO DIA ${dataAudiencia}, ÀS ${horaAudiencia} HORAS, DAS DEPENDÊNCIAS DO JUIZADO ESPECIAL CRIMINAL DE VÁRZEA GRANDE NO BAIRRO CHAPÉU DO SOL, AVENIDA CHAPÉU DO SOL, S/N, E QUE O NÃO COMPARECIMENTO IMPORTARÁ EM RENUNCIA À REPRESENTAÇÃO E O ARQUIVAMENTO DO PROCESSO.`;
         yPos = addWrappedText(doc, yPos, audienciaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);

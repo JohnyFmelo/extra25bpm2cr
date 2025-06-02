@@ -13,7 +13,6 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF, generateTCOFilename } from "./tco/pdfGenerator";
 import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
-
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
@@ -1045,26 +1044,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
   return <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
-        {hasMinorAuthor.isMinor && hasMinorAuthor.details && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <X className="h-5 w-5 text-red-400" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  Autor Menor de Idade Detectado
-                </h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>
-                    O autor possui {hasMinorAuthor.details.years} anos, {hasMinorAuthor.details.months} meses e {hasMinorAuthor.details.days} dias. 
-                    TCO não pode ser registrado para menores de 18 anos.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {hasMinorAuthor.isMinor && hasMinorAuthor.details}
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Básicas</h2>
@@ -1093,40 +1073,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Histórico e Narrativas</h2>
-          <HistoricoTab 
-            relatoPolicial={relatoPolicial} 
-            setRelatoPolicial={handleRelatoPolicialChange} 
-            relatoAutor={relatoAutor} 
-            setRelatoAutor={setRelatoAutor} 
-            relatoVitima={relatoVitima} 
-            setRelatoVitima={setRelatoVitima} 
-            relatoTestemunha={relatoTestemunha} 
-            setRelatoTestemunha={setRelatoTestemunha} 
-            apreensoes={apreensoes} 
-            setApreensoes={setApreensoes} 
-            conclusaoPolicial={conclusaoPolicial} 
-            setConclusaoPolicial={setConclusaoPolicial} 
-            drugSeizure={natureza === "Porte de drogas para consumo"} 
-            representacao={representacao} 
-            setRepresentacao={setRepresentacao} 
-            natureza={natureza} 
-            videoLinks={videoLinks} 
-            setVideoLinks={setVideoLinks} 
-            solicitarCorpoDelito={autores.length > 0 ? autores[0].laudoPericial : "Não"} 
-            autorSexo={autores.length > 0 ? autores[0].sexo : "masculino"} 
-            providencias={providencias} 
-            setProvidencias={setProvidencias} 
-            documentosAnexos={documentosAnexos} 
-            setDocumentosAnexos={setDocumentosAnexos} 
-            lacreNumero={lacreNumero} 
-            vitimas={vitimas} 
-            setVitimaRelato={handleVitimaRelatoChange} 
-            setVitimaRepresentacao={handleVitimaRepresentacaoChange} 
-            testemunhas={testemunhas} 
-            setTestemunhaRelato={handleTestemunhaRelatoChange} 
-            autores={autores} 
-            setAutorRelato={handleAutorRelatoChange} 
-          />
+          <HistoricoTab relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange} relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor} relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima} relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha} apreensoes={apreensoes} setApreensoes={setApreensoes} conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial} drugSeizure={natureza === "Porte de drogas para consumo"} representacao={representacao} setRepresentacao={setRepresentacao} natureza={natureza} videoLinks={videoLinks} setVideoLinks={setVideoLinks} solicitarCorpoDelito={autores.length > 0 ? autores[0].laudoPericial : "Não"} autorSexo={autores.length > 0 ? autores[0].sexo : "masculino"} providencias={providencias} setProvidencias={setProvidencias} documentosAnexos={documentosAnexos} setDocumentosAnexos={setDocumentosAnexos} lacreNumero={lacreNumero} vitimas={vitimas} setVitimaRelato={handleVitimaRelatoChange} setVitimaRepresentacao={handleVitimaRepresentacaoChange} testemunhas={testemunhas} setTestemunhaRelato={handleTestemunhaRelatoChange} autores={autores} setAutorRelato={handleAutorRelatoChange} />
         </div>
 
         <Card className="mb-8">
