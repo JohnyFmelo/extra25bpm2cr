@@ -1,15 +1,14 @@
 // --- START OF FILE BasicInformationTab (5).tsx ---
 
-import React, { useEffect, useState, useCallback } from "react"; // Adicionado useCallback
+import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, AlertTriangle } from "lucide-react"; // AlertTriangle já estava, mas confirmando
+import { X, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-// import { AlertTriangle } from "lucide-react"; // Removido duplicado
 import TCOTimer from "./TCOTimer";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, getDocs, where } from "firebase/firestore";
@@ -22,7 +21,7 @@ interface BasicInformationTabProps {
   setNatureza: (value: string) => void;
   autor: string;
   setAutor: (value: string) => void;
-  penaDescricao: string; // Usado para pena de natureza única
+  penaDescricao: string; 
   naturezaOptions: string[];
   customNatureza: string;
   setCustomNatureza: (value: string) => void;
@@ -36,7 +35,7 @@ interface BasicInformationTabProps {
 
 // Mapeamento de naturezas para penas MÁXIMAS (em anos)
 const naturezaPenas: Record<string, number> = {
-  "Porte de drogas para consumo": 0, // Não há pena de prisão, apenas medidas educativas
+  "Porte de drogas para consumo": 0,
   "Lesão Corporal": 1.0, 
   "Ameaça": 0.5, 
   "Injúria": 0.5, 
@@ -44,14 +43,14 @@ const naturezaPenas: Record<string, number> = {
   "Calúnia": 2.0, 
   "Perturbação do trabalho ou do sossego alheios": 0.25, 
   "Vias de Fato": 0.25, 
-  "Contravenção penal": 0.25, // Genérico, pode variar. Assumindo um valor comum.
+  "Contravenção penal": 0.25,
   "Dano": 0.5, 
   "Perturbação do Sossego": 0.25, 
   "Conduzir veículo sem CNH gerando perigo de dano": 1.0, 
   "Entregar veículo automotor a pessoa não habilitada": 1.0, 
   "Trafegar em velocidade incompatível com segurança": 1.0, 
   "Omissão de socorro": 0.5, 
-  "Rixa": 0.17, // approx 2 meses
+  "Rixa": 0.17, 
   "Invasão de domicílio": 0.25, 
   "Fraude em comércio": 2.0, 
   "Ato obsceno": 1.0, 
@@ -59,10 +58,9 @@ const naturezaPenas: Record<string, number> = {
   "Resistência": 2.0, 
   "Desobediência": 0.5, 
   "Desacato": 2.0, 
-  "Exercício arbitrário das próprias razões": 0.08, // approx 1 mês
+  "Exercício arbitrário das próprias razões": 0.08, 
 };
 
-// Mapeamento de naturezas para tipificações
 const naturezaTipificacoes: Record<string, string> = {
   "Ameaça": "ART. 147 DO CÓDIGO PENAL",
   "Vias de Fato": "ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS",
@@ -88,15 +86,16 @@ const naturezaTipificacoes: Record<string, string> = {
   "Exercício arbitrário das próprias razões": "ART. 345 DO CÓDIGO PENAL",
 };
 
-// Função helper para formatar a pena em anos e meses
 const formatarPena = (anosDecimais: number): string => {
   if (anosDecimais < 0) return "Pena indeterminada";
-  
-  // Caso especial para Porte de Drogas (pena 0) pode ser tratado no local da chamada se uma mensagem específica for necessária
-  if (anosDecimais === 0) return "0 meses";
+  if (anosDecimais === 0) return "0 meses"; // Trata explicitamente pena 0
 
   const anosInteiros = Math.floor(anosDecimais);
-  const mesesResiduais = Math.round((anosDecimais - anosInteiros) * 12);
+  const mesesDecimais = (anosDecimais - anosInteiros) * 12;
+  
+  // Arredondar para o inteiro mais próximo para meses, com precisão para evitar problemas com ponto flutuante
+  const mesesResiduais = Math.round(parseFloat(mesesDecimais.toPrecision(5)));
+
 
   const partes = [];
   if (anosInteiros > 0) {
@@ -107,10 +106,11 @@ const formatarPena = (anosDecimais: number): string => {
   }
 
   if (partes.length === 0) {
-    // Se anosDecimais > 0 mas resultou em 0 anos e 0 meses (ex: 0.01 anos)
-    // Para as penas do sistema, a menor é ~0.08 (1 mês), então isso não deve ocorrer.
-    if (anosDecimais > 0) return "menos de 1 mês"; // Ou "1 mês" como piso.
-    return "0 meses"; // Se anosDecimais era 0.
+    // Para casos como 0.01 anos, que seriam arredondados para 0 meses.
+    // Se a pena original era > 0, podemos dizer "menos de 1 mês" ou considerar 1 mês como piso se fizer sentido prático.
+    // Com as penas definidas, a menor (0.08) resulta em "1 mês".
+    if (anosDecimais > 0 && mesesResiduais === 0) return "1 mês (aproximadamente)"; 
+    return "0 meses"; // Default para caso não caia em nenhuma condição, mas deve ser pego pelo anosDecimais === 0
   }
 
   return partes.join(' e ');
@@ -141,32 +141,31 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   const [showPenaAlert, setShowPenaAlert] = useState<boolean>(false);
   const [tipificacaoCompleta, setTipificacaoCompleta] = useState<string>("");
 
-  // Inicializar com a natureza atual se existir e não estiver já em selectedNaturezas
-  // Isso é útil se o formulário for carregado com uma natureza pré-definida.
   useEffect(() => {
     if (natureza) {
-        // Se a 'natureza' prop é uma string com " + ", divida-a em um array
-        const naturezasIniciais = natureza.includes(" + ") ? natureza.split(" + ") : [natureza];
-        // Filtrar naturezas que já não estejam em selectedNaturezas para evitar duplicatas no estado inicial
+        const naturezasIniciais = natureza.includes(" + ") ? natureza.split(" + ") : [natureza].filter(Boolean);
         const novasNaturezasParaAdicionar = naturezasIniciais.filter(nat => !selectedNaturezas.includes(nat));
         if (novasNaturezasParaAdicionar.length > 0) {
-            setSelectedNaturezas(prev => [...prev, ...novasNaturezasParaAdicionar]);
+            setSelectedNaturezas(prev => [...new Set([...prev, ...novasNaturezasParaAdicionar])]); // Usar Set para garantir unicidade
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [natureza]); // Dependência apenas em 'natureza' para rodar na montagem/mudança da prop
+  }, [natureza]); 
 
-  // Calcular pena total e tipificação sempre que as naturezas selecionadas mudarem
   useEffect(() => {
     let totalCalculado = 0;
     const tipificacoes: string[] = [];
     
     selectedNaturezas.forEach(nat => {
       if (nat === "Outros") {
-        totalCalculado += 2.0; // Para natureza customizada, assumir pena de 2 anos
+        totalCalculado += 2.0; 
         tipificacoes.push(customNatureza ? `[${customNatureza.toUpperCase()}] - TIPIFICAÇÃO A SER INSERIDA MANUALMENTE` : "[TIPIFICAÇÃO LEGAL A SER INSERIDA]");
       } else {
-        totalCalculado += naturezaPenas[nat] || 2.0; // Default 2 anos se não encontrado
+        // CORREÇÃO APLICADA AQUI:
+        const penaDaNatureza = naturezaPenas[nat];
+        // Usar ?? para tratar `undefined` (natureza não mapeada), mas permitir pena 0.
+        totalCalculado += (typeof penaDaNatureza === 'number' ? penaDaNatureza : 2.0); 
+        
         tipificacoes.push(naturezaTipificacoes[nat] || `[${nat.toUpperCase()}] - TIPIFICAÇÃO NÃO MAPEADA`);
       }
     });
@@ -181,23 +180,25 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
     } else if (tipificacoes.length === 2) {
       tipificacaoFormatada = tipificacoes.join(" E ");
     } else if (tipificacoes.length > 2) {
-      const ultimoItem = tipificacoes.pop() as string; // Assegura que pop() não é undefined
+      const ultimoItem = tipificacoes.pop() as string; 
       tipificacaoFormatada = tipificacoes.join(", ") + " E " + ultimoItem;
     }
     
     setTipificacaoCompleta(tipificacaoFormatada);
     
-    if (penaExcedeLimite) {
+    if (penaExcedeLimite && selectedNaturezas.length > 0) { // Adicionado selectedNaturezas.length > 0 para evitar toast inicial
       toast({
-        variant: "destructive", // Alterado para destructive para maior impacto
+        variant: "destructive",
         title: "Atenção: Pena Máxima Superior a 2 Anos",
         description: `A soma das penas (${formatarPena(totalCalculado)}) excede o limite de 2 anos para TCO. Revise as naturezas ou proceda com o registro adequado (não TCO).`
       });
     }
-  }, [selectedNaturezas, customNatureza, toast]);
+  // A dependência de 'toast' geralmente não é necessária se vindo de um hook que o estabiliza.
+  // eslint-disable-next-line react-hooks/exhaustive-deps 
+  }, [selectedNaturezas, customNatureza]); // Removido toast da lista de dependências
 
   const checkDuplicateTco = useCallback(async (tcoNum: string) => {
-    if (!tcoNum || tcoNum.length < 3) return; // Adicionada verificação para evitar chamadas desnecessárias
+    if (!tcoNum || tcoNum.length < 3) return;
     setIsChecking(true);
     try {
       const tcosRef = collection(db, "tcos");
@@ -206,9 +207,8 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       
       if (!querySnapshot.empty) {
         const existingTco = querySnapshot.docs[0].data();
-        // Certifique-se de que createdAt existe e é um timestamp do Firebase ou uma string de data válida
-        let createdAtDate = new Date(); // Fallback para data atual se a conversão falhar
-        if (existingTco.createdAt?.toDate) { // Verifica se é um Timestamp do Firebase
+        let createdAtDate = new Date(); 
+        if (existingTco.createdAt?.toDate) { 
             createdAtDate = existingTco.createdAt.toDate();
         } else if (typeof existingTco.createdAt === 'string' || typeof existingTco.createdAt === 'number') {
             createdAtDate = new Date(existingTco.createdAt);
@@ -233,21 +233,19 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       setIsChecking(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast]); // db não é reativo, toast é estável
+  }, []); // toast é estável, db é estável.
 
   const handleTcoNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const numericValue = value.replace(/[^0-9]/g, '');
     setTcoNumber(numericValue);
-    // A verificação de duplicidade agora é tratada pelo useEffect com debounce
   };
   
-  // Debounce para verificar TCO duplicado
   useEffect(() => {
     if (tcoNumber && tcoNumber.length >= 3) {
       const handler = setTimeout(() => {
         checkDuplicateTco(tcoNumber);
-      }, 1000); // 1 segundo de delay
+      }, 1000); 
 
       return () => {
         clearTimeout(handler);
@@ -260,7 +258,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
     if (selectedNatureza && !selectedNaturezas.includes(selectedNatureza)) {
       const newNaturezas = [...selectedNaturezas, selectedNatureza];
       setSelectedNaturezas(newNaturezas);
-      setNatureza(newNaturezas.join(" + ")); // Atualiza a prop natureza com todas as selecionadas
+      setNatureza(newNaturezas.join(" + ")); 
     }
   };
 
@@ -269,18 +267,16 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
     setSelectedNaturezas(newNaturezas);
     
     if (naturezaToRemove === "Outros") {
-      // Limpar customNatureza se "Outros" for removido
-      setSelectedCustomNatureza(""); // Limpa o input local
-      setCustomNatureza(""); // Limpa a prop
+      setSelectedCustomNatureza(""); 
+      setCustomNatureza(""); 
     }
     
-    setNatureza(newNaturezas.join(" + ")); // Atualiza a prop natureza
+    setNatureza(newNaturezas.join(" + ")); 
   };
 
   const handleCustomNaturezaChange = (value: string) => {
-    setSelectedCustomNatureza(value); // Atualiza o input local
-    setCustomNatureza(value); // Atualiza a prop
-    // A tipificação e pena serão recalculadas pelo useEffect de selectedNaturezas/customNatureza
+    setSelectedCustomNatureza(value); 
+    setCustomNatureza(value); 
   };
 
   return (
@@ -296,7 +292,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
           <TCOTimer startTime={startTime} isRunning={isTimerRunning} />
         </div>
       </CardHeader>
-      <CardContent className="px-[5px]"> {/* Mantido o padding customizado se necessário */}
+      <CardContent className="px-[5px]"> 
         <div className="space-y-4">
           
           <div>
@@ -317,7 +313,6 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
             </div>
           </div>
           
-          {/* Alert de Pena Superior a 2 Anos - Aparece diretamente no formulário */}
           {showPenaAlert && (
             <Alert variant="destructive" className="border-red-600 bg-red-50 dark:bg-red-950">
               <AlertTriangle className="h-4 w-4 text-red-700 dark:text-red-400" />
@@ -329,13 +324,12 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
             </Alert>
           )}
 
-          {/* Naturezas Selecionadas e Soma das Penas */}
           {selectedNaturezas.length > 0 && (
             <div>
               <Label>Naturezas Selecionadas</Label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {selectedNaturezas.map((nat, index) => (
-                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                  <Badge key={`${nat}-${index}`} variant="secondary" className="flex items-center gap-1"> {/* Key melhorada */}
                     {nat === "Outros" ? (selectedCustomNatureza || "Outros (não especificado)") : nat}
                     <Button
                       variant="ghost"
@@ -349,14 +343,9 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
                   </Badge>
                 ))}
               </div>
-              {/* Exibir soma das penas APENAS se mais de uma natureza for selecionada */}
               {selectedNaturezas.length > 1 && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Soma das Penas: {
-                    (totalPenaAnos === 0 && selectedNaturezas.every(n => naturezaPenas[n] === 0)) 
-                    ? "Medidas educativas/alternativas (Pena total: 0)" 
-                    : formatarPena(totalPenaAnos)
-                  }
+                  Soma das Penas: {formatarPena(totalPenaAnos)}
                 </p>
               )}
             </div>
@@ -364,13 +353,13 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
           
           <div>
             <Label htmlFor="naturezaAdd">Adicionar Natureza *</Label>
-            <Select onValueChange={handleAddNatureza} value=""> {/* Resetar valor do select após seleção */}
+            <Select onValueChange={handleAddNatureza} value=""> 
               <SelectTrigger id="naturezaAdd">
                 <SelectValue placeholder="Selecione uma natureza para adicionar" />
               </SelectTrigger>
               <SelectContent>
                 {naturezaOptions
-                  .filter(option => !selectedNaturezas.includes(option)) // Não mostrar opções já selecionadas
+                  .filter(option => !selectedNaturezas.includes(option)) 
                   .map(option => (
                     <SelectItem key={option} value={option}>
                       {option}
@@ -400,7 +389,6 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
             </div>
           )}
 
-          {/* Pena da Tipificação individual (mostrada apenas para UMA natureza que não seja "Outros") */}
           {penaDescricao && selectedNaturezas.length === 1 && !selectedNaturezas.includes("Outros") && (
             <div>
               <Label>Pena da Natureza Selecionada</Label>
@@ -434,7 +422,6 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
         </div>
       </CardContent>
       <CardFooter className="flex justify-between">
-        {/* Conteúdo do rodapé, se houver */}
       </CardFooter>
     </Card>
   );
