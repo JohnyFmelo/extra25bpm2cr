@@ -13,7 +13,6 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF, generateTCOFilename } from "./tco/pdfGenerator";
 import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
-
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
@@ -1045,26 +1044,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
   return <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
-        {hasMinorAuthor.isMinor && hasMinorAuthor.details && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <X className="h-5 w-5 text-red-400" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  Autor Menor de Idade Detectado
-                </h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>
-                    O autor possui {hasMinorAuthor.details.years} anos, {hasMinorAuthor.details.months} meses e {hasMinorAuthor.details.days} dias. 
-                    TCO não pode ser registrado para menores de 18 anos.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {hasMinorAuthor.isMinor && hasMinorAuthor.details}
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Básicas</h2>
@@ -1093,4 +1073,97 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Histórico e Narrativas</h2>
-          <HistoricoTab relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange} relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor} relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima} relatoTestemunha={relatoTestemunha} setRelato
+          <HistoricoTab relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange} relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor} relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima} relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha} apreensoes={apreensoes} setApreensoes={setApreensoes} conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial} drugSeizure={natureza === "Porte de drogas para consumo"} representacao={representacao} setRepresentacao={setRepresentacao} natureza={natureza} videoLinks={videoLinks} setVideoLinks={setVideoLinks} solicitarCorpoDelito={autores.length > 0 ? autores[0].laudoPericial : "Não"} autorSexo={autores.length > 0 ? autores[0].sexo : "masculino"} providencias={providencias} setProvidencias={setProvidencias} documentosAnexos={documentosAnexos} setDocumentosAnexos={setDocumentosAnexos} lacreNumero={lacreNumero} vitimas={vitimas} setVitimaRelato={handleVitimaRelatoChange} setVitimaRepresentacao={handleVitimaRepresentacaoChange} testemunhas={testemunhas} setTestemunhaRelato={handleTestemunhaRelatoChange} autores={autores} setAutorRelato={handleAutorRelatoChange} />
+        </div>
+
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Anexos (Opcional)</CardTitle>
+            <CardDescription>Adicione fotos ou links de vídeos relacionados à ocorrência.</CardDescription>
+          </CardHeader>
+          <CardContent className="px-[8px]">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-blue-500 transition-colors duration-200 ease-in-out">
+                <div className="flex flex-col items-center text-center">
+                  <ImageIcon className="w-12 h-12 text-blue-600 mb-2" />
+                  <h3 className="text-lg font-medium text-gray-700">Fotos</h3>
+                  <p className="text-sm text-gray-500 px-4 mt-1">
+                    Anexe imagens relevantes (JPG, PNG, GIF). Serão incluídas no PDF.
+                  </p>
+                </div>
+                <input type="file" multiple accept="image/jpeg, image/png, image/gif" ref={imageInputRef} onChange={handleImageFileChange} className="hidden" id="imageUpload" />
+                <Button type="button" variant="outline" onClick={() => imageInputRef.current?.click()} className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto mx-auto" aria-label="Selecionar imagens para anexar">
+                  <Plus className="mr-2 h-5 w-5" />
+                  Selecionar Fotos
+                </Button>
+                {imageFiles.length > 0 && <div className="w-full pt-2">
+                    <p className="text-sm font-medium text-gray-600 mb-1.5">Arquivos selecionados:</p>
+                    <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
+                      {imageFiles.map((file, index) => <li key={`${file.name}-${index}-${file.lastModified}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
+                          <span className="truncate mr-2 flex-1 text-gray-700" title={file.name}>
+                            {file.name} <span className="text-gray-400 text-xs">({(file.size / 1024).toFixed(1)} KB)</span>
+                          </span>
+                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveImageFile(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover imagem ${file.name}`}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </li>)}
+                    </ul>
+                  </div>}
+                {imageFiles.length === 0 && <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p>}
+              </div>
+
+              <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-green-500 transition-colors duration-200 ease-in-out">
+                <div className="flex flex-col items-center text-center">
+                  <VideoIcon className="w-12 h-12 text-green-600 mb-2" />
+                  <h3 className="text-lg font-medium text-gray-700">Vídeos (Links)</h3>
+                  <p className="text-sm text-gray-500 px-4 mt-1">Adicione links para vídeos online (YouTube, Drive, etc.).</p>
+                </div>
+                <div className="flex w-full space-x-2 items-center pt-1">
+                  <Input type="url" value={newVideoLink} onChange={e => setNewVideoLink(e.target.value)} placeholder="https://..." aria-label="Link do vídeo" className="flex-1 text-sm" />
+                  <Button type="button" onClick={handleAddVideoLink} className="bg-green-600 hover:bg-green-700 text-white shrink-0" size="icon" aria-label="Adicionar link de vídeo" disabled={!newVideoLink.trim()}>
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                </div>
+                {videoLinks.length > 0 && <div className="w-full pt-2">
+                    <p className="text-sm font-medium text-gray-600 mb-1.5">Links adicionados:</p>
+                    <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
+                      {videoLinks.map((link, index) => <li key={`${index}-${link}`} className="flex justify-between items-start p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm gap-2">
+                          <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all min-w-0 flex-1 leading-relaxed" title={`Abrir link: ${link}`} style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      wordBreak: 'break-all'
+                    }}>
+                            {link}
+                          </a>
+                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveVideoLink(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7 shrink-0 mt-0.5" aria-label={`Remover link ${link}`}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </li>)}
+                    </ul>
+                  </div>}
+                {videoLinks.length === 0 && <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p>}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end mt-8 pt-6 border-t border-gray-300">
+          <Button type="submit" disabled={isSubmitting || hasMinorAuthor.isMinor} size="lg" className="min-w-[200px]">
+            {isSubmitting ? <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processando...
+              </> : <>
+                <FileText className="mr-2 h-5 w-5" />
+                Finalizar e Salvar TCO
+              </>}
+          </Button>
+        </div>
+      </form>
+    </div>;
+};
+export default TCOForm;
