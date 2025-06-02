@@ -30,17 +30,13 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     const primeiraVitima = data.vitimas?.[0];
 
     // Adiciona campos usando a função utilitária, passando doc, yPos e data
-    const naturezaDisplay = data.natureza ? data.natureza.toUpperCase() : "NÃO INFORMADA";
-    yPos = addFieldBoldLabel(doc, yPos, "NATUREZA", naturezaDisplay, data);
-
-    const autorNomeDisplay = primeiroAutor?.nome ? primeiroAutor.nome.toUpperCase() : "NÃO INFORMADO(A)";
-    yPos = addFieldBoldLabel(doc, yPos, "AUTOR DO FATO", autorNomeDisplay, data);
+    yPos = addFieldBoldLabel(doc, yPos, "NATUREZA", data.natureza, data);
+    yPos = addFieldBoldLabel(doc, yPos, "AUTOR DO FATO", primeiroAutor?.nome, data);
 
     // Verifica se a natureza está relacionada a drogas (case-insensitive)
     const isDrugRelated = data.natureza && /droga|narcotráfico/i.test(data.natureza);
     if (!isDrugRelated) {
-        const vitimaNomeDisplay = primeiraVitima?.nome ? primeiraVitima.nome.toUpperCase() : "NÃO INFORMADA";
-        yPos = addFieldBoldLabel(doc, yPos, "VÍTIMA", vitimaNomeDisplay, data);
+        yPos = addFieldBoldLabel(doc, yPos, "VÍTIMA", primeiraVitima?.nome, data);
     }
 
     yPos += 15; // Espaço extra
@@ -63,7 +59,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     yPos += 20; // Espaço antes da assinatura
 
     // --- Assinatura do Condutor na Autuação ---
-    yPos = checkPageBreak(doc, yPos, 35, data); // Verifica espaço para assinatura (aumentei um pouco para 3 linhas de texto)
+    yPos = checkPageBreak(doc, yPos, 30, data); // Verifica espaço para assinatura
     const condutorAutuacao = data.componentesGuarnicao?.[0];
     const signatureLineLength = 80;
     const signatureLineStartX = (PAGE_WIDTH - signatureLineLength) / 2; // Centraliza a linha
@@ -72,17 +68,11 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     doc.line(signatureLineStartX, signatureLineY, signatureLineStartX + signatureLineLength, signatureLineY);
     yPos += 5; // Espaço após linha
 
-    const nomeCondutor = condutorAutuacao?.nome || "NOME NÃO INFORMADO";
-    const postoCondutor = condutorAutuacao?.posto || "POSTO NÃO INFORMADO";
-    const rgCondutor = condutorAutuacao?.rg || "NÃO INFORMADO";
-
-    const linhaNomePosto = `${nomeCondutor} - ${postoCondutor}`.toUpperCase();
-    const linhaRg = `RG PMMT: ${rgCondutor}`.toUpperCase();
+    const condutorNomeCompleto = `${condutorAutuacao?.posto || ""} ${condutorAutuacao?.nome || "Não informado"} RGPM: ${condutorAutuacao?.rg || "Não informado."}`.trim().toUpperCase();
 
     doc.setFont("helvetica", "normal"); doc.setFontSize(10);
     // Centraliza o texto da assinatura
-    doc.text(linhaNomePosto, PAGE_WIDTH / 2, yPos, { align: "center" }); yPos += 4;
-    doc.text(linhaRg, PAGE_WIDTH / 2, yPos, { align: "center" }); yPos += 4;
+    doc.text(condutorNomeCompleto, PAGE_WIDTH / 2, yPos, { align: "center" }); yPos += 4;
     doc.text("CONDUTOR DA OCORRÊNCIA", PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 10; // Espaço após assinatura
 
