@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -34,16 +35,56 @@ interface BasicInformationTabProps {
 
 // Mapeamento de naturezas para penas MÁXIMAS (em anos)
 const naturezaPenas: Record<string, number> = {
-  "Porte de drogas para consumo": 0.5, // 6 meses
-  "Lesão corporal": 1.0, // 1 ano
+  "Porte de drogas para consumo": 0, // Não há pena de prisão, apenas medidas educativas
+  "Lesão corporal": 1.0, // 1 ano (máxima)
   "Ameaça": 0.5, // 6 meses (máxima)
   "Injúria": 0.5, // 6 meses
   "Difamação": 1.0, // 1 ano
   "Calúnia": 2.0, // 2 anos (máxima)
   "Perturbação do trabalho ou do sossego alheios": 0.25, // 3 meses
-  "Vias de fato": 0.5, // 6 meses
-  "Contravenção penal": 0.5, // 6 meses
-  // Adicione outras naturezas conforme necessário
+  "Vias de fato": 0.25, // 3 meses (máxima)
+  "Contravenção penal": 0.25, // 3 meses
+  "Dano": 0.5, // 6 meses
+  "Perturbação do Sossego": 0.25, // 3 meses
+  "Conduzir veículo sem CNH gerando perigo de dano": 1.0, // 1 ano
+  "Entregar veículo automotor a pessoa não habilitada": 1.0, // 1 ano
+  "Trafegar em velocidade incompatível com segurança": 1.0, // 1 ano
+  "Omissão de socorro": 0.5, // 6 meses
+  "Rixa": 0.17, // 2 meses (máxima)
+  "Invasão de domicílio": 0.25, // 3 meses
+  "Fraude em comércio": 2.0, // 2 anos
+  "Ato obsceno": 1.0, // 1 ano
+  "Falsa identidade": 1.0, // 1 ano
+  "Resistência": 2.0, // 2 anos
+  "Desobediência": 0.5, // 6 meses
+  "Desacato": 2.0, // 2 anos
+  "Exercício arbitrário das próprias razões": 0.08, // 1 mês
+};
+
+// Mapeamento de naturezas para tipificações
+const naturezaTipificacoes: Record<string, string> = {
+  "Ameaça": "ART. 147 DO CÓDIGO PENAL",
+  "Vias de Fato": "ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS",
+  "Lesão Corporal": "ART. 129 DO CÓDIGO PENAL",
+  "Dano": "ART. 163 DO CÓDIGO PENAL",
+  "Injúria": "ART. 140 DO CÓDIGO PENAL",
+  "Difamação": "ART. 139 DO CÓDIGO PENAL",
+  "Calúnia": "ART. 138 DO CÓDIGO PENAL",
+  "Perturbação do Sossego": "ART. 42 DA LEI DE CONTRAVENÇÕES PENAIS",
+  "Porte de drogas para consumo": "ART. 28 DA LEI Nº 11.343/2006 (LEI DE DROGAS)",
+  "Conduzir veículo sem CNH gerando perigo de dano": "ART. 309 DO CÓDIGO DE TRÂNSITO BRASILEIRO",
+  "Entregar veículo automotor a pessoa não habilitada": "ART. 310 DO CÓDIGO DE TRÂNSITO BRASILEIRO",
+  "Trafegar em velocidade incompatível com segurança": "ART. 311 DO CÓDIGO DE TRÂNSITO BRASILEIRO",
+  "Omissão de socorro": "ART. 135 DO CÓDIGO PENAL",
+  "Rixa": "ART. 137 DO CÓDIGO PENAL",
+  "Invasão de domicílio": "ART. 150 DO CÓDIGO PENAL",
+  "Fraude em comércio": "ART. 176 DO CÓDIGO PENAL",
+  "Ato obsceno": "ART. 233 DO CÓDIGO PENAL",
+  "Falsa identidade": "ART. 307 DO CÓDIGO PENAL",
+  "Resistência": "ART. 329 DO CÓDIGO PENAL",
+  "Desobediência": "ART. 330 DO CÓDIGO PENAL",
+  "Desacato": "ART. 331 DO CÓDIGO PENAL",
+  "Exercício arbitrário das próprias razões": "ART. 345 DO CÓDIGO PENAL",
 };
 
 const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
@@ -68,6 +109,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
   const [selectedCustomNatureza, setSelectedCustomNatureza] = useState<string>("");
   const [totalPenaAnos, setTotalPenaAnos] = useState<number>(0);
   const [showPenaAlert, setShowPenaAlert] = useState<boolean>(false);
+  const [tipificacaoCompleta, setTipificacaoCompleta] = useState<string>("");
 
   // Inicializar com a natureza atual se existir
   useEffect(() => {
@@ -76,20 +118,25 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
     }
   }, [natureza]);
 
-  // Calcular pena total sempre que as naturezas selecionadas mudarem
+  // Calcular pena total e tipificação sempre que as naturezas selecionadas mudarem
   useEffect(() => {
     let total = 0;
+    const tipificacoes: string[] = [];
+    
     selectedNaturezas.forEach(nat => {
       if (nat === "Outros") {
         // Para natureza customizada, assumir pena de 2 anos como padrão (máximo para TCO)
         total += 2.0;
+        tipificacoes.push("[TIPIFICAÇÃO LEGAL A SER INSERIDA]");
       } else {
         total += naturezaPenas[nat] || 2.0; // Default 2 anos se não encontrado
+        tipificacoes.push(naturezaTipificacoes[nat] || "[TIPIFICAÇÃO NÃO MAPEADA]");
       }
     });
     
     setTotalPenaAnos(total);
     setShowPenaAlert(total > 2);
+    setTipificacaoCompleta(tipificacoes.join(" E "));
     
     if (total > 2) {
       toast({
@@ -140,7 +187,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
       const newNaturezas = [...selectedNaturezas, selectedNatureza];
       setSelectedNaturezas(newNaturezas);
       
-      // Atualizar a natureza principal (primeira selecionada)
+      // Atualizar a natureza principal (primeira selecionada define o comportamento do formulário)
       if (newNaturezas.length === 1) {
         setNatureza(selectedNatureza);
       } else {
@@ -219,16 +266,15 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
             </div>
           </div>
           
-          {/* Alert de Pena Superior a 2 Anos */}
+          {/* Alert de Pena Superior a 2 Anos - Aparece no topo igual ao de menor */}
           {showPenaAlert && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Atenção: Pena Superior a 2 Anos</AlertTitle>
-              <AlertDescription>
+            <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
+              <p className="font-semibold">Atenção: Pena Superior a 2 Anos Detectada</p>
+              <p>
                 A soma das penas máximas das naturezas selecionadas é de {totalPenaAnos} anos, 
-                excedendo o limite de 2 anos para TCO. Verifique se o caso deve ser registrado como TCO.
-              </AlertDescription>
-            </Alert>
+                excedendo o limite de 2 anos. Não é permitido registrar TCO quando a pena máxima total excede 2 anos.
+              </p>
+            </div>
           )}
 
           {/* Naturezas Selecionadas */}
@@ -286,6 +332,14 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
                 value={selectedCustomNatureza} 
                 onChange={(e) => handleCustomNaturezaChange(e.target.value)} 
               />
+            </div>
+          )}
+
+          {/* Tipificação Legal - Mostra a tipificação ordenada conforme ordem de inserção */}
+          {tipificacaoCompleta && (
+            <div>
+              <Label>Tipificação Legal</Label>
+              <Input readOnly value={tipificacaoCompleta} className="bg-gray-100" />
             </div>
           )}
 

@@ -273,19 +273,10 @@ const TCOForm: React.FC<TCOFormProps> = ({
     }
   }, [tcoNumber, isTimerRunning]);
   useEffect(() => {
-    if (substancia === "Vegetal" && cor !== "Verde") {
-      setIsUnknownMaterial(true);
-      setIndicios("Material desconhecido");
-    } else if (substancia === "Artificial" && cor !== "Amarelada" && cor !== "Branca") {
-      setIsUnknownMaterial(true);
-      setIndicios("Material desconhecido");
-    } else {
-      setIsUnknownMaterial(false);
-      if (substancia === "Vegetal" && cor === "Verde") setIndicios("Maconha");else if (substancia === "Artificial" && cor === "Amarelada") setIndicios("Pasta-Base");else if (substancia === "Artificial" && cor === "Branca") setIndicios("Cocaína");else setIndicios("");
-    }
-  }, [substancia, cor]);
-  useEffect(() => {
-    const isDrugCase = natureza === "Porte de drogas para consumo";
+    // A primeira natureza define as regras do formulário
+    const primeiraNatureza = natureza.split(' + ')[0];
+    const isDrugCase = primeiraNatureza === "Porte de drogas para consumo";
+    
     if (isDrugCase) {
       if (indicios) {
         const indicioFinal = isUnknownMaterial && customMaterialDesc ? customMaterialDesc : indicios;
@@ -324,14 +315,17 @@ const TCOForm: React.FC<TCOFormProps> = ({
     }
   }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes]);
   useEffect(() => {
-    const displayNaturezaReal = natureza === "Outros" ? customNatureza.trim() : natureza;
+    // A primeira natureza define a tipificação e pena
+    const primeiraNatureza = natureza.split(' + ')[0];
+    const displayNaturezaReal = primeiraNatureza === "Outros" ? customNatureza.trim() : primeiraNatureza;
     let tipificacaoAtual = "";
     let penaAtual = "";
-    if (natureza === "Outros") {
+    
+    if (primeiraNatureza === "Outros") {
       tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
       penaAtual = penaDescricao || "";
     } else {
-      switch (natureza) {
+      switch (primeiraNatureza) {
         case "Ameaça":
           tipificacaoAtual = "ART. 147 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 1 A 6 MESES, OU MULTA";
@@ -1087,7 +1081,8 @@ const TCOForm: React.FC<TCOFormProps> = ({
           />
         </div>
 
-        {natureza === "Porte de drogas para consumo" && (
+        {/* A primeira natureza define se mostra a aba de drogas */}
+        {natureza.split(' + ')[0] === "Porte de drogas para consumo" && (
           <div className="mb-8">
             <DrugVerificationTab
               quantidade={quantidade}
