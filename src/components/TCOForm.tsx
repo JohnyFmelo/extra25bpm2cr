@@ -1068,241 +1068,29 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Básicas</h2>
-          <BasicInformationTab 
-            tcoNumber={tcoNumber} 
-            setTcoNumber={setTcoNumber} 
-            natureza={natureza} 
-            setNatureza={setNatureza} 
-            autor={autor} 
-            setAutor={setAutor} 
-            penaDescricao={penaDescricao} 
-            naturezaOptions={naturezaOptions} 
-            customNatureza={customNatureza} 
-            setCustomNatureza={setCustomNatureza} 
-            startTime={startTime} 
-            isTimerRunning={isTimerRunning} 
-            juizadoEspecialData={juizadoEspecialData} 
-            setJuizadoEspecialData={setJuizadoEspecialData} 
-            juizadoEspecialHora={juizadoEspecialHora} 
-            setJuizadoEspecialHora={setJuizadoEspecialHora} 
-          />
+          <BasicInformationTab tcoNumber={tcoNumber} setTcoNumber={setTcoNumber} natureza={natureza} setNatureza={setNatureza} autor={autor} setAutor={setAutor} penaDescricao={penaDescricao} naturezaOptions={naturezaOptions} customNatureza={customNatureza} setCustomNatureza={setCustomNatureza} startTime={startTime} isTimerRunning={isTimerRunning} juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData} juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora} />
         </div>
 
         {/* A primeira natureza define se mostra a aba de drogas */}
-        {natureza.split(' + ')[0] === "Porte de drogas para consumo" && (
-          <div className="mb-8">
-            <DrugVerificationTab 
-              quantidade={quantidade} 
-              setQuantidade={setQuantidade} 
-              substancia={substancia} 
-              setSubstancia={setSubstancia} 
-              cor={cor} 
-              setCor={setCor} 
-              odor={odor} 
-              setOdor={setOdor} 
-              indicios={indicios} 
-              customMaterialDesc={customMaterialDesc} 
-              setCustomMaterialDesc={setCustomMaterialDesc} 
-              isUnknownMaterial={isUnknownMaterial} 
-              lacreNumero={lacreNumero} 
-              setLacreNumero={setLacreNumero} 
-            />
-          </div>
-        )}
+        {natureza.split(' + ')[0] === "Porte de drogas para consumo" && <div className="mb-8">
+            <DrugVerificationTab quantidade={quantidade} setQuantidade={setQuantidade} substancia={substancia} setSubstancia={setSubstancia} cor={cor} setCor={setCor} odor={odor} setOdor={setOdor} indicios={indicios} customMaterialDesc={customMaterialDesc} setCustomMaterialDesc={setCustomMaterialDesc} isUnknownMaterial={isUnknownMaterial} lacreNumero={lacreNumero} setLacreNumero={setLacreNumero} />
+          </div>}
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Gerais da Ocorrência</h2>
-          <GeneralInformationTab 
-            natureza={natureza} 
-            tipificacao={tipificacao} 
-            setTipificacao={setTipificacao} 
-            isCustomNatureza={natureza === "Outros"} 
-            customNatureza={customNatureza} 
-            dataFato={dataFato} 
-            setDataFato={setDataFato} 
-            horaFato={horaFato} 
-            setHoraFato={setHoraFato} 
-            dataInicioRegistro={dataInicioRegistro} 
-            horaInicioRegistro={horaInicioRegistro} 
-            dataTerminoRegistro={dataTerminoRegistro} 
-            horaTerminoRegistro={horaTerminoRegistro} 
-            localFato={localFato} 
-            setLocalFato={setLocalFato} 
-            endereco={endereco} 
-            setEndereco={setEndereco} 
-            municipio={municipio} 
-            comunicante={comunicante} 
-            setComunicante={setComunicante} 
-            guarnicao={guarnicao} 
-            setGuarnicao={setGuarnicao} 
-            operacao={operacao} 
-            setOperacao={setOperacao} 
-            condutorNome={condutorParaDisplay?.nome || ""} 
-            condutorPosto={condutorParaDisplay?.posto || ""} 
-            condutorRg={condutorParaDisplay?.rg || ""} 
-          />
+          <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza === "Outros"} customNatureza={customNatureza} dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Pessoas Envolvidas</h2>
-          <PessoasEnvolvidasTab 
-            vitimas={vitimas} 
-            handleVitimaChange={handleVitimaChange} 
-            handleAddVitima={handleAddVitima} 
-            handleRemoveVitima={handleRemoveVitima} 
-            testemunhas={testemunhas} 
-            handleTestemunhaChange={handleTestemunhaChange} 
-            handleAddTestemunha={handleAddTestemunha} 
-            handleRemoveTestemunha={handleRemoveTestemunha} 
-            autores={autores} 
-            handleAutorDetalhadoChange={handleAutorDetalhadoChange} 
-            handleAddAutor={handleAddAutor} 
-            handleRemoveAutor={handleRemoveAutor} 
-            natureza={natureza} 
-          />
+          <PessoasEnvolvidasTab vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima} testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha} autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor} natureza={natureza} />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Guarnição Policial</h2>
-          <GuarnicaoTab 
-            currentGuarnicaoList={componentesGuarnicao} 
-            onAddPolicial={handleAddPolicialToList} 
-            onRemovePolicial={handleRemovePolicialFromList} 
-            onToggleApoioPolicial={handleToggleApoioPolicial} 
-          />
+          <GuarnicaoTab currentGuarnicaoList={componentesGuarnicao} onAddPolicial={handleAddPolicialToList} onRemovePolicial={handleRemovePolicialFromList} onToggleApoioPolicial={handleToggleApoioPolicial} />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Histórico e Narrativas</h2>
-          <HistoricoTab 
-            relatoPolicial={relatoPolicial} 
-            setRelatoPolicial={handleRelatoPolicialChange} 
-            relatoAutor={relatoAutor} 
-            setRelatoAutor={setRelatoAutor} 
-            relatoVitima={relatoVitima} 
-            setRelatoVitima={setRelatoVitima} 
-            relatoTestemunha={relatoTestemunha} 
-            setRelatoTestemunha={setRelatoTestemunha} 
-            conclusaoPolicial={conclusaoPolicial} 
-            setConclusaoPolicial={setConclusaoPolicial} 
-            apreensoes={apreensoes} 
-            setApreensoes={setApreensoes} 
-            providencias={providencias} 
-            setProvidencias={setProvidencias} 
-            documentosAnexos={documentosAnexos} 
-            setDocumentosAnexos={setDocumentosAnexos} 
-            vitimas={vitimas} 
-            handleVitimaRelatoChange={handleVitimaRelatoChange} 
-            handleVitimaRepresentacaoChange={handleVitimaRepresentacaoChange} 
-            testemunhas={testemunhas} 
-            handleTestemunhaRelatoChange={handleTestemunhaRelatoChange} 
-            autores={autores} 
-            handleAutorRelatoChange={handleAutorRelatoChange} 
-            representacao={representacao} 
-            setRepresentacao={setRepresentacao} 
-            natureza={natureza} 
-          />
-        </div>
-
-        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
-          <h2 className="text-xl font-semibold mb-4">Anexos</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FileText className="inline w-4 h-4 mr-1" />
-                Imagens
-              </label>
-              <div className="flex items-center space-x-2">
-                <Input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageFileChange}
-                  className="flex-1"
-                />
-              </div>
-              {imageFiles.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {imageFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <span className="text-sm text-gray-700 flex items-center">
-                        <ImageIcon className="w-4 h-4 mr-2" />
-                        {file.name}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveImageFile(index)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <VideoIcon className="inline w-4 h-4 mr-1" />
-                Links de Vídeos
-              </label>
-              <div className="flex items-center space-x-2">
-                <Input
-                  type="url"
-                  placeholder="https://..."
-                  value={newVideoLink}
-                  onChange={(e) => setNewVideoLink(e.target.value)}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  onClick={handleAddVideoLink}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-              {videoLinks.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {videoLinks.map((link, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <span className="text-sm text-gray-700 flex items-center truncate">
-                        <VideoIcon className="w-4 h-4 mr-2 flex-shrink-0" />
-                        {link}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveVideoLink(index)}
-                        className="text-red-600 hover:text-red-800 ml-2"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-center pt-6">
-          <Button 
-            type="submit" 
-            disabled={isSubmitting || hasMinorAuthor.isMinor}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 text-lg"
-          >
-            {isSubmitting ? "Gerando TCO..." : "Finalizar TCO"}
-          </Button>
-        </div>
-      </form>
-    </div>;
-};
-
-export default TCOForm;
+          <HistoricoTab relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange} relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor} relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima} relatoTestemunha={relatoTestemunha} setRelato
