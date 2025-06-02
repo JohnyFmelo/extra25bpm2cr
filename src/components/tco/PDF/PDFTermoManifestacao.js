@@ -1,20 +1,26 @@
+// src/components/tco/PDF/PDFTermoManifestacao.js
+import {
+    MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
+    addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak
+} from './pdfUtils.js';
+
 /** Adiciona Termo de Manifestação da Vítima (em página nova) */
 export const addTermoManifestacao = (doc, data) => {
-    // Skip termo para casos de consumo de drogas ou se não houver vítimas
-    if (data || data.natureza === "Porte de drogas para consumo") {
+    // Skip term for drug consumption cases or if no victims are present
+    if (data.natureza === "Porte de drogas para consumo") {
         console.log("Caso de porte de drogas para consumo, pulando Termo de Manifestação.");
         return null;
     }
     
-    const vitimas = data?.vitimas?.filter(v => v?.nome && v.nome.trim() !== "");
+    const vitimas = data.vitimas?.filter(v => v?.nome && v.nome.trim() !== "");
     if (!vitimas || vitimas.length === 0) {
         console.warn("Nenhuma vítima com nome informado, pulando Termo de Manifestação.");
         return null;
     }
 
     let yPos;
-    const condutor = data?.componentesGuarnicao?.[0];
-    const autor = data?.autores?.[0];
+    const condutor = data.componentesGuarnicao?.[0];
+    const autor = data.autores?.[0];
     
     // Flexão de gênero para autor do fato
     const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR';
@@ -25,8 +31,7 @@ export const addTermoManifestacao = (doc, data) => {
         yPos = addNewPage(doc, data);
         const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
         
-        doc.setFont("helvetica", "bold"); 
-        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(12);
         yPos = checkPageBreak(doc, yPos, 15, data);
         doc.text(`TERMO DE MANIFESTAÇÃO DA VÍTIMA ${vitima.nome.toUpperCase()}`, PAGE_WIDTH / 2, yPos, { align: "center" });
         yPos += 10;
@@ -34,10 +39,11 @@ export const addTermoManifestacao = (doc, data) => {
         yPos = addWrappedText(doc, yPos, "EU, VÍTIMA ABAIXO ASSINADA, POR ESTE INSTRUMENTO MANIFESTO O MEU INTERESSE EM:", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
         yPos += 5;
 
-        // Marcação do X de acordo com a representação da vítima
+        // Fix: Corrigir a marcação do X de acordo com o valor de representacao da vítima específica
         let manifestacaoOption1 = '(   )';
         let manifestacaoOption2 = '(   )';
         
+        // Usando os valores corretos que vem do frontend para ESTA vítima específica
         if (vitima.representacao === 'representar') {
             manifestacaoOption1 = '( X )';
         } else if (vitima.representacao === 'decidir_posteriormente') {
@@ -54,9 +60,10 @@ export const addTermoManifestacao = (doc, data) => {
         yPos = addWrappedText(doc, yPos, option2Text, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
         yPos += 5;
 
-        // Usar juizadoEspecialData e juizadoEspecialHora com verificação segura
-        const dataAudiencia = data?.juizadoEspecialData ? formatarDataSimples(data.juizadoEspecialData) : "___/___/______";
-        const horaAudiencia = data?.juizadoEspecialHora || "__:__";
+        // Novo parágrafo com informações da audiência
+        const apresentacaoJuizado = data.tco?.apresentacaoJuizadoEspecialVG;
+        const dataAudiencia = apresentacaoJuizado?.data || "[DATA NÃO INFORMADA]";
+        const horaAudiencia = apresentacaoJuizado?.hora || "[HORA NÃO INFORMADA]";
         
         const audienciaText = `ESTOU CIENTE DE QUE A AUDIENCIA OCORRERÁ NO DIA ${dataAudiencia}, ÀS ${horaAudiencia} HORAS, DAS DEPENDÊNCIAS DO JUIZADO ESPECIAL CRIMINAL DE VÁRZEA GRANDE NO BAIRRO CHAPÉU DO SOL, AVENIDA CHAPÉU DO SOL, S/N, E QUE O NÃO COMPARECIMENTO IMPORTARÁ EM RENUNCIA À REPRESENTAÇÃO E O ARQUIVAMENTO DO PROCESSO.`;
         yPos = addWrappedText(doc, yPos, audienciaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
