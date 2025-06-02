@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -106,7 +105,17 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
       return naturezaTipificacoes[nat.trim()] || "[TIPIFICAÇÃO NÃO MAPEADA]";
     });
     
-    return tipificacoes.join(" E ");
+    // Formato da tipificação: usar vírgulas e "E" apenas antes do último item
+    if (tipificacoes.length === 1) {
+      return tipificacoes[0];
+    } else if (tipificacoes.length === 2) {
+      return tipificacoes.join(" E ");
+    } else if (tipificacoes.length > 2) {
+      const ultimoItem = tipificacoes.pop();
+      return tipificacoes.join(", ") + " E " + ultimoItem;
+    }
+    
+    return "";
   };
 
   return (

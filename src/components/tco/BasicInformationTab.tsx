@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -36,13 +35,13 @@ interface BasicInformationTabProps {
 // Mapeamento de naturezas para penas MÁXIMAS (em anos)
 const naturezaPenas: Record<string, number> = {
   "Porte de drogas para consumo": 0, // Não há pena de prisão, apenas medidas educativas
-  "Lesão corporal": 1.0, // 1 ano (máxima)
+  "Lesão Corporal": 1.0, // 1 ano (máxima)
   "Ameaça": 0.5, // 6 meses (máxima)
   "Injúria": 0.5, // 6 meses
   "Difamação": 1.0, // 1 ano
   "Calúnia": 2.0, // 2 anos (máxima)
   "Perturbação do trabalho ou do sossego alheios": 0.25, // 3 meses
-  "Vias de fato": 0.25, // 3 meses (máxima)
+  "Vias de Fato": 0.25, // 3 meses (máxima)
   "Contravenção penal": 0.25, // 3 meses
   "Dano": 0.5, // 6 meses
   "Perturbação do Sossego": 0.25, // 3 meses
@@ -136,7 +135,19 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
     
     setTotalPenaAnos(total);
     setShowPenaAlert(total > 2);
-    setTipificacaoCompleta(tipificacoes.join(" E "));
+    
+    // Formato da tipificação: usar vírgulas e "E" apenas antes do último item
+    let tipificacaoFormatada = "";
+    if (tipificacoes.length === 1) {
+      tipificacaoFormatada = tipificacoes[0];
+    } else if (tipificacoes.length === 2) {
+      tipificacaoFormatada = tipificacoes.join(" E ");
+    } else if (tipificacoes.length > 2) {
+      const ultimoItem = tipificacoes.pop();
+      tipificacaoFormatada = tipificacoes.join(", ") + " E " + ultimoItem;
+    }
+    
+    setTipificacaoCompleta(tipificacaoFormatada);
     
     if (total > 2) {
       toast({
@@ -266,15 +277,16 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
             </div>
           </div>
           
-          {/* Alert de Pena Superior a 2 Anos - Aparece no topo igual ao de menor */}
+          {/* Alert de Pena Superior a 2 Anos - Aparece no formulário */}
           {showPenaAlert && (
-            <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
-              <p className="font-semibold">Atenção: Pena Superior a 2 Anos Detectada</p>
-              <p>
+            <Alert variant="destructive" className="border-red-600 bg-red-50 dark:bg-red-950">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Atenção: Pena Superior a 2 Anos Detectada</AlertTitle>
+              <AlertDescription>
                 A soma das penas máximas das naturezas selecionadas é de {totalPenaAnos} anos, 
                 excedendo o limite de 2 anos. Não é permitido registrar TCO quando a pena máxima total excede 2 anos.
-              </p>
-            </div>
+              </AlertDescription>
+            </Alert>
           )}
 
           {/* Naturezas Selecionadas */}
