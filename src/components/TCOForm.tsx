@@ -310,7 +310,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       }
       setVitimas([{
         ...initialPersonData,
-        nome: "O ESTADO"
+        nome: ""
       }]);
       setRepresentacao(""); // Limpa representação para "O ESTADO"
     } else {
