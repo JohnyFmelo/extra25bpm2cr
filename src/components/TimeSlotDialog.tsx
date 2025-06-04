@@ -49,6 +49,9 @@ const TimeSlotDialog = ({
 
   // Função para calcular o horário final baseado no início e duração
   const calculateEndTime = (start: string, duration: string): string => {
+    if (!start || !duration || isNaN(parseFloat(duration))) { // Basic validation
+        return "Inválido";
+    }
     const [startHour, startMinute] = start.split(':').map(Number);
     const durationHours = parseFloat(duration);
     
@@ -61,8 +64,15 @@ const TimeSlotDialog = ({
 
   // Função para calcular duração baseada no início e fim
   const calculateDuration = (start: string, end: string): string => {
+    if (!start || !end) { // Basic validation
+        return "0";
+    }
     const [startHour, startMinute] = start.split(':').map(Number);
     let [endHour, endMinute] = end.split(':').map(Number);
+    
+    if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) {
+        return "0"; // Invalid input
+    }
     
     // Se o horário de fim for menor que o de início, assumir que é no dia seguinte
     if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
@@ -72,6 +82,9 @@ const TimeSlotDialog = ({
     const startTotalMinutes = startHour * 60 + startMinute;
     const endTotalMinutes = endHour * 60 + endMinute;
     const durationMinutes = endTotalMinutes - startTotalMinutes;
+    
+    if (durationMinutes < 0) return "0"; // Should not happen with the logic above but as a safeguard
+    
     const durationHours = durationMinutes / 60;
     
     return durationHours.toString();
@@ -79,22 +92,36 @@ const TimeSlotDialog = ({
 
   useEffect(() => {
     if (editingTimeSlot) {
-      setStartTime(editingTimeSlot.startTime);
-      const duration = calculateDuration(editingTimeSlot.startTime, editingTimeSlot.endTime);
-      setHours(duration);
-      setSelectedSlots(editingTimeSlot.slots);
+      // Assuming properties like startTime, endTime, slots are consistently named or mapped upstream
+      // If they also come as snake_case from Firebase, they would need similar handling:
+      // e.g., const effectiveStartTime = (editingTimeSlot as any).start_time || editingTimeSlot.startTime || "07:00";
+      const effectiveStartTime = (editingTimeSlot as any).start_time || editingTimeSlot.startTime || "07:00";
+      const effectiveEndTime = (editingTimeSlot as any).end_time || editingTimeSlot.endTime; // Can be calculated if not present
+      const effectiveSlots = (editingTimeSlot as any).total_slots || editingTimeSlot.slots || 2;
+
+      setStartTime(effectiveStartTime);
+      if (effectiveStartTime && effectiveEndTime) {
+        const duration = calculateDuration(effectiveStartTime, effectiveEndTime);
+        setHours(duration);
+      } else if (effectiveStartTime && editingTimeSlot.hours) { // If duration is stored as 'hours'
+        setHours(editingTimeSlot.hours.toString());
+      } else {
+        setHours("6"); // Fallback
+      }
+      
+      setSelectedSlots(effectiveSlots);
       setDescription(editingTimeSlot.description || "");
-      // If editingTimeSlot.allowedMilitaryTypes is undefined or null (e.g., field doesn't exist yet on an old document),
-      // default to an empty array (no types selected). Otherwise, use the value from Firebase.
-      // For new slots, the `else` block below will set the default to all types.
-      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes ?? []);
-      if (!slotOptions.includes(editingTimeSlot.slots)) {
+      
+      // Correctly load allowedMilitaryTypes by checking the snake_case field from Firebase data.
+      setAllowedMilitaryTypes((editingTimeSlot as any).allowed_military_types ?? []);
+      
+      if (!slotOptions.includes(effectiveSlots)) {
         setShowCustomSlots(true);
-        setCustomSlots(editingTimeSlot.slots.toString());
+        setCustomSlots(effectiveSlots.toString());
       } else {
         setShowCustomSlots(false);
       }
-      setUseWeeklyLogic(false);
+      setUseWeeklyLogic(editingTimeSlot.isWeekly || false);
     } else {
       setStartTime("07:00");
       setHours("6");
@@ -117,6 +144,18 @@ const TimeSlotDialog = ({
 
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
+    // Ensure startTime and hours are valid before calculating endTime
+    const currentHours = parseFloat(hours);
+    if (isNaN(currentHours) || currentHours <= 0) {
+        // Handle error, maybe show a notification
+        console.error("Duração inválida");
+        return;
+    }
+    if (!/^\d{2}:\d{2}$/.test(startTime)) {
+        console.error("Horário de início inválido");
+        return;
+    }
+
     const endTime = calculateEndTime(startTime, hours);
     
     const newTimeSlot: TimeSlot = {
@@ -124,12 +163,25 @@ const TimeSlotDialog = ({
       startTime,
       endTime,
       slots,
-      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
+      slotsUsed: editingTimeSlot ? ((editingTimeSlot as any).slots_used ?? editingTimeSlot.slotsUsed ?? 0) : 0,
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedMilitaryTypes
+      allowedMilitaryTypes // This state will be saved to Firebase
     };
     
+    // When saving, ensure you save with snake_case if Firebase expects it,
+    // or that your saving function handles the mapping.
+    // For example, if saving directly:
+    // const dataToSave = {
+    //   ...newTimeSlot,
+    //   allowed_military_types: newTimeSlot.allowedMilitaryTypes,
+    //   total_slots: newTimeSlot.slots,
+    //   // remove camelCase versions if necessary
+    // };
+    // delete (dataToSave as any).allowedMilitaryTypes; 
+    // delete (dataToSave as any).slots;
+
+
     if (editingTimeSlot) {
       onEditTimeSlot(newTimeSlot);
     } else {
@@ -146,6 +198,8 @@ const TimeSlotDialog = ({
     const hoursValue = parseFloat(hours);
     return isNaN(hoursValue) || hoursValue <= 0 || isLoading || allowedMilitaryTypes.length === 0;
   };
+  
+  const displayedEndTime = calculateEndTime(startTime, hours);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -198,7 +252,7 @@ const TimeSlotDialog = ({
               </div>
             </div>
             <div className="text-xs text-gray-500 text-center">
-              Fim: {calculateEndTime(startTime, hours)}
+              Fim: {displayedEndTime}
             </div>
           </div>
 
@@ -250,6 +304,7 @@ const TimeSlotDialog = ({
                   className="text-center"
                   placeholder="Número personalizado de vagas"
                   disabled={isLoading}
+                  min="1"
                 />
               </div>
             )}
