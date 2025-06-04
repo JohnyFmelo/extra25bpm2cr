@@ -429,9 +429,20 @@ const TimeSlotsList = () => {
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
     const userDataString = localStorage.getItem('user');
     const userData = userDataString ? JSON.parse(userDataString) : null;
+    
     if (userData?.rank === "Estágio") {
       return false;
     }
+
+    // Verificar se o tipo de militar do usuário está permitido para este horário
+    const userMilitaryType = userData?.militaryType; // Assumindo que existe este campo
+    const allowedTypes = slot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"];
+    
+    // Se o usuário não tem tipo definido ou o tipo não está na lista permitida, não mostrar o botão
+    if (!userMilitaryType || !allowedTypes.includes(userMilitaryType)) {
+      return false;
+    }
+
     if (isVolunteered(slot)) {
       return true;
     }
