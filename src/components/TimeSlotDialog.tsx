@@ -1,3 +1,5 @@
+--- START OF FILE TimeSlotDialog (1).tsx ---
+
 
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
@@ -39,7 +41,8 @@ const TimeSlotDialog = ({
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>(["Operacional", "Administrativo", "Inteligencia"]);
+  // CORREÇÃO: Inicializar como array vazio
+  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
 
   const slotOptions = [2, 3, 4, 5];
   const militaryTypes = [
@@ -52,11 +55,11 @@ const TimeSlotDialog = ({
   const calculateEndTime = (start: string, duration: string): string => {
     const [startHour, startMinute] = start.split(':').map(Number);
     const durationHours = parseFloat(duration);
-    
+
     const totalMinutes = startHour * 60 + startMinute + (durationHours * 60);
     const endHour = Math.floor(totalMinutes / 60) % 24;
     const endMinute = totalMinutes % 60;
-    
+
     return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
   };
 
@@ -64,17 +67,17 @@ const TimeSlotDialog = ({
   const calculateDuration = (start: string, end: string): string => {
     const [startHour, startMinute] = start.split(':').map(Number);
     let [endHour, endMinute] = end.split(':').map(Number);
-    
+
     // Se o horário de fim for menor que o de início, assumir que é no dia seguinte
     if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
       endHour += 24;
     }
-    
+
     const startTotalMinutes = startHour * 60 + startMinute;
     const endTotalMinutes = endHour * 60 + endMinute;
     const durationMinutes = endTotalMinutes - startTotalMinutes;
     const durationHours = durationMinutes / 60;
-    
+
     return durationHours.toString();
   };
 
@@ -85,26 +88,29 @@ const TimeSlotDialog = ({
       setHours(duration);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
-      // Corrigir o carregamento dos tipos permitidos
-      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]);
+      // Ao editar, carregar os tipos salvos. Se não houver (horários antigos), pode-se usar um fallback
+      // ou, preferencialmente, garantir que a propriedade sempre exista (mesmo como array vazio).
+      // Aqui, se for undefined, começará vazio, o que é razoável.
+      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []);
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
       } else {
         setShowCustomSlots(false);
       }
-      setUseWeeklyLogic(false);
-    } else {
+      setUseWeeklyLogic(false); // Lógica semanal não é editável aqui
+    } else { // Criando um NOVO horário
       setStartTime("07:00");
       setHours("6");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes(["Operacional", "Administrativo", "Inteligencia"]);
+      // CORREÇÃO: Para um novo horário, começar com NENHUM tipo militar selecionado
+      setAllowedMilitaryTypes([]);
       setUseWeeklyLogic(false);
     }
-  }, [editingTimeSlot, open]);
+  }, [editingTimeSlot, open]); // slotOptions não é estritamente necessário como dependência aqui
 
   const handleMilitaryTypeChange = (typeId: string, checked: boolean) => {
     if (checked) {
@@ -117,7 +123,7 @@ const TimeSlotDialog = ({
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     const endTime = calculateEndTime(startTime, hours);
-    
+
     const newTimeSlot: TimeSlot = {
       date: selectedDate,
       startTime,
@@ -126,9 +132,9 @@ const TimeSlotDialog = ({
       slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedMilitaryTypes
+      allowedMilitaryTypes // Usará o estado atualizado
     };
-    
+
     if (editingTimeSlot) {
       onEditTimeSlot(newTimeSlot);
     } else {
@@ -323,15 +329,15 @@ const TimeSlotDialog = ({
         </div>
 
         <DialogFooter className="flex justify-end gap-2 pt-4 border-t">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
             className="text-gray-700 border-gray-300"
             disabled={isLoading}
           >
             Cancelar
           </Button>
-          <Button 
+          <Button
             onClick={handleRegister}
             disabled={isButtonDisabled()}
             className="bg-green-500 hover:bg-green-600 text-white"
@@ -355,3 +361,4 @@ const TimeSlotDialog = ({
 };
 
 export default TimeSlotDialog;
+--- END OF FILE TimeSlotDialog (1).tsx ---
