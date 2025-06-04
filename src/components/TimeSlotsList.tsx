@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
 import supabase from "@/lib/supabaseClient";
+
 interface TimeSlot {
   id?: string;
   date: string;
@@ -22,13 +23,16 @@ interface TimeSlot {
   slots_used: number;
   volunteers?: string[];
   description?: string;
+  allowed_military_types?: string[];
 }
+
 interface GroupedTimeSlots {
   [key: string]: {
     slots: TimeSlot[];
     dailyCost: number;
   };
 }
+
 const TimeSlotLimitControl = ({
   slotLimit,
   onUpdateLimit,
@@ -103,6 +107,7 @@ const TimeSlotLimitControl = ({
         </div>}
     </div>;
 };
+
 const getMilitaryRankWeight = (rank: string): number => {
   const rankWeights: {
     [key: string]: number;
@@ -135,6 +140,7 @@ const getMilitaryRankWeight = (rank: string): number => {
   };
   return rankWeights[rank] || 0;
 };
+
 const getRankCategory = (rank: string): {
   category: string;
   hourlyRate: number;
@@ -159,6 +165,7 @@ const getRankCategory = (rank: string): {
     hourlyRate: 0
   };
 };
+
 const getVolunteerRank = (volunteerFullName: string): string => {
   const parts = volunteerFullName.split(" ");
   if (parts.length >= 2 && (parts[1] === "Sgt" || parts[1] === "Ten")) {
@@ -166,12 +173,14 @@ const getVolunteerRank = (volunteerFullName: string): string => {
   }
   return parts[0];
 };
+
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   }).format(value).replace("R$", "R$ ");
 };
+
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -263,7 +272,8 @@ const TimeSlotsList = () => {
           volunteers: data.volunteers || [],
           slots_used: data.slots_used || 0,
           total_slots: data.total_slots || data.slots || 0,
-          description: data.description || ""
+          description: data.description || "",
+          allowed_military_types: data.allowed_military_types || []
         };
       });
       setTimeSlots(formattedSlots);
@@ -708,4 +718,5 @@ const TimeSlotsList = () => {
       </AlertDialog>
     </div>;
 };
+
 export default TimeSlotsList;
