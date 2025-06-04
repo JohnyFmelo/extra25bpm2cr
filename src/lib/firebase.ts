@@ -101,22 +101,13 @@ export const dataOperations = {
   async insert(newSlot: any) {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
+      const clonedSlot = safeClone(newSlot);
       
-      console.log('Inserting slot with allowed military types:', newSlot.allowedMilitaryTypes);
-      
-      // Garantir que os dados sejam enviados corretamente
+      // Ensure allowed_military_types is properly included
       const slotToInsert = {
-        date: newSlot.date instanceof Date ? newSlot.date.toISOString().split('T')[0] : newSlot.date,
-        start_time: newSlot.startTime,
-        end_time: newSlot.endTime,
-        total_slots: newSlot.slots,
-        slots_used: newSlot.slotsUsed || 0,
-        description: newSlot.description || "",
-        allowed_military_types: newSlot.allowedMilitaryTypes || ["Operacional"], // Garantir que sempre tenha um valor
-        volunteers: newSlot.volunteers || []
+        ...clonedSlot,
+        allowed_military_types: newSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]
       };
-      
-      console.log('Final slot data to insert:', slotToInsert);
       
       await addDoc(timeSlotCollection, slotToInsert);
       return { success: true };
@@ -129,10 +120,6 @@ export const dataOperations = {
   async update(updatedSlot: any, conditions: any) {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
-      
-      console.log('Updating slot with allowed military types:', updatedSlot.allowedMilitaryTypes);
-      console.log('Update conditions:', conditions);
-      
       const q = query(
         timeSlotCollection,
         where('date', '==', conditions.date),
@@ -143,20 +130,13 @@ export const dataOperations = {
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
         const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
+        const clonedSlot = safeClone(updatedSlot);
         
-        // Preparar dados para atualização
+        // Ensure allowed_military_types is properly included
         const slotToUpdate = {
-          date: updatedSlot.date instanceof Date ? updatedSlot.date.toISOString().split('T')[0] : updatedSlot.date,
-          start_time: updatedSlot.startTime,
-          end_time: updatedSlot.endTime,
-          total_slots: updatedSlot.slots,
-          slots_used: updatedSlot.slotsUsed || 0,
-          description: updatedSlot.description || "",
-          allowed_military_types: updatedSlot.allowedMilitaryTypes || ["Operacional"], // Garantir que sempre tenha um valor
-          volunteers: updatedSlot.volunteers || []
+          ...clonedSlot,
+          allowed_military_types: updatedSlot.allowedMilitaryTypes || updatedSlot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"]
         };
-        
-        console.log('Final slot data to update:', slotToUpdate);
         
         await updateDoc(docRef, slotToUpdate);
         return { success: true };
