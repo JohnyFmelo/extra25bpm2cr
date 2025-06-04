@@ -9,16 +9,16 @@ import { Switch } from "./ui/switch";
 import { Checkbox } from "./ui/checkbox";
 import { Clock, Calendar, Users, RefreshCw, FileText, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TimeSlot } from "@/types/timeSlot";
+import { TimeSlot } from "@/types/timeSlot"; // Seu tipo TimeSlot (provavelmente camelCase)
 import { Label } from "./ui/label";
 
 interface TimeSlotDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate: Date;
-  onAddTimeSlot: (timeSlot: TimeSlot) => void;
-  onEditTimeSlot: (timeSlot: TimeSlot) => void;
-  editingTimeSlot: TimeSlot | null;
+  onAddTimeSlot: (timeSlot: TimeSlot | any) => void; // any para flexibilidade se enviar snake_case
+  onEditTimeSlot: (timeSlot: TimeSlot | any) => void; // any para flexibilidade se enviar snake_case
+  editingTimeSlot: TimeSlot | null | any; // any para ler snake_case
   isLoading?: boolean;
 }
 
@@ -44,12 +44,11 @@ const TimeSlotDialog = ({
   const militaryTypes = [
     { id: "Operacional", label: "Operacional" },
     { id: "Administrativo", label: "Administrativo" },
-    { id: "Inteligencia", label: "Inteligência" }
+    { id: "Inteligencia", label: "Inteligência" } // Corresponde ao valor no Firebase
   ];
 
-  // Função para calcular o horário final baseado no início e duração
   const calculateEndTime = (start: string, duration: string): string => {
-    if (!start || !duration || isNaN(parseFloat(duration))) { // Basic validation
+    if (!start || !duration || isNaN(parseFloat(duration))) {
         return "Inválido";
     }
     const [startHour, startMinute] = start.split(':').map(Number);
@@ -62,19 +61,17 @@ const TimeSlotDialog = ({
     return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
   };
 
-  // Função para calcular duração baseada no início e fim
   const calculateDuration = (start: string, end: string): string => {
-    if (!start || !end) { // Basic validation
+    if (!start || !end) {
         return "0";
     }
     const [startHour, startMinute] = start.split(':').map(Number);
     let [endHour, endMinute] = end.split(':').map(Number);
     
     if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) {
-        return "0"; // Invalid input
+        return "0";
     }
     
-    // Se o horário de fim for menor que o de início, assumir que é no dia seguinte
     if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
       endHour += 24;
     }
@@ -83,46 +80,43 @@ const TimeSlotDialog = ({
     const endTotalMinutes = endHour * 60 + endMinute;
     const durationMinutes = endTotalMinutes - startTotalMinutes;
     
-    if (durationMinutes < 0) return "0"; // Should not happen with the logic above but as a safeguard
+    if (durationMinutes < 0) return "0"; 
     
     const durationHours = durationMinutes / 60;
-    
     return durationHours.toString();
   };
 
   useEffect(() => {
     if (editingTimeSlot) {
-      // Assuming properties like startTime, endTime, slots are consistently named or mapped upstream
-      // If they also come as snake_case from Firebase, they would need similar handling:
-      // e.g., const effectiveStartTime = (editingTimeSlot as any).start_time || editingTimeSlot.startTime || "07:00";
-      const effectiveStartTime = (editingTimeSlot as any).start_time || editingTimeSlot.startTime || "07:00";
-      const effectiveEndTime = (editingTimeSlot as any).end_time || editingTimeSlot.endTime; // Can be calculated if not present
-      const effectiveSlots = (editingTimeSlot as any).total_slots || editingTimeSlot.slots || 2;
+      // Assumindo que os campos do Firebase podem ser snake_case
+      const fbStartTime = editingTimeSlot.start_time || editingTimeSlot.startTime || "07:00";
+      const fbEndTime = editingTimeSlot.end_time || editingTimeSlot.endTime;
+      const fbSlots = editingTimeSlot.total_slots || editingTimeSlot.slots || 2;
+      const fbDescription = editingTimeSlot.description || "";
+      const fbIsWeekly = editingTimeSlot.is_weekly || editingTimeSlot.isWeekly || false;
+      
+      // Carrega allowed_military_types (snake_case) do Firebase
+      const fbAllowedMilitaryTypes = editingTimeSlot.allowed_military_types ?? [];
 
-      setStartTime(effectiveStartTime);
-      if (effectiveStartTime && effectiveEndTime) {
-        const duration = calculateDuration(effectiveStartTime, effectiveEndTime);
-        setHours(duration);
-      } else if (effectiveStartTime && editingTimeSlot.hours) { // If duration is stored as 'hours'
-        setHours(editingTimeSlot.hours.toString());
+      setStartTime(fbStartTime);
+      if (fbStartTime && fbEndTime) {
+        setHours(calculateDuration(fbStartTime, fbEndTime));
       } else {
         setHours("6"); // Fallback
       }
-      
-      setSelectedSlots(effectiveSlots);
-      setDescription(editingTimeSlot.description || "");
-      
-      // Correctly load allowedMilitaryTypes by checking the snake_case field from Firebase data.
-      setAllowedMilitaryTypes((editingTimeSlot as any).allowed_military_types ?? []);
-      
-      if (!slotOptions.includes(effectiveSlots)) {
+      setSelectedSlots(fbSlots);
+      setDescription(fbDescription);
+      setAllowedMilitaryTypes(fbAllowedMilitaryTypes); // Define o estado com os dados do Firebase
+      setUseWeeklyLogic(fbIsWeekly);
+
+      if (!slotOptions.includes(fbSlots)) {
         setShowCustomSlots(true);
-        setCustomSlots(effectiveSlots.toString());
+        setCustomSlots(fbSlots.toString());
       } else {
         setShowCustomSlots(false);
       }
-      setUseWeeklyLogic(editingTimeSlot.isWeekly || false);
     } else {
+      // Reset para novo horário
       setStartTime("07:00");
       setHours("6");
       setSelectedSlots(2);
@@ -143,11 +137,10 @@ const TimeSlotDialog = ({
   };
 
   const handleRegister = () => {
-    const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
-    // Ensure startTime and hours are valid before calculating endTime
+    const currentSlots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     const currentHours = parseFloat(hours);
+
     if (isNaN(currentHours) || currentHours <= 0) {
-        // Handle error, maybe show a notification
         console.error("Duração inválida");
         return;
     }
@@ -156,47 +149,41 @@ const TimeSlotDialog = ({
         return;
     }
 
-    const endTime = calculateEndTime(startTime, hours);
+    const currentEndTime = calculateEndTime(startTime, hours);
     
-    const newTimeSlot: TimeSlot = {
+    // Objeto conforme o tipo TimeSlot (camelCase) para uso interno e tipagem
+    const timeSlotObject: TimeSlot = {
+      // id: editingTimeSlot?.id, // Se o ID for necessário para a função pai
       date: selectedDate,
-      startTime,
-      endTime,
-      slots,
-      slotsUsed: editingTimeSlot ? ((editingTimeSlot as any).slots_used ?? editingTimeSlot.slotsUsed ?? 0) : 0,
+      startTime: startTime,
+      endTime: currentEndTime,
+      slots: currentSlots,
+      slotsUsed: editingTimeSlot ? (editingTimeSlot.slots_used ?? editingTimeSlot.slotsUsed ?? 0) : 0,
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedMilitaryTypes // This state will be saved to Firebase
+      allowedMilitaryTypes: allowedMilitaryTypes // Estado atualizado (camelCase)
     };
     
-    // When saving, ensure you save with snake_case if Firebase expects it,
-    // or that your saving function handles the mapping.
-    // For example, if saving directly:
-    // const dataToSave = {
-    //   ...newTimeSlot,
-    //   allowed_military_types: newTimeSlot.allowedMilitaryTypes,
-    //   total_slots: newTimeSlot.slots,
-    //   // remove camelCase versions if necessary
-    // };
-    // delete (dataToSave as any).allowedMilitaryTypes; 
-    // delete (dataToSave as any).slots;
-
-
+    // A função onEditTimeSlot/onAddTimeSlot no componente pai é responsável
+    // por mapear timeSlotObject.allowedMilitaryTypes para allowed_military_types
+    // antes de salvar no Firebase.
     if (editingTimeSlot) {
-      onEditTimeSlot(newTimeSlot);
+      // Passa o objeto TimeSlot (camelCase). A função pai deve lidar com o mapeamento para snake_case.
+      onEditTimeSlot({ ...timeSlotObject, id: editingTimeSlot.id || (editingTimeSlot as any).idFromFirebase }); 
     } else {
-      onAddTimeSlot(newTimeSlot);
+      onAddTimeSlot(timeSlotObject);
     }
     onOpenChange(false);
   };
 
   const isButtonDisabled = () => {
-    if (showCustomSlots) {
-      const numSlots = parseInt(customSlots);
-      return isNaN(numSlots) || numSlots <= 0 || isLoading || allowedMilitaryTypes.length === 0;
-    }
+    const numSlots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
+    if (isNaN(numSlots) || numSlots <= 0) return true;
+    
     const hoursValue = parseFloat(hours);
-    return isNaN(hoursValue) || hoursValue <= 0 || isLoading || allowedMilitaryTypes.length === 0;
+    if (isNaN(hoursValue) || hoursValue <= 0) return true;
+    
+    return isLoading || allowedMilitaryTypes.length === 0;
   };
   
   const displayedEndTime = calculateEndTime(startTime, hours);
@@ -219,7 +206,6 @@ const TimeSlotDialog = ({
         </DialogHeader>
 
         <div className="space-y-5 py-2">
-          {/* Horário de início e duração */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Clock className="h-4 w-4 text-green-500" />
@@ -256,29 +242,28 @@ const TimeSlotDialog = ({
             </div>
           </div>
 
-          {/* Número de vagas */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Users className="h-4 w-4 text-green-500" />
               Número de vagas
             </Label>
             <div className="flex flex-wrap gap-2">
-              {slotOptions.map((slots) => (
+              {slotOptions.map((slotsVal) => (
                 <Button
-                  key={slots}
+                  key={slotsVal}
                   variant="outline"
                   size="sm"
                   className={cn(
                     "flex-1 min-w-10 h-10 border-gray-200",
-                    selectedSlots === slots && !showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                    selectedSlots === slotsVal && !showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
                   )}
                   onClick={() => {
-                    setSelectedSlots(slots);
+                    setSelectedSlots(slotsVal);
                     setShowCustomSlots(false);
                   }}
                   disabled={isLoading}
                 >
-                  {slots}
+                  {slotsVal}
                 </Button>
               ))}
               <Button
@@ -310,7 +295,6 @@ const TimeSlotDialog = ({
             )}
           </div>
 
-          {/* Tipos de militares permitidos */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Shield className="h-4 w-4 text-green-500" />
@@ -341,7 +325,6 @@ const TimeSlotDialog = ({
             )}
           </div>
 
-          {/* Descrição */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <FileText className="h-4 w-4 text-green-500" />
@@ -356,7 +339,6 @@ const TimeSlotDialog = ({
             />
           </div>
 
-          {/* Opção para criar horários semanais - apenas para novos horários */}
           {!editingTimeSlot && (
             <div className="flex items-center justify-between gap-2 pt-2 pb-1">
               <div className="flex items-center gap-2">
