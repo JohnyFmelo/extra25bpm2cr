@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -52,11 +51,11 @@ const TimeSlotDialog = ({
   const calculateEndTime = (start: string, duration: string): string => {
     const [startHour, startMinute] = start.split(':').map(Number);
     const durationHours = parseFloat(duration);
-    
+
     const totalMinutes = startHour * 60 + startMinute + (durationHours * 60);
     const endHour = Math.floor(totalMinutes / 60) % 24;
     const endMinute = totalMinutes % 60;
-    
+
     return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
   };
 
@@ -64,79 +63,64 @@ const TimeSlotDialog = ({
   const calculateDuration = (start: string, end: string): string => {
     const [startHour, startMinute] = start.split(':').map(Number);
     let [endHour, endMinute] = end.split(':').map(Number);
-    
+
     // Se o horário de fim for menor que o de início, assumir que é no dia seguinte
     if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
       endHour += 24;
     }
-    
+
     const startTotalMinutes = startHour * 60 + startMinute;
     const endTotalMinutes = endHour * 60 + endMinute;
     const durationMinutes = endTotalMinutes - startTotalMinutes;
     const durationHours = durationMinutes / 60;
-    
+
     return durationHours.toString();
   };
 
+  // Limpeza e preenchimento do formulário ao abrir/fechar ou editar
   useEffect(() => {
     if (editingTimeSlot) {
-      console.log('Editing time slot:', editingTimeSlot);
-      console.log('Allowed military types from Firebase:', editingTimeSlot.allowedMilitaryTypes);
-      
       setStartTime(editingTimeSlot.startTime);
       const duration = calculateDuration(editingTimeSlot.startTime, editingTimeSlot.endTime);
       setHours(duration);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
-      
-      // Carregar corretamente os tipos permitidos do Firebase
+
       if (editingTimeSlot.allowedMilitaryTypes && Array.isArray(editingTimeSlot.allowedMilitaryTypes)) {
         setAllowedMilitaryTypes([...editingTimeSlot.allowedMilitaryTypes]);
-        console.log('Setting allowed types to:', editingTimeSlot.allowedMilitaryTypes);
       } else {
-        // Se não houver tipos definidos, usar apenas Operacional como padrão
         setAllowedMilitaryTypes(["Operacional"]);
-        console.log('No types found, setting default to Operacional');
       }
-      
+
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
       } else {
         setShowCustomSlots(false);
+        setCustomSlots("");
       }
       setUseWeeklyLogic(false);
     } else {
-      // Resetar para novo horário
       setStartTime("07:00");
       setHours("6");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes(["Operacional"]); // Padrão apenas Operacional
+      setAllowedMilitaryTypes(["Operacional"]);
       setUseWeeklyLogic(false);
     }
   }, [editingTimeSlot, open]);
 
   const handleMilitaryTypeChange = (typeId: string, checked: boolean) => {
-    console.log(`Changing type ${typeId} to ${checked}`);
-    console.log('Current allowed types:', allowedMilitaryTypes);
-    
     setAllowedMilitaryTypes(prevTypes => {
       if (checked) {
-        // Adicionar o tipo se não estiver presente
         if (!prevTypes.includes(typeId)) {
-          const newTypes = [...prevTypes, typeId];
-          console.log('New types after adding:', newTypes);
-          return newTypes;
+          return [...prevTypes, typeId];
         }
         return prevTypes;
       } else {
-        // Remover o tipo
-        const newTypes = prevTypes.filter(type => type !== typeId);
-        console.log('New types after removing:', newTypes);
-        return newTypes;
+        return prevTypes.filter(type => type !== typeId);
       }
     });
   };
@@ -144,15 +128,12 @@ const TimeSlotDialog = ({
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     const endTime = calculateEndTime(startTime, hours);
-    
-    console.log('Registering with allowed military types:', allowedMilitaryTypes);
-    
+
     // Verificar se pelo menos um tipo está selecionado
     if (allowedMilitaryTypes.length === 0) {
-      console.error('No military types selected');
       return;
     }
-    
+
     const newTimeSlot: TimeSlot = {
       date: selectedDate,
       startTime,
@@ -161,15 +142,14 @@ const TimeSlotDialog = ({
       slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedMilitaryTypes: [...allowedMilitaryTypes] // Criar uma nova cópia do array
+      allowedMilitaryTypes: [...allowedMilitaryTypes]
     };
-    
-    if (editingTimeSlot) {
-      // Manter o ID para edição
-      newTimeSlot.id = editingTimeSlot.id;
-      onEditTimeSlot(newTimeSlot);
+
+    if (editingTimeSlot && editingTimeSlot.id) {
+      newTimeSlot.id = editingTimeSlot.id; // garantir id correto
+      onEditTimeSlot({ ...newTimeSlot }); // garantir nova referência de objeto
     } else {
-      onAddTimeSlot(newTimeSlot);
+      onAddTimeSlot({ ...newTimeSlot }); // garantir nova referência de objeto
     }
     onOpenChange(false);
   };
@@ -300,8 +280,7 @@ const TimeSlotDialog = ({
             <div className="space-y-2">
               {militaryTypes.map((type) => {
                 const isChecked = allowedMilitaryTypes.includes(type.id);
-                console.log(`Type ${type.id} is checked: ${isChecked}`);
-                
+
                 return (
                   <div key={type.id} className="flex items-center space-x-2">
                     <Checkbox
