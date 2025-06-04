@@ -17,13 +17,13 @@ import supabase from "@/lib/supabaseClient";
 interface TimeSlot {
   id?: string;
   date: string;
-  start_time: string;
-  end_time: string;
-  total_slots: number;
-  slots_used: number;
+  startTime: string;
+  endTime: string;
+  totalSlots: number;
+  slotsUsed: number;
   volunteers?: string[];
   description?: string;
-  allowed_military_types?: string[];
+  allowedMilitaryTypes?: string[];
 }
 
 interface GroupedTimeSlots {
@@ -267,13 +267,13 @@ const TimeSlotsList = () => {
         return {
           id: doc.id,
           date: data.date,
-          start_time: data.start_time,
-          end_time: data.end_time,
+          startTime: data.start_time,
+          endTime: data.end_time,
           volunteers: data.volunteers || [],
-          slots_used: data.slots_used || 0,
-          total_slots: data.total_slots || data.slots || 0,
+          slotsUsed: data.slots_used || 0,
+          totalSlots: data.total_slots || data.slots || 0,
           description: data.description || "",
-          allowed_military_types: data.allowed_military_types || []
+          allowedMilitaryTypes: data.allowed_military_types || []
         };
       });
       setTimeSlots(formattedSlots);
@@ -323,13 +323,13 @@ const TimeSlotsList = () => {
     try {
       const updatedSlot = {
         ...timeSlot,
-        slots_used: timeSlot.slots_used + 1,
+        slotsUsed: timeSlot.slotsUsed + 1,
         volunteers: [...(timeSlot.volunteers || []), volunteerName]
       };
       const result = await dataOperations.update(updatedSlot, {
         date: timeSlot.date,
-        start_time: timeSlot.start_time,
-        end_time: timeSlot.end_time
+        start_time: timeSlot.startTime,
+        end_time: timeSlot.endTime
       });
       if (!result.success) {
         throw new Error('Falha ao atualizar o horário');
@@ -359,13 +359,13 @@ const TimeSlotsList = () => {
     try {
       const updatedSlot = {
         ...timeSlot,
-        slots_used: timeSlot.slots_used - 1,
+        slotsUsed: timeSlot.slotsUsed - 1,
         volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerName)
       };
       const result = await dataOperations.update(updatedSlot, {
         date: timeSlot.date,
-        start_time: timeSlot.start_time,
-        end_time: timeSlot.end_time
+        start_time: timeSlot.startTime,
+        end_time: timeSlot.endTime
       });
       if (!result.success) {
         throw new Error('Falha ao atualizar o horário');
@@ -427,7 +427,7 @@ const TimeSlotsList = () => {
     return timeSlot.volunteers?.includes(volunteerName);
   };
   const isSlotFull = (timeSlot: TimeSlot) => {
-    return timeSlot.slots_used === timeSlot.total_slots;
+    return timeSlot.slotsUsed === timeSlot.totalSlots;
   };
   const formatDateHeader = (date: string) => {
     const dayOfWeek = format(parseISO(date), "eee", {
@@ -446,7 +446,7 @@ const TimeSlotsList = () => {
 
     // Verificar se o tipo de militar do usuário está permitido para este horário
     const userMilitaryType = userData?.militaryType;
-    const allowedTypes = slot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"];
+    const allowedTypes = slot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"];
     
     // Se o usuário tem tipo definido e não está na lista permitida, não mostrar o botão
     if (userMilitaryType && !allowedTypes.includes(userMilitaryType)) {
@@ -498,7 +498,7 @@ const TimeSlotsList = () => {
         slot.volunteers?.forEach(volunteerFullName => {
           const volunteerRank = getVolunteerRank(volunteerFullName);
           const rankInfo = getRankCategory(volunteerRank);
-          const hours = parseFloat(calculateTimeDifference(slot.start_time, slot.end_time));
+          const hours = parseFloat(calculateTimeDifference(slot.startTime, slot.endTime));
           const slotCost = hours * rankInfo.hourlyRate;
           dailyCost += slotCost;
           totalCostCounter[rankInfo.category] = (totalCostCounter[rankInfo.category] || 0) + slotCost;
@@ -519,13 +519,13 @@ const TimeSlotsList = () => {
     try {
       const updatedSlot = {
         ...timeSlot,
-        slots_used: timeSlot.slots_used - 1,
+        slotsUsed: timeSlot.slotsUsed - 1,
         volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerName)
       };
       const result = await dataOperations.update(updatedSlot, {
         date: timeSlot.date,
-        start_time: timeSlot.start_time,
-        end_time: timeSlot.end_time
+        start_time: timeSlot.startTime,
+        end_time: timeSlot.endTime
       });
       if (!result.success) {
         throw new Error('Falha ao remover voluntário');
@@ -620,8 +620,8 @@ const TimeSlotsList = () => {
       const isDatePast = isPast(parseISO(date));
       const isCollapsed = isDatePast;
       const sortedSlots = [...slots].sort((a, b) => {
-        const timeA = a.start_time;
-        const timeB = b.start_time;
+        const timeA = a.startTime;
+        const timeB = b.startTime;
         return timeA.localeCompare(timeB);
       });
       return <div key={date} className="bg-white rounded-lg shadow-sm">
@@ -648,7 +648,7 @@ const TimeSlotsList = () => {
                           <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
                             <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
                             <p className="font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
-                              {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}-{calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)}h
+                              {slot.startTime?.slice(0, 5)} às {slot.endTime?.slice(0, 5)}-{calculateTimeDifference(slot.startTime, slot.endTime).slice(0, 4)}h
                             </p>
                           </div>
                           {slot.description && <span className="text-gray-700 ml-2 max-w-[200px] truncate">
@@ -659,7 +659,7 @@ const TimeSlotsList = () => {
                         <div className="flex items-center justify-between">
                           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${isSlotFull(slot) ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
                             <span className="text-sm font-medium whitespace-nowrap">
-                              {isSlotFull(slot) ? 'Vagas Esgotadas' : `${slot.total_slots - slot.slots_used} ${slot.total_slots - slot.slots_used === 1 ? 'vaga' : 'vagas'}`}
+                              {isSlotFull(slot) ? 'Vagas Esgotadas' : `${slot.totalSlots - slot.slotsUsed} ${slot.totalSlots - slot.slotsUsed === 1 ? 'vaga' : 'vagas'}`}
                             </span>
                           </div>
                         </div>
