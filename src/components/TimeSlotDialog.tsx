@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -85,8 +84,10 @@ const TimeSlotDialog = ({
       setHours(duration);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
-      // Corrigir o carregamento dos tipos permitidos
-      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]);
+      // If editingTimeSlot.allowedMilitaryTypes is undefined or null (e.g., field doesn't exist yet on an old document),
+      // default to an empty array (no types selected). Otherwise, use the value from Firebase.
+      // For new slots, the `else` block below will set the default to all types.
+      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes ?? []);
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
