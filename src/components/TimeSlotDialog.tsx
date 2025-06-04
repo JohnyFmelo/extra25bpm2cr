@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -90,9 +89,10 @@ const TimeSlotDialog = ({
       setDescription(editingTimeSlot.description || "");
       
       // Carregar corretamente os tipos permitidos do Firebase
-      if (editingTimeSlot.allowedMilitaryTypes && Array.isArray(editingTimeSlot.allowedMilitaryTypes)) {
-        setAllowedMilitaryTypes([...editingTimeSlot.allowedMilitaryTypes]);
-        console.log('Setting allowed types to:', editingTimeSlot.allowedMilitaryTypes);
+      const typesFromFirebase = editingTimeSlot.allowedMilitaryTypes;
+      if (typesFromFirebase && Array.isArray(typesFromFirebase) && typesFromFirebase.length > 0) {
+        setAllowedMilitaryTypes(typesFromFirebase);
+        console.log('Setting allowed types to:', typesFromFirebase);
       } else {
         // Se não houver tipos definidos, usar apenas Operacional como padrão
         setAllowedMilitaryTypes(["Operacional"]);
@@ -123,22 +123,15 @@ const TimeSlotDialog = ({
     console.log(`Changing type ${typeId} to ${checked}`);
     console.log('Current allowed types:', allowedMilitaryTypes);
     
-    setAllowedMilitaryTypes(prevTypes => {
-      if (checked) {
-        // Adicionar o tipo se não estiver presente
-        if (!prevTypes.includes(typeId)) {
-          const newTypes = [...prevTypes, typeId];
-          console.log('New types after adding:', newTypes);
-          return newTypes;
-        }
-        return prevTypes;
-      } else {
-        // Remover o tipo
-        const newTypes = prevTypes.filter(type => type !== typeId);
-        console.log('New types after removing:', newTypes);
-        return newTypes;
-      }
-    });
+    if (checked) {
+      const newTypes = [...allowedMilitaryTypes, typeId];
+      setAllowedMilitaryTypes(newTypes);
+      console.log('New types after adding:', newTypes);
+    } else {
+      const newTypes = allowedMilitaryTypes.filter(type => type !== typeId);
+      setAllowedMilitaryTypes(newTypes);
+      console.log('New types after removing:', newTypes);
+    }
   };
 
   const handleRegister = () => {
@@ -146,12 +139,6 @@ const TimeSlotDialog = ({
     const endTime = calculateEndTime(startTime, hours);
     
     console.log('Registering with allowed military types:', allowedMilitaryTypes);
-    
-    // Verificar se pelo menos um tipo está selecionado
-    if (allowedMilitaryTypes.length === 0) {
-      console.error('No military types selected');
-      return;
-    }
     
     const newTimeSlot: TimeSlot = {
       date: selectedDate,

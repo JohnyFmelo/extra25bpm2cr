@@ -112,7 +112,7 @@ export const dataOperations = {
         total_slots: newSlot.slots,
         slots_used: newSlot.slotsUsed || 0,
         description: newSlot.description || "",
-        allowed_military_types: Array.isArray(newSlot.allowedMilitaryTypes) ? newSlot.allowedMilitaryTypes : ["Operacional"],
+        allowed_military_types: newSlot.allowedMilitaryTypes || ["Operacional"], // Garantir que sempre tenha um valor
         volunteers: newSlot.volunteers || []
       };
       
@@ -152,7 +152,7 @@ export const dataOperations = {
           total_slots: updatedSlot.slots,
           slots_used: updatedSlot.slotsUsed || 0,
           description: updatedSlot.description || "",
-          allowed_military_types: Array.isArray(updatedSlot.allowedMilitaryTypes) ? updatedSlot.allowedMilitaryTypes : ["Operacional"],
+          allowed_military_types: updatedSlot.allowedMilitaryTypes || ["Operacional"], // Garantir que sempre tenha um valor
           volunteers: updatedSlot.volunteers || []
         };
         

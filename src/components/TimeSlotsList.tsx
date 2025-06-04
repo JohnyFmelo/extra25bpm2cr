@@ -445,15 +445,11 @@ const TimeSlotsList = () => {
     }
 
     // Verificar se o tipo de militar do usuário está permitido para este horário
-    const userService = userData?.service; // Mudança aqui: usar 'service' em vez de 'militaryType'
+    const userMilitaryType = userData?.militaryType;
     const allowedTypes = slot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"];
     
-    console.log('User service:', userService);
-    console.log('Allowed types for slot:', allowedTypes);
-    
     // Se o usuário tem tipo definido e não está na lista permitida, não mostrar o botão
-    if (userService && !allowedTypes.includes(userService)) {
-      console.log('User service not allowed for this slot');
+    if (userMilitaryType && !allowedTypes.includes(userMilitaryType)) {
       return false;
     }
 
