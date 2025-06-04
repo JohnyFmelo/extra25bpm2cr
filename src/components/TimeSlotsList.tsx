@@ -445,14 +445,16 @@ const TimeSlotsList = () => {
     }
 
     // Verificar se o tipo de militar do usuário está permitido para este horário
-    const userMilitaryType = userData?.militaryType; // Assumindo que existe este campo
+    const userMilitaryType = userData?.militaryType;
     const allowedTypes = slot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"];
     
-    // Se o usuário não tem tipo definido, permitir acesso (compatibilidade com usuários antigos)
-    // Se o tipo não está na lista permitida, não mostrar o botão
+    // Se o usuário tem tipo definido e não está na lista permitida, não mostrar o botão
     if (userMilitaryType && !allowedTypes.includes(userMilitaryType)) {
       return false;
     }
+
+    // Se não há tipo definido para o usuário, permitir acesso (compatibilidade)
+    // ou se está na lista permitida, continuar com as outras verificações
 
     if (isVolunteered(slot)) {
       return true;
