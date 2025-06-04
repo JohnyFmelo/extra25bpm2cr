@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -38,7 +39,7 @@ const TimeSlotDialog = ({
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]); // Alterado para array vazio
+  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>(["Operacional", "Administrativo", "Inteligencia"]);
 
   const slotOptions = [2, 3, 4, 5];
   const militaryTypes = [
@@ -84,8 +85,8 @@ const TimeSlotDialog = ({
       setHours(duration);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
-      // Carregar apenas os tipos permitidos salvos, ou array vazio se não houver
-      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []);
+      // Corrigir o carregamento dos tipos permitidos
+      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]);
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
@@ -100,7 +101,7 @@ const TimeSlotDialog = ({
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes([]); // Inicializar como vazio para novos horários
+      setAllowedMilitaryTypes(["Operacional", "Administrativo", "Inteligencia"]);
       setUseWeeklyLogic(false);
     }
   }, [editingTimeSlot, open]);
