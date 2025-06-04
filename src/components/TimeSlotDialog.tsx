@@ -38,7 +38,6 @@ const TimeSlotDialog = ({
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  // ALTERAÇÃO: inicia vazio
   const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
 
   const slotOptions = [2, 3, 4, 5];
@@ -92,7 +91,18 @@ const TimeSlotDialog = ({
       const fbSlots = editingTimeSlot.total_slots || editingTimeSlot.slots || 2;
       const fbDescription = editingTimeSlot.description || "";
       const fbIsWeekly = editingTimeSlot.is_weekly || editingTimeSlot.isWeekly || false;
-      const fbAllowedMilitaryTypes = editingTimeSlot.allowed_military_types ?? [];
+      // Handle both snake_case and camelCase, and handle string or array
+      let fbAllowedMilitaryTypes = editingTimeSlot.allowed_military_types 
+        ?? editingTimeSlot.allowedMilitaryTypes 
+        ?? [];
+      if (typeof fbAllowedMilitaryTypes === "string") {
+        fbAllowedMilitaryTypes = [fbAllowedMilitaryTypes];
+      }
+      if (!Array.isArray(fbAllowedMilitaryTypes)) {
+        fbAllowedMilitaryTypes = [];
+      }
+      // Para debug:
+      // console.log('TIPOS DE MILITARES LIDOS:', fbAllowedMilitaryTypes);
 
       setStartTime(fbStartTime);
       if (fbStartTime && fbEndTime) {
@@ -112,7 +122,6 @@ const TimeSlotDialog = ({
         setShowCustomSlots(false);
       }
     } else {
-      // RESET ALTERADO: inicia vazio
       setStartTime("07:00");
       setHours("6");
       setSelectedSlots(2);
