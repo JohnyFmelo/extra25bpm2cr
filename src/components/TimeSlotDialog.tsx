@@ -9,16 +9,16 @@ import { Switch } from "./ui/switch";
 import { Checkbox } from "./ui/checkbox";
 import { Clock, Calendar, Users, RefreshCw, FileText, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TimeSlot } from "@/types/timeSlot"; // Seu tipo TimeSlot (provavelmente camelCase)
+import { TimeSlot } from "@/types/timeSlot";
 import { Label } from "./ui/label";
 
 interface TimeSlotDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate: Date;
-  onAddTimeSlot: (timeSlot: TimeSlot | any) => void; // any para flexibilidade se enviar snake_case
-  onEditTimeSlot: (timeSlot: TimeSlot | any) => void; // any para flexibilidade se enviar snake_case
-  editingTimeSlot: TimeSlot | null | any; // any para ler snake_case
+  onAddTimeSlot: (timeSlot: TimeSlot | any) => void;
+  onEditTimeSlot: (timeSlot: TimeSlot | any) => void;
+  editingTimeSlot: TimeSlot | null | any;
   isLoading?: boolean;
 }
 
@@ -38,75 +38,71 @@ const TimeSlotDialog = ({
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>(["Operacional", "Administrativo", "Inteligencia"]);
+  // ALTERAÇÃO: inicia vazio
+  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
 
   const slotOptions = [2, 3, 4, 5];
   const militaryTypes = [
     { id: "Operacional", label: "Operacional" },
     { id: "Administrativo", label: "Administrativo" },
-    { id: "Inteligencia", label: "Inteligência" } // Corresponde ao valor no Firebase
+    { id: "Inteligencia", label: "Inteligência" }
   ];
 
   const calculateEndTime = (start: string, duration: string): string => {
     if (!start || !duration || isNaN(parseFloat(duration))) {
-        return "Inválido";
+      return "Inválido";
     }
     const [startHour, startMinute] = start.split(':').map(Number);
     const durationHours = parseFloat(duration);
-    
     const totalMinutes = startHour * 60 + startMinute + (durationHours * 60);
     const endHour = Math.floor(totalMinutes / 60) % 24;
     const endMinute = totalMinutes % 60;
-    
     return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
   };
 
   const calculateDuration = (start: string, end: string): string => {
     if (!start || !end) {
-        return "0";
+      return "0";
     }
     const [startHour, startMinute] = start.split(':').map(Number);
     let [endHour, endMinute] = end.split(':').map(Number);
-    
+
     if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) {
-        return "0";
+      return "0";
     }
-    
+
     if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
       endHour += 24;
     }
-    
+
     const startTotalMinutes = startHour * 60 + startMinute;
     const endTotalMinutes = endHour * 60 + endMinute;
     const durationMinutes = endTotalMinutes - startTotalMinutes;
-    
-    if (durationMinutes < 0) return "0"; 
-    
+
+    if (durationMinutes < 0) return "0";
+
     const durationHours = durationMinutes / 60;
     return durationHours.toString();
   };
 
   useEffect(() => {
     if (editingTimeSlot) {
-      // Assumindo que os campos do Firebase podem ser snake_case
       const fbStartTime = editingTimeSlot.start_time || editingTimeSlot.startTime || "07:00";
       const fbEndTime = editingTimeSlot.end_time || editingTimeSlot.endTime;
       const fbSlots = editingTimeSlot.total_slots || editingTimeSlot.slots || 2;
       const fbDescription = editingTimeSlot.description || "";
       const fbIsWeekly = editingTimeSlot.is_weekly || editingTimeSlot.isWeekly || false;
-      
-      // Carrega allowed_military_types (snake_case) do Firebase
       const fbAllowedMilitaryTypes = editingTimeSlot.allowed_military_types ?? [];
 
       setStartTime(fbStartTime);
       if (fbStartTime && fbEndTime) {
         setHours(calculateDuration(fbStartTime, fbEndTime));
       } else {
-        setHours("6"); // Fallback
+        setHours("6");
       }
       setSelectedSlots(fbSlots);
       setDescription(fbDescription);
-      setAllowedMilitaryTypes(fbAllowedMilitaryTypes); // Define o estado com os dados do Firebase
+      setAllowedMilitaryTypes(fbAllowedMilitaryTypes);
       setUseWeeklyLogic(fbIsWeekly);
 
       if (!slotOptions.includes(fbSlots)) {
@@ -116,14 +112,14 @@ const TimeSlotDialog = ({
         setShowCustomSlots(false);
       }
     } else {
-      // Reset para novo horário
+      // RESET ALTERADO: inicia vazio
       setStartTime("07:00");
       setHours("6");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes(["Operacional", "Administrativo", "Inteligencia"]);
+      setAllowedMilitaryTypes([]);
       setUseWeeklyLogic(false);
     }
   }, [editingTimeSlot, open]);
@@ -141,19 +137,17 @@ const TimeSlotDialog = ({
     const currentHours = parseFloat(hours);
 
     if (isNaN(currentHours) || currentHours <= 0) {
-        console.error("Duração inválida");
-        return;
+      console.error("Duração inválida");
+      return;
     }
     if (!/^\d{2}:\d{2}$/.test(startTime)) {
-        console.error("Horário de início inválido");
-        return;
+      console.error("Horário de início inválido");
+      return;
     }
 
     const currentEndTime = calculateEndTime(startTime, hours);
-    
-    // Objeto conforme o tipo TimeSlot (camelCase) para uso interno e tipagem
+
     const timeSlotObject: TimeSlot = {
-      // id: editingTimeSlot?.id, // Se o ID for necessário para a função pai
       date: selectedDate,
       startTime: startTime,
       endTime: currentEndTime,
@@ -161,15 +155,11 @@ const TimeSlotDialog = ({
       slotsUsed: editingTimeSlot ? (editingTimeSlot.slots_used ?? editingTimeSlot.slotsUsed ?? 0) : 0,
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedMilitaryTypes: allowedMilitaryTypes // Estado atualizado (camelCase)
+      allowedMilitaryTypes: allowedMilitaryTypes
     };
-    
-    // A função onEditTimeSlot/onAddTimeSlot no componente pai é responsável
-    // por mapear timeSlotObject.allowedMilitaryTypes para allowed_military_types
-    // antes de salvar no Firebase.
+
     if (editingTimeSlot) {
-      // Passa o objeto TimeSlot (camelCase). A função pai deve lidar com o mapeamento para snake_case.
-      onEditTimeSlot({ ...timeSlotObject, id: editingTimeSlot.id || (editingTimeSlot as any).idFromFirebase }); 
+      onEditTimeSlot({ ...timeSlotObject, id: editingTimeSlot.id || (editingTimeSlot as any).idFromFirebase });
     } else {
       onAddTimeSlot(timeSlotObject);
     }
@@ -179,13 +169,11 @@ const TimeSlotDialog = ({
   const isButtonDisabled = () => {
     const numSlots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     if (isNaN(numSlots) || numSlots <= 0) return true;
-    
     const hoursValue = parseFloat(hours);
     if (isNaN(hoursValue) || hoursValue <= 0) return true;
-    
     return isLoading || allowedMilitaryTypes.length === 0;
   };
-  
+
   const displayedEndTime = calculateEndTime(startTime, hours);
 
   return (
