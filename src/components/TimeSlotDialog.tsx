@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -16,9 +17,9 @@ interface TimeSlotDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate: Date;
-  onAddTimeSlot: (timeSlot: TimeSlot | any) => void;
-  onEditTimeSlot: (timeSlot: TimeSlot | any) => void;
-  editingTimeSlot: TimeSlot | null | any;
+  onAddTimeSlot: (timeSlot: TimeSlot) => void;
+  onEditTimeSlot: (timeSlot: TimeSlot) => void;
+  editingTimeSlot: TimeSlot | null;
   isLoading?: boolean;
 }
 
@@ -38,7 +39,7 @@ const TimeSlotDialog = ({
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
+  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>(["Operacional"]);
 
   const slotOptions = [2, 3, 4, 5];
   const militaryTypes = [
@@ -47,143 +48,140 @@ const TimeSlotDialog = ({
     { id: "Inteligencia", label: "Inteligência" }
   ];
 
+  // Função para calcular o horário final baseado no início e duração
   const calculateEndTime = (start: string, duration: string): string => {
-    if (!start || !duration || isNaN(parseFloat(duration))) {
-      return "Inválido";
-    }
     const [startHour, startMinute] = start.split(':').map(Number);
     const durationHours = parseFloat(duration);
+    
     const totalMinutes = startHour * 60 + startMinute + (durationHours * 60);
     const endHour = Math.floor(totalMinutes / 60) % 24;
     const endMinute = totalMinutes % 60;
+    
     return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
   };
 
+  // Função para calcular duração baseada no início e fim
   const calculateDuration = (start: string, end: string): string => {
-    if (!start || !end) {
-      return "0";
-    }
     const [startHour, startMinute] = start.split(':').map(Number);
     let [endHour, endMinute] = end.split(':').map(Number);
-
-    if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) {
-      return "0";
-    }
-
+    
+    // Se o horário de fim for menor que o de início, assumir que é no dia seguinte
     if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
       endHour += 24;
     }
-
+    
     const startTotalMinutes = startHour * 60 + startMinute;
     const endTotalMinutes = endHour * 60 + endMinute;
     const durationMinutes = endTotalMinutes - startTotalMinutes;
-
-    if (durationMinutes < 0) return "0";
-
     const durationHours = durationMinutes / 60;
+    
     return durationHours.toString();
   };
 
   useEffect(() => {
     if (editingTimeSlot) {
-      const fbStartTime = editingTimeSlot.start_time || editingTimeSlot.startTime || "07:00";
-      const fbEndTime = editingTimeSlot.end_time || editingTimeSlot.endTime;
-      const fbSlots = editingTimeSlot.total_slots || editingTimeSlot.slots || 2;
-      const fbDescription = editingTimeSlot.description || "";
-      const fbIsWeekly = editingTimeSlot.is_weekly || editingTimeSlot.isWeekly || false;
-      // Handle both snake_case and camelCase, and handle string or array
-      let fbAllowedMilitaryTypes = editingTimeSlot.allowed_military_types 
-        ?? editingTimeSlot.allowedMilitaryTypes 
-        ?? [];
-      if (typeof fbAllowedMilitaryTypes === "string") {
-        fbAllowedMilitaryTypes = [fbAllowedMilitaryTypes];
-      }
-      if (!Array.isArray(fbAllowedMilitaryTypes)) {
-        fbAllowedMilitaryTypes = [];
-      }
-      // Para debug:
-      // console.log('TIPOS DE MILITARES LIDOS:', fbAllowedMilitaryTypes);
-
-      setStartTime(fbStartTime);
-      if (fbStartTime && fbEndTime) {
-        setHours(calculateDuration(fbStartTime, fbEndTime));
+      console.log('Editing time slot:', editingTimeSlot);
+      console.log('Allowed military types from Firebase:', editingTimeSlot.allowedMilitaryTypes);
+      
+      setStartTime(editingTimeSlot.startTime);
+      const duration = calculateDuration(editingTimeSlot.startTime, editingTimeSlot.endTime);
+      setHours(duration);
+      setSelectedSlots(editingTimeSlot.slots);
+      setDescription(editingTimeSlot.description || "");
+      
+      // Carregar corretamente os tipos permitidos do Firebase
+      if (editingTimeSlot.allowedMilitaryTypes && Array.isArray(editingTimeSlot.allowedMilitaryTypes)) {
+        setAllowedMilitaryTypes([...editingTimeSlot.allowedMilitaryTypes]);
+        console.log('Setting allowed types to:', editingTimeSlot.allowedMilitaryTypes);
       } else {
-        setHours("6");
+        // Se não houver tipos definidos, usar apenas Operacional como padrão
+        setAllowedMilitaryTypes(["Operacional"]);
+        console.log('No types found, setting default to Operacional');
       }
-      setSelectedSlots(fbSlots);
-      setDescription(fbDescription);
-      setAllowedMilitaryTypes(fbAllowedMilitaryTypes);
-      setUseWeeklyLogic(fbIsWeekly);
-
-      if (!slotOptions.includes(fbSlots)) {
+      
+      if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
-        setCustomSlots(fbSlots.toString());
+        setCustomSlots(editingTimeSlot.slots.toString());
       } else {
         setShowCustomSlots(false);
       }
+      setUseWeeklyLogic(false);
     } else {
+      // Resetar para novo horário
       setStartTime("07:00");
       setHours("6");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes([]);
+      setAllowedMilitaryTypes(["Operacional"]); // Padrão apenas Operacional
       setUseWeeklyLogic(false);
     }
   }, [editingTimeSlot, open]);
 
   const handleMilitaryTypeChange = (typeId: string, checked: boolean) => {
-    if (checked) {
-      setAllowedMilitaryTypes(prev => [...prev, typeId]);
-    } else {
-      setAllowedMilitaryTypes(prev => prev.filter(type => type !== typeId));
-    }
+    console.log(`Changing type ${typeId} to ${checked}`);
+    console.log('Current allowed types:', allowedMilitaryTypes);
+    
+    setAllowedMilitaryTypes(prevTypes => {
+      if (checked) {
+        // Adicionar o tipo se não estiver presente
+        if (!prevTypes.includes(typeId)) {
+          const newTypes = [...prevTypes, typeId];
+          console.log('New types after adding:', newTypes);
+          return newTypes;
+        }
+        return prevTypes;
+      } else {
+        // Remover o tipo
+        const newTypes = prevTypes.filter(type => type !== typeId);
+        console.log('New types after removing:', newTypes);
+        return newTypes;
+      }
+    });
   };
 
   const handleRegister = () => {
-    const currentSlots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
-    const currentHours = parseFloat(hours);
-
-    if (isNaN(currentHours) || currentHours <= 0) {
-      console.error("Duração inválida");
+    const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
+    const endTime = calculateEndTime(startTime, hours);
+    
+    console.log('Registering with allowed military types:', allowedMilitaryTypes);
+    
+    // Verificar se pelo menos um tipo está selecionado
+    if (allowedMilitaryTypes.length === 0) {
+      console.error('No military types selected');
       return;
     }
-    if (!/^\d{2}:\d{2}$/.test(startTime)) {
-      console.error("Horário de início inválido");
-      return;
-    }
-
-    const currentEndTime = calculateEndTime(startTime, hours);
-
-    const timeSlotObject: TimeSlot = {
+    
+    const newTimeSlot: TimeSlot = {
       date: selectedDate,
-      startTime: startTime,
-      endTime: currentEndTime,
-      slots: currentSlots,
-      slotsUsed: editingTimeSlot ? (editingTimeSlot.slots_used ?? editingTimeSlot.slotsUsed ?? 0) : 0,
+      startTime,
+      endTime,
+      slots,
+      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedMilitaryTypes: allowedMilitaryTypes
+      allowedMilitaryTypes: [...allowedMilitaryTypes] // Criar uma nova cópia do array
     };
-
+    
     if (editingTimeSlot) {
-      onEditTimeSlot({ ...timeSlotObject, id: editingTimeSlot.id || (editingTimeSlot as any).idFromFirebase });
+      // Manter o ID para edição
+      newTimeSlot.id = editingTimeSlot.id;
+      onEditTimeSlot(newTimeSlot);
     } else {
-      onAddTimeSlot(timeSlotObject);
+      onAddTimeSlot(newTimeSlot);
     }
     onOpenChange(false);
   };
 
   const isButtonDisabled = () => {
-    const numSlots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
-    if (isNaN(numSlots) || numSlots <= 0) return true;
+    if (showCustomSlots) {
+      const numSlots = parseInt(customSlots);
+      return isNaN(numSlots) || numSlots <= 0 || isLoading || allowedMilitaryTypes.length === 0;
+    }
     const hoursValue = parseFloat(hours);
-    if (isNaN(hoursValue) || hoursValue <= 0) return true;
-    return isLoading || allowedMilitaryTypes.length === 0;
+    return isNaN(hoursValue) || hoursValue <= 0 || isLoading || allowedMilitaryTypes.length === 0;
   };
-
-  const displayedEndTime = calculateEndTime(startTime, hours);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -203,6 +201,7 @@ const TimeSlotDialog = ({
         </DialogHeader>
 
         <div className="space-y-5 py-2">
+          {/* Horário de início e duração */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Clock className="h-4 w-4 text-green-500" />
@@ -235,32 +234,33 @@ const TimeSlotDialog = ({
               </div>
             </div>
             <div className="text-xs text-gray-500 text-center">
-              Fim: {displayedEndTime}
+              Fim: {calculateEndTime(startTime, hours)}
             </div>
           </div>
 
+          {/* Número de vagas */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Users className="h-4 w-4 text-green-500" />
               Número de vagas
             </Label>
             <div className="flex flex-wrap gap-2">
-              {slotOptions.map((slotsVal) => (
+              {slotOptions.map((slots) => (
                 <Button
-                  key={slotsVal}
+                  key={slots}
                   variant="outline"
                   size="sm"
                   className={cn(
                     "flex-1 min-w-10 h-10 border-gray-200",
-                    selectedSlots === slotsVal && !showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                    selectedSlots === slots && !showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
                   )}
                   onClick={() => {
-                    setSelectedSlots(slotsVal);
+                    setSelectedSlots(slots);
                     setShowCustomSlots(false);
                   }}
                   disabled={isLoading}
                 >
-                  {slotsVal}
+                  {slots}
                 </Button>
               ))}
               <Button
@@ -286,34 +286,39 @@ const TimeSlotDialog = ({
                   className="text-center"
                   placeholder="Número personalizado de vagas"
                   disabled={isLoading}
-                  min="1"
                 />
               </div>
             )}
           </div>
 
+          {/* Tipos de militares permitidos */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Shield className="h-4 w-4 text-green-500" />
               Tipos de militares permitidos
             </Label>
             <div className="space-y-2">
-              {militaryTypes.map((type) => (
-                <div key={type.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={type.id}
-                    checked={allowedMilitaryTypes.includes(type.id)}
-                    onCheckedChange={(checked) => handleMilitaryTypeChange(type.id, checked as boolean)}
-                    disabled={isLoading}
-                  />
-                  <Label
-                    htmlFor={type.id}
-                    className="text-sm font-normal text-gray-700 cursor-pointer"
-                  >
-                    {type.label}
-                  </Label>
-                </div>
-              ))}
+              {militaryTypes.map((type) => {
+                const isChecked = allowedMilitaryTypes.includes(type.id);
+                console.log(`Type ${type.id} is checked: ${isChecked}`);
+                
+                return (
+                  <div key={type.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={type.id}
+                      checked={isChecked}
+                      onCheckedChange={(checked) => handleMilitaryTypeChange(type.id, checked as boolean)}
+                      disabled={isLoading}
+                    />
+                    <Label
+                      htmlFor={type.id}
+                      className="text-sm font-normal text-gray-700 cursor-pointer"
+                    >
+                      {type.label}
+                    </Label>
+                  </div>
+                );
+              })}
             </div>
             {allowedMilitaryTypes.length === 0 && (
               <p className="text-xs text-red-500">
@@ -322,6 +327,7 @@ const TimeSlotDialog = ({
             )}
           </div>
 
+          {/* Descrição */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <FileText className="h-4 w-4 text-green-500" />
@@ -336,6 +342,7 @@ const TimeSlotDialog = ({
             />
           </div>
 
+          {/* Opção para criar horários semanais - apenas para novos horários */}
           {!editingTimeSlot && (
             <div className="flex items-center justify-between gap-2 pt-2 pb-1">
               <div className="flex items-center gap-2">
