@@ -448,8 +448,9 @@ const TimeSlotsList = () => {
     const userMilitaryType = userData?.militaryType; // Assumindo que existe este campo
     const allowedTypes = slot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"];
     
-    // Se o usuário não tem tipo definido ou o tipo não está na lista permitida, não mostrar o botão
-    if (!userMilitaryType || !allowedTypes.includes(userMilitaryType)) {
+    // Se o usuário não tem tipo definido, permitir acesso (compatibilidade com usuários antigos)
+    // Se o tipo não está na lista permitida, não mostrar o botão
+    if (userMilitaryType && !allowedTypes.includes(userMilitaryType)) {
       return false;
     }
 

@@ -102,7 +102,14 @@ export const dataOperations = {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
       const clonedSlot = safeClone(newSlot);
-      await addDoc(timeSlotCollection, clonedSlot);
+      
+      // Ensure allowed_military_types is properly included
+      const slotToInsert = {
+        ...clonedSlot,
+        allowed_military_types: newSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]
+      };
+      
+      await addDoc(timeSlotCollection, slotToInsert);
       return { success: true };
     }).catch(error => {
       console.error('Error inserting data:', error);
@@ -124,7 +131,14 @@ export const dataOperations = {
       if (!querySnapshot.empty) {
         const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
         const clonedSlot = safeClone(updatedSlot);
-        await updateDoc(docRef, clonedSlot);
+        
+        // Ensure allowed_military_types is properly included
+        const slotToUpdate = {
+          ...clonedSlot,
+          allowed_military_types: updatedSlot.allowedMilitaryTypes || updatedSlot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"]
+        };
+        
+        await updateDoc(docRef, slotToUpdate);
         return { success: true };
       }
       return { success: false };
