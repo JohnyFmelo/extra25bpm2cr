@@ -10,7 +10,6 @@ import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
 interface WeeklyCalendarProps {
   className?: string;
   currentDate?: Date;
@@ -19,7 +18,6 @@ interface WeeklyCalendarProps {
   isLocked?: boolean;
   onLockChange?: (locked: boolean) => void;
 }
-
 const WeeklyCalendar = ({
   className,
   currentDate: externalCurrentDate,
@@ -36,41 +34,36 @@ const WeeklyCalendar = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showAllWeekSlots, setShowAllWeekSlots] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-  const { toast } = useToast();
-  
+  const {
+    toast
+  } = useToast();
   const currentDateValue = externalCurrentDate !== undefined ? externalCurrentDate : internalCurrentDate;
   // Ajuste para nomes mais curtos e consistentes para mobile e desktop.
-  const weekDays = ["TER", "QUA", "QUI", "SEX", "SÁB", "DOM", "SEG"]; 
-  const currentMonth = format(currentDateValue, "MMMM yyyy", { locale: ptBR });
+  const weekDays = ["TER", "QUA", "QUI", "SEX", "SÁB", "DOM", "SEG"];
+  const currentMonth = format(currentDateValue, "MMMM yyyy", {
+    locale: ptBR
+  });
   const isMobile = useIsMobile();
-
   useEffect(() => {
     fetchTimeSlots();
   }, []);
-
   const hasTimeSlotsForDate = (date: Date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     return timeSlots.some(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
   };
-
   const formatTimeForDB = (time: string) => {
     return time.includes(":") ? `${time}:00` : `${time}:00:00`;
   };
-
   const getTimeSlotsForDate = (date: Date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
-    return timeSlots.filter(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime)); // Ordenar por hora de início
+    return timeSlots.filter(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate).sort((a, b) => a.startTime.localeCompare(b.startTime)); // Ordenar por hora de início
   };
-
   const getCurrentWeekTimeSlots = () => {
     const startDate = new Date(currentDateValue);
     // Ajuste para iniciar a semana na Terça-feira
     const dayOfWeek = startDate.getDay(); // 0 (Dom) - 6 (Sáb)
-    const daysToSubtract = (dayOfWeek === 0) ? 5 : (dayOfWeek === 1) ? 6 : (dayOfWeek - 2);
+    const daysToSubtract = dayOfWeek === 0 ? 5 : dayOfWeek === 1 ? 6 : dayOfWeek - 2;
     startDate.setDate(currentDateValue.getDate() - daysToSubtract);
-
-
     const weekSlots = [];
     for (let i = 0; i < 7; i++) {
       const currentDateInWeek = new Date(startDate);
@@ -85,12 +78,11 @@ const WeeklyCalendar = ({
     }
     return weekSlots;
   };
-
   const getDaysOfWeek = () => {
     const days = [];
     const startDate = new Date(currentDateValue);
     const currentDay = startDate.getDay(); // 0 (Dom) - 6 (Sáb)
-    
+
     // Queremos Terça como o primeiro dia da semana visualizada
     // Se hoje é Dom (0), subtrai 5 dias para chegar na Terça passada.
     // Se hoje é Seg (1), subtrai 6 dias para chegar na Terça passada.
@@ -99,14 +91,14 @@ const WeeklyCalendar = ({
     // ...
     // Se hoje é Sáb (6), subtrai 4 dias.
     // (currentDay + 7 - 2) % 7  -> (currentDay + 5) % 7 funciona.
-    const daysToSubtract = (currentDay + 5) % 7; 
+    const daysToSubtract = (currentDay + 5) % 7;
     startDate.setDate(currentDateValue.getDate() - daysToSubtract);
-
     for (let i = 0; i < 7; i++) {
       const currentDateInWeek = new Date(startDate);
       currentDateInWeek.setDate(startDate.getDate() + i);
       days.push({
-        dayName: weekDays[i], // Usar o array ajustado
+        dayName: weekDays[i],
+        // Usar o array ajustado
         date: currentDateInWeek.getDate(),
         fullDate: currentDateInWeek,
         isToday: currentDateInWeek.toDateString() === new Date().toDateString(),
@@ -115,7 +107,6 @@ const WeeklyCalendar = ({
     }
     return days;
   };
-
   const handlePreviousWeek = () => {
     const newDate = subWeeks(currentDateValue, 1);
     if (onDateChange) {
@@ -125,7 +116,6 @@ const WeeklyCalendar = ({
     }
     setShowAllWeekSlots(false);
   };
-
   const handleNextWeek = () => {
     const newDate = addWeeks(currentDateValue, 1);
     if (onDateChange) {
@@ -135,26 +125,23 @@ const WeeklyCalendar = ({
     }
     setShowAllWeekSlots(false);
   };
-
   const handleDayClick = (date: Date) => {
     setSelectedDate(date);
     setShowAllWeekSlots(false);
   };
-
   const handlePlusClick = () => {
     if (selectedDate) {
       setEditingTimeSlot(null);
       setIsDialogOpen(true);
     }
   };
-
   const handleEyeClick = () => {
     setShowAllWeekSlots(prev => !prev);
-    if (!showAllWeekSlots) { // Se estava false e vai para true
+    if (!showAllWeekSlots) {
+      // Se estava false e vai para true
       setSelectedDate(null); // Limpa a seleção do dia
     }
   };
-
   const handleEditClick = (timeSlot: TimeSlot) => {
     setEditingTimeSlot(timeSlot);
     // Garante que selectedDate está definido para o TimeSlotDialog se necessário
@@ -163,7 +150,6 @@ const WeeklyCalendar = ({
     }
     setIsDialogOpen(true);
   };
-
   const fetchTimeSlots = async () => {
     try {
       setIsLoading(true);
@@ -195,7 +181,6 @@ const WeeklyCalendar = ({
       setIsLoading(false);
     }
   };
-
   const handleClearData = async () => {
     try {
       const result = await dataOperations.clear();
@@ -217,7 +202,6 @@ const WeeklyCalendar = ({
       });
     }
   };
-
   const handleTimeSlotAdd = async (timeSlot: TimeSlot) => {
     try {
       setIsLoading(true);
@@ -275,7 +259,6 @@ const WeeklyCalendar = ({
       setIsLoading(false);
     }
   };
-
   const handleTimeSlotEdit = async (updatedTimeSlot: TimeSlot) => {
     if (!editingTimeSlot) return;
     try {
@@ -313,7 +296,6 @@ const WeeklyCalendar = ({
       setIsLoading(false);
     }
   };
-
   const handleDeleteTimeSlot = async (timeSlot: TimeSlot) => {
     try {
       setIsLoading(true);
@@ -341,73 +323,40 @@ const WeeklyCalendar = ({
       setIsLoading(false);
     }
   };
-
   const handleClearAllTimeSlots = async () => {
     await handleClearData();
     setShowDeleteAlert(false);
   };
-
   const daysOfWeek = getDaysOfWeek();
   const weekTimeSlots = getCurrentWeekTimeSlots();
-  
-  const renderTimeSlotItem = (slot: TimeSlot, index: number, showEditButton: boolean) => (
-    <div 
-      key={slot.id || `${format(slot.date, 'yyyy-MM-dd')}-${slot.startTime}-${index}`} 
-      className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:shadow-md hover:border-green-300 transition-all duration-200 ease-in-out bg-white"
-    >
+  const renderTimeSlotItem = (slot: TimeSlot, index: number, showEditButton: boolean) => <div key={slot.id || `${format(slot.date, 'yyyy-MM-dd')}-${slot.startTime}-${index}`} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:shadow-md hover:border-green-300 transition-all duration-200 ease-in-out bg-white">
       <div className="flex-1 min-w-0"> {/* Garante que o texto quebra se necessário */}
         <div className="font-medium text-gray-800 truncate">
           {slot.startTime} - {slot.endTime}
-          {slot.description && (
-            <span className="ml-2 text-sm text-gray-500 italic">| {slot.description}</span>
-          )}
+          {slot.description && <span className="ml-2 text-sm text-gray-500 italic">| {slot.description}</span>}
         </div>
         <div className="text-xs text-gray-500 mt-1 flex items-center">
-          <span className={cn(
-            "inline-block w-2.5 h-2.5 rounded-full mr-1.5 shrink-0", // shrink-0 para não encolher o ponto
-            slot.slotsUsed >= slot.slots ? "bg-red-500" : 
-            slot.slotsUsed > slot.slots / 2 ? "bg-yellow-500" : "bg-green-500"
-          )}></span>
+          <span className={cn("inline-block w-2.5 h-2.5 rounded-full mr-1.5 shrink-0",
+        // shrink-0 para não encolher o ponto
+        slot.slotsUsed >= slot.slots ? "bg-red-500" : slot.slotsUsed > slot.slots / 2 ? "bg-yellow-500" : "bg-green-500")}></span>
           {slot.slotsUsed}/{slot.slots} vagas
         </div>
       </div>
       <div className="flex gap-1 sm:gap-2 ml-2 shrink-0"> {/* ml-2 para dar espaço, shrink-0 para não encolher botões */}
-        {showEditButton && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 text-gray-500 hover:text-blue-600 hover:bg-blue-50" 
-            onClick={() => handleEditClick(slot)}
-            disabled={isLocked || isLoading}
-            aria-label="Editar horário"
-          >
+        {showEditButton && <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600 hover:bg-blue-50" onClick={() => handleEditClick(slot)} disabled={isLocked || isLoading} aria-label="Editar horário">
             <Pencil className="h-4 w-4" />
-          </Button>
-        )}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50" 
-          onClick={() => handleDeleteTimeSlot(slot)}
-          disabled={isLocked || isLoading}
-          aria-label="Excluir horário"
-        >
+          </Button>}
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteTimeSlot(slot)} disabled={isLocked || isLoading} aria-label="Excluir horário">
           <Trash className="h-4 w-4" />
         </Button>
       </div>
-    </div>
-  );
-
-  const renderEmptyState = (message: string, subMessage?: string) => (
-    <div className="text-center py-10 px-4 text-gray-500 flex flex-col items-center">
+    </div>;
+  const renderEmptyState = (message: string, subMessage?: string) => <div className="text-center py-10 px-4 text-gray-500 flex flex-col items-center">
       <Calendar className="h-12 w-12 mb-3 text-gray-400" />
       <p className="text-md font-medium">{message}</p>
       {subMessage && <p className="text-sm mt-1">{subMessage}</p>}
-    </div>
-  );
-
-  return (
-    <div className={cn("bg-gray-50 rounded-xl shadow-lg overflow-hidden", className)}>
+    </div>;
+  return <div className={cn("bg-gray-50 rounded-xl shadow-lg overflow-hidden", className)}>
       {/* Cabeçalho do calendário */}
       <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 text-white">
         <div className="flex justify-between items-center">
@@ -416,66 +365,27 @@ const WeeklyCalendar = ({
             <h2 className="text-lg md:text-xl font-semibold capitalize tracking-tight">{currentMonth}</h2>
           </div>
           
-          {showControls && (
-            <div className="flex items-center gap-1 sm:gap-2">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 md:h-9 md:w-9 bg-white/20 hover:bg-white/30 text-white rounded-full" 
-                onClick={handlePlusClick} 
-                disabled={!selectedDate || isLocked || isLoading}
-                aria-label="Adicionar novo horário para data selecionada"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn(
-                  "h-8 w-8 md:h-9 md:w-9 bg-white/20 hover:bg-white/30 text-white rounded-full", 
-                  showAllWeekSlots && "bg-white/40 ring-2 ring-white/50"
-                )} 
-                onClick={handleEyeClick}
-                disabled={isLoading}
-                aria-label={showAllWeekSlots ? "Mostrar horários do dia selecionado" : "Mostrar horários da semana toda"}
-              >
+          {showControls && <div className="flex items-center gap-1 sm:gap-2">
+              
+              <Button variant="ghost" size="icon" className={cn("h-8 w-8 md:h-9 md:w-9 bg-white/20 hover:bg-white/30 text-white rounded-full", showAllWeekSlots && "bg-white/40 ring-2 ring-white/50")} onClick={handleEyeClick} disabled={isLoading} aria-label={showAllWeekSlots ? "Mostrar horários do dia selecionado" : "Mostrar horários da semana toda"}>
                 <Eye className="h-4 w-4" />
               </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 md:h-9 md:w-9 bg-white/20 hover:bg-white/30 text-white rounded-full" 
-                onClick={() => setShowDeleteAlert(true)} 
-                disabled={isLocked || isLoading || timeSlots.length === 0} // Desabilitar se não houver horários
-                aria-label="Excluir todos os horários"
-              >
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 bg-white/20 hover:bg-white/30 text-white rounded-full" onClick={() => setShowDeleteAlert(true)} disabled={isLocked || isLoading || timeSlots.length === 0} // Desabilitar se não houver horários
+          aria-label="Excluir todos os horários">
                 <Trash className="h-4 w-4" />
               </Button>
-            </div>
-          )}
+            </div>}
         </div>
       </div>
 
       {/* Navegação semanal e dias */}
       <div className="p-3 sm:p-4">
         <div className="flex justify-between items-center mb-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-9 text-gray-700 border-gray-300 hover:bg-gray-100" 
-            onClick={handlePreviousWeek} 
-            disabled={isLocked || isLoading}
-          >
+          <Button variant="outline" size="sm" className="h-9 text-gray-700 border-gray-300 hover:bg-gray-100" onClick={handlePreviousWeek} disabled={isLocked || isLoading}>
             <ChevronLeft className="h-4 w-4 mr-1" />
             Anterior
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-9 text-gray-700 border-gray-300 hover:bg-gray-100" 
-            onClick={handleNextWeek} 
-            disabled={isLocked || isLoading}
-          >
+          <Button variant="outline" size="sm" className="h-9 text-gray-700 border-gray-300 hover:bg-gray-100" onClick={handleNextWeek} disabled={isLocked || isLoading}>
             Próxima
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
@@ -484,106 +394,63 @@ const WeeklyCalendar = ({
         {/* Grade dos dias da semana */}
         <div className="grid grid-cols-7 gap-1 md:gap-1.5 mb-4">
           {daysOfWeek.map((day, index) => {
-            const isSelected = selectedDate?.toDateString() === day.fullDate.toDateString();
-            return (
-              <div 
-                key={index} 
-                className={cn(
-                  "flex flex-col items-center justify-center p-1.5 md:p-2 rounded-lg transition-all duration-150 ease-in-out cursor-pointer min-h-[60px] md:min-h-[70px]",
-                  "hover:bg-green-50",
-                  isSelected && "bg-green-100 ring-2 ring-green-500 shadow-md",
-                  !isSelected && day.isToday && "bg-green-50 ring-1 ring-green-300",
-                  day.hasTimeSlots && !isSelected && "relative after:absolute after:bottom-1.5 after:left-1/2 after:-translate-x-1/2 after:w-1.5 after:h-1.5 after:bg-green-500 after:rounded-full"
-                )} 
-                onClick={() => handleDayClick(day.fullDate)}
-                role="button"
-                aria-pressed={isSelected}
-                aria-label={`Selecionar dia ${day.date}, ${day.dayName}`}
-              >
-                <span className={cn(
-                  "text-[10px] md:text-xs font-medium uppercase",
-                  isSelected ? "text-green-700" : "text-gray-500",
-                  day.isToday && !isSelected && "text-green-600"
-                )}>
+          const isSelected = selectedDate?.toDateString() === day.fullDate.toDateString();
+          return <div key={index} className={cn("flex flex-col items-center justify-center p-1.5 md:p-2 rounded-lg transition-all duration-150 ease-in-out cursor-pointer min-h-[60px] md:min-h-[70px]", "hover:bg-green-50", isSelected && "bg-green-100 ring-2 ring-green-500 shadow-md", !isSelected && day.isToday && "bg-green-50 ring-1 ring-green-300", day.hasTimeSlots && !isSelected && "relative after:absolute after:bottom-1.5 after:left-1/2 after:-translate-x-1/2 after:w-1.5 after:h-1.5 after:bg-green-500 after:rounded-full")} onClick={() => handleDayClick(day.fullDate)} role="button" aria-pressed={isSelected} aria-label={`Selecionar dia ${day.date}, ${day.dayName}`}>
+                <span className={cn("text-[10px] md:text-xs font-medium uppercase", isSelected ? "text-green-700" : "text-gray-500", day.isToday && !isSelected && "text-green-600")}>
                   {day.dayName}
                 </span>
-                <span className={cn(
-                  "text-lg md:text-xl font-medium mt-0.5",
-                  isSelected ? "text-green-700 font-bold" : "text-gray-700",
-                  day.isToday && !isSelected && "text-green-600 font-semibold"
-                )}>
+                <span className={cn("text-lg md:text-xl font-medium mt-0.5", isSelected ? "text-green-700 font-bold" : "text-gray-700", day.isToday && !isSelected && "text-green-600 font-semibold")}>
                   {day.date}
                 </span>
-                {isSelected && day.hasTimeSlots && ( // Bolinha para dia selecionado com horários, mais centralizada
-                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-green-500 rounded-full"></span>
-                )}
-              </div>
-            );
-          })}
+                {isSelected && day.hasTimeSlots &&
+            // Bolinha para dia selecionado com horários, mais centralizada
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-green-500 rounded-full"></span>}
+              </div>;
+        })}
         </div>
       </div>
       
       {/* Exibição de horários */}
       <div className="px-3 sm:px-4 pb-4 min-h-[200px] bg-white pt-4 rounded-b-lg">
-        {isLoading ? (
-          <div className="flex justify-center items-center py-10 text-gray-500">
+        {isLoading ? <div className="flex justify-center items-center py-10 text-gray-500">
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
             Carregando horários...
-          </div>
-        ) : showAllWeekSlots ? (
-          <div className="space-y-6">
-            {weekTimeSlots.length > 0 ? (
-              weekTimeSlots.map(({ date, slots }) => (
-                <div key={format(date, 'yyyy-MM-dd')} className="space-y-2">
+          </div> : showAllWeekSlots ? <div className="space-y-6">
+            {weekTimeSlots.length > 0 ? weekTimeSlots.map(({
+          date,
+          slots
+        }) => <div key={format(date, 'yyyy-MM-dd')} className="space-y-2">
                   <h3 className="font-semibold text-md text-green-700 bg-green-50 p-2.5 rounded-md sticky top-0 z-10 shadow-sm">
-                    {format(date, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                    {format(date, "EEEE, dd 'de' MMMM", {
+              locale: ptBR
+            })}
                   </h3>
                   <div className="space-y-2 pt-1">
                     {slots.map((slot, index) => renderTimeSlotItem(slot, index, false))} {/* Sem botão de editar na visão semanal */}
                   </div>
-                </div>
-              ))
-            ) : (
-              renderEmptyState("Nenhum horário disponível nesta semana.")
-            )}
-          </div>
-        ) : selectedDate ? (
-          <div className="space-y-3">
+                </div>) : renderEmptyState("Nenhum horário disponível nesta semana.")}
+          </div> : selectedDate ? <div className="space-y-3">
             <h3 className="font-semibold text-md text-green-700 bg-green-50 p-2.5 rounded-md sticky top-0 z-10 shadow-sm">
-              Horários para {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+              Horários para {format(selectedDate, "EEEE, dd 'de' MMMM", {
+            locale: ptBR
+          })}
             </h3>
             
-            {getTimeSlotsForDate(selectedDate).length > 0 ? (
-              <div className="space-y-2 pt-1">
+            {getTimeSlotsForDate(selectedDate).length > 0 ? <div className="space-y-2 pt-1">
                 {getTimeSlotsForDate(selectedDate).map((slot, index) => renderTimeSlotItem(slot, index, true))}
-              </div>
-            ) : (
-              renderEmptyState("Nenhum horário disponível para esta data.")
-            )}
+              </div> : renderEmptyState("Nenhum horário disponível para esta data.")}
 
-            {!isLocked && (
-              <div className="mt-6 flex justify-center border-t border-gray-200 pt-4">
-                <Button
-                  size="default" // Changed from "md" to "default" which is a valid size
-                  className="bg-green-500 hover:bg-green-600 text-white shadow-md hover:shadow-lg transition-shadow"
-                  onClick={handlePlusClick}
-                  disabled={isLoading}
-                >
+            {!isLocked && <div className="mt-6 flex justify-center border-t border-gray-200 pt-4">
+                <Button size="default" // Changed from "md" to "default" which is a valid size
+          className="bg-green-500 hover:bg-green-600 text-white shadow-md hover:shadow-lg transition-shadow" onClick={handlePlusClick} disabled={isLoading}>
                   <Plus className="h-5 w-5 mr-2" />
                   Adicionar Horário
                 </Button>
-              </div>
-            )}
-          </div>
-        ) : (
-          renderEmptyState(
-            "Selecione uma data no calendário",
-            "Ou clique no ícone do olho para ver todos os horários da semana."
-          )
-        )}
+              </div>}
+          </div> : renderEmptyState("Selecione uma data no calendário", "Ou clique no ícone do olho para ver todos os horários da semana.")}
       </div>
 
       {/* Diálogos e modais */}
@@ -600,33 +467,18 @@ const WeeklyCalendar = ({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleClearAllTimeSlots}
-              className="bg-red-500 hover:bg-red-600"
-              disabled={isLoading}
-            >
+            <AlertDialogAction onClick={handleClearAllTimeSlots} className="bg-red-500 hover:bg-red-600" disabled={isLoading}>
               {isLoading ? "Excluindo..." : "Confirmar Exclusão"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {selectedDate && (
-        <TimeSlotDialog 
-          open={isDialogOpen} 
-          onOpenChange={open => {
-            setIsDialogOpen(open);
-            if (!open) setEditingTimeSlot(null);
-          }} 
-          selectedDate={selectedDate} 
-          onAddTimeSlot={handleTimeSlotAdd} 
-          onEditTimeSlot={handleTimeSlotEdit} 
-          editingTimeSlot={editingTimeSlot} 
-          isLoading={isLoading} // Passar isLoading para o dialog
-        />
-      )}
-    </div>
-  );
+      {selectedDate && <TimeSlotDialog open={isDialogOpen} onOpenChange={open => {
+      setIsDialogOpen(open);
+      if (!open) setEditingTimeSlot(null);
+    }} selectedDate={selectedDate} onAddTimeSlot={handleTimeSlotAdd} onEditTimeSlot={handleTimeSlotEdit} editingTimeSlot={editingTimeSlot} isLoading={isLoading} // Passar isLoading para o dialog
+    />}
+    </div>;
 };
-
 export default WeeklyCalendar;
