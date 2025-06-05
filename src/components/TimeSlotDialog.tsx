@@ -1,7 +1,7 @@
 // --- START OF FILE TimeSlotDialog (3).tsx ---
 
 import React, { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns"; // Adicionado parseISO se for usar
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
 import { Button } from "./ui/button";
@@ -12,14 +12,10 @@ import { Checkbox } from "./ui/checkbox";
 import { Clock, Calendar, Users, RefreshCw, FileText, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "./ui/label";
-// Importar a interface TimeSlot de TimeSlotsList para consistência
-import { TimeSlot as FirebaseTimeSlot } from "./TimeSlotsList"; // Renomeado para evitar conflito
+import { TimeSlot as FirebaseTimeSlot } from "./TimeSlotsList"; 
 
-// Tipos para as props onAddTimeSlot e onEditTimeSlot
-// Estes objetos devem ter a estrutura que será enviada para o Firebase (snake_case)
 type NewTimeSlotData = Omit<FirebaseTimeSlot, 'id' | 'volunteers' | 'slots_used'> & { slots_used?: number };
 type EditTimeSlotData = Partial<FirebaseTimeSlot> & { id: string };
-
 
 interface TimeSlotDialogProps {
   open: boolean;
@@ -27,7 +23,7 @@ interface TimeSlotDialogProps {
   selectedDate: Date;
   onAddTimeSlot: (timeSlot: NewTimeSlotData) => void;
   onEditTimeSlot: (timeSlot: EditTimeSlotData) => void;
-  editingTimeSlot: FirebaseTimeSlot | null; // Usa a interface de TimeSlotsList
+  editingTimeSlot: FirebaseTimeSlot | null;
   isLoading?: boolean;
 }
 
@@ -40,22 +36,19 @@ const TimeSlotDialog = ({
   editingTimeSlot,
   isLoading = false,
 }: TimeSlotDialogProps) => {
-  const [startTime, setStartTime] = useState("07:00"); // Para input (pode ser camelCase)
-  const [hours, setHours] = useState("6");             // Para input
-  const [selectedSlots, setSelectedSlots] = useState<number>(2); // Para input
+  const [startTime, setStartTime] = useState("07:00");
+  const [hours, setHours] = useState("6");        
+  const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  // Estado interno para os checkboxes (os valores aqui devem corresponder aos IDs abaixo)
   const [allowedMilitaryTypesInternal, setAllowedMilitaryTypesInternal] = useState<string[]>(["Operacional", "Administrativo", "Inteligencia"]);
 
   const slotOptions = [2, 3, 4, 5];
   const militaryTypes = [
     { id: "Operacional", label: "Operacional" },
     { id: "Administrativo", label: "Administrativo" },
-    // Certifique-se que 'id' corresponde ao valor no Firebase se houver acento.
-    // Ex: { id: "Inteligência", label: "Inteligência" }
     { id: "Inteligencia", label: "Inteligência" }
   ];
 
@@ -85,18 +78,16 @@ const TimeSlotDialog = ({
 
   useEffect(() => {
     if (editingTimeSlot) {
-      setStartTime(editingTimeSlot.start_time); // Carrega snake_case
+      console.log('[TimeSlotDialog] useEffect - Editing slot loaded:', JSON.parse(JSON.stringify(editingTimeSlot)));
+      setStartTime(editingTimeSlot.start_time);
       const duration = calculateDuration(editingTimeSlot.start_time, editingTimeSlot.end_time);
       setHours(duration);
-      setSelectedSlots(editingTimeSlot.total_slots); // Carrega snake_case
+      setSelectedSlots(editingTimeSlot.total_slots);
       setDescription(editingTimeSlot.description || "");
       
-      // Carrega allowed_military_types (snake_case) do Firebase
       if (editingTimeSlot.allowed_military_types && editingTimeSlot.allowed_military_types.length > 0) {
         setAllowedMilitaryTypesInternal(editingTimeSlot.allowed_military_types);
       } else {
-        // Se vazio no DB, definir um padrão (ex: todos selecionados, ou nenhum)
-        // Aqui, se vazio, mostra todos selecionados. Ajuste se necessário.
         setAllowedMilitaryTypesInternal(["Operacional", "Administrativo", "Inteligencia"]);
       }
 
@@ -108,17 +99,17 @@ const TimeSlotDialog = ({
       }
       setUseWeeklyLogic(editingTimeSlot.isWeekly || false);
     } else {
-      // Reset para novo slot
+      console.log('[TimeSlotDialog] useEffect - No editing slot, resetting for new.');
       setStartTime("07:00");
       setHours("6");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypesInternal(["Operacional", "Administrativo", "Inteligencia"]); // Padrão para novo
+      setAllowedMilitaryTypesInternal(["Operacional", "Administrativo", "Inteligencia"]);
       setUseWeeklyLogic(false);
     }
-  }, [editingTimeSlot, open]); // Adicionar slotOptions se for dinâmico
+  }, [editingTimeSlot, open]);
 
   const handleMilitaryTypeChange = (typeId: string, checked: boolean) => {
     setAllowedMilitaryTypesInternal(prev =>
@@ -129,58 +120,65 @@ const TimeSlotDialog = ({
   const handleRegister = () => {
     const slotsValue = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     if (isNaN(slotsValue) || slotsValue <= 0) {
-        // Adicionar toast ou validação visual
+        toast({title: "Erro de Validação", description: "Número de vagas inválido.", variant: "destructive" });
         return;
     }
     const hoursValue = parseFloat(hours);
      if (isNaN(hoursValue) || hoursValue <= 0) {
-        // Adicionar toast ou validação visual
+        toast({title: "Erro de Validação", description: "Duração em horas inválida.", variant: "destructive" });
+        return;
+    }
+    if (allowedMilitaryTypesInternal.length === 0) {
+        toast({title: "Erro de Validação", description: "Selecione ao menos um tipo de militar.", variant: "destructive" });
         return;
     }
 
     const endTimeValue = calculateEndTime(startTime, hours);
     
-    // Objeto com a estrutura snake_case para o Firebase
     const baseTimeSlotData = {
       date: format(selectedDate, "yyyy-MM-dd"),
       start_time: startTime,
       end_time: endTimeValue,
       total_slots: slotsValue,
       description: description.trim(),
-      allowed_military_types: allowedMilitaryTypesInternal, // Usa o estado interno
+      allowed_military_types: allowedMilitaryTypesInternal,
       isWeekly: useWeeklyLogic,
     };
     
     if (editingTimeSlot) {
       const editData: EditTimeSlotData = {
         ...baseTimeSlotData,
-        id: editingTimeSlot.id!, // ID é obrigatório para editar
-        // Manter campos não editáveis diretamente no formulário
+        id: editingTimeSlot.id!,
         slots_used: editingTimeSlot.slots_used, 
         volunteers: editingTimeSlot.volunteers,
       };
+      console.log('[TimeSlotDialog] handleRegister - Submitting edit data:', JSON.parse(JSON.stringify(editData)));
       onEditTimeSlot(editData);
     } else {
       const addData: NewTimeSlotData = {
         ...baseTimeSlotData,
-        slots_used: 0, // Novo slot
-        // volunteers: [], // Firebase.ts pode inicializar se necessário
+        slots_used: 0,
       };
+      console.log('[TimeSlotDialog] handleRegister - Submitting new data:', JSON.parse(JSON.stringify(addData)));
       onAddTimeSlot(addData);
     }
     onOpenChange(false);
   };
+  // Adicionada toast para feedback de validação em handleRegister.
+  const { toast } = useToast(); 
 
   const isButtonDisabled = () => {
     if (isLoading) return true;
-    if (showCustomSlots) {
-      const numSlots = parseInt(customSlots);
-      if (isNaN(numSlots) || numSlots <= 0) return true;
-    }
-    const hoursValue = parseFloat(hours);
-    if (isNaN(hoursValue) || hoursValue <= 0) return true;
-    if (allowedMilitaryTypesInternal.length === 0) return true; // Validação
-    return false;
+    // As validações foram movidas para dentro de handleRegister para fornecer feedback com toast.
+    // Aqui, apenas verificamos isLoading para o estado visual do botão.
+    // if (showCustomSlots) {
+    //   const numSlots = parseInt(customSlots);
+    //   if (isNaN(numSlots) || numSlots <= 0) return true;
+    // }
+    // const hoursValue = parseFloat(hours);
+    // if (isNaN(hoursValue) || hoursValue <= 0) return true;
+    // if (allowedMilitaryTypesInternal.length === 0) return true;
+    return false; // A validação real ocorre no handleRegister
   };
 
   return (
@@ -237,7 +235,7 @@ const TimeSlotDialog = ({
                 </div>
               ))}
             </div>
-            {allowedMilitaryTypesInternal.length === 0 && <p className="text-xs text-red-500">Selecione pelo menos um tipo de militar.</p>}
+            {/* Removida a mensagem de erro visual daqui, pois a validação está no handleRegister com toast */}
           </div>
 
           <div className="space-y-2">
