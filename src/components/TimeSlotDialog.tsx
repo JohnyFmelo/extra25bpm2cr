@@ -39,7 +39,8 @@ const TimeSlotDialog = ({
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>(["Operacional", "Administrativo", "Inteligencia"]);
+  // Iniciar com array vazio para novos horários
+  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
 
   const slotOptions = [2, 3, 4, 5];
   const militaryTypes = [
@@ -85,8 +86,8 @@ const TimeSlotDialog = ({
       setHours(duration);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
-      // Corrigir o carregamento dos tipos permitidos
-      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]);
+      // Carregar apenas os tipos que estavam salvos
+      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []);
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
@@ -95,28 +96,46 @@ const TimeSlotDialog = ({
       }
       setUseWeeklyLogic(false);
     } else {
+      // Reset para novo horário - iniciar com array vazio
       setStartTime("07:00");
       setHours("6");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes(["Operacional", "Administrativo", "Inteligencia"]);
+      setAllowedMilitaryTypes([]); // Array vazio para novos horários
       setUseWeeklyLogic(false);
     }
   }, [editingTimeSlot, open]);
 
   const handleMilitaryTypeChange = (typeId: string, checked: boolean) => {
+    console.log(`Changing ${typeId} to ${checked}`);
+    
     if (checked) {
-      setAllowedMilitaryTypes(prev => [...prev, typeId]);
+      // Adicionar tipo se não estiver na lista
+      setAllowedMilitaryTypes(prev => {
+        if (!prev.includes(typeId)) {
+          const newTypes = [...prev, typeId];
+          console.log('Added type, new array:', newTypes);
+          return newTypes;
+        }
+        return prev;
+      });
     } else {
-      setAllowedMilitaryTypes(prev => prev.filter(type => type !== typeId));
+      // Remover tipo da lista
+      setAllowedMilitaryTypes(prev => {
+        const newTypes = prev.filter(type => type !== typeId);
+        console.log('Removed type, new array:', newTypes);
+        return newTypes;
+      });
     }
   };
 
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     const endTime = calculateEndTime(startTime, hours);
+    
+    console.log('Registering with allowedMilitaryTypes:', allowedMilitaryTypes);
     
     const newTimeSlot: TimeSlot = {
       date: selectedDate,
@@ -126,7 +145,7 @@ const TimeSlotDialog = ({
       slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedMilitaryTypes
+      allowedMilitaryTypes: [...allowedMilitaryTypes] // Criar uma cópia do array
     };
     
     if (editingTimeSlot) {
@@ -283,6 +302,9 @@ const TimeSlotDialog = ({
                 Selecione pelo menos um tipo de militar
               </p>
             )}
+            <div className="text-xs text-gray-400">
+              Selecionados: {allowedMilitaryTypes.join(', ') || 'Nenhum'}
+            </div>
           </div>
 
           {/* Descrição */}
