@@ -106,23 +106,34 @@ export const dataOperations = {
   async insert(newSlot: any) {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
-      const clonedSlot = safeClone(newSlot);
       
-      console.log('Inserting slot with allowedMilitaryTypes:', newSlot.allowedMilitaryTypes);
+      console.log('*** FIREBASE INSERT ***');
+      console.log('Original slot received:', newSlot);
+      console.log('allowedMilitaryTypes from slot:', newSlot.allowedMilitaryTypes);
       
-      // Salvar exatamente o que foi enviado, sem valores padrão
+      // Verificar se allowedMilitaryTypes existe e não está vazio
+      if (!newSlot.allowedMilitaryTypes || newSlot.allowedMilitaryTypes.length === 0) {
+        console.error('ERROR: No allowedMilitaryTypes provided to Firebase insert!');
+        return { success: false, error: 'No military types selected' };
+      }
+      
+      // Preparar os dados para inserção
       const slotToInsert = {
-        ...clonedSlot,
-        allowed_military_types: newSlot.allowedMilitaryTypes || []
+        ...safeClone(newSlot),
+        allowed_military_types: newSlot.allowedMilitaryTypes
       };
       
-      console.log('Final slot to insert:', slotToInsert);
+      // Remover o campo allowedMilitaryTypes para evitar duplicação
+      delete slotToInsert.allowedMilitaryTypes;
+      
+      console.log('Final slot to insert in Firebase:', slotToInsert);
+      console.log('allowed_military_types field:', slotToInsert.allowed_military_types);
       
       await addDoc(timeSlotCollection, slotToInsert);
       return { success: true };
     }).catch(error => {
       console.error('Error inserting data:', error);
-      return { success: false };
+      return { success: false, error: error.message };
     });
   },
 
@@ -139,25 +150,36 @@ export const dataOperations = {
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
         const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
-        const clonedSlot = safeClone(updatedSlot);
         
-        console.log('Updating slot with allowedMilitaryTypes:', updatedSlot.allowedMilitaryTypes);
+        console.log('*** FIREBASE UPDATE ***');
+        console.log('Original slot received:', updatedSlot);
+        console.log('allowedMilitaryTypes from slot:', updatedSlot.allowedMilitaryTypes);
         
-        // Atualizar com exatamente o que foi enviado
+        // Verificar se allowedMilitaryTypes existe
+        if (!updatedSlot.allowedMilitaryTypes || updatedSlot.allowedMilitaryTypes.length === 0) {
+          console.error('ERROR: No allowedMilitaryTypes provided to Firebase update!');
+          return { success: false, error: 'No military types selected' };
+        }
+        
+        // Preparar os dados para atualização
         const slotToUpdate = {
-          ...clonedSlot,
-          allowed_military_types: updatedSlot.allowedMilitaryTypes || []
+          ...safeClone(updatedSlot),
+          allowed_military_types: updatedSlot.allowedMilitaryTypes
         };
         
-        console.log('Final slot to update:', slotToUpdate);
+        // Remover o campo allowedMilitaryTypes para evitar duplicação
+        delete slotToUpdate.allowedMilitaryTypes;
+        
+        console.log('Final slot to update in Firebase:', slotToUpdate);
+        console.log('allowed_military_types field:', slotToUpdate.allowed_military_types);
         
         await updateDoc(docRef, slotToUpdate);
         return { success: true };
       }
-      return { success: false };
+      return { success: false, error: 'Document not found' };
     }).catch(error => {
       console.error('Error updating data:', error);
-      return { success: false };
+      return { success: false, error: error.message };
     });
   },
 

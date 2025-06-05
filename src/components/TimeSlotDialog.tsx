@@ -38,7 +38,6 @@ const TimeSlotDialog = ({
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  // Iniciar com array vazio para novos horários
   const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
 
   const slotOptions = [2, 3, 4, 5];
@@ -142,7 +141,15 @@ const TimeSlotDialog = ({
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     const endTime = calculateEndTime(startTime, hours);
     
-    console.log('Registering with allowedMilitaryTypes:', allowedMilitaryTypes);
+    console.log('*** REGISTERING TIME SLOT ***');
+    console.log('allowedMilitaryTypes before creating slot:', allowedMilitaryTypes);
+    console.log('allowedMilitaryTypes length:', allowedMilitaryTypes.length);
+    
+    // Verificar se há tipos selecionados
+    if (allowedMilitaryTypes.length === 0) {
+      console.error('No military types selected!');
+      return;
+    }
     
     const newTimeSlot: TimeSlot = {
       date: selectedDate,
@@ -154,6 +161,9 @@ const TimeSlotDialog = ({
       description: description.trim(),
       allowedMilitaryTypes: [...allowedMilitaryTypes] // Criar uma cópia do array
     };
+    
+    console.log('Final TimeSlot object:', newTimeSlot);
+    console.log('Final allowedMilitaryTypes in slot:', newTimeSlot.allowedMilitaryTypes);
     
     if (editingTimeSlot) {
       onEditTimeSlot(newTimeSlot);
@@ -313,7 +323,7 @@ const TimeSlotDialog = ({
               Selecionados: {allowedMilitaryTypes.join(', ') || 'Nenhum'}
             </div>
             <div className="text-xs text-blue-500">
-              Debug - Estado atual: [{allowedMilitaryTypes.join(', ')}]
+              Debug - Estado atual: [{allowedMilitaryTypes.join(', ')}] (length: {allowedMilitaryTypes.length})
             </div>
           </div>
 
