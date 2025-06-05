@@ -14,11 +14,26 @@ import {
     QuerySnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-// Importando TimeSlot de '@/types/user', assumindo que ele pode ter campos em camelCase ou snake_case.
-// O ideal seria ter uma interface específica para o que é enviado/recebido do Firebase e outra para a app.
-// Por agora, a função transformToFirebaseFormat cuidará da conversão.
-import { TimeSlot as AppTimeSlotType } from '@/types/user'; // Esta é a TimeSlot do seu app
-import { format as formatDateFns, parseISO } from 'date-fns'; // Para formatar Date para string yyyy-MM-dd e parse
+import { format as formatDateFns, parseISO } from 'date-fns'; // Para formatar Date para string yyyy-MM-dd
+
+// Interface para representar a estrutura de dados como ela é no Firestore
+interface FirestoreTimeSlotData {
+    date: string; // yyyy-MM-dd
+    start_time: string;
+    end_time: string;
+    total_slots: number;
+    slots_used: number;
+    description?: string;
+    allowed_military_types?: string[]; // snake_case no Firestore
+    is_weekly?: boolean; // snake_case no Firestore
+    volunteers?: string[];
+    // outros campos que existem no firestore
+}
+
+// Tipagem para os dados que chegam das camadas da aplicação (componentes)
+// Pode ser uma mistura, então usamos `any` aqui e a função de transformação cuida do resto.
+type AppSlotDataType = any;
+
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -34,119 +49,85 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
+// Função de transformação para preparar dados para o Firestore
+const transformToFirestoreDocument = (appData: AppSlotDataType): Partial<FirestoreTimeSlotData> => {
+    const firestoreDoc: Partial<FirestoreTimeSlotData> = {};
 
-// Helper function to transform application slot data to Firebase format
-// Input: Pode ser um objeto com campos mistos (camelCase/snake_case)
-// Output: Objeto com campos snake_case para o Firebase
-const transformToFirebaseFormat = (slotData: any): DocumentData => {
-    const dataForFirebase: DocumentData = {};
-
-    // Date: Garante que seja string 'yyyy-MM-dd'
-    if (slotData.date) {
-        if (slotData.date instanceof Date) {
-            dataForFirebase.date = formatDateFns(slotData.date, 'yyyy-MM-dd');
-        } else if (typeof slotData.date === 'string') {
-            // Tenta normalizar caso venha em formato diferente, mas o ideal é que TimeSlotDialog já envie Date object
+    // Date: Vem como Date de TimeSlotDialog, ou string de TimeSlotsList (já formatada)
+    if (appData.date) {
+        if (appData.date instanceof Date) {
+            firestoreDoc.date = formatDateFns(appData.date, 'yyyy-MM-dd');
+        } else if (typeof appData.date === 'string') {
+            // Assumindo que se for string, já está 'yyyy-MM-dd' ou pode ser parseada
             try {
-                dataForFirebase.date = formatDateFns(parseISO(slotData.date), 'yyyy-MM-dd');
-            } catch (e) {
-                dataForFirebase.date = slotData.date; // Mantém se não conseguir parsear (pode já estar correto)
+                firestoreDoc.date = formatDateFns(parseISO(appData.date), 'yyyy-MM-dd');
+            } catch {
+                 firestoreDoc.date = appData.date; // Mantém se não parseável, assumindo formato correto
             }
         }
     }
 
-    // Time and Slot counts (prioriza camelCase do Dialog, fallback para snake_case)
-    if (slotData.startTime !== undefined || slotData.start_time !== undefined) {
-        dataForFirebase.start_time = slotData.startTime || slotData.start_time;
-    }
-    if (slotData.endTime !== undefined || slotData.end_time !== undefined) {
-        dataForFirebase.end_time = slotData.endTime || slotData.end_time;
-    }
-    if (slotData.slots !== undefined || slotData.total_slots !== undefined) { // `slots` do Dialog, `total_slots` do TimeSlotsList/DB
-        dataForFirebase.total_slots = slotData.slots !== undefined ? slotData.slots : slotData.total_slots;
-    }
-    if (slotData.slotsUsed !== undefined || slotData.slots_used !== undefined) {
-        dataForFirebase.slots_used = slotData.slotsUsed !== undefined ? slotData.slotsUsed : slotData.slots_used;
-    }
+    // Times (start_time, end_time)
+    // TimeSlotsList usa start_time, TimeSlotDialog usa startTime
+    if (appData.startTime !== undefined) firestoreDoc.start_time = appData.startTime;
+    else if (appData.start_time !== undefined) firestoreDoc.start_time = appData.start_time;
 
-    // Description
-    if (slotData.description !== undefined) {
-        dataForFirebase.description = slotData.description;
-    }
+    if (appData.endTime !== undefined) firestoreDoc.end_time = appData.endTime;
+    else if (appData.end_time !== undefined) firestoreDoc.end_time = appData.end_time;
 
-    // Volunteers
-    if (slotData.volunteers !== undefined) {
-        dataForFirebase.volunteers = slotData.volunteers;
-    }
+    // Slots (total_slots, slots_used)
+    // TimeSlotsList usa total_slots, TimeSlotDialog usa slots
+    if (appData.slots !== undefined) firestoreDoc.total_slots = appData.slots;
+    else if (appData.total_slots !== undefined) firestoreDoc.total_slots = appData.total_slots;
 
-    // isWeekly (do Dialog)
-    if (slotData.isWeekly !== undefined) {
-        dataForFirebase.is_weekly = slotData.isWeekly;
-    }
-
-    // allowedMilitaryTypes (camelCase do Dialog/TimeSlotsList) para allowed_military_types (snake_case no Firebase)
-    // Garante que é um array, mesmo que vazio. Remove o fallback problemático.
-    dataForFirebase.allowed_military_types = slotData.allowedMilitaryTypes || slotData.allowed_military_types || [];
+    // TimeSlotsList usa slots_used, TimeSlotDialog usa slotsUsed
+    if (appData.slotsUsed !== undefined) firestoreDoc.slots_used = appData.slotsUsed;
+    else if (appData.slots_used !== undefined) firestoreDoc.slots_used = appData.slots_used;
 
 
-    // Para outros campos que possam existir no slotData e não foram explicitamente mapeados,
-    // mas precisam ser mantidos (cuidado para não adicionar o 'id' ou sobrescrever com undefined)
-    // Este loop pode ser perigoso se não controlado. A abordagem explícita acima é mais segura.
-    // Por exemplo, se slotData tiver um `id`, ele não deve ir para dentro do objeto de dados do Firebase.
-    // Vamos evitar adicionar campos não explicitamente definidos para a transformação para Firebase.
+    // Description (geralmente consistente)
+    if (appData.description !== undefined) firestoreDoc.description = appData.description;
 
-    // Remove undefined fields to prevent overwriting existing Firebase fields with undefined during updates
-    const cleanDataForFirebase: DocumentData = {};
-    for (const key in dataForFirebase) {
-        if (dataForFirebase[key] !== undefined) {
-            cleanDataForFirebase[key] = dataForFirebase[key];
+    // Volunteers (geralmente consistente)
+    if (appData.volunteers !== undefined) firestoreDoc.volunteers = appData.volunteers;
+
+    // allowedMilitaryTypes (camelCase nos componentes) -> allowed_military_types (snake_case no Firestore)
+    if (appData.allowedMilitaryTypes !== undefined) {
+        firestoreDoc.allowed_military_types = appData.allowedMilitaryTypes;
+    } else if (appData.allowed_military_types !== undefined) { // Caso já venha em snake_case
+        firestoreDoc.allowed_military_types = appData.allowed_military_types;
+    } else {
+        // Se a intenção é apagar o campo, deve ser tratado explicitamente,
+        // caso contrário, não definir aqui evita sobrescrever com [] se não for intencional.
+        // Para um novo documento, [] pode ser o padrão. Para update, omitir se não houver mudança.
+        // No entanto, a lógica anterior nos componentes envia sempre, então:
+        firestoreDoc.allowed_military_types = []; // Garante que é um array, como antes nos componentes
+    }
+
+
+    // isWeekly (camelCase do Dialog) -> is_weekly (snake_case no Firestore)
+    if (appData.isWeekly !== undefined) firestoreDoc.is_weekly = appData.isWeekly;
+    else if (appData.is_weekly !== undefined) firestoreDoc.is_weekly = appData.is_weekly;
+
+
+    // Limpeza: remover chaves com valor undefined para não sobrescrever no Firestore indevidamente em updates.
+    // O Firestore ignora chaves `undefined` em `addDoc` e `setDoc`, mas as remove em `updateDoc`.
+    const cleanedFirestoreDoc: Partial<FirestoreTimeSlotData> = {};
+    for (const key in firestoreDoc) {
+        if (firestoreDoc[key as keyof FirestoreTimeSlotData] !== undefined) {
+            cleanedFirestoreDoc[key as keyof FirestoreTimeSlotData] = firestoreDoc[key as keyof FirestoreTimeSlotData];
         }
     }
-
-    return cleanDataForFirebase;
-};
-
-// Helper function to transform Firebase data to application format
-// Input: Objeto do Firebase (snake_case)
-// Output: Objeto no formato esperado pela aplicação (TimeSlotsList/TimeSlotDialog - camelCase para alguns campos)
-// Nota: TimeSlotsList faz sua própria transformação no onSnapshot, mas para fetch direto, isso é útil.
-const transformFromFirebaseFormat = (firebaseData: DocumentData, id: string): AppTimeSlotType => {
-    // O tipo AppTimeSlotType de @/types/user precisa ser flexível ou este mapeamento
-    // deve ser preciso para coincidir com ele.
-    // A interface `TimeSlot` dentro de TimeSlotsList.tsx já tem `allowedMilitaryTypes` (camelCase)
-    return {
-        id: id,
-        date: firebaseData.date, // Firebase já tem string 'yyyy-MM-dd'
-        // Mapeando snake_case para camelCase se AppTimeSlotType usar camelCase
-        startTime: firebaseData.start_time,
-        start_time: firebaseData.start_time, // Para compatibilidade com TimeSlotsList
-
-        endTime: firebaseData.end_time,
-        end_time: firebaseData.end_time, // Para compatibilidade com TimeSlotsList
-
-        slots: firebaseData.total_slots,       // `slots` é esperado por TimeSlotDialog
-        total_slots: firebaseData.total_slots, // Para compatibilidade com TimeSlotsList
-
-        slotsUsed: firebaseData.slots_used,
-        slots_used: firebaseData.slots_used, // Para compatibilidade com TimeSlotsList
-        
-        description: firebaseData.description || "",
-        allowedMilitaryTypes: firebaseData.allowed_military_types || [], // Para TimeSlotsList e TimeSlotDialog
-        isWeekly: firebaseData.is_weekly || false,
-        volunteers: firebaseData.volunteers || [],
-        // title: firebaseData.title || '', // Se `title` existir e for parte de AppTimeSlotType
-
-        // Incluindo campos que possam não estar na definição estrita de AppTimeSlotType mas existem no firebaseData
-        // ...firebaseData // Isso pode ser arriscado se AppTimeSlotType for estrito.
-    } as AppTimeSlotType; // Type assertion, use with caution or make AppTimeSlotType more generic
+    return cleanedFirestoreDoc;
 };
 
 
+// Helper function to handle Firestore operations
 const handleFirestoreOperation = async <T>(
-    operation: (db: Firestore) => Promise<T>
+    operation: (dbInstance: Firestore) => Promise<T>
 ): Promise<T> => {
     try {
-        const result = await operation(db); // db aqui é a instância global
+        const result = await operation(db); // Usa a instância global `db`
         return result;
     } catch (error) {
         console.error('Firestore operation error:', error);
@@ -155,33 +136,49 @@ const handleFirestoreOperation = async <T>(
 };
 
 export const dataOperations = {
-    async fetch(): Promise<AppTimeSlotType[]> { // Retorna o tipo da aplicação
-        return handleFirestoreOperation(async (firestoreDb) => { // dbInstance para evitar conflito
+    // fetch não é usado por TimeSlotsList, pois ele usa onSnapshot.
+    // Se você precisar de uma função fetch que retorne os dados transformados para o formato do app (com camelCase para allowedMilitaryTypes),
+    // ela precisaria de uma função `transformFromFirestoreDocument`.
+    // Por ora, vou focar nas operações de escrita.
+    
+    /*
+    async fetch(): Promise<any[]> { // O tipo de retorno dependeria da interface "AppTimeSlot"
+        return handleFirestoreOperation(async (firestoreDb) => {
             const timeSlotCollection = collection(firestoreDb, 'timeSlots');
             const querySnapshot = await getDocs(timeSlotCollection);
-            return querySnapshot.docs.map(docSnapshot => transformFromFirebaseFormat(docSnapshot.data(), docSnapshot.id));
+            // Precisaria de uma função `transformFromFirestoreDocument` aqui
+            return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         }).catch(error => {
             console.error('Error fetching data:', error);
             return [];
         });
     },
+    */
 
-    async insert(newSlotData: any) { // newSlotData vem dos componentes (pode ser misto)
+    async insert(newSlotAppInput: AppSlotDataType) {
         return handleFirestoreOperation(async (firestoreDb) => {
             const timeSlotCollection = collection(firestoreDb, 'timeSlots');
-            const slotToInsertFirebase = transformToFirebaseFormat(newSlotData);
+            const documentToInsert = transformToFirestoreDocument(newSlotAppInput);
             
-            await addDoc(timeSlotCollection, slotToInsertFirebase);
+            // Para 'insert', garantir campos essenciais mesmo que `transformToFirestoreDocument` os limpe se `undefined`
+            // (isso é mais uma política de como novos documentos devem ser criados)
+            if (documentToInsert.allowed_military_types === undefined) {
+                 documentToInsert.allowed_military_types = []; // Default para novos
+            }
+             if (documentToInsert.slots_used === undefined) {
+                 documentToInsert.slots_used = 0; // Default para novos
+            }
+
+            await addDoc(timeSlotCollection, documentToInsert);
             return { success: true };
         }).catch(error => {
-            console.error('Error inserting data:', error, 'Data:', newSlotData, 'Transformed:', transformToFirebaseFormat(newSlotData));
+            const transformed = transformToFirestoreDocument(newSlotAppInput);
+            console.error('Error inserting data:', error, 'Input:', newSlotAppInput, 'Transformed:', transformed);
             return { success: false, error };
         });
     },
 
-    async update(updatedSlotData: any, conditions: { date: string; start_time: string; end_time: string }) {
-        // updatedSlotData vem dos componentes (pode ser misto).
-        // conditions devem ser para campos snake_case do Firebase.
+    async update(updatedSlotAppInput: AppSlotDataType, conditions: { date: string; start_time: string; end_time: string }) {
         return handleFirestoreOperation(async (firestoreDb) => {
             const timeSlotCollection = collection(firestoreDb, 'timeSlots');
             const q = query(
@@ -194,24 +191,25 @@ export const dataOperations = {
             const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
                 const docRef = doc(firestoreDb, 'timeSlots', querySnapshot.docs[0].id);
-                const slotToUpdateFirebase = transformToFirebaseFormat(updatedSlotData);
-                
-                // Não incluir o 'id' nos dados de atualização do documento
-                const { id, ...dataForUpdate } = slotToUpdateFirebase; 
+                const documentToUpdate = transformToFirestoreDocument(updatedSlotAppInput);
 
-                await updateDoc(docRef, dataForUpdate);
+                // `updateDoc` só atualiza os campos fornecidos. Se um campo for `undefined` no `documentToUpdate`,
+                // e ele tiver sido removido pela limpeza em `transformToFirestoreDocument`, ele não será enviado.
+                // Se você quiser remover um campo, precisaria enviá-lo com `deleteField()` do Firestore.
+                // A limpeza já garante que não enviamos `undefined`.
+                await updateDoc(docRef, documentToUpdate);
                 return { success: true };
             }
-            console.warn('No document found for update with conditions:', conditions);
-            return { success: false, message: "Document not found for update" };
+            console.warn('No document found for update. Conditions:', conditions, 'Input:', updatedSlotAppInput);
+            return { success: false, message: "Document not found for update." };
         }).catch(error => {
-            console.error('Error updating data:', error, 'Data:', updatedSlotData, 'Conditions:', conditions, 'Transformed:', transformToFirebaseFormat(updatedSlotData));
+            const transformed = transformToFirestoreDocument(updatedSlotAppInput);
+            console.error('Error updating data:', error, 'Input:', updatedSlotAppInput, 'Conditions:', conditions, 'Transformed:', transformed);
             return { success: false, error };
         });
     },
 
     async delete(conditions: { date: string; start_time: string; end_time: string }) {
-        // conditions devem ser para campos snake_case do Firebase.
         return handleFirestoreOperation(async (firestoreDb) => {
             const timeSlotCollection = collection(firestoreDb, 'timeSlots');
             const q = query(
@@ -227,10 +225,10 @@ export const dataOperations = {
                 await deleteDoc(docRef);
                 return { success: true };
             }
-            console.warn('No document found for deletion with conditions:', conditions);
-            return { success: false, message: "Document not found for deletion" };
+            console.warn('No document found for deletion. Conditions:', conditions);
+            return { success: false, message: "Document not found for deletion." };
         }).catch(error => {
-            console.error('Error deleting data:', error);
+            console.error('Error deleting data:', error, 'Conditions:', conditions);
             return { success: false, error };
         });
     },
@@ -241,7 +239,7 @@ export const dataOperations = {
             const querySnapshot = await getDocs(timeSlotCollection);
 
             const deletePromises: Promise<void>[] = [];
-            querySnapshot.docs.forEach(docSnapshot => {
+            querySnapshot.docs.forEach(docSnapshot => { // Renomeado `doc` para `docSnapshot`
                 deletePromises.push(deleteDoc(docSnapshot.ref));
             });
             await Promise.all(deletePromises);
