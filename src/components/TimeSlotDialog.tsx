@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -81,13 +80,20 @@ const TimeSlotDialog = ({
 
   useEffect(() => {
     if (editingTimeSlot) {
+      console.log('Loading editing time slot:', editingTimeSlot);
+      console.log('Editing allowedMilitaryTypes:', editingTimeSlot.allowedMilitaryTypes);
+      
       setStartTime(editingTimeSlot.startTime);
       const duration = calculateDuration(editingTimeSlot.startTime, editingTimeSlot.endTime);
       setHours(duration);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
-      // Carregar apenas os tipos que estavam salvos
-      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []);
+      
+      // Carregar exatamente os tipos que estão salvos no Firebase
+      const savedTypes = editingTimeSlot.allowedMilitaryTypes || [];
+      console.log('Setting allowedMilitaryTypes to:', savedTypes);
+      setAllowedMilitaryTypes(savedTypes);
+      
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
@@ -97,6 +103,7 @@ const TimeSlotDialog = ({
       setUseWeeklyLogic(false);
     } else {
       // Reset para novo horário - iniciar com array vazio
+      console.log('Resetting for new time slot');
       setStartTime("07:00");
       setHours("6");
       setSelectedSlots(2);
@@ -304,6 +311,9 @@ const TimeSlotDialog = ({
             )}
             <div className="text-xs text-gray-400">
               Selecionados: {allowedMilitaryTypes.join(', ') || 'Nenhum'}
+            </div>
+            <div className="text-xs text-blue-500">
+              Debug - Estado atual: [{allowedMilitaryTypes.join(', ')}]
             </div>
           </div>
 

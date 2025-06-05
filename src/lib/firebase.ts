@@ -64,13 +64,18 @@ const safeClone = (data: DocumentData): Record<string, any> => {
 
 // Helper function to safely get documents from a query snapshot
 const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    title: doc.data().title || '',
-    description: doc.data().description || '',
-    date: doc.data().date || '',
-    ...safeClone(doc.data())
-  }));
+  return snapshot.docs.map(doc => {
+    const data = doc.data();
+    console.log('Document data from Firebase:', data);
+    return {
+      id: doc.id,
+      title: data.title || '',
+      description: data.description || '',
+      date: data.date || '',
+      allowedMilitaryTypes: data.allowed_military_types || data.allowedMilitaryTypes || [],
+      ...safeClone(doc.data())
+    };
+  });
 };
 
 // Helper function to handle Firestore operations with proper cleanup
@@ -103,11 +108,15 @@ export const dataOperations = {
       const timeSlotCollection = collection(db, 'timeSlots');
       const clonedSlot = safeClone(newSlot);
       
-      // Ensure allowed_military_types is properly included
+      console.log('Inserting slot with allowedMilitaryTypes:', newSlot.allowedMilitaryTypes);
+      
+      // Salvar exatamente o que foi enviado, sem valores padrão
       const slotToInsert = {
         ...clonedSlot,
-        allowed_military_types: newSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]
+        allowed_military_types: newSlot.allowedMilitaryTypes || []
       };
+      
+      console.log('Final slot to insert:', slotToInsert);
       
       await addDoc(timeSlotCollection, slotToInsert);
       return { success: true };
@@ -132,11 +141,15 @@ export const dataOperations = {
         const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
         const clonedSlot = safeClone(updatedSlot);
         
-        // Ensure allowed_military_types is properly included
+        console.log('Updating slot with allowedMilitaryTypes:', updatedSlot.allowedMilitaryTypes);
+        
+        // Atualizar com exatamente o que foi enviado
         const slotToUpdate = {
           ...clonedSlot,
-          allowed_military_types: updatedSlot.allowedMilitaryTypes || updatedSlot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"]
+          allowed_military_types: updatedSlot.allowedMilitaryTypes || []
         };
+        
+        console.log('Final slot to update:', slotToUpdate);
         
         await updateDoc(docRef, slotToUpdate);
         return { success: true };
