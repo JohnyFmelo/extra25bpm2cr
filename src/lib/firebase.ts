@@ -1,112 +1,63 @@
-import { initializeApp } from 'firebase/app';
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  getDocs, 
-  deleteDoc, 
-  doc, 
-  updateDoc,
-  Firestore,
-  DocumentData,
-  QuerySnapshot
-} from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { TimeSlot } from '@/types/user';
+// firebase.ts
+// ... (imports e config) ...
+// Defina um tipo para os dados que vêm do TimeSlotDialog para maior clareza
+// Este tipo deve corresponder à estrutura do objeto 'timeSlotData' / 'newSlot' / 'updatedSlot'
+// que é passado para dataOperations.
+interface SlotDataForFirebase {
+  date: string;
+  start_time: string;
+  end_time: string;
+  total_slots: number;
+  slots_used: number;
+  volunteers?: string[];
+  description?: string;
+  allowed_military_types?: string[]; // Esta é a chave
+  isWeekly?: boolean; // Se aplicável
+  id?: string; // Para updates
+}
 
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
-};
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-
-// Helper function to safely clone Firestore data
-const safeClone = (data: DocumentData): Record<string, any> => {
-  const serializableData: Record<string, any> = {};
-  
-  for (const [key, value] of Object.entries(data)) {
-    if (typeof value === 'function' || value instanceof ReadableStream) {
-      continue;
-    }
-    
-    if (value instanceof Date) {
-      serializableData[key] = value.toISOString();
-      continue;
-    }
-    
-    if (Array.isArray(value)) {
-      serializableData[key] = value.map(item => 
-        typeof item === 'object' && item !== null ? safeClone(item) : item
-      );
-      continue;
-    }
-    
-    if (typeof value === 'object' && value !== null) {
-      serializableData[key] = safeClone(value);
-      continue;
-    }
-    
-    serializableData[key] = value;
-  }
-  
-  return serializableData;
-};
-
-// Helper function to safely get documents from a query snapshot
-const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    title: doc.data().title || '',
-    description: doc.data().description || '',
-    date: doc.data().date || '',
-    ...safeClone(doc.data())
-  }));
-};
-
-// Helper function to handle Firestore operations with proper cleanup
-const handleFirestoreOperation = async <T>(
-  operation: (db: Firestore) => Promise<T>
-): Promise<T> => {
-  try {
-    const result = await operation(db);
-    return result;
-  } catch (error) {
-    console.error('Firestore operation error:', error);
-    throw error;
-  }
-};
+// ... (safeClone, getDocsFromSnapshot, handleFirestoreOperation) ...
+// Nesses helpers, não há menção direta a allowed_military_types, então devem estar ok.
 
 export const dataOperations = {
-  async fetch(): Promise<TimeSlot[]> {
+  async fetch(): Promise<TimeSlotFromList[]> { // Usando o tipo de TimeSlotsList
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
       const querySnapshot = await getDocs(timeSlotCollection);
-      return getDocsFromSnapshot(querySnapshot);
+      // Mapear para o tipo TimeSlotFromList explicitamente
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        // Garantir que os campos obrigatórios do tipo TimeSlotFromList existam
+        date: doc.data().date || '',
+        start_time: doc.data().start_time || '',
+        end_time: doc.data().end_time || '',
+        total_slots: doc.data().total_slots || 0,
+        slots_used: doc.data().slots_used || 0,
+        allowed_military_types: doc.data().allowed_military_types || [], // Importante fallback para array vazio
+        description: doc.data().description || '',
+        volunteers: doc.data().volunteers || [],
+      } as TimeSlotFromList));
     }).catch(error => {
       console.error('Error fetching data:', error);
       return [];
     });
   },
 
-  async insert(newSlot: any) {
+  async insert(newSlotData: SlotDataForFirebase) { // newSlotData vem do TimeSlotDialog.handleRegister
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
-      const clonedSlot = safeClone(newSlot);
       
-      // Ensure allowed_military_types is properly included
+      // O objeto newSlotData já deve estar com os nomes corretos (snake_case)
+      // e allowed_military_types com os valores selecionados.
+      // Remover o fallback desnecessário aqui:
       const slotToInsert = {
-        ...clonedSlot,
-        allowed_military_types: newSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]
+        ...newSlotData,
+        // Garante que se allowed_military_types for undefined (não deveria ser),
+        // salve um array vazio para consistência no DB.
+        // No entanto, TimeSlotDialog deve sempre enviar um array.
+        allowed_military_types: newSlotData.allowed_military_types || [] 
       };
       
       await addDoc(timeSlotCollection, slotToInsert);
@@ -117,37 +68,55 @@ export const dataOperations = {
     });
   },
 
-  async update(updatedSlot: any, conditions: any) {
+  async update(updatedSlotData: SlotDataForFirebase & { id: string }, conditions: any) {
+    // 'conditions' ainda é usado para encontrar o documento, mas 'updatedSlotData' contém todos os novos valores
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
-      const q = query(
-        timeSlotCollection,
-        where('date', '==', conditions.date),
-        where('start_time', '==', conditions.start_time),
-        where('end_time', '==', conditions.end_time)
-      );
       
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
-        const clonedSlot = safeClone(updatedSlot);
-        
-        // Ensure allowed_military_types is properly included
+      // Tentar encontrar pelo ID se disponível em updatedSlotData, senão usar conditions
+      let docRef;
+      if (updatedSlotData.id) {
+          docRef = doc(db, 'timeSlots', updatedSlotData.id);
+      } else {
+          // Lógica original de busca por conditions se ID não estiver em updatedSlotData
+          const q = query(
+            timeSlotCollection,
+            where('date', '==', conditions.date),
+            where('start_time', '==', conditions.start_time),
+            where('end_time', '==', conditions.end_time)
+          );
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
+          } else {
+            console.error('Document not found for update with conditions:', conditions);
+            return { success: false, message: "Document not found" };
+          }
+      }
+
+      if (docRef) {
+        // O objeto updatedSlotData já deve ter os nomes corretos (snake_case)
+        // e allowed_military_types com os valores selecionados.
+        // Remover o fallback desnecessário aqui.
+        // Criar um objeto apenas com os campos a serem atualizados, excluindo o id de dentro do payload.
+        const { id, ...dataToUpdate } = updatedSlotData; 
         const slotToUpdate = {
-          ...clonedSlot,
-          allowed_military_types: updatedSlot.allowedMilitaryTypes || updatedSlot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"]
+            ...dataToUpdate,
+            // Garante que se allowed_military_types for undefined (não deveria ser),
+            // salve um array vazio. TimeSlotDialog deve enviar um array.
+            allowed_military_types: updatedSlotData.allowed_military_types || [] 
         };
-        
         await updateDoc(docRef, slotToUpdate);
         return { success: true };
       }
-      return { success: false };
+      return { success: false, message: "Document reference not established" };
     }).catch(error => {
       console.error('Error updating data:', error);
       return { success: false };
     });
   },
 
+  // ... (delete e clear permanecem os mesmos, não afetam allowed_military_types diretamente na escrita)
   async delete(conditions: any) {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
