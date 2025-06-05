@@ -1,10 +1,8 @@
-// --- START OF FILE TimeSlotsList (1).tsx ---
-
 import React, { useState, useEffect } from "react";
 import { format, parseISO, isPast, addDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
-import { dataOperations } from "@/lib/firebase"; // Assumindo que este é o firebase.ts corrigido
+import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -14,20 +12,18 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
-import supabase from "@/lib/supabaseClient"; // Nota: você está usando Firebase e Supabase no mesmo arquivo.
+import supabase from "@/lib/supabaseClient";
 
-// Esta interface é a nossa referência para a estrutura de dados do Firebase
-export interface TimeSlot {
+interface TimeSlot {
   id?: string;
-  date: string; // yyyy-MM-dd
+  date: string;
   start_time: string;
   end_time: string;
   total_slots: number;
   slots_used: number;
   volunteers?: string[];
   description?: string;
-  allowed_military_types?: string[]; // snake_case, array de strings
-  isWeekly?: boolean; // Adicionado para consistência se usado
+  allowed_military_types?: string[];
 }
 
 interface GroupedTimeSlots {
@@ -116,22 +112,58 @@ const getMilitaryRankWeight = (rank: string): number => {
   const rankWeights: {
     [key: string]: number;
   } = {
-    "Cel": 12, "Cel PM": 12, "Ten Cel": 11, "Ten Cel PM": 11, "Maj": 10, "Maj PM": 10,
-    "Cap": 9, "Cap PM": 9, "1° Ten": 8, "1° Ten PM": 8, "2° Ten": 7, "2° Ten PM": 7,
-    "Sub Ten": 6, "Sub Ten PM": 6, "1° Sgt": 5, "1° Sgt PM": 5, "2° Sgt": 4, "2° Sgt PM": 4,
-    "3° Sgt": 3, "3° Sgt PM": 3, "Cb": 2, "Cb PM": 2, "Sd": 1, "Sd PM": 1, "Estágio": 0
+    "Cel": 12,
+    "Cel PM": 12,
+    "Ten Cel": 11,
+    "Ten Cel PM": 11,
+    "Maj": 10,
+    "Maj PM": 10,
+    "Cap": 9,
+    "Cap PM": 9,
+    "1° Ten": 8,
+    "1° Ten PM": 8,
+    "2° Ten": 7,
+    "2° Ten PM": 7,
+    "Sub Ten": 6,
+    "Sub Ten PM": 6,
+    "1° Sgt": 5,
+    "1° Sgt PM": 5,
+    "2° Sgt": 4,
+    "2° Sgt PM": 4,
+    "3° Sgt": 3,
+    "3° Sgt PM": 3,
+    "Cb": 2,
+    "Cb PM": 2,
+    "Sd": 1,
+    "Sd PM": 1,
+    "Estágio": 0
   };
   return rankWeights[rank] || 0;
 };
 
-const getRankCategory = (rank: string): { category: string; hourlyRate: number; } => {
+const getRankCategory = (rank: string): {
+  category: string;
+  hourlyRate: number;
+} => {
   const cbSdRanks = ["Sd", "Sd PM", "Cb", "Cb PM"];
   const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM"];
   const oficiaisRanks = ["2° Ten", "2° Ten PM", "1° Ten", "1° Ten PM", "Cap", "Cap PM", "Maj", "Maj PM", "Ten Cel", "Ten Cel PM", "Cel", "Cel PM"];
-  if (cbSdRanks.includes(rank)) return { category: "Cb/Sd", hourlyRate: 41.13 };
-  if (stSgtRanks.includes(rank)) return { category: "St/Sgt", hourlyRate: 56.28 };
-  if (oficiaisRanks.includes(rank)) return { category: "Oficiais", hourlyRate: 87.02 };
-  return { category: "Outros", hourlyRate: 0 };
+  if (cbSdRanks.includes(rank)) return {
+    category: "Cb/Sd",
+    hourlyRate: 41.13
+  };
+  if (stSgtRanks.includes(rank)) return {
+    category: "St/Sgt",
+    hourlyRate: 56.28
+  };
+  if (oficiaisRanks.includes(rank)) return {
+    category: "Oficiais",
+    hourlyRate: 87.02
+  };
+  return {
+    category: "Outros",
+    hourlyRate: 0
+  };
 };
 
 const getVolunteerRank = (volunteerFullName: string): string => {
@@ -143,25 +175,30 @@ const getVolunteerRank = (volunteerFullName: string): string => {
 };
 
 const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value).replace("R$", "R$ ");
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value).replace("R$", "R$ ");
 };
 
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [slotLimit, setSlotLimit] = useState<number>(0);
-  const [volunteerHours, setVolunteerHours] = useState<{ [key: string]: string; }>({});
-  const { toast } = useToast();
+  const [volunteerHours, setVolunteerHours] = useState<{
+    [key: string]: string;
+  }>({});
+  const {
+    toast
+  } = useToast();
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
   const isAdmin = userData?.userType === 'admin';
-
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
-    if (!startTime || !endTime) return "0";
     const [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);
-    if (endHour < startHour || (endHour === 0 && startHour > 0)) {
+    if (endHour < startHour || endHour === 0 && startHour > 0) {
       endHour += 24;
     }
     let diffHours = endHour - startHour;
@@ -173,25 +210,26 @@ const TimeSlotsList = () => {
     const totalHours = diffHours + diffMinutes / 60;
     return `${totalHours}`;
   };
-
   const fetchVolunteerHours = async () => {
     if (!isAdmin) return;
     try {
-      const currentMonth = format(new Date(), 'MMMM', { locale: ptBR }).toUpperCase();
+      const currentMonth = format(new Date(), 'MMMM', {
+        locale: ptBR
+      }).toUpperCase();
       type TableName = "JANEIRO" | "FEVEREIRO" | "MARCO" | "ABRIL" | "MAIO" | "JUNHO" | "JULHO" | "AGOSTO" | "SETEMBRO" | "OUTUBRO" | "NOVEMBRO" | "DEZEMBRO" | "ESCALA";
       let tableName: TableName;
-      if (currentMonth === 'JANEIRO') tableName = "JANEIRO";
-      else if (currentMonth === 'FEVEREIRO') tableName = "FEVEREIRO";
-      else if (currentMonth === 'MARÇO') tableName = "MARCO";
-      // ... (restante dos meses)
-      else tableName = "DEZEMBRO"; // Exemplo de fallback
-
-      const { data, error } = await supabase.from(tableName).select('Nome, "Total Geral"');
+      if (currentMonth === 'JANEIRO') tableName = "JANEIRO";else if (currentMonth === 'FEVEREIRO') tableName = "FEVEREIRO";else if (currentMonth === 'MARÇO') tableName = "MARCO";else if (currentMonth === 'ABRIL') tableName = "ABRIL";else if (currentMonth === 'MAIO') tableName = "MAIO";else if (currentMonth === 'JUNHO') tableName = "JUNHO";else if (currentMonth === 'JULHO') tableName = "JULHO";else if (currentMonth === 'AGOSTO') tableName = "AGOSTO";else if (currentMonth === 'SETEMBRO') tableName = "SETEMBRO";else if (currentMonth === 'OUTUBRO') tableName = "OUTUBRO";else if (currentMonth === 'NOVEMBRO') tableName = "NOVEMBRO";else tableName = "DEZEMBRO";
+      const {
+        data,
+        error
+      } = await supabase.from(tableName).select('Nome, "Total Geral"');
       if (error) {
         console.error('Error fetching volunteer hours:', error);
         return;
       }
-      const hoursMap: { [key: string]: string; } = {};
+      const hoursMap: {
+        [key: string]: string;
+      } = {};
       if (data) {
         data.forEach(row => {
           if (row && typeof row === 'object' && 'Nome' in row && 'Total Geral' in row) {
@@ -208,7 +246,6 @@ const TimeSlotsList = () => {
       console.error('Error in fetchVolunteerHours:', error);
     }
   };
-
   useEffect(() => {
     const fetchSlotLimit = async () => {
       try {
@@ -225,26 +262,29 @@ const TimeSlotsList = () => {
     const timeSlotsCollection = collection(db, 'timeSlots');
     const q = query(timeSlotsCollection);
     const unsubscribe = onSnapshot(q, snapshot => {
-      const formattedSlots: TimeSlot[] = snapshot.docs.map(docSnap => { // Renomeado para docSnap para evitar conflito
-        const data = docSnap.data();
+      const formattedSlots: TimeSlot[] = snapshot.docs.map(doc => {
+        const data = doc.data();
         return {
-          id: docSnap.id,
-          date: data.date || format(new Date(), 'yyyy-MM-dd'), // Fallback para data
-          start_time: data.start_time || '00:00',
-          end_time: data.end_time || '00:00',
+          id: doc.id,
+          date: data.date,
+          start_time: data.start_time,
+          end_time: data.end_time,
           volunteers: data.volunteers || [],
           slots_used: data.slots_used || 0,
-          total_slots: data.total_slots || data.slots || 0, // 'data.slots' como fallback se existir
+          total_slots: data.total_slots || data.slots || 0,
           description: data.description || "",
-          allowed_military_types: data.allowed_military_types || [], // Importante: fallback para array vazio
-          isWeekly: data.isWeekly || false,
+          allowed_military_types: data.allowed_military_types || []
         };
       });
       setTimeSlots(formattedSlots);
       setIsLoading(false);
     }, error => {
       console.error('Erro ao ouvir horários:', error);
-      toast({ title: "Erro ao atualizar horários", description: "Não foi possível receber atualizações em tempo real.", variant: "destructive" });
+      toast({
+        title: "Erro ao atualizar horários",
+        description: "Não foi possível receber atualizações em tempo real.",
+        variant: "destructive"
+      });
       setIsLoading(false);
     });
     if (isAdmin) {
@@ -252,156 +292,206 @@ const TimeSlotsList = () => {
     }
     return () => unsubscribe();
   }, [toast, isAdmin]);
-
   const handleVolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
-      toast({ title: "Erro", description: "Usuário não encontrado. Por favor, faça login novamente.", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: "Usuário não encontrado. Por favor, faça login novamente.",
+        variant: "destructive"
+      });
       return;
     }
     const userSlotCount = timeSlots.reduce((count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
     if (userSlotCount >= slotLimit && !isAdmin) {
-      toast({ title: "Limite atingido!🚫", description: `Você atingiu o limite de ${slotLimit} horário${slotLimit === 1 ? '' : 's'} por usuário.`, variant: "destructive" });
+      toast({
+        title: "Limite atingido!🚫",
+        description: `Você atingiu o limite de ${slotLimit} horário${slotLimit === 1 ? '' : 's'} por usuário.`,
+        variant: "destructive"
+      });
       return;
     }
     const slotsForDate = timeSlots.filter(slot => slot.date === timeSlot.date);
     const isAlreadyRegistered = slotsForDate.some(slot => slot.volunteers?.includes(volunteerName));
     if (isAlreadyRegistered) {
-      toast({ title: "Erro ⛔", description: "Você já está registrado em um horário nesta data.", variant: "destructive" });
+      toast({
+        title: "Erro ⛔",
+        description: "Você já está registrado em um horário nesta data.",
+        variant: "destructive"
+      });
       return;
     }
     try {
-      const updatedSlot: Partial<TimeSlot> & { id: string } = { // Parcial, pois só atualizamos alguns campos
-        id: timeSlot.id!,
-        slots_used: (timeSlot.slots_used || 0) + 1,
+      const updatedSlot = {
+        ...timeSlot,
+        slots_used: timeSlot.slots_used + 1,
         volunteers: [...(timeSlot.volunteers || []), volunteerName]
       };
-      // Passa o objeto com id para dataOperations.update.
-      // 'conditions' não é mais estritamente necessário se o update usa o ID.
-      const result = await dataOperations.update(updatedSlot, { /* conditions for old update logic if needed */ });
+      const result = await dataOperations.update(updatedSlot, {
+        date: timeSlot.date,
+        start_time: timeSlot.start_time,
+        end_time: timeSlot.end_time
+      });
       if (!result.success) {
-        throw new Error(result.message || 'Falha ao atualizar o horário');
+        throw new Error('Falha ao atualizar o horário');
       }
-      toast({ title: "Sucesso!✅🤠", description: "Extra marcada. Aguarde a escala." });
-    } catch (error: any) {
+      toast({
+        title: "Sucesso!✅🤠",
+        description: "Extra marcada. Aguarde a escala."
+      });
+    } catch (error) {
       console.error('Erro ao voluntariar:', error);
-      toast({ title: "Erro 🤔", description: error.message || "Não foi possível reservar a Extra.", variant: "destructive" });
+      toast({
+        title: "Erro 🤔",
+        description: "Não foi possível reservar a Extra.",
+        variant: "destructive"
+      });
     }
   };
-
   const handleUnvolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
-      toast({ title: "Erro 🤔", description: "Usuário não encontrado. Por favor, faça login novamente.", variant: "destructive" });
+      toast({
+        title: "Erro 🤔",
+        description: "Usuário não encontrado. Por favor, faça login novamente.",
+        variant: "destructive"
+      });
       return;
     }
     try {
-      const updatedSlot: Partial<TimeSlot> & { id: string } = {
-        id: timeSlot.id!,
-        slots_used: Math.max(0, (timeSlot.slots_used || 0) - 1),
+      const updatedSlot = {
+        ...timeSlot,
+        slots_used: timeSlot.slots_used - 1,
         volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerName)
       };
-      const result = await dataOperations.update(updatedSlot, { /* conditions */ });
+      const result = await dataOperations.update(updatedSlot, {
+        date: timeSlot.date,
+        start_time: timeSlot.start_time,
+        end_time: timeSlot.end_time
+      });
       if (!result.success) {
-        throw new Error(result.message || 'Falha ao atualizar o horário');
+        throw new Error('Falha ao atualizar o horário');
       }
-      toast({ title: "Desmarcado! 👀🤔", description: "Extra desmarcada com sucesso!" });
-    } catch (error: any) {
+      toast({
+        title: "Desmarcado! 👀🤔",
+        description: "Extra desmarcada com sucesso!"
+      });
+    } catch (error) {
       console.error('Erro ao desmarcar:', error);
-      toast({ title: "Erro ⛔", description: error.message || "Não foi possível desmarcar a Extra.", variant: "destructive" });
+      toast({
+        title: "Erro ⛔",
+        description: "Não foi possível desmarcar a Extra.",
+        variant: "destructive"
+      });
     }
   };
-  
   const handleUpdateSlotLimit = async (limit: number) => {
-    // ... (sem alterações)
     if (isNaN(limit) || limit < 0) {
-      toast({ title: "Erro 😵‍💫", description: "Por favor, insira um número válido.", variant: "destructive" });
+      toast({
+        title: "Erro 😵‍💫",
+        description: "Por favor, insira um número válido.",
+        variant: "destructive"
+      });
       return;
     }
     try {
-      await setDoc(doc(db, 'settings', 'slotLimit'), { value: limit });
+      await setDoc(doc(db, 'settings', 'slotLimit'), {
+        value: limit
+      });
       setSlotLimit(limit);
-      toast({ title: "Sucesso", description: "Limite de horários atualizado com sucesso!" });
+      toast({
+        title: "Sucesso",
+        description: "Limite de horários atualizado com sucesso!"
+      });
     } catch (error) {
       console.error('Erro ao atualizar limite de slots:', error);
-      toast({ title: "Erro", description: "Não foi possível atualizar o limite de horários.", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o limite de horários.",
+        variant: "destructive"
+      });
     }
   };
-
   const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
     return slots.reduce((groups: GroupedTimeSlots, slot) => {
       const date = slot.date;
       if (!groups[date]) {
-        groups[date] = { slots: [], dailyCost: 0 };
+        groups[date] = {
+          slots: [],
+          dailyCost: 0
+        };
       }
       groups[date].slots.push(slot);
       return groups;
     }, {});
   };
-
-  const isVolunteered = (timeSlot: TimeSlot) => timeSlot.volunteers?.includes(volunteerName);
-  const isSlotFull = (timeSlot: TimeSlot) => timeSlot.slots_used >= timeSlot.total_slots;
-
-  const formatDateHeader = (date: string) => {
-    try {
-        const parsedDate = parseISO(date);
-        const dayOfWeek = format(parsedDate, "eee", { locale: ptBR });
-        const truncatedDay = dayOfWeek.substring(0, 3);
-        return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}-${format(parsedDate, "dd/MM/yy")}`;
-    } catch (error) {
-        console.error("Error formatting date header:", date, error);
-        return date; // Fallback
-    }
+  const isVolunteered = (timeSlot: TimeSlot) => {
+    return timeSlot.volunteers?.includes(volunteerName);
   };
-
+  const isSlotFull = (timeSlot: TimeSlot) => {
+    return timeSlot.slots_used === timeSlot.total_slots;
+  };
+  const formatDateHeader = (date: string) => {
+    const dayOfWeek = format(parseISO(date), "eee", {
+      locale: ptBR
+    });
+    const truncatedDay = dayOfWeek.substring(0, 3);
+    return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}-${format(parseISO(date), "dd/MM/yy")}`;
+  };
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
-    // ... (lógica existente, mas certifique-se que usa slot.allowed_military_types)
     const userDataString = localStorage.getItem('user');
     const userData = userDataString ? JSON.parse(userDataString) : null;
     
-    if (userData?.rank === "Estágio") return false;
+    if (userData?.rank === "Estágio") {
+      return false;
+    }
 
+    // Verificar se o tipo de militar do usuário está permitido para este horário
     const userMilitaryType = userData?.militaryType;
-    // Default to all types if slot.allowed_military_types is empty or undefined for wider access
-    // Or strict: if empty, no one can volunteer unless admin overrides
-    const allowedTypes = slot.allowed_military_types && slot.allowed_military_types.length > 0 
-                         ? slot.allowed_military_types
-                         : ["Operacional", "Administrativo", "Inteligencia"]; // Fallback if empty
-
+    const allowedTypes = slot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"];
+    
+    // Se o usuário tem tipo definido e não está na lista permitida, não mostrar o botão
     if (userMilitaryType && !allowedTypes.includes(userMilitaryType)) {
       return false;
     }
 
-    if (isVolunteered(slot)) return true; // Show unvolunteer
-    if (isSlotFull(slot)) return true; // Show full (or not, if no action) - current logic shows button
-    
-    const userTotalSlotsCount = timeSlots.reduce((count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
-    if (userTotalSlotsCount >= slotLimit && !isAdmin) return false; // Limit reached
+    // Se não há tipo definido para o usuário, permitir acesso (compatibilidade)
+    // ou se está na lista permitida, continuar com as outras verificações
 
+    if (isVolunteered(slot)) {
+      return true;
+    }
+    if (isSlotFull(slot)) {
+      return true;
+    }
+    const userSlotCount = timeSlots.reduce((count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
+    if (userSlotCount >= slotLimit && !isAdmin) {
+      return false;
+    }
     const slotsForDate = timeSlots.filter(s => s.date === slot.date);
     const isVolunteeredForDate = slotsForDate.some(s => s.volunteers?.includes(volunteerName));
-    return !isVolunteeredForDate; // Can volunteer if not already on this date
+    return !isVolunteeredForDate;
   };
-
   const canVolunteerForSlot = (slot: TimeSlot) => {
     if (isAdmin) return true;
     const userSlotCount = timeSlots.reduce((count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
     return userSlotCount < slotLimit;
   };
-
-  const sortVolunteers = (volunteers: string[] | undefined) => {
+  const sortVolunteers = (volunteers: string[]) => {
     if (!volunteers) return [];
-    return [...volunteers].sort((a, b) => {
+    return volunteers.sort((a, b) => {
       const rankA = a.split(" ")[0];
       const rankB = b.split(" ")[0];
       return getMilitaryRankWeight(rankB) - getMilitaryRankWeight(rankA);
     });
   };
-
   const [calculatedGroupedTimeSlots, setCalculatedGroupedTimeSlots] = useState<GroupedTimeSlots>({});
-  const [totalCostSummary, setTotalCostSummary] = useState<{ "Cb/Sd": number; "St/Sgt": number; "Oficiais": number; "Total Geral": number; }>({ "Cb/Sd": 0, "St/Sgt": 0, "Oficiais": 0, "Total Geral": 0 });
-
   useEffect(() => {
     const grouped = groupTimeSlotsByDate(timeSlots);
-    let newTotalCostSummary = { "Cb/Sd": 0, "St/Sgt": 0, "Oficiais": 0, "Total Geral": 0 };
+    let totalCostCounter = {
+      "Cb/Sd": 0,
+      "St/Sgt": 0,
+      "Oficiais": 0,
+      "Total Geral": 0
+    };
     Object.keys(grouped).forEach(date => {
       let dailyCost = 0;
       grouped[date].slots.forEach(slot => {
@@ -411,64 +501,91 @@ const TimeSlotsList = () => {
           const hours = parseFloat(calculateTimeDifference(slot.start_time, slot.end_time));
           const slotCost = hours * rankInfo.hourlyRate;
           dailyCost += slotCost;
-          newTotalCostSummary[rankInfo.category] = (newTotalCostSummary[rankInfo.category] || 0) + slotCost;
-          newTotalCostSummary["Total Geral"] = (newTotalCostSummary["Total Geral"] || 0) + slotCost;
+          totalCostCounter[rankInfo.category] = (totalCostCounter[rankInfo.category] || 0) + slotCost;
+          totalCostCounter["Total Geral"] = (totalCostCounter["Total Geral"] || 0) + slotCost;
         });
       });
       grouped[date].dailyCost = dailyCost;
     });
     setCalculatedGroupedTimeSlots(grouped);
-    setTotalCostSummary(newTotalCostSummary);
+    setTotalCostSummary(totalCostCounter);
   }, [timeSlots]);
-
   const userSlotCount = timeSlots.reduce((count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
-  const [volunteerToRemove, setVolunteerToRemove] = useState<{ name: string; timeSlot: TimeSlot; } | null>(null);
-
-  const handleRemoveVolunteer = async (timeSlot: TimeSlot, volunteerNameToRemove: string) => {
+  const [volunteerToRemove, setVolunteerToRemove] = useState<{
+    name: string;
+    timeSlot: TimeSlot;
+  } | null>(null);
+  const handleRemoveVolunteer = async (timeSlot: TimeSlot, volunteerName: string) => {
     try {
-      const updatedSlot: Partial<TimeSlot> & { id: string } = {
-        id: timeSlot.id!,
-        slots_used: Math.max(0, (timeSlot.slots_used || 0) - 1),
-        volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerNameToRemove)
+      const updatedSlot = {
+        ...timeSlot,
+        slots_used: timeSlot.slots_used - 1,
+        volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerName)
       };
-      const result = await dataOperations.update(updatedSlot, { /* conditions */ });
+      const result = await dataOperations.update(updatedSlot, {
+        date: timeSlot.date,
+        start_time: timeSlot.start_time,
+        end_time: timeSlot.end_time
+      });
       if (!result.success) {
-        throw new Error(result.message || 'Falha ao remover voluntário');
+        throw new Error('Falha ao remover voluntário');
       }
-      toast({ title: "Sucesso! ✅", description: `${volunteerNameToRemove} foi removido deste horário.` });
-    } catch (error: any) {
+      toast({
+        title: "Sucesso! ✅",
+        description: `${volunteerName} foi removido deste horário.`
+      });
+    } catch (error) {
       console.error('Erro ao remover voluntário:', error);
-      toast({ title: "Erro ⛔", description: error.message || "Não foi possível remover o voluntário.", variant: "destructive" });
+      toast({
+        title: "Erro ⛔",
+        description: "Não foi possível remover o voluntário.",
+        variant: "destructive"
+      });
     }
   };
-
+  const [totalCostSummary, setTotalCostSummary] = useState<{
+    "Cb/Sd": number;
+    "St/Sgt": number;
+    "Oficiais": number;
+    "Total Geral": number;
+  }>({
+    "Cb/Sd": 0,
+    "St/Sgt": 0,
+    "Oficiais": 0,
+    "Total Geral": 0
+  });
   const today = new Date();
   const tomorrow = addDays(today, 1);
   let weeklyCost = 0;
   let weeklyCostDates: string[] = [];
-
   if (calculatedGroupedTimeSlots) {
-    Object.entries(calculatedGroupedTimeSlots).forEach(([date, groupedData]) => {
+    Object.entries(calculatedGroupedTimeSlots).filter(([date]) => {
       const slotDate = parseISO(date);
       const isWeeklyDate = isAfter(slotDate, tomorrow) || format(slotDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
       if (isWeeklyDate) {
         weeklyCostDates.push(date);
-        weeklyCost += groupedData.dailyCost;
       }
+      return isWeeklyDate;
+    }).forEach(([, groupedData]) => {
+      weeklyCost += groupedData.dailyCost;
     });
   }
-
   const formatWeeklyDateRange = () => {
     if (weeklyCostDates.length === 0) return "";
     const sortedDates = weeklyCostDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-    const startDate = format(parseISO(sortedDates[0]), "eee", { locale: ptBR }).substring(0, 3).toUpperCase();
-    const endDate = format(parseISO(sortedDates[sortedDates.length - 1]), "eee", { locale: ptBR }).substring(0, 3).toUpperCase();
+    const startDate = format(parseISO(sortedDates[0]), "eee", {
+      locale: ptBR
+    }).substring(0, 3).toUpperCase();
+    const endDate = format(parseISO(sortedDates[sortedDates.length - 1]), "eee", {
+      locale: ptBR
+    }).substring(0, 3).toUpperCase();
     return `${startDate}-${endDate}`;
   };
   const weeklyDateRangeText = formatWeeklyDateRange();
-
+  if (isLoading) {
+    return <div className="p-4">Carregando horários...</div>;
+  }
   const getVolunteerHours = (volunteerName: string) => {
-    // ... (sem alterações)
     if (volunteerHours[volunteerName]) {
       return volunteerHours[volunteerName];
     }
@@ -481,11 +598,6 @@ const TimeSlotsList = () => {
     }
     return null;
   };
-  
-  if (isLoading) {
-    return <div className="p-4">Carregando horários...</div>;
-  }
-
   return <div className="space-y-6 p-4 py-0 my-0 px-0">
       <TimeSlotLimitControl slotLimit={slotLimit} onUpdateLimit={handleUpdateSlotLimit} userSlotCount={userSlotCount} isAdmin={isAdmin} />
 
@@ -500,12 +612,18 @@ const TimeSlotsList = () => {
           </div>
         </div>}
 
-      {Object.entries(calculatedGroupedTimeSlots).sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime()).map(([date, groupedData]) => {
-      const { slots, dailyCost } = groupedData;
-      const isDatePast = isPast(parseISO(date)) && format(parseISO(date), 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd'); // Past and not today
-      // const isCollapsed = isDatePast; // Removido colapso automático para sempre mostrar
-      const sortedSlots = [...slots].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""));
-      
+      {Object.entries(calculatedGroupedTimeSlots).sort().map(([date, groupedData]) => {
+      const {
+        slots,
+        dailyCost
+      } = groupedData;
+      const isDatePast = isPast(parseISO(date));
+      const isCollapsed = isDatePast;
+      const sortedSlots = [...slots].sort((a, b) => {
+        const timeA = a.start_time;
+        const timeB = b.start_time;
+        return timeA.localeCompare(timeB);
+      });
       return <div key={date} className="bg-white rounded-lg shadow-sm">
             <div className="p-4 md:p-5 px-[5px]">
               <div className="flex flex-col items-center">
@@ -518,23 +636,22 @@ const TimeSlotsList = () => {
                     {isAdmin && dailyCost > 0 && <span className="text-green-600 font-semibold text-base">{formatCurrency(dailyCost)}</span>}
                   </div>
                   <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
-                    {isDatePast ? "Encerrado" : "Extra"}
+                    {isDatePast ? "Extra" : "Extra"}
                   </Badge>
                 </div>
               </div>
 
-              {/* {!isCollapsed && ( */}
-                <div className="space-y-3 mt-4">
+              {!isCollapsed && <div className="space-y-3 mt-4">
                   {sortedSlots.map((slot, idx) => <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
                       <div className="flex flex-col space-y-3">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
                             <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
                             <p className="font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
-                              {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} ({calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)}h)
+                              {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}-{calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)}h
                             </p>
                           </div>
-                          {slot.description && <span className="text-gray-700 ml-2 max-w-[200px] truncate" title={slot.description}>
+                          {slot.description && <span className="text-gray-700 ml-2 max-w-[200px] truncate">
                               {slot.description}
                             </span>}
                         </div>
@@ -545,12 +662,6 @@ const TimeSlotsList = () => {
                               {isSlotFull(slot) ? 'Vagas Esgotadas' : `${slot.total_slots - slot.slots_used} ${slot.total_slots - slot.slots_used === 1 ? 'vaga' : 'vagas'}`}
                             </span>
                           </div>
-                          {/* Mostrar tipos de militares permitidos */}
-                          {slot.allowed_military_types && slot.allowed_military_types.length > 0 && (
-                            <div className="text-xs text-gray-500">
-                                Permitido: {slot.allowed_military_types.join(', ')}
-                            </div>
-                          )}
                         </div>
                       </div>
                       
@@ -564,27 +675,25 @@ const TimeSlotsList = () => {
                                       {getVolunteerHours(volunteer)}h
                                     </span>}
                                 </div>
-                                {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({ name: volunteer, timeSlot: slot })}>
+                                {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({
+                      name: volunteer,
+                      timeSlot: slot
+                    })}>
                                     <X className="h-4 w-4" />
                                   </Button>}
                               </div>)}
                           </div>
                         </div>}
                       
-                      {!isDatePast && ( // Não mostrar botões para datas passadas
-                        <div className="pt-2">
-                          {shouldShowVolunteerButton(slot) && (
-                            isVolunteered(slot) ? 
-                              <Button onClick={() => handleUnvolunteer(slot)} variant="destructive" size="sm" className="w-full shadow-sm hover:shadow">Desmarcar</Button> : 
-                              (!isSlotFull(slot) && canVolunteerForSlot(slot) && 
-                                <Button onClick={() => handleVolunteer(slot)} className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow w-full" size="sm">Voluntário</Button>
-                              )
-                          )}
-                        </div>
-                      )}
+                      <div className="pt-2">
+                        {shouldShowVolunteerButton(slot) && (isVolunteered(slot) ? <Button onClick={() => handleUnvolunteer(slot)} variant="destructive" size="sm" className="w-full shadow-sm hover:shadow">
+                              Desmarcar
+                            </Button> : !isSlotFull(slot) && canVolunteerForSlot(slot) && <Button onClick={() => handleVolunteer(slot)} className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow w-full" size="sm">
+                                Voluntário
+                              </Button>)}
+                      </div>
                     </div>)}
-                </div>
-              {/* )} */}
+                </div>}
             </div>
           </div>;
     })}
@@ -598,13 +707,13 @@ const TimeSlotsList = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setVolunteerToRemove(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={() => {
-              if (volunteerToRemove) {
-                handleRemoveVolunteer(volunteerToRemove.timeSlot, volunteerToRemove.name);
-                setVolunteerToRemove(null);
-              }
-            }}>
+            if (volunteerToRemove) {
+              handleRemoveVolunteer(volunteerToRemove.timeSlot, volunteerToRemove.name);
+              setVolunteerToRemove(null);
+            }
+          }}>
               Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -614,4 +723,3 @@ const TimeSlotsList = () => {
 };
 
 export default TimeSlotsList;
-// --- END OF FILE TimeSlotsList (1).tsx ---
