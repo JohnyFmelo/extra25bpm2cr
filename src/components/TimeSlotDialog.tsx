@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -10,16 +9,32 @@ import { Switch } from "./ui/switch";
 import { Checkbox } from "./ui/checkbox";
 import { Clock, Calendar, Users, RefreshCw, FileText, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TimeSlot } from "@/types/timeSlot";
+import { TimeSlot as AppTimeSlotType } from "@/types/timeSlot"; // Assumindo que esta é a interface camelCase
 import { Label } from "./ui/label";
+
+// Interface para o prop editingTimeSlot que vem do TimeSlotsList.tsx
+// Pode ter campos snake_case como start_time, end_time, total_slots
+interface EditingTimeSlotProps {
+  id?: string;
+  date: string; // Ou Date, dependendo de como é passado
+  start_time: string;
+  end_time: string;
+  total_slots: number;
+  slots_used: number;
+  description?: string;
+  allowedMilitaryTypes?: string[]; // Já deve vir como camelCase de TimeSlotsList
+  volunteers?: string[]; // Adicionado para completude, se necessário
+  isWeekly?: boolean; // Se relevante
+}
+
 
 interface TimeSlotDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate: Date;
-  onAddTimeSlot: (timeSlot: TimeSlot) => void;
-  onEditTimeSlot: (timeSlot: TimeSlot) => void;
-  editingTimeSlot: TimeSlot | null;
+  onAddTimeSlot: (timeSlot: AppTimeSlotType) => void; // Espera o tipo AppTimeSlotType (camelCase)
+  onEditTimeSlot: (timeSlot: AppTimeSlotType) => void; // Espera o tipo AppTimeSlotType (camelCase)
+  editingTimeSlot: EditingTimeSlotProps | null; // Prop de entrada, pode ter snake_case
   isLoading?: boolean;
 }
 
@@ -29,17 +44,17 @@ const TimeSlotDialog = ({
   selectedDate,
   onAddTimeSlot,
   onEditTimeSlot,
-  editingTimeSlot,
+  editingTimeSlot, // Este é do tipo EditingTimeSlotProps
   isLoading = false,
 }: TimeSlotDialogProps) => {
-  const [startTime, setStartTime] = useState("07:00");
+  const [startTime, setStartTime] = useState("07:00"); // Estado interno usa camelCase
   const [hours, setHours] = useState("6");
-  const [selectedSlots, setSelectedSlots] = useState<number>(2);
+  const [selectedSlots, setSelectedSlots] = useState<number>(2); // Estado interno
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>(["Operacional", "Administrativo", "Inteligencia"]);
+  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>(["Operacional", "Administrativo", "Inteligencia"]); // Estado interno
 
   const slotOptions = [2, 3, 4, 5];
   const militaryTypes = [
@@ -48,8 +63,8 @@ const TimeSlotDialog = ({
     { id: "Inteligencia", label: "Inteligência" }
   ];
 
-  // Função para calcular o horário final baseado no início e duração
   const calculateEndTime = (start: string, duration: string): string => {
+    if (!start || !duration || isNaN(parseFloat(duration))) return "00:00"; // Validação
     const [startHour, startMinute] = start.split(':').map(Number);
     const durationHours = parseFloat(duration);
     
@@ -60,12 +75,11 @@ const TimeSlotDialog = ({
     return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
   };
 
-  // Função para calcular duração baseada no início e fim
   const calculateDuration = (start: string, end: string): string => {
+    if (!start || !end) return "0"; // Validação
     const [startHour, startMinute] = start.split(':').map(Number);
     let [endHour, endMinute] = end.split(':').map(Number);
     
-    // Se o horário de fim for menor que o de início, assumir que é no dia seguinte
     if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
       endHour += 24;
     }
@@ -73,6 +87,8 @@ const TimeSlotDialog = ({
     const startTotalMinutes = startHour * 60 + startMinute;
     const endTotalMinutes = endHour * 60 + endMinute;
     const durationMinutes = endTotalMinutes - startTotalMinutes;
+    
+    if (durationMinutes < 0) return "0"; // Caso de erro
     const durationHours = durationMinutes / 60;
     
     return durationHours.toString();
@@ -80,28 +96,35 @@ const TimeSlotDialog = ({
 
   useEffect(() => {
     if (editingTimeSlot) {
-      setStartTime(editingTimeSlot.startTime);
-      const duration = calculateDuration(editingTimeSlot.startTime, editingTimeSlot.endTime);
-      setHours(duration);
-      setSelectedSlots(editingTimeSlot.slots);
+      // Mapeia de editingTimeSlot (que pode ter snake_case para tempo/slots) para o estado interno (camelCase)
+      setStartTime(editingTimeSlot.start_time || "07:00");
+      const duration = calculateDuration(editingTimeSlot.start_time, editingTimeSlot.end_time);
+      setHours(duration !== "0" ? duration : "6");
+      setSelectedSlots(editingTimeSlot.total_slots || 2);
       setDescription(editingTimeSlot.description || "");
-      // Corrigir o carregamento dos tipos permitidos
-      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]);
-      if (!slotOptions.includes(editingTimeSlot.slots)) {
+      // CORREÇÃO: Usa allowedMilitaryTypes de editingTimeSlot, que já deve vir camelCase de TimeSlotsList.
+      // Se for undefined ou nulo, usa um array vazio para não resetar para os três.
+      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []); 
+      
+      if (!slotOptions.includes(editingTimeSlot.total_slots || 0)) {
         setShowCustomSlots(true);
-        setCustomSlots(editingTimeSlot.slots.toString());
+        setCustomSlots((editingTimeSlot.total_slots || 0).toString());
       } else {
         setShowCustomSlots(false);
+        setCustomSlots(""); // Limpar custom slots se não estiver usando
       }
-      setUseWeeklyLogic(false);
+      setUseWeeklyLogic(editingTimeSlot.isWeekly || false);
     } else {
+      // Reset para criação de novo horário
       setStartTime("07:00");
       setHours("6");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes(["Operacional", "Administrativo", "Inteligencia"]);
+      // CORREÇÃO: Para novo slot, pode começar com todos ou vazio. Se vazio, a validação abaixo pegará.
+      // Mantendo o default de todos selecionados para novos slots, como no original.
+      setAllowedMilitaryTypes(["Operacional", "Administrativo", "Inteligencia"]); 
       setUseWeeklyLogic(false);
     }
   }, [editingTimeSlot, open]);
@@ -115,24 +138,30 @@ const TimeSlotDialog = ({
   };
 
   const handleRegister = () => {
-    const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
-    const endTime = calculateEndTime(startTime, hours);
+    const slotsCount = showCustomSlots ? parseInt(customSlots) : selectedSlots;
+    if (isNaN(slotsCount) || slotsCount <=0) {
+        // Adicionar toast ou tratamento de erro para slots inválidos
+        return;
+    }
+    const finalEndTime = calculateEndTime(startTime, hours);
     
-    const newTimeSlot: TimeSlot = {
-      date: selectedDate,
-      startTime,
-      endTime,
-      slots,
-      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
+    // Cria o objeto usando AppTimeSlotType (camelCase) para enviar via onAddTimeSlot/onEditTimeSlot
+    const newTimeSlotData: AppTimeSlotType = {
+      id: editingTimeSlot?.id, // Inclui ID se estiver editando
+      date: selectedDate, // selectedDate já é Date
+      startTime: startTime,
+      endTime: finalEndTime,
+      slots: slotsCount,
+      slotsUsed: editingTimeSlot ? editingTimeSlot.slots_used : 0,
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedMilitaryTypes
+      allowedMilitaryTypes: allowedMilitaryTypes // Já está no estado (camelCase)
     };
     
     if (editingTimeSlot) {
-      onEditTimeSlot(newTimeSlot);
+      onEditTimeSlot(newTimeSlotData);
     } else {
-      onAddTimeSlot(newTimeSlot);
+      onAddTimeSlot(newTimeSlotData);
     }
     onOpenChange(false);
   };
@@ -140,10 +169,15 @@ const TimeSlotDialog = ({
   const isButtonDisabled = () => {
     if (showCustomSlots) {
       const numSlots = parseInt(customSlots);
-      return isNaN(numSlots) || numSlots <= 0 || isLoading || allowedMilitaryTypes.length === 0;
+      if (isNaN(numSlots) || numSlots <= 0) return true;
     }
     const hoursValue = parseFloat(hours);
-    return isNaN(hoursValue) || hoursValue <= 0 || isLoading || allowedMilitaryTypes.length === 0;
+    if (isNaN(hoursValue) || hoursValue <= 0) return true;
+
+    // CORREÇÃO: Botão desabilitado se nenhum tipo militar for selecionado
+    if (allowedMilitaryTypes.length === 0) return true; 
+    
+    return isLoading;
   };
 
   return (
@@ -208,22 +242,22 @@ const TimeSlotDialog = ({
               Número de vagas
             </Label>
             <div className="flex flex-wrap gap-2">
-              {slotOptions.map((slots) => (
+              {slotOptions.map((slotsVal) => ( // Renomeado para evitar conflito com `slots` da interface
                 <Button
-                  key={slots}
+                  key={slotsVal}
                   variant="outline"
                   size="sm"
                   className={cn(
                     "flex-1 min-w-10 h-10 border-gray-200",
-                    selectedSlots === slots && !showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                    selectedSlots === slotsVal && !showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
                   )}
                   onClick={() => {
-                    setSelectedSlots(slots);
+                    setSelectedSlots(slotsVal);
                     setShowCustomSlots(false);
                   }}
                   disabled={isLoading}
                 >
-                  {slots}
+                  {slotsVal}
                 </Button>
               ))}
               <Button
@@ -244,6 +278,7 @@ const TimeSlotDialog = ({
               <div className="pt-2">
                 <Input
                   type="number"
+                  min="1"
                   value={customSlots}
                   onChange={(e) => setCustomSlots(e.target.value)}
                   className="text-center"
@@ -280,7 +315,7 @@ const TimeSlotDialog = ({
             </div>
             {allowedMilitaryTypes.length === 0 && (
               <p className="text-xs text-red-500">
-                Selecione pelo menos um tipo de militar
+                Selecione pelo menos um tipo de militar.
               </p>
             )}
           </div>
@@ -295,7 +330,7 @@ const TimeSlotDialog = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="min-h-[80px] resize-none"
-              placeholder="Ex: Consulta de rotina, retorno, etc."
+              placeholder="Ex: Reforço POG, Apoio Administrativo, etc."
               disabled={isLoading}
             />
           </div>
