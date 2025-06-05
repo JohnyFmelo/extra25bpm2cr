@@ -73,7 +73,7 @@ const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
       title: data.title || '',
       description: data.description || '',
       date: data.date || '',
-      allowedMilitaryTypes: data.allowed_military_types || data.allowedMilitaryTypes || [],
+      allowedMilitaryTypes: data.allowed_military_types || [], // Mapear corretamente
       ...safeClone(doc.data())
     };
   });
@@ -110,18 +110,22 @@ export const dataOperations = {
       
       console.log('*** FIREBASE INSERT ***');
       console.log('Original slot received:', newSlot);
-      console.log('allowed_military_types from slot:', newSlot.allowed_military_types);
+      console.log('allowedMilitaryTypes from slot:', newSlot.allowedMilitaryTypes);
       
-      // Verificar se allowed_military_types existe e não está vazio
-      if (!newSlot.allowed_military_types || newSlot.allowed_military_types.length === 0) {
-        console.error('ERROR: No allowed_military_types provided to Firebase insert!');
+      // Verificar se allowedMilitaryTypes existe e não está vazio
+      if (!newSlot.allowedMilitaryTypes || newSlot.allowedMilitaryTypes.length === 0) {
+        console.error('ERROR: No allowedMilitaryTypes provided to Firebase insert!');
         return { success: false, error: 'No military types selected' };
       }
       
-      // Preparar os dados para inserção
+      // Preparar os dados para inserção, mapeando allowedMilitaryTypes para allowed_military_types
       const slotToInsert = {
-        ...safeClone(newSlot)
+        ...safeClone(newSlot),
+        allowed_military_types: newSlot.allowedMilitaryTypes
       };
+      
+      // Remover o campo allowedMilitaryTypes para evitar duplicação
+      delete slotToInsert.allowedMilitaryTypes;
       
       console.log('Final slot to insert in Firebase:', slotToInsert);
       console.log('allowed_military_types field:', slotToInsert.allowed_military_types);
@@ -150,18 +154,22 @@ export const dataOperations = {
         
         console.log('*** FIREBASE UPDATE ***');
         console.log('Original slot received:', updatedSlot);
-        console.log('allowed_military_types from slot:', updatedSlot.allowed_military_types);
+        console.log('allowedMilitaryTypes from slot:', updatedSlot.allowedMilitaryTypes);
         
-        // Verificar se allowed_military_types existe
-        if (!updatedSlot.allowed_military_types || updatedSlot.allowed_military_types.length === 0) {
-          console.error('ERROR: No allowed_military_types provided to Firebase update!');
+        // Verificar se allowedMilitaryTypes existe
+        if (!updatedSlot.allowedMilitaryTypes || updatedSlot.allowedMilitaryTypes.length === 0) {
+          console.error('ERROR: No allowedMilitaryTypes provided to Firebase update!');
           return { success: false, error: 'No military types selected' };
         }
         
-        // Preparar os dados para atualização
+        // Preparar os dados para atualização, mapeando allowedMilitaryTypes para allowed_military_types
         const slotToUpdate = {
-          ...safeClone(updatedSlot)
+          ...safeClone(updatedSlot),
+          allowed_military_types: updatedSlot.allowedMilitaryTypes
         };
+        
+        // Remover o campo allowedMilitaryTypes para evitar duplicação
+        delete slotToUpdate.allowedMilitaryTypes;
         
         console.log('Final slot to update in Firebase:', slotToUpdate);
         console.log('allowed_military_types field:', slotToUpdate.allowed_military_types);
