@@ -1,4 +1,4 @@
-// --- START OF FILE firebase.ts (ou @/lib/firebase/index.ts) ---
+// --- START OF FILE firebase.ts ---
 
 import { initializeApp } from 'firebase/app';
 import { 
@@ -11,19 +11,13 @@ import {
   deleteDoc, 
   doc, 
   updateDoc,
-  Firestore,
-  DocumentData, // Mantido para compatibilidade com safeClone se você o readicionar
-  QuerySnapshot // Mantido para compatibilidade com getDocsFromSnapshot se você o readicionar
+  // Firestore, // Não usado diretamente
+  // DocumentData, 
+  // QuerySnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { format } from "date-fns"; // Adicionado para fallback em fetch
 
-// Importar a interface TimeSlot de TimeSlotsList para consistência com os dados do Firebase
-// Se TimeSlotsList.tsx estiver em um local diferente, ajuste o path.
-// Supondo que TimeSlotsList.tsx está em '@/components/TimeSlotsList.tsx' ou similar
-// e exporta a interface TimeSlot.
-// Se não puder importar diretamente, defina uma interface aqui que corresponda.
-// import { TimeSlot as FirebaseTimeSlot } from '@/components/TimeSlotsList'; 
-// Alternativamente, defina a interface aqui se a importação circular/direta for um problema:
 export interface FirebaseTimeSlot {
   id?: string;
   date: string;
@@ -37,7 +31,6 @@ export interface FirebaseTimeSlot {
   isWeekly?: boolean;
 }
 
-
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -45,42 +38,35 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID // Opcional
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-// Tipos para os dados que vêm do TimeSlotDialog para as operações de escrita
 type NewSlotPayload = Omit<FirebaseTimeSlot, 'id' | 'volunteers' | 'slots_used'> & { slots_used?: number };
-type UpdateSlotPayload = Partial<Omit<FirebaseTimeSlot, 'id'>> & { id: string }; // id é obrigatório para update
+type UpdateSlotPayload = Partial<Omit<FirebaseTimeSlot, 'id'>> & { id: string };
 
-// Helper para operações Firestore (opcional, mas bom para logging/error handling centralizado)
 const handleFirestoreOperation = async <T>(
-  operation: () => Promise<T> // Simplificado para não passar 'db'
+  operation: () => Promise<T>
 ): Promise<T> => {
   try {
-    const result = await operation();
-    return result;
+    return await operation();
   } catch (error) {
     console.error('Firestore operation error:', error);
-    // Você pode querer retornar um objeto de erro padronizado aqui
-    throw error; // Re-lança para que a chamada original possa tratar
+    throw error;
   }
 };
 
 export const dataOperations = {
-  // Fetch não é mais usado por TimeSlotsList diretamente, que usa onSnapshot.
-  // Mas pode ser útil para outras partes ou se onSnapshot for removido.
   async fetch(): Promise<FirebaseTimeSlot[]> {
     return handleFirestoreOperation(async () => {
       const timeSlotCollection = collection(db, 'timeSlots');
       const querySnapshot = await getDocs(timeSlotCollection);
       return querySnapshot.docs.map(docSnap => ({
         id: docSnap.id,
-        ...(docSnap.data() as Omit<FirebaseTimeSlot, 'id'>), // Cast para o tipo base
-        // Garantir fallbacks para campos cruciais se vierem undefined do DB
+        ...(docSnap.data() as Omit<FirebaseTimeSlot, 'id'>),
         date: docSnap.data().date || format(new Date(), 'yyyy-MM-dd'),
         start_time: docSnap.data().start_time || '00:00',
         end_time: docSnap.data().end_time || '00:00',
@@ -99,54 +85,52 @@ export const dataOperations = {
       const timeSlotCollection = collection(db, 'timeSlots');
       const slotToInsert = {
         ...newSlotData,
-        allowed_military_types: newSlotData.allowed_military_types || [], // Garante array
-        volunteers: [], // Novo slot começa sem voluntários
-        slots_used: newSlotData.slots_used !== undefined ? newSlotData.slots_used : 0, // Padrão para slots_used
+        allowed_military_types: newSlotData.allowed_military_types || [],
+        volunteers: [],
+        slots_used: newSlotData.slots_used !== undefined ? newSlotData.slots_used : 0,
       };
+      console.log('[Firebase] Inserting new slot:', JSON.parse(JSON.stringify(slotToInsert)));
       await addDoc(timeSlotCollection, slotToInsert);
       return { success: true };
     }).catch(error => {
       console.error('Error inserting data:', error);
-      return { success: false, message: (error as Error).message || "Unknown error" };
+      return { success: false, message: (error as Error).message || "Unknown error during insert" };
     });
   },
 
-  async update(updatedSlotData: UpdateSlotPayload, conditions?: any) { 
-    // 'conditions' pode ser removido se o ID for sempre usado.
-    // TimeSlotsList já envia 'id' em 'updatedSlotData' para handleVolunteer, etc.
+  async update(updatedSlotData: UpdateSlotPayload) { // Removido 'conditions'
     return handleFirestoreOperation(async () => {
       if (!updatedSlotData.id) {
-        console.error('Update operation requires an ID.');
+        console.error('[Firebase] Update operation requires an ID in updatedSlotData.');
         return { success: false, message: "Update requires an ID." };
       }
       const docRef = doc(db, 'timeSlots', updatedSlotData.id);
       
-      // Criar um objeto apenas com os campos a serem atualizados, excluindo o 'id'.
       const { id, ...dataToUpdate } = updatedSlotData;
       
       const slotToUpdate: Partial<FirebaseTimeSlot> = { ...dataToUpdate };
 
-      // Garante que allowed_military_types seja um array se estiver sendo atualizado
       if (dataToUpdate.allowed_military_types !== undefined) {
         slotToUpdate.allowed_military_types = dataToUpdate.allowed_military_types || [];
       }
 
+      console.log('[Firebase] dataOperations.update: Attempting to update doc ID:', updatedSlotData.id, 'with payload:', JSON.parse(JSON.stringify(slotToUpdate)));
       await updateDoc(docRef, slotToUpdate);
       return { success: true };
     }).catch(error => {
       console.error('Error updating data:', error);
-      return { success: false, message: (error as Error).message || "Unknown error" };
+      return { success: false, message: (error as Error).message || "Unknown error during update" };
     });
   },
 
-  async delete(conditions: { date: string; start_time: string; end_time: string; } | { id: string }) {
+  async delete(conditions: { date?: string; start_time?: string; end_time?: string; id?: string }) {
     return handleFirestoreOperation(async () => {
       const timeSlotCollection = collection(db, 'timeSlots');
       let docToDeleteId: string | undefined;
 
-      if ('id' in conditions && conditions.id) {
+      if (conditions.id) {
         docToDeleteId = conditions.id;
-      } else if ('date' in conditions) { // Fallback para lógica antiga se ID não for passado
+      } else if (conditions.date && conditions.start_time && conditions.end_time) {
         const q = query(
           timeSlotCollection,
           where('date', '==', conditions.date),
@@ -157,9 +141,12 @@ export const dataOperations = {
         if (!querySnapshot.empty) {
           docToDeleteId = querySnapshot.docs[0].id;
         }
+      } else {
+        return { success: false, message: "Insufficient conditions for deletion." };
       }
 
       if (docToDeleteId) {
+        console.log('[Firebase] Deleting document with ID:', docToDeleteId);
         const docRef = doc(db, 'timeSlots', docToDeleteId);
         await deleteDoc(docRef);
         return { success: true };
@@ -167,7 +154,7 @@ export const dataOperations = {
       return { success: false, message: "Document not found for deletion" };
     }).catch(error => {
       console.error('Error deleting data:', error);
-      return { success: false, message: (error as Error).message || "Unknown error" };
+      return { success: false, message: (error as Error).message || "Unknown error during delete" };
     });
   },
 
@@ -175,11 +162,12 @@ export const dataOperations = {
     return handleFirestoreOperation(async () => {
       const timeSlotCollection = collection(db, 'timeSlots');
       const querySnapshot = await getDocs(timeSlotCollection);
+      console.log(`[Firebase] Clearing ${querySnapshot.docs.length} documents.`);
       await Promise.all(querySnapshot.docs.map(docSnap => deleteDoc(docSnap.ref)));
       return { success: true };
     }).catch(error => {
       console.error('Error clearing data:', error);
-      return { success: false, message: (error as Error).message || "Unknown error" };
+      return { success: false, message: (error as Error).message || "Unknown error during clear" };
     });
   }
 };
