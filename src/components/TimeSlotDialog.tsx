@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -38,7 +39,7 @@ const TimeSlotDialog = ({
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
+  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>(["Operacional", "Administrativo", "Inteligencia"]);
 
   const slotOptions = [2, 3, 4, 5];
   const militaryTypes = [
@@ -79,20 +80,13 @@ const TimeSlotDialog = ({
 
   useEffect(() => {
     if (editingTimeSlot) {
-      console.log('Loading editing time slot:', editingTimeSlot);
-      console.log('Editing allowedMilitaryTypes:', editingTimeSlot.allowedMilitaryTypes);
-      
       setStartTime(editingTimeSlot.startTime);
       const duration = calculateDuration(editingTimeSlot.startTime, editingTimeSlot.endTime);
       setHours(duration);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
-      
-      // Carregar exatamente os tipos que estão salvos no Firebase
-      const savedTypes = editingTimeSlot.allowedMilitaryTypes || [];
-      console.log('Setting allowedMilitaryTypes to:', savedTypes);
-      setAllowedMilitaryTypes(savedTypes);
-      
+      // Corrigir o carregamento dos tipos permitidos
+      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]);
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
@@ -101,55 +95,28 @@ const TimeSlotDialog = ({
       }
       setUseWeeklyLogic(false);
     } else {
-      // Reset para novo horário - iniciar com array vazio
-      console.log('Resetting for new time slot');
       setStartTime("07:00");
       setHours("6");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes([]); // Array vazio para novos horários
+      setAllowedMilitaryTypes(["Operacional", "Administrativo", "Inteligencia"]);
       setUseWeeklyLogic(false);
     }
   }, [editingTimeSlot, open]);
 
   const handleMilitaryTypeChange = (typeId: string, checked: boolean) => {
-    console.log(`Changing ${typeId} to ${checked}`);
-    
     if (checked) {
-      // Adicionar tipo se não estiver na lista
-      setAllowedMilitaryTypes(prev => {
-        if (!prev.includes(typeId)) {
-          const newTypes = [...prev, typeId];
-          console.log('Added type, new array:', newTypes);
-          return newTypes;
-        }
-        return prev;
-      });
+      setAllowedMilitaryTypes(prev => [...prev, typeId]);
     } else {
-      // Remover tipo da lista
-      setAllowedMilitaryTypes(prev => {
-        const newTypes = prev.filter(type => type !== typeId);
-        console.log('Removed type, new array:', newTypes);
-        return newTypes;
-      });
+      setAllowedMilitaryTypes(prev => prev.filter(type => type !== typeId));
     }
   };
 
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     const endTime = calculateEndTime(startTime, hours);
-    
-    console.log('*** REGISTERING TIME SLOT ***');
-    console.log('allowedMilitaryTypes before creating slot:', allowedMilitaryTypes);
-    console.log('allowedMilitaryTypes length:', allowedMilitaryTypes.length);
-    
-    // Verificar se há tipos selecionados
-    if (allowedMilitaryTypes.length === 0) {
-      console.error('No military types selected!');
-      return;
-    }
     
     const newTimeSlot: TimeSlot = {
       date: selectedDate,
@@ -159,11 +126,8 @@ const TimeSlotDialog = ({
       slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedMilitaryTypes: [...allowedMilitaryTypes] // Criar uma cópia do array
+      allowedMilitaryTypes
     };
-    
-    console.log('Final TimeSlot object:', newTimeSlot);
-    console.log('Final allowedMilitaryTypes in slot:', newTimeSlot.allowedMilitaryTypes);
     
     if (editingTimeSlot) {
       onEditTimeSlot(newTimeSlot);
@@ -319,12 +283,6 @@ const TimeSlotDialog = ({
                 Selecione pelo menos um tipo de militar
               </p>
             )}
-            <div className="text-xs text-gray-400">
-              Selecionados: {allowedMilitaryTypes.join(', ') || 'Nenhum'}
-            </div>
-            <div className="text-xs text-blue-500">
-              Debug - Estado atual: [{allowedMilitaryTypes.join(', ')}] (length: {allowedMilitaryTypes.length})
-            </div>
           </div>
 
           {/* Descrição */}
