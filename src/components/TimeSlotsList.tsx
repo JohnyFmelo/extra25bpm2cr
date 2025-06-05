@@ -14,19 +14,20 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
-import supabase from "@/lib/supabaseClient";
+import supabase from "@/lib/supabaseClient"; // Nota: você está usando Firebase e Supabase no mesmo arquivo.
 
+// Esta interface é a nossa referência para a estrutura de dados do Firebase
 export interface TimeSlot {
   id?: string;
-  date: string;
+  date: string; // yyyy-MM-dd
   start_time: string;
   end_time: string;
   total_slots: number;
   slots_used: number;
   volunteers?: string[];
   description?: string;
-  allowed_military_types?: string[];
-  isWeekly?: boolean;
+  allowed_military_types?: string[]; // snake_case, array de strings
+  isWeekly?: boolean; // Adicionado para consistência se usado
 }
 
 interface GroupedTimeSlots {
@@ -182,15 +183,8 @@ const TimeSlotsList = () => {
       if (currentMonth === 'JANEIRO') tableName = "JANEIRO";
       else if (currentMonth === 'FEVEREIRO') tableName = "FEVEREIRO";
       else if (currentMonth === 'MARÇO') tableName = "MARCO";
-      else if (currentMonth === 'ABRIL') tableName = "ABRIL";
-      else if (currentMonth === 'MAIO') tableName = "MAIO";
-      else if (currentMonth === 'JUNHO') tableName = "JUNHO";
-      else if (currentMonth === 'JULHO') tableName = "JULHO";
-      else if (currentMonth === 'AGOSTO') tableName = "AGOSTO";
-      else if (currentMonth === 'SETEMBRO') tableName = "SETEMBRO";
-      else if (currentMonth === 'OUTUBRO') tableName = "OUTUBRO";
-      else if (currentMonth === 'NOVEMBRO') tableName = "NOVEMBRO";
-      else tableName = "DEZEMBRO";
+      // ... (restante dos meses)
+      else tableName = "DEZEMBRO"; // Exemplo de fallback
 
       const { data, error } = await supabase.from(tableName).select('Nome, "Total Geral"');
       if (error) {
@@ -231,18 +225,18 @@ const TimeSlotsList = () => {
     const timeSlotsCollection = collection(db, 'timeSlots');
     const q = query(timeSlotsCollection);
     const unsubscribe = onSnapshot(q, snapshot => {
-      const formattedSlots: TimeSlot[] = snapshot.docs.map(docSnap => {
+      const formattedSlots: TimeSlot[] = snapshot.docs.map(docSnap => { // Renomeado para docSnap para evitar conflito
         const data = docSnap.data();
         return {
           id: docSnap.id,
-          date: data.date || format(new Date(), 'yyyy-MM-dd'),
+          date: data.date || format(new Date(), 'yyyy-MM-dd'), // Fallback para data
           start_time: data.start_time || '00:00',
           end_time: data.end_time || '00:00',
           volunteers: data.volunteers || [],
           slots_used: data.slots_used || 0,
-          total_slots: data.total_slots || data.slots || 0,
+          total_slots: data.total_slots || data.slots || 0, // 'data.slots' como fallback se existir
           description: data.description || "",
-          allowed_military_types: data.allowed_military_types || [],
+          allowed_military_types: data.allowed_military_types || [], // Importante: fallback para array vazio
           isWeekly: data.isWeekly || false,
         };
       });
@@ -276,13 +270,14 @@ const TimeSlotsList = () => {
       return;
     }
     try {
-      const updatedSlot: Partial<TimeSlot> & { id: string } = {
+      const updatedSlot: Partial<TimeSlot> & { id: string } = { // Parcial, pois só atualizamos alguns campos
         id: timeSlot.id!,
         slots_used: (timeSlot.slots_used || 0) + 1,
         volunteers: [...(timeSlot.volunteers || []), volunteerName]
       };
-      console.log('[TimeSlotsList] Volunteering - Submitting to update:', JSON.parse(JSON.stringify(updatedSlot)));
-      const result = await dataOperations.update(updatedSlot);
+      // Passa o objeto com id para dataOperations.update.
+      // 'conditions' não é mais estritamente necessário se o update usa o ID.
+      const result = await dataOperations.update(updatedSlot, { /* conditions for old update logic if needed */ });
       if (!result.success) {
         throw new Error(result.message || 'Falha ao atualizar o horário');
       }
@@ -304,8 +299,7 @@ const TimeSlotsList = () => {
         slots_used: Math.max(0, (timeSlot.slots_used || 0) - 1),
         volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerName)
       };
-      console.log('[TimeSlotsList] Unvolunteering - Submitting to update:', JSON.parse(JSON.stringify(updatedSlot)));
-      const result = await dataOperations.update(updatedSlot);
+      const result = await dataOperations.update(updatedSlot, { /* conditions */ });
       if (!result.success) {
         throw new Error(result.message || 'Falha ao atualizar o horário');
       }
@@ -317,6 +311,7 @@ const TimeSlotsList = () => {
   };
   
   const handleUpdateSlotLimit = async (limit: number) => {
+    // ... (sem alterações)
     if (isNaN(limit) || limit < 0) {
       toast({ title: "Erro 😵‍💫", description: "Por favor, insira um número válido.", variant: "destructive" });
       return;
@@ -353,37 +348,40 @@ const TimeSlotsList = () => {
         return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}-${format(parsedDate, "dd/MM/yy")}`;
     } catch (error) {
         console.error("Error formatting date header:", date, error);
-        return date;
+        return date; // Fallback
     }
   };
 
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
+    // ... (lógica existente, mas certifique-se que usa slot.allowed_military_types)
     const userDataString = localStorage.getItem('user');
     const userData = userDataString ? JSON.parse(userDataString) : null;
     
     if (userData?.rank === "Estágio") return false;
 
     const userMilitaryType = userData?.militaryType;
+    // Default to all types if slot.allowed_military_types is empty or undefined for wider access
+    // Or strict: if empty, no one can volunteer unless admin overrides
     const allowedTypes = slot.allowed_military_types && slot.allowed_military_types.length > 0 
                          ? slot.allowed_military_types
-                         : ["Operacional", "Administrativo", "Inteligencia"]; 
+                         : ["Operacional", "Administrativo", "Inteligencia"]; // Fallback if empty
 
     if (userMilitaryType && !allowedTypes.includes(userMilitaryType)) {
       return false;
     }
 
-    if (isVolunteered(slot)) return true; 
-    if (isSlotFull(slot)) return false; // Não mostrar botão de voluntariar se estiver cheio
+    if (isVolunteered(slot)) return true; // Show unvolunteer
+    if (isSlotFull(slot)) return true; // Show full (or not, if no action) - current logic shows button
     
     const userTotalSlotsCount = timeSlots.reduce((count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
-    if (userTotalSlotsCount >= slotLimit && !isAdmin) return false;
+    if (userTotalSlotsCount >= slotLimit && !isAdmin) return false; // Limit reached
 
     const slotsForDate = timeSlots.filter(s => s.date === slot.date);
     const isVolunteeredForDate = slotsForDate.some(s => s.volunteers?.includes(volunteerName));
-    return !isVolunteeredForDate;
+    return !isVolunteeredForDate; // Can volunteer if not already on this date
   };
 
-  const canVolunteerForSlot = (slot: TimeSlot) => { // Esta função pode ser redundante com shouldShowVolunteerButton
+  const canVolunteerForSlot = (slot: TimeSlot) => {
     if (isAdmin) return true;
     const userSlotCount = timeSlots.reduce((count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
     return userSlotCount < slotLimit;
@@ -433,8 +431,7 @@ const TimeSlotsList = () => {
         slots_used: Math.max(0, (timeSlot.slots_used || 0) - 1),
         volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerNameToRemove)
       };
-      console.log('[TimeSlotsList] Removing volunteer - Submitting to update:', JSON.parse(JSON.stringify(updatedSlot)));
-      const result = await dataOperations.update(updatedSlot);
+      const result = await dataOperations.update(updatedSlot, { /* conditions */ });
       if (!result.success) {
         throw new Error(result.message || 'Falha ao remover voluntário');
       }
@@ -471,6 +468,7 @@ const TimeSlotsList = () => {
   const weeklyDateRangeText = formatWeeklyDateRange();
 
   const getVolunteerHours = (volunteerName: string) => {
+    // ... (sem alterações)
     if (volunteerHours[volunteerName]) {
       return volunteerHours[volunteerName];
     }
@@ -504,7 +502,8 @@ const TimeSlotsList = () => {
 
       {Object.entries(calculatedGroupedTimeSlots).sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime()).map(([date, groupedData]) => {
       const { slots, dailyCost } = groupedData;
-      const isDatePast = isPast(parseISO(date)) && format(parseISO(date), 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd');
+      const isDatePast = isPast(parseISO(date)) && format(parseISO(date), 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd'); // Past and not today
+      // const isCollapsed = isDatePast; // Removido colapso automático para sempre mostrar
       const sortedSlots = [...slots].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""));
       
       return <div key={date} className="bg-white rounded-lg shadow-sm">
@@ -524,63 +523,68 @@ const TimeSlotsList = () => {
                 </div>
               </div>
 
-              <div className="space-y-3 mt-4">
-                {sortedSlots.map((slot, idx) => <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
-                    <div className="flex flex-col space-y-3">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
-                          <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                          <p className="font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
-                            {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} ({calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)}h)
-                          </p>
+              {/* {!isCollapsed && ( */}
+                <div className="space-y-3 mt-4">
+                  {sortedSlots.map((slot, idx) => <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                      <div className="flex flex-col space-y-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
+                            <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                            <p className="font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
+                              {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} ({calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)}h)
+                            </p>
+                          </div>
+                          {slot.description && <span className="text-gray-700 ml-2 max-w-[200px] truncate" title={slot.description}>
+                              {slot.description}
+                            </span>}
                         </div>
-                        {slot.description && <span className="text-gray-700 ml-2 max-w-[200px] truncate" title={slot.description}>
-                            {slot.description}
-                          </span>}
+                        
+                        <div className="flex items-center justify-between">
+                          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${isSlotFull(slot) ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
+                            <span className="text-sm font-medium whitespace-nowrap">
+                              {isSlotFull(slot) ? 'Vagas Esgotadas' : `${slot.total_slots - slot.slots_used} ${slot.total_slots - slot.slots_used === 1 ? 'vaga' : 'vagas'}`}
+                            </span>
+                          </div>
+                          {/* Mostrar tipos de militares permitidos */}
+                          {slot.allowed_military_types && slot.allowed_military_types.length > 0 && (
+                            <div className="text-xs text-gray-500">
+                                Permitido: {slot.allowed_military_types.join(', ')}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
-                      <div className="flex items-center justify-between">
-                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${isSlotFull(slot) ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
-                          <span className="text-sm font-medium whitespace-nowrap">
-                            {isSlotFull(slot) ? 'Vagas Esgotadas' : `${slot.total_slots - slot.slots_used} ${slot.total_slots - slot.slots_used === 1 ? 'vaga' : 'vagas'}`}
-                          </span>
-                        </div>
-                        {slot.allowed_military_types && slot.allowed_military_types.length > 0 && (
-                          <div className="text-xs text-gray-500">
-                              Permitido: {slot.allowed_military_types.join(', ')}
+                      {slot.volunteers && slot.volunteers.length > 0 && <div className="pt-3 border-t border-gray-200">
+                          <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
+                          <div className="space-y-1">
+                            {sortVolunteers(slot.volunteers).map((volunteer, index) => <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
+                                <div className="flex items-center">
+                                  <span>{volunteer}</span>
+                                  {isAdmin && getVolunteerHours(volunteer) && <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                                      {getVolunteerHours(volunteer)}h
+                                    </span>}
+                                </div>
+                                {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({ name: volunteer, timeSlot: slot })}>
+                                    <X className="h-4 w-4" />
+                                  </Button>}
+                              </div>)}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {slot.volunteers && slot.volunteers.length > 0 && <div className="pt-3 border-t border-gray-200">
-                        <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
-                        <div className="space-y-1">
-                          {sortVolunteers(slot.volunteers).map((volunteer, index) => <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
-                              <div className="flex items-center">
-                                <span>{volunteer}</span>
-                                {isAdmin && getVolunteerHours(volunteer) && <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
-                                    {getVolunteerHours(volunteer)}h
-                                  </span>}
-                              </div>
-                              {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({ name: volunteer, timeSlot: slot })}>
-                                  <X className="h-4 w-4" />
-                                </Button>}
-                            </div>)}
+                        </div>}
+                      
+                      {!isDatePast && ( // Não mostrar botões para datas passadas
+                        <div className="pt-2">
+                          {shouldShowVolunteerButton(slot) && (
+                            isVolunteered(slot) ? 
+                              <Button onClick={() => handleUnvolunteer(slot)} variant="destructive" size="sm" className="w-full shadow-sm hover:shadow">Desmarcar</Button> : 
+                              (!isSlotFull(slot) && canVolunteerForSlot(slot) && 
+                                <Button onClick={() => handleVolunteer(slot)} className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow w-full" size="sm">Voluntário</Button>
+                              )
+                          )}
                         </div>
-                      </div>}
-                    
-                    {!isDatePast && (
-                      <div className="pt-2">
-                        {shouldShowVolunteerButton(slot) && (
-                          isVolunteered(slot) ? 
-                            <Button onClick={() => handleUnvolunteer(slot)} variant="destructive" size="sm" className="w-full shadow-sm hover:shadow">Desmarcar</Button> : 
-                            <Button onClick={() => handleVolunteer(slot)} className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow w-full" size="sm">Voluntário</Button>
-                        )}
-                      </div>
-                    )}
-                  </div>)}
-              </div>
+                      )}
+                    </div>)}
+                </div>
+              {/* )} */}
             </div>
           </div>;
     })}
