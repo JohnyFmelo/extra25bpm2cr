@@ -1,3 +1,4 @@
+
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -14,7 +15,7 @@ import {
   QuerySnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { TimeSlot } from '@/types/user';
+import { TimeSlot } from '@/types/timeSlot';
 import { parseISO } from 'date-fns';
 
 const firebaseConfig = {
