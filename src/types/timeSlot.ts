@@ -8,8 +8,7 @@ export interface TimeSlot {
   id?: string;
   isWeekly?: boolean;
   description?: string;
-  allowedMilitaryTypes?: string[];
-  volunteers?: any[];
+  allowedMilitaryTypes?: string[]; // Novo campo para tipos permitidos
 }
 
 export interface FirebaseTimeSlot {
@@ -20,8 +19,5 @@ export interface FirebaseTimeSlot {
   slots_used: number;
   id?: string;
   description?: string;
+  allowed_military_types?: string[]; // Novo campo para tipos permitidos
 }
-
-export type MilitaryType = 'Inteligência' | 'Administrativo' | 'Operacional';
-
-export const MILITARY_TYPES: MilitaryType[] = ['Inteligência', 'Administrativo', 'Operacional'];

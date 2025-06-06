@@ -1,4 +1,3 @@
-// --- START OF FILE TimeSlotDialog (8).tsx ---
 
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
@@ -8,18 +7,18 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Switch } from "./ui/switch";
-import { Clock, Calendar, Users, RefreshCw, FileText, Shield, Briefcase } from "lucide-react";
+import { Checkbox } from "./ui/checkbox";
+import { Clock, Calendar, Users, RefreshCw, FileText, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
-// Atualize o caminho de importação se necessário
-import { TimeSlot, RankCategoryType, RANK_CATEGORIES, UserServiceType, USER_SERVICE_TYPES } from "@/types/timeSlot";
+import { TimeSlot } from "@/types/timeSlot";
 import { Label } from "./ui/label";
 
 interface TimeSlotDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate: Date;
-  onAddTimeSlot: (timeSlot: Omit<TimeSlot, 'id' | 'slotsUsed' | 'volunteers' | 'date'> & { date: string }) => void; // Ajustado para o que é realmente enviado
-  onEditTimeSlot: (timeSlot: TimeSlot) => void; // Completo para edição
+  onAddTimeSlot: (timeSlot: TimeSlot) => void;
+  onEditTimeSlot: (timeSlot: TimeSlot) => void;
   editingTimeSlot: TimeSlot | null;
   isLoading?: boolean;
 }
@@ -34,92 +33,106 @@ const TimeSlotDialog = ({
   isLoading = false,
 }: TimeSlotDialogProps) => {
   const [startTime, setStartTime] = useState("07:00");
-  const [endTime, setEndTime] = useState("13:00");
-  const [selectedSlots, setSelectedSlots] = useState<number>(2); // total_slots
+  const [hours, setHours] = useState("6");
+  const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedRankCategories, setAllowedRankCategories] = useState<RankCategoryType[]>([]);
-  const [allowedServices, setAllowedServices] = useState<UserServiceType[]>([]);
+  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>(["Operacional", "Administrativo", "Inteligencia"]);
 
   const slotOptions = [2, 3, 4, 5];
+  const militaryTypes = [
+    { id: "Operacional", label: "Operacional" },
+    { id: "Administrativo", label: "Administrativo" },
+    { id: "Inteligencia", label: "Inteligência" }
+  ];
 
-  useEffect(() => {
-    if (open) { // Apenas redefina/preencha quando o diálogo abrir
-        if (editingTimeSlot) {
-            setStartTime(editingTimeSlot.startTime);
-            setEndTime(editingTimeSlot.endTime);
-            setSelectedSlots(editingTimeSlot.slots);
-            setDescription(editingTimeSlot.description || "");
-            setAllowedRankCategories(editingTimeSlot.allowedRankCategories || []);
-            setAllowedServices(editingTimeSlot.allowedServices || []);
-            if (!slotOptions.includes(editingTimeSlot.slots)) {
-                setShowCustomSlots(true);
-                setCustomSlots(editingTimeSlot.slots.toString());
-            } else {
-                setShowCustomSlots(false);
-                setCustomSlots(""); // Limpar custom slots se um predefinido for carregado
-            }
-            setUseWeeklyLogic(editingTimeSlot.isWeekly || false); // Carregar isWeekly se existir
-        } else {
-            // Valores padrão para novo registro
-            setStartTime("07:00");
-            setEndTime("13:00");
-            setSelectedSlots(2);
-            setShowCustomSlots(false);
-            setCustomSlots("");
-            setDescription("");
-            setUseWeeklyLogic(false);
-            setAllowedRankCategories([]);
-            setAllowedServices([]);
-        }
-    }
-  }, [editingTimeSlot, open]); // Adicionado 'open' como dependência
-
-  const handleRankCategoryToggle = (category: RankCategoryType) => {
-    setAllowedRankCategories(prev => {
-      if (prev.includes(category)) {
-        return prev.filter(c => c !== category);
-      } else {
-        return [...prev, category];
-      }
-    });
+  // Função para calcular o horário final baseado no início e duração
+  const calculateEndTime = (start: string, duration: string): string => {
+    const [startHour, startMinute] = start.split(':').map(Number);
+    const durationHours = parseFloat(duration);
+    
+    const totalMinutes = startHour * 60 + startMinute + (durationHours * 60);
+    const endHour = Math.floor(totalMinutes / 60) % 24;
+    const endMinute = totalMinutes % 60;
+    
+    return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
   };
 
-  const handleServiceToggle = (service: UserServiceType) => {
-    setAllowedServices(prev => {
-      if (prev.includes(service)) {
-        return prev.filter(s => s !== service);
+  // Função para calcular duração baseada no início e fim
+  const calculateDuration = (start: string, end: string): string => {
+    const [startHour, startMinute] = start.split(':').map(Number);
+    let [endHour, endMinute] = end.split(':').map(Number);
+    
+    // Se o horário de fim for menor que o de início, assumir que é no dia seguinte
+    if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
+      endHour += 24;
+    }
+    
+    const startTotalMinutes = startHour * 60 + startMinute;
+    const endTotalMinutes = endHour * 60 + endMinute;
+    const durationMinutes = endTotalMinutes - startTotalMinutes;
+    const durationHours = durationMinutes / 60;
+    
+    return durationHours.toString();
+  };
+
+  useEffect(() => {
+    if (editingTimeSlot) {
+      setStartTime(editingTimeSlot.startTime);
+      const duration = calculateDuration(editingTimeSlot.startTime, editingTimeSlot.endTime);
+      setHours(duration);
+      setSelectedSlots(editingTimeSlot.slots);
+      setDescription(editingTimeSlot.description || "");
+      // Corrigir o carregamento dos tipos permitidos
+      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]);
+      if (!slotOptions.includes(editingTimeSlot.slots)) {
+        setShowCustomSlots(true);
+        setCustomSlots(editingTimeSlot.slots.toString());
       } else {
-        return [...prev, service];
+        setShowCustomSlots(false);
       }
-    });
+      setUseWeeklyLogic(false);
+    } else {
+      setStartTime("07:00");
+      setHours("6");
+      setSelectedSlots(2);
+      setShowCustomSlots(false);
+      setCustomSlots("");
+      setDescription("");
+      setAllowedMilitaryTypes(["Operacional", "Administrativo", "Inteligencia"]);
+      setUseWeeklyLogic(false);
+    }
+  }, [editingTimeSlot, open]);
+
+  const handleMilitaryTypeChange = (typeId: string, checked: boolean) => {
+    if (checked) {
+      setAllowedMilitaryTypes(prev => [...prev, typeId]);
+    } else {
+      setAllowedMilitaryTypes(prev => prev.filter(type => type !== typeId));
+    }
   };
 
   const handleRegister = () => {
-    const slotsValue = showCustomSlots ? parseInt(customSlots) : selectedSlots;
+    const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
+    const endTime = calculateEndTime(startTime, hours);
     
-    const dateString = format(selectedDate, "yyyy-MM-dd");
-
-    const timeSlotData = {
-      date: dateString,
-      startTime: startTime,
-      endTime: endTime,
-      slots: slotsValue, // Este é o total_slots
+    const newTimeSlot: TimeSlot = {
+      date: selectedDate,
+      startTime,
+      endTime,
+      slots,
+      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedRankCategories: allowedRankCategories,
-      allowedServices: allowedServices,
+      allowedMilitaryTypes
     };
     
     if (editingTimeSlot) {
-      onEditTimeSlot({
-        ...editingTimeSlot, // Mantém id, slotsUsed, volunteers
-        ...timeSlotData,   // Atualiza os campos editáveis
-      });
+      onEditTimeSlot(newTimeSlot);
     } else {
-      onAddTimeSlot(timeSlotData); // Envia apenas os dados para um novo slot
+      onAddTimeSlot(newTimeSlot);
     }
     onOpenChange(false);
   };
@@ -127,9 +140,10 @@ const TimeSlotDialog = ({
   const isButtonDisabled = () => {
     if (showCustomSlots) {
       const numSlots = parseInt(customSlots);
-      return isNaN(numSlots) || numSlots <= 0 || isLoading;
+      return isNaN(numSlots) || numSlots <= 0 || isLoading || allowedMilitaryTypes.length === 0;
     }
-    return isLoading;
+    const hoursValue = parseFloat(hours);
+    return isNaN(hoursValue) || hoursValue <= 0 || isLoading || allowedMilitaryTypes.length === 0;
   };
 
   return (
@@ -149,8 +163,8 @@ const TimeSlotDialog = ({
           </div>
         </DialogHeader>
 
-        <div className="space-y-5 py-2 max-h-[70vh] overflow-y-auto pr-2"> {/* Added scroll for long dialogs */}
-          {/* Horário de início e fim */}
+        <div className="space-y-5 py-2">
+          {/* Horário de início e duração */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Clock className="h-4 w-4 text-green-500" />
@@ -158,9 +172,8 @@ const TimeSlotDialog = ({
             </Label>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label htmlFor="startTime" className="text-xs text-gray-500">Início</Label>
+                <Label className="text-xs text-gray-500">Início</Label>
                 <Input
-                  id="startTime"
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
@@ -169,16 +182,22 @@ const TimeSlotDialog = ({
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="endTime" className="text-xs text-gray-500">Fim</Label>
+                <Label className="text-xs text-gray-500">Duração (horas)</Label>
                 <Input
-                  id="endTime"
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
+                  type="number"
+                  step="0.5"
+                  min="0.5"
+                  max="24"
+                  value={hours}
+                  onChange={(e) => setHours(e.target.value)}
                   className="text-center"
+                  placeholder="6"
                   disabled={isLoading}
                 />
               </div>
+            </div>
+            <div className="text-xs text-gray-500 text-center">
+              Fim: {calculateEndTime(startTime, hours)}
             </div>
           </div>
 
@@ -186,25 +205,25 @@ const TimeSlotDialog = ({
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Users className="h-4 w-4 text-green-500" />
-              Número de vagas (total\_slots)
+              Número de vagas
             </Label>
             <div className="flex flex-wrap gap-2">
-              {slotOptions.map((slotsNum) => (
+              {slotOptions.map((slots) => (
                 <Button
-                  key={slotsNum}
+                  key={slots}
                   variant="outline"
                   size="sm"
                   className={cn(
                     "flex-1 min-w-10 h-10 border-gray-200",
-                    selectedSlots === slotsNum && !showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                    selectedSlots === slots && !showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
                   )}
                   onClick={() => {
-                    setSelectedSlots(slotsNum);
+                    setSelectedSlots(slots);
                     setShowCustomSlots(false);
                   }}
                   disabled={isLoading}
                 >
-                  {slotsNum}
+                  {slots}
                 </Button>
               ))}
               <Button
@@ -230,93 +249,73 @@ const TimeSlotDialog = ({
                   className="text-center"
                   placeholder="Número personalizado de vagas"
                   disabled={isLoading}
-                  min="1"
                 />
               </div>
             )}
           </div>
 
-          {/* Categorias de Posto Permitidas */}
-          <div className="space-y-3">
+          {/* Tipos de militares permitidos */}
+          <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Shield className="h-4 w-4 text-green-500" />
-              Categorias de Posto Permitidas
+              Tipos de militares permitidos
             </Label>
-            <div className="space-y-3">
-              {RANK_CATEGORIES.map((category) => (
-                <div key={category} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
-                  <span className="text-sm font-medium text-gray-700">{category}</span>
-                  <Switch
-                    checked={allowedRankCategories.includes(category)}
-                    onCheckedChange={() => handleRankCategoryToggle(category)}
-                    className={cn("data-[state=checked]:bg-green-500", "data-[state=checked]:hover:bg-green-600")}
+            <div className="space-y-2">
+              {militaryTypes.map((type) => (
+                <div key={type.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={type.id}
+                    checked={allowedMilitaryTypes.includes(type.id)}
+                    onCheckedChange={(checked) => handleMilitaryTypeChange(type.id, checked as boolean)}
                     disabled={isLoading}
                   />
+                  <Label
+                    htmlFor={type.id}
+                    className="text-sm font-normal text-gray-700 cursor-pointer"
+                  >
+                    {type.label}
+                  </Label>
                 </div>
               ))}
             </div>
-            {allowedRankCategories.length === 0 && (
-              <p className="text-xs text-gray-500 italic">
-                Se não selecionar nenhuma, todas as categorias de posto serão permitidas.
-              </p>
-            )}
-          </div>
-
-          {/* Serviços Permitidos */}
-          <div className="space-y-3">
-            <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <Briefcase className="h-4 w-4 text-green-500" />
-              Serviços Permitidos
-            </Label>
-            <div className="space-y-3">
-              {USER_SERVICE_TYPES.map((service) => (
-                <div key={service} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
-                  <span className="text-sm font-medium text-gray-700">{service}</span>
-                  <Switch
-                    checked={allowedServices.includes(service)}
-                    onCheckedChange={() => handleServiceToggle(service)}
-                    className={cn("data-[state=checked]:bg-green-500", "data-[state=checked]:hover:bg-green-600")}
-                    disabled={isLoading}
-                  />
-                </div>
-              ))}
-            </div>
-            {allowedServices.length === 0 && (
-              <p className="text-xs text-gray-500 italic">
-                Se não selecionar nenhum, todos os serviços serão permitidos.
+            {allowedMilitaryTypes.length === 0 && (
+              <p className="text-xs text-red-500">
+                Selecione pelo menos um tipo de militar
               </p>
             )}
           </div>
 
           {/* Descrição */}
           <div className="space-y-2">
-            <Label htmlFor="description" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <FileText className="h-4 w-4 text-green-500" />
               Descrição (opcional)
             </Label>
             <Textarea
-              id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="min-h-[80px] resize-none"
-              placeholder="Ex: Apoio ao evento X, Reforço de segurança Y, etc."
+              placeholder="Ex: Consulta de rotina, retorno, etc."
               disabled={isLoading}
             />
           </div>
 
+          {/* Opção para criar horários semanais - apenas para novos horários */}
           {!editingTimeSlot && (
             <div className="flex items-center justify-between gap-2 pt-2 pb-1">
               <div className="flex items-center gap-2">
                 <RefreshCw className="h-4 w-4 text-green-500" />
-                <Label htmlFor="weeklyLogicSwitch" className="text-sm font-medium text-gray-700">
+                <Label className="text-sm font-medium text-gray-700">
                   Aplicar para toda a semana
                 </Label>
               </div>
               <Switch
-                id="weeklyLogicSwitch"
                 checked={useWeeklyLogic}
                 onCheckedChange={setUseWeeklyLogic}
-                className={cn("data-[state=checked]:bg-green-500", "data-[state=checked]:hover:bg-green-600")}
+                className={cn(
+                  "data-[state=checked]:bg-green-500",
+                  "data-[state=checked]:hover:bg-green-600"
+                )}
                 disabled={isLoading}
               />
             </div>
@@ -356,4 +355,3 @@ const TimeSlotDialog = ({
 };
 
 export default TimeSlotDialog;
-// --- END OF FILE TimeSlotDialog (8).tsx ---
