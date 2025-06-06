@@ -14,7 +14,7 @@ import {
   QuerySnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { TimeSlot } from '@/types/timeSlot';
+import { TimeSlot } from '@/types/user';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -64,19 +64,13 @@ const safeClone = (data: DocumentData): Record<string, any> => {
 
 // Helper function to safely get documents from a query snapshot
 const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
-  return snapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      date: data.date instanceof Date ? data.date : new Date(data.date),
-      startTime: data.start_time ? data.start_time.slice(0, 5) : '',
-      endTime: data.end_time ? data.end_time.slice(0, 5) : '',
-      slots: data.total_slots || 0,
-      slotsUsed: data.slots_used || 0,
-      description: data.description || '',
-      allowedMilitaryTypes: data.allowed_military_types || undefined
-    };
-  });
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    title: doc.data().title || '',
+    description: doc.data().description || '',
+    date: doc.data().date || '',
+    ...safeClone(doc.data())
+  }));
 };
 
 // Helper function to handle Firestore operations with proper cleanup
@@ -109,21 +103,12 @@ export const dataOperations = {
       const timeSlotCollection = collection(db, 'timeSlots');
       const clonedSlot = safeClone(newSlot);
       
-      // Criar o objeto para inserir no Firebase
+      // Ensure allowed_military_types is properly included
       const slotToInsert = {
-        date: newSlot.date instanceof Date ? newSlot.date.toISOString() : newSlot.date,
-        start_time: newSlot.startTime,
-        end_time: newSlot.endTime,
-        total_slots: newSlot.slots,
-        slots_used: newSlot.slotsUsed || 0,
-        description: newSlot.description || '',
-        // Apenas incluir allowed_military_types se houver tipos selecionados
-        ...(newSlot.allowedMilitaryTypes && newSlot.allowedMilitaryTypes.length > 0 && {
-          allowed_military_types: newSlot.allowedMilitaryTypes
-        })
+        ...clonedSlot,
+        allowed_military_types: newSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]
       };
       
-      console.log('Inserting slot:', slotToInsert);
       await addDoc(timeSlotCollection, slotToInsert);
       return { success: true };
     }).catch(error => {
@@ -145,22 +130,14 @@ export const dataOperations = {
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
         const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
+        const clonedSlot = safeClone(updatedSlot);
         
-        // Criar o objeto para atualizar no Firebase
+        // Ensure allowed_military_types is properly included
         const slotToUpdate = {
-          date: updatedSlot.date instanceof Date ? updatedSlot.date.toISOString() : updatedSlot.date,
-          start_time: updatedSlot.startTime,
-          end_time: updatedSlot.endTime,
-          total_slots: updatedSlot.slots,
-          slots_used: updatedSlot.slotsUsed || 0,
-          description: updatedSlot.description || '',
-          // Apenas incluir allowed_military_types se houver tipos selecionados
-          ...(updatedSlot.allowedMilitaryTypes && updatedSlot.allowedMilitaryTypes.length > 0 && {
-            allowed_military_types: updatedSlot.allowedMilitaryTypes
-          })
+          ...clonedSlot,
+          allowed_military_types: updatedSlot.allowedMilitaryTypes || updatedSlot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"]
         };
         
-        console.log('Updating slot:', slotToUpdate);
         await updateDoc(docRef, slotToUpdate);
         return { success: true };
       }
