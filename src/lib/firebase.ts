@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -65,19 +64,13 @@ const safeClone = (data: DocumentData): Record<string, any> => {
 
 // Helper function to safely get documents from a query snapshot
 const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
-  return snapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      date: new Date(data.date),
-      startTime: data.start_time ? data.start_time.slice(0, 5) : "00:00",
-      endTime: data.end_time ? data.end_time.slice(0, 5) : "00:00",
-      slots: data.total_slots || 0,
-      slotsUsed: data.slots_used || 0,
-      description: data.description || "",
-      allowedMilitaryTypes: data.allowed_military_types || undefined
-    };
-  });
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    title: doc.data().title || '',
+    description: doc.data().description || '',
+    date: doc.data().date || '',
+    ...safeClone(doc.data())
+  }));
 };
 
 // Helper function to handle Firestore operations with proper cleanup
@@ -108,6 +101,7 @@ export const dataOperations = {
   async insert(newSlot: any) {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
+      const clonedSlot = safeClone(newSlot);
       
       // Criar o objeto para inserir no Firebase
       const slotToInsert = {
