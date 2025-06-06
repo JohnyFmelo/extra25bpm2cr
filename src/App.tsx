@@ -1,16 +1,16 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Hours from "./pages/Hours";
 import TopBar from "./components/TopBar";
 import BottomMenuBar from "./components/BottomMenuBar";
 import { useUserBlockListener } from "./hooks/useUserBlockListener";
-import { UserProvider } from "@/context/UserContext"; // <-- Adicionado
 
 // Protected Route component
 const ProtectedRoute = ({
@@ -63,35 +63,31 @@ const App = () => {
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
   };
-  return (
-    <React.StrictMode>
-      <UserProvider>
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/" element={<ProtectedRoute>
-                      <Layout activeTab={activeTab} onTabChange={handleTabChange}>
-                        <Index initialActiveTab={activeTab} />
-                      </Layout>
-                    </ProtectedRoute>} />
-                <Route path="/hours" element={<ProtectedRoute>
-                      <Layout activeTab="hours" onTabChange={handleTabChange}>
-                        <Hours />
-                      </Layout>
-                    </ProtectedRoute>} />
-                {/* Redirect any unknown routes to login */}
-                <Route path="*" element={<Navigate to="/login" replace />} />
-              </Routes>
-            </TooltipProvider>
-          </BrowserRouter>
-        </QueryClientProvider>
-      </UserProvider>
-    </React.StrictMode>
-  );
+  return <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<ProtectedRoute>
+                    <Layout activeTab={activeTab} onTabChange={handleTabChange}>
+                      <Index initialActiveTab={activeTab} />
+                    </Layout>
+                  </ProtectedRoute>} />
+              <Route path="/hours" element={<ProtectedRoute>
+                    <Layout activeTab="hours" onTabChange={handleTabChange}>
+                      <Hours />
+                    </Layout>
+                  </ProtectedRoute>} />
+              {/* Redirect any unknown routes to login */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </TooltipProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </React.StrictMode>;
 };
 
 export default App;
