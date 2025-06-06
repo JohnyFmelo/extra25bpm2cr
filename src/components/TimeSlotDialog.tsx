@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -8,7 +9,7 @@ import { Textarea } from "./ui/textarea";
 import { Switch } from "./ui/switch";
 import { Clock, Calendar, Users, RefreshCw, FileText, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TimeSlot } from "@/types/timeSlot";
+import { TimeSlot, MilitaryType, MILITARY_TYPES } from "@/types/timeSlot";
 import { Label } from "./ui/label";
 
 interface TimeSlotDialogProps {
@@ -31,60 +32,24 @@ const TimeSlotDialog = ({
   isLoading = false,
 }: TimeSlotDialogProps) => {
   const [startTime, setStartTime] = useState("07:00");
-  const [hours, setHours] = useState("6");
+  const [endTime, setEndTime] = useState("13:00");
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>(["Operacional", "Administrativo", "Inteligencia"]);
+  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
 
   const slotOptions = [2, 3, 4, 5];
-  const militaryTypes = [
-    { id: "Operacional", label: "Operacional" },
-    { id: "Administrativo", label: "Administrativo" },
-    { id: "Inteligencia", label: "Inteligência" }
-  ];
 
-  // Função para calcular o horário final baseado no início e duração
-  const calculateEndTime = (start: string, duration: string): string => {
-    const [startHour, startMinute] = start.split(':').map(Number);
-    const durationHours = parseFloat(duration);
-    
-    const totalMinutes = startHour * 60 + startMinute + (durationHours * 60);
-    const endHour = Math.floor(totalMinutes / 60) % 24;
-    const endMinute = totalMinutes % 60;
-    
-    return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
-  };
-
-  // Função para calcular duração baseada no início e fim
-  const calculateDuration = (start: string, end: string): string => {
-    const [startHour, startMinute] = start.split(':').map(Number);
-    let [endHour, endMinute] = end.split(':').map(Number);
-    
-    // Se o horário de fim for menor que o de início, assumir que é no dia seguinte
-    if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
-      endHour += 24;
-    }
-    
-    const startTotalMinutes = startHour * 60 + startMinute;
-    const endTotalMinutes = endHour * 60 + endMinute;
-    const durationMinutes = endTotalMinutes - startTotalMinutes;
-    const durationHours = durationMinutes / 60;
-    
-    return durationHours.toString();
-  };
-
+  // Reset ou preencher os campos quando o diálogo abrir
   useEffect(() => {
     if (editingTimeSlot) {
       setStartTime(editingTimeSlot.startTime);
-      const duration = calculateDuration(editingTimeSlot.startTime, editingTimeSlot.endTime);
-      setHours(duration);
+      setEndTime(editingTimeSlot.endTime);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
-      // Corrigir o carregamento dos tipos permitidos
-      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]);
+      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []);
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
@@ -93,28 +58,30 @@ const TimeSlotDialog = ({
       }
       setUseWeeklyLogic(false);
     } else {
+      // Valores padrão para novo registro
       setStartTime("07:00");
-      setHours("6");
+      setEndTime("13:00");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes(["Operacional", "Administrativo", "Inteligencia"]);
       setUseWeeklyLogic(false);
+      setAllowedMilitaryTypes([]);
     }
   }, [editingTimeSlot, open]);
 
-  const handleMilitaryTypeChange = (typeId: string, checked: boolean) => {
-    if (checked) {
-      setAllowedMilitaryTypes(prev => [...prev, typeId]);
-    } else {
-      setAllowedMilitaryTypes(prev => prev.filter(type => type !== typeId));
-    }
+  const handleMilitaryTypeToggle = (type: MilitaryType) => {
+    setAllowedMilitaryTypes(prev => {
+      if (prev.includes(type)) {
+        return prev.filter(t => t !== type);
+      } else {
+        return [...prev, type];
+      }
+    });
   };
 
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
-    const endTime = calculateEndTime(startTime, hours);
     
     const newTimeSlot: TimeSlot = {
       date: selectedDate,
@@ -124,7 +91,8 @@ const TimeSlotDialog = ({
       slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedMilitaryTypes
+      allowedMilitaryTypes,
+      volunteers: editingTimeSlot ? editingTimeSlot.volunteers : []
     };
     
     if (editingTimeSlot) {
@@ -138,10 +106,9 @@ const TimeSlotDialog = ({
   const isButtonDisabled = () => {
     if (showCustomSlots) {
       const numSlots = parseInt(customSlots);
-      return isNaN(numSlots) || numSlots <= 0 || isLoading || allowedMilitaryTypes.length === 0;
+      return isNaN(numSlots) || numSlots <= 0 || isLoading;
     }
-    const hoursValue = parseFloat(hours);
-    return isNaN(hoursValue) || hoursValue <= 0 || isLoading || allowedMilitaryTypes.length === 0;
+    return isLoading;
   };
 
   return (
@@ -162,7 +129,7 @@ const TimeSlotDialog = ({
         </DialogHeader>
 
         <div className="space-y-5 py-2">
-          {/* Horário de início e duração */}
+          {/* Horário de início e fim */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Clock className="h-4 w-4 text-green-500" />
@@ -180,22 +147,15 @@ const TimeSlotDialog = ({
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-gray-500">Duração (horas)</Label>
+                <Label className="text-xs text-gray-500">Fim</Label>
                 <Input
-                  type="number"
-                  step="0.5"
-                  min="0.5"
-                  max="24"
-                  value={hours}
-                  onChange={(e) => setHours(e.target.value)}
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
                   className="text-center"
-                  placeholder="6"
                   disabled={isLoading}
                 />
               </div>
-            </div>
-            <div className="text-xs text-gray-500 text-center">
-              Fim: {calculateEndTime(startTime, hours)}
             </div>
           </div>
 
@@ -252,25 +212,19 @@ const TimeSlotDialog = ({
             )}
           </div>
 
-          {/* Tipos de militares permitidos */}
-          <div className="space-y-2">
+          {/* Tipos Militares Permitidos */}
+          <div className="space-y-3">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Shield className="h-4 w-4 text-green-500" />
-              Tipos de militares permitidos
+              Tipos militares permitidos
             </Label>
-            <div className="space-y-2">
-              {militaryTypes.map((type) => (
-                <div key={type.id} className="flex items-center justify-between gap-2">
-                  <Label
-                    htmlFor={type.id}
-                    className="text-sm font-normal text-gray-700 cursor-pointer"
-                  >
-                    {type.label}
-                  </Label>
+            <div className="space-y-3">
+              {MILITARY_TYPES.map((type) => (
+                <div key={type} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
+                  <span className="text-sm font-medium text-gray-700">{type}</span>
                   <Switch
-                    id={type.id}
-                    checked={allowedMilitaryTypes.includes(type.id)}
-                    onCheckedChange={(checked) => handleMilitaryTypeChange(type.id, checked)}
+                    checked={allowedMilitaryTypes.includes(type)}
+                    onCheckedChange={() => handleMilitaryTypeToggle(type)}
                     className={cn(
                       "data-[state=checked]:bg-green-500",
                       "data-[state=checked]:hover:bg-green-600"
@@ -281,8 +235,8 @@ const TimeSlotDialog = ({
               ))}
             </div>
             {allowedMilitaryTypes.length === 0 && (
-              <p className="text-xs text-red-500">
-                Selecione pelo menos um tipo de militar
+              <p className="text-xs text-gray-500 italic">
+                Selecione pelo menos um tipo militar para permitir participação
               </p>
             )}
           </div>

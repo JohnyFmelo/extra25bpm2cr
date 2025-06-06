@@ -159,6 +159,48 @@ export type Database = {
         }
         Relationships: []
       }
+      extra_time_slots: {
+        Row: {
+          allowed_military_types: string[] | null
+          created_at: string | null
+          date: string
+          description: string | null
+          end_time: string
+          id: string
+          slots_used: number
+          start_time: string
+          total_slots: number
+          updated_at: string | null
+          volunteers: Json | null
+        }
+        Insert: {
+          allowed_military_types?: string[] | null
+          created_at?: string | null
+          date: string
+          description?: string | null
+          end_time: string
+          id?: string
+          slots_used?: number
+          start_time: string
+          total_slots?: number
+          updated_at?: string | null
+          volunteers?: Json | null
+        }
+        Update: {
+          allowed_military_types?: string[] | null
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          end_time?: string
+          id?: string
+          slots_used?: number
+          start_time?: string
+          total_slots?: number
+          updated_at?: string | null
+          volunteers?: Json | null
+        }
+        Relationships: []
+      }
       FEVEREIRO: {
         Row: {
           "Horas 25° BPM": string | null
