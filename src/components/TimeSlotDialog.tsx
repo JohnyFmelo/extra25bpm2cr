@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -7,7 +6,6 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Switch } from "./ui/switch";
-import { Checkbox } from "./ui/checkbox";
 import { Clock, Calendar, Users, RefreshCw, FileText, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeSlot } from "@/types/timeSlot";
@@ -262,19 +260,23 @@ const TimeSlotDialog = ({
             </Label>
             <div className="space-y-2">
               {militaryTypes.map((type) => (
-                <div key={type.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={type.id}
-                    checked={allowedMilitaryTypes.includes(type.id)}
-                    onCheckedChange={(checked) => handleMilitaryTypeChange(type.id, checked as boolean)}
-                    disabled={isLoading}
-                  />
+                <div key={type.id} className="flex items-center justify-between gap-2">
                   <Label
                     htmlFor={type.id}
                     className="text-sm font-normal text-gray-700 cursor-pointer"
                   >
                     {type.label}
                   </Label>
+                  <Switch
+                    id={type.id}
+                    checked={allowedMilitaryTypes.includes(type.id)}
+                    onCheckedChange={(checked) => handleMilitaryTypeChange(type.id, checked)}
+                    className={cn(
+                      "data-[state=checked]:bg-green-500",
+                      "data-[state=checked]:hover:bg-green-600"
+                    )}
+                    disabled={isLoading}
+                  />
                 </div>
               ))}
             </div>
