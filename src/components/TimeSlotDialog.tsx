@@ -1,3 +1,4 @@
+// --- START OF FILE TimeSlotDialog (8).tsx ---
 
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
@@ -7,17 +8,18 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Switch } from "./ui/switch";
-import { Clock, Calendar, Users, RefreshCw, FileText, Shield } from "lucide-react";
+import { Clock, Calendar, Users, RefreshCw, FileText, Shield, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TimeSlot, MilitaryType, MILITARY_TYPES } from "@/types/timeSlot";
+// Atualize o caminho de importação se necessário
+import { TimeSlot, RankCategoryType, RANK_CATEGORIES, UserServiceType, USER_SERVICE_TYPES } from "@/types/timeSlot";
 import { Label } from "./ui/label";
 
 interface TimeSlotDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate: Date;
-  onAddTimeSlot: (timeSlot: TimeSlot) => void;
-  onEditTimeSlot: (timeSlot: TimeSlot) => void;
+  onAddTimeSlot: (timeSlot: Omit<TimeSlot, 'id' | 'slotsUsed' | 'volunteers' | 'date'> & { date: string }) => void; // Ajustado para o que é realmente enviado
+  onEditTimeSlot: (timeSlot: TimeSlot) => void; // Completo para edição
   editingTimeSlot: TimeSlot | null;
   isLoading?: boolean;
 }
@@ -33,72 +35,91 @@ const TimeSlotDialog = ({
 }: TimeSlotDialogProps) => {
   const [startTime, setStartTime] = useState("07:00");
   const [endTime, setEndTime] = useState("13:00");
-  const [selectedSlots, setSelectedSlots] = useState<number>(2);
+  const [selectedSlots, setSelectedSlots] = useState<number>(2); // total_slots
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
+  const [allowedRankCategories, setAllowedRankCategories] = useState<RankCategoryType[]>([]);
+  const [allowedServices, setAllowedServices] = useState<UserServiceType[]>([]);
 
   const slotOptions = [2, 3, 4, 5];
 
-  // Reset ou preencher os campos quando o diálogo abrir
   useEffect(() => {
-    if (editingTimeSlot) {
-      setStartTime(editingTimeSlot.startTime);
-      setEndTime(editingTimeSlot.endTime);
-      setSelectedSlots(editingTimeSlot.slots);
-      setDescription(editingTimeSlot.description || "");
-      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []);
-      if (!slotOptions.includes(editingTimeSlot.slots)) {
-        setShowCustomSlots(true);
-        setCustomSlots(editingTimeSlot.slots.toString());
-      } else {
-        setShowCustomSlots(false);
-      }
-      setUseWeeklyLogic(false);
-    } else {
-      // Valores padrão para novo registro
-      setStartTime("07:00");
-      setEndTime("13:00");
-      setSelectedSlots(2);
-      setShowCustomSlots(false);
-      setCustomSlots("");
-      setDescription("");
-      setUseWeeklyLogic(false);
-      setAllowedMilitaryTypes([]);
+    if (open) { // Apenas redefina/preencha quando o diálogo abrir
+        if (editingTimeSlot) {
+            setStartTime(editingTimeSlot.startTime);
+            setEndTime(editingTimeSlot.endTime);
+            setSelectedSlots(editingTimeSlot.slots);
+            setDescription(editingTimeSlot.description || "");
+            setAllowedRankCategories(editingTimeSlot.allowedRankCategories || []);
+            setAllowedServices(editingTimeSlot.allowedServices || []);
+            if (!slotOptions.includes(editingTimeSlot.slots)) {
+                setShowCustomSlots(true);
+                setCustomSlots(editingTimeSlot.slots.toString());
+            } else {
+                setShowCustomSlots(false);
+                setCustomSlots(""); // Limpar custom slots se um predefinido for carregado
+            }
+            setUseWeeklyLogic(editingTimeSlot.isWeekly || false); // Carregar isWeekly se existir
+        } else {
+            // Valores padrão para novo registro
+            setStartTime("07:00");
+            setEndTime("13:00");
+            setSelectedSlots(2);
+            setShowCustomSlots(false);
+            setCustomSlots("");
+            setDescription("");
+            setUseWeeklyLogic(false);
+            setAllowedRankCategories([]);
+            setAllowedServices([]);
+        }
     }
-  }, [editingTimeSlot, open]);
+  }, [editingTimeSlot, open]); // Adicionado 'open' como dependência
 
-  const handleMilitaryTypeToggle = (type: MilitaryType) => {
-    setAllowedMilitaryTypes(prev => {
-      if (prev.includes(type)) {
-        return prev.filter(t => t !== type);
+  const handleRankCategoryToggle = (category: RankCategoryType) => {
+    setAllowedRankCategories(prev => {
+      if (prev.includes(category)) {
+        return prev.filter(c => c !== category);
       } else {
-        return [...prev, type];
+        return [...prev, category];
+      }
+    });
+  };
+
+  const handleServiceToggle = (service: UserServiceType) => {
+    setAllowedServices(prev => {
+      if (prev.includes(service)) {
+        return prev.filter(s => s !== service);
+      } else {
+        return [...prev, service];
       }
     });
   };
 
   const handleRegister = () => {
-    const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
+    const slotsValue = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     
-    const newTimeSlot: TimeSlot = {
-      date: selectedDate,
-      startTime,
-      endTime,
-      slots,
-      slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
+    const dateString = format(selectedDate, "yyyy-MM-dd");
+
+    const timeSlotData = {
+      date: dateString,
+      startTime: startTime,
+      endTime: endTime,
+      slots: slotsValue, // Este é o total_slots
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedMilitaryTypes,
-      volunteers: editingTimeSlot ? editingTimeSlot.volunteers : []
+      allowedRankCategories: allowedRankCategories,
+      allowedServices: allowedServices,
     };
     
     if (editingTimeSlot) {
-      onEditTimeSlot(newTimeSlot);
+      onEditTimeSlot({
+        ...editingTimeSlot, // Mantém id, slotsUsed, volunteers
+        ...timeSlotData,   // Atualiza os campos editáveis
+      });
     } else {
-      onAddTimeSlot(newTimeSlot);
+      onAddTimeSlot(timeSlotData); // Envia apenas os dados para um novo slot
     }
     onOpenChange(false);
   };
@@ -128,7 +149,7 @@ const TimeSlotDialog = ({
           </div>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
+        <div className="space-y-5 py-2 max-h-[70vh] overflow-y-auto pr-2"> {/* Added scroll for long dialogs */}
           {/* Horário de início e fim */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
@@ -137,8 +158,9 @@ const TimeSlotDialog = ({
             </Label>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-gray-500">Início</Label>
+                <Label htmlFor="startTime" className="text-xs text-gray-500">Início</Label>
                 <Input
+                  id="startTime"
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
@@ -147,8 +169,9 @@ const TimeSlotDialog = ({
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-gray-500">Fim</Label>
+                <Label htmlFor="endTime" className="text-xs text-gray-500">Fim</Label>
                 <Input
+                  id="endTime"
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
@@ -163,25 +186,25 @@ const TimeSlotDialog = ({
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Users className="h-4 w-4 text-green-500" />
-              Número de vagas
+              Número de vagas (total\_slots)
             </Label>
             <div className="flex flex-wrap gap-2">
-              {slotOptions.map((slots) => (
+              {slotOptions.map((slotsNum) => (
                 <Button
-                  key={slots}
+                  key={slotsNum}
                   variant="outline"
                   size="sm"
                   className={cn(
                     "flex-1 min-w-10 h-10 border-gray-200",
-                    selectedSlots === slots && !showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                    selectedSlots === slotsNum && !showCustomSlots && "bg-green-500 text-white hover:bg-green-600 border-green-500"
                   )}
                   onClick={() => {
-                    setSelectedSlots(slots);
+                    setSelectedSlots(slotsNum);
                     setShowCustomSlots(false);
                   }}
                   disabled={isLoading}
                 >
-                  {slots}
+                  {slotsNum}
                 </Button>
               ))}
               <Button
@@ -207,71 +230,93 @@ const TimeSlotDialog = ({
                   className="text-center"
                   placeholder="Número personalizado de vagas"
                   disabled={isLoading}
+                  min="1"
                 />
               </div>
             )}
           </div>
 
-          {/* Tipos Militares Permitidos */}
+          {/* Categorias de Posto Permitidas */}
           <div className="space-y-3">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Shield className="h-4 w-4 text-green-500" />
-              Tipos militares permitidos
+              Categorias de Posto Permitidas
             </Label>
             <div className="space-y-3">
-              {MILITARY_TYPES.map((type) => (
-                <div key={type} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
-                  <span className="text-sm font-medium text-gray-700">{type}</span>
+              {RANK_CATEGORIES.map((category) => (
+                <div key={category} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
+                  <span className="text-sm font-medium text-gray-700">{category}</span>
                   <Switch
-                    checked={allowedMilitaryTypes.includes(type)}
-                    onCheckedChange={() => handleMilitaryTypeToggle(type)}
-                    className={cn(
-                      "data-[state=checked]:bg-green-500",
-                      "data-[state=checked]:hover:bg-green-600"
-                    )}
+                    checked={allowedRankCategories.includes(category)}
+                    onCheckedChange={() => handleRankCategoryToggle(category)}
+                    className={cn("data-[state=checked]:bg-green-500", "data-[state=checked]:hover:bg-green-600")}
                     disabled={isLoading}
                   />
                 </div>
               ))}
             </div>
-            {allowedMilitaryTypes.length === 0 && (
+            {allowedRankCategories.length === 0 && (
               <p className="text-xs text-gray-500 italic">
-                Selecione pelo menos um tipo militar para permitir participação
+                Se não selecionar nenhuma, todas as categorias de posto serão permitidas.
+              </p>
+            )}
+          </div>
+
+          {/* Serviços Permitidos */}
+          <div className="space-y-3">
+            <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Briefcase className="h-4 w-4 text-green-500" />
+              Serviços Permitidos
+            </Label>
+            <div className="space-y-3">
+              {USER_SERVICE_TYPES.map((service) => (
+                <div key={service} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
+                  <span className="text-sm font-medium text-gray-700">{service}</span>
+                  <Switch
+                    checked={allowedServices.includes(service)}
+                    onCheckedChange={() => handleServiceToggle(service)}
+                    className={cn("data-[state=checked]:bg-green-500", "data-[state=checked]:hover:bg-green-600")}
+                    disabled={isLoading}
+                  />
+                </div>
+              ))}
+            </div>
+            {allowedServices.length === 0 && (
+              <p className="text-xs text-gray-500 italic">
+                Se não selecionar nenhum, todos os serviços serão permitidos.
               </p>
             )}
           </div>
 
           {/* Descrição */}
           <div className="space-y-2">
-            <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <Label htmlFor="description" className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <FileText className="h-4 w-4 text-green-500" />
               Descrição (opcional)
             </Label>
             <Textarea
+              id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="min-h-[80px] resize-none"
-              placeholder="Ex: Consulta de rotina, retorno, etc."
+              placeholder="Ex: Apoio ao evento X, Reforço de segurança Y, etc."
               disabled={isLoading}
             />
           </div>
 
-          {/* Opção para criar horários semanais - apenas para novos horários */}
           {!editingTimeSlot && (
             <div className="flex items-center justify-between gap-2 pt-2 pb-1">
               <div className="flex items-center gap-2">
                 <RefreshCw className="h-4 w-4 text-green-500" />
-                <Label className="text-sm font-medium text-gray-700">
+                <Label htmlFor="weeklyLogicSwitch" className="text-sm font-medium text-gray-700">
                   Aplicar para toda a semana
                 </Label>
               </div>
               <Switch
+                id="weeklyLogicSwitch"
                 checked={useWeeklyLogic}
                 onCheckedChange={setUseWeeklyLogic}
-                className={cn(
-                  "data-[state=checked]:bg-green-500",
-                  "data-[state=checked]:hover:bg-green-600"
-                )}
+                className={cn("data-[state=checked]:bg-green-500", "data-[state=checked]:hover:bg-green-600")}
                 disabled={isLoading}
               />
             </div>
@@ -311,3 +356,4 @@ const TimeSlotDialog = ({
 };
 
 export default TimeSlotDialog;
+// --- END OF FILE TimeSlotDialog (8).tsx ---
