@@ -38,7 +38,7 @@ export const toast = ({
       ...options,
       style: { 
         ...options.style,
-        backgroundColor: "#ffd7d7", // Light red background
+        backgroundColor: "#ef4444", // Light red background
         borderColor: "#ef4444", // red-500
       }
     });
@@ -49,7 +49,7 @@ export const toast = ({
       ...options,
       style: { 
         ...options.style,
-        backgroundColor: "#ffedd5", // Light orange background
+        backgroundColor: "#f97316", // Light orange background
         borderColor: "#f97316", // orange-500
       }
     });
@@ -59,7 +59,7 @@ export const toast = ({
     ...options,
     style: { 
       ...options.style,
-      backgroundColor: "#e0f2fe", // Light blue background
+      backgroundColor: "#0ea5e9", // Light blue background
       borderColor: "#0ea5e9", // sky-500
     }
   });
