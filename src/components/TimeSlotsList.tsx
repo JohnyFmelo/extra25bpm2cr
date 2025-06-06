@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
 import supabase from "@/lib/supabaseClient";
-
 interface TimeSlot {
   id?: string;
   date: string;
@@ -23,16 +22,13 @@ interface TimeSlot {
   slots_used: number;
   volunteers?: string[];
   description?: string;
-  allowed_military_types?: string[];
 }
-
 interface GroupedTimeSlots {
   [key: string]: {
     slots: TimeSlot[];
     dailyCost: number;
   };
 }
-
 const TimeSlotLimitControl = ({
   slotLimit,
   onUpdateLimit,
@@ -107,7 +103,6 @@ const TimeSlotLimitControl = ({
         </div>}
     </div>;
 };
-
 const getMilitaryRankWeight = (rank: string): number => {
   const rankWeights: {
     [key: string]: number;
@@ -140,7 +135,6 @@ const getMilitaryRankWeight = (rank: string): number => {
   };
   return rankWeights[rank] || 0;
 };
-
 const getRankCategory = (rank: string): {
   category: string;
   hourlyRate: number;
@@ -165,7 +159,6 @@ const getRankCategory = (rank: string): {
     hourlyRate: 0
   };
 };
-
 const getVolunteerRank = (volunteerFullName: string): string => {
   const parts = volunteerFullName.split(" ");
   if (parts.length >= 2 && (parts[1] === "Sgt" || parts[1] === "Ten")) {
@@ -173,14 +166,12 @@ const getVolunteerRank = (volunteerFullName: string): string => {
   }
   return parts[0];
 };
-
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   }).format(value).replace("R$", "R$ ");
 };
-
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -272,8 +263,7 @@ const TimeSlotsList = () => {
           volunteers: data.volunteers || [],
           slots_used: data.slots_used || 0,
           total_slots: data.total_slots || data.slots || 0,
-          description: data.description || "",
-          allowed_military_types: data.allowed_military_types || []
+          description: data.description || ""
         };
       });
       setTimeSlots(formattedSlots);
@@ -439,23 +429,9 @@ const TimeSlotsList = () => {
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
     const userDataString = localStorage.getItem('user');
     const userData = userDataString ? JSON.parse(userDataString) : null;
-    
     if (userData?.rank === "Estágio") {
       return false;
     }
-
-    // Verificar se o tipo de militar do usuário está permitido para este horário
-    const userMilitaryType = userData?.militaryType;
-    const allowedTypes = slot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"];
-    
-    // Se o usuário tem tipo definido e não está na lista permitida, não mostrar o botão
-    if (userMilitaryType && !allowedTypes.includes(userMilitaryType)) {
-      return false;
-    }
-
-    // Se não há tipo definido para o usuário, permitir acesso (compatibilidade)
-    // ou se está na lista permitida, continuar com as outras verificações
-
     if (isVolunteered(slot)) {
       return true;
     }
@@ -721,5 +697,4 @@ const TimeSlotsList = () => {
       </AlertDialog>
     </div>;
 };
-
 export default TimeSlotsList;

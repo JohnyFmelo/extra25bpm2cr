@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -6,8 +7,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Switch } from "./ui/switch";
-import { Checkbox } from "./ui/checkbox";
-import { Clock, Calendar, Users, RefreshCw, FileText, Shield } from "lucide-react";
+import { Clock, Calendar, Users, RefreshCw, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeSlot } from "@/types/timeSlot";
 import { Label } from "./ui/label";
@@ -19,7 +19,7 @@ interface TimeSlotDialogProps {
   onAddTimeSlot: (timeSlot: TimeSlot) => void;
   onEditTimeSlot: (timeSlot: TimeSlot) => void;
   editingTimeSlot: TimeSlot | null;
-  isLoading?: boolean;
+  isLoading?: boolean; // Added isLoading prop
 }
 
 const TimeSlotDialog = ({
@@ -29,89 +29,47 @@ const TimeSlotDialog = ({
   onAddTimeSlot,
   onEditTimeSlot,
   editingTimeSlot,
-  isLoading = false,
+  isLoading = false, // Default to false
 }: TimeSlotDialogProps) => {
   const [startTime, setStartTime] = useState("07:00");
-  const [hours, setHours] = useState("6");
+  const [endTime, setEndTime] = useState("13:00");
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
 
-  // IDs devem bater exatamente com o array do Firebase
-  const militaryTypes = [
-    { id: "Operacional", label: "Operacional" },
-    { id: "Administrativo", label: "Administrativo" },
-    { id: "Inteligencia", label: "Inteligência" }
-  ];
   const slotOptions = [2, 3, 4, 5];
 
-  const calculateEndTime = (start: string, duration: string): string => {
-    const [startHour, startMinute] = start.split(':').map(Number);
-    const durationHours = parseFloat(duration);
-    const totalMinutes = startHour * 60 + startMinute + (durationHours * 60);
-    const endHour = Math.floor(totalMinutes / 60) % 24;
-    const endMinute = totalMinutes % 60;
-    return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
-  };
-
-  const calculateDuration = (start: string, end: string): string => {
-    const [startHour, startMinute] = start.split(':').map(Number);
-    let [endHour, endMinute] = end.split(':').map(Number);
-    if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
-      endHour += 24;
-    }
-    const startTotalMinutes = startHour * 60 + startMinute;
-    const endTotalMinutes = endHour * 60 + endMinute;
-    const durationMinutes = endTotalMinutes - startTotalMinutes;
-    const durationHours = durationMinutes / 60;
-    return durationHours.toString();
-  };
-
+  // Reset ou preencher os campos quando o diálogo abrir
   useEffect(() => {
     if (editingTimeSlot) {
       setStartTime(editingTimeSlot.startTime);
-      const duration = calculateDuration(editingTimeSlot.startTime, editingTimeSlot.endTime);
-      setHours(duration);
+      setEndTime(editingTimeSlot.endTime);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
-      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []);
-      if (![2, 3, 4, 5].includes(editingTimeSlot.slots)) {
+      if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
       } else {
         setShowCustomSlots(false);
       }
-      setUseWeeklyLogic(false);
+      setUseWeeklyLogic(false); // Não permitir editar como semanal
     } else {
+      // Valores padrão para novo registro
       setStartTime("07:00");
-      setHours("6");
+      setEndTime("13:00");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes([]); // Começa vazio ao criar novo
       setUseWeeklyLogic(false);
     }
   }, [editingTimeSlot, open]);
 
-  // Corrigido: só adiciona se checked === true e não duplica
-  const handleMilitaryTypeChange = (typeId: string, checked: boolean | "indeterminate") => {
-    if (checked === true) {
-      setAllowedMilitaryTypes(prev => prev.includes(typeId) ? prev : [...prev, typeId]);
-    } else {
-      setAllowedMilitaryTypes(prev => prev.filter(type => type !== typeId));
-    }
-  };
-
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
-    const endTime = calculateEndTime(startTime, hours);
-    // DEBUG: veja o que será enviado ao Firebase
-    // console.log("allowedMilitaryTypes a enviar:", allowedMilitaryTypes);
-
+    
     const newTimeSlot: TimeSlot = {
       date: selectedDate,
       startTime,
@@ -119,10 +77,9 @@ const TimeSlotDialog = ({
       slots,
       slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
       isWeekly: useWeeklyLogic,
-      description: description.trim(),
-      allowedMilitaryTypes
+      description: description.trim()
     };
-
+    
     if (editingTimeSlot) {
       onEditTimeSlot(newTimeSlot);
     } else {
@@ -134,14 +91,10 @@ const TimeSlotDialog = ({
   const isButtonDisabled = () => {
     if (showCustomSlots) {
       const numSlots = parseInt(customSlots);
-      return isNaN(numSlots) || numSlots <= 0 || isLoading || allowedMilitaryTypes.length === 0;
+      return isNaN(numSlots) || numSlots <= 0 || isLoading; // Added isLoading check
     }
-    const hoursValue = parseFloat(hours);
-    return isNaN(hoursValue) || hoursValue <= 0 || isLoading || allowedMilitaryTypes.length === 0;
+    return isLoading; // Added isLoading check
   };
-
-  // DEBUG: monitore o state em tempo real
-  // console.log("allowedMilitaryTypes (atual):", allowedMilitaryTypes);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -161,7 +114,7 @@ const TimeSlotDialog = ({
         </DialogHeader>
 
         <div className="space-y-5 py-2">
-          {/* Horário de início e duração */}
+          {/* Horário de início e fim */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Clock className="h-4 w-4 text-green-500" />
@@ -179,22 +132,15 @@ const TimeSlotDialog = ({
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-gray-500">Duração (horas)</Label>
+                <Label className="text-xs text-gray-500">Fim</Label>
                 <Input
-                  type="number"
-                  step="0.5"
-                  min="0.5"
-                  max="24"
-                  value={hours}
-                  onChange={(e) => setHours(e.target.value)}
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
                   className="text-center"
-                  placeholder="6"
                   disabled={isLoading}
                 />
               </div>
-            </div>
-            <div className="text-xs text-gray-500 text-center">
-              Fim: {calculateEndTime(startTime, hours)}
             </div>
           </div>
 
@@ -248,37 +194,6 @@ const TimeSlotDialog = ({
                   disabled={isLoading}
                 />
               </div>
-            )}
-          </div>
-
-          {/* Tipos de militares permitidos */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <Shield className="h-4 w-4 text-green-500" />
-              Tipos de militares permitidos
-            </Label>
-            <div className="space-y-2">
-              {militaryTypes.map((type) => (
-                <div key={type.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={type.id}
-                    checked={allowedMilitaryTypes.includes(type.id)}
-                    onCheckedChange={checked => handleMilitaryTypeChange(type.id, checked === true)}
-                    disabled={isLoading}
-                  />
-                  <Label
-                    htmlFor={type.id}
-                    className="text-sm font-normal text-gray-700 cursor-pointer"
-                  >
-                    {type.label}
-                  </Label>
-                </div>
-              ))}
-            </div>
-            {allowedMilitaryTypes.length === 0 && (
-              <p className="text-xs text-red-500">
-                Selecione pelo menos um tipo de militar
-              </p>
             )}
           </div>
 
