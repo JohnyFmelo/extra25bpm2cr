@@ -567,7 +567,7 @@ const TimeSlotsList = () => {
     }
     return (
       <span className="text-xs text-blue-700 bg-blue-50 rounded px-2 py-1">
-        Permitido para: {allowedMilitaryTypes.join(", ")}
+        PM's: {allowedMilitaryTypes.join(", ")}
       </span>
     );
   };
