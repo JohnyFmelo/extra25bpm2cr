@@ -154,7 +154,6 @@ const TimeSlotsList = () => {
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
   const isAdmin = userData?.userType === 'admin';
 
-  // CORREÇÃO: agora usamos service do usuário, não rank category
   const userService = userData?.service;
 
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
@@ -445,7 +444,6 @@ const TimeSlotsList = () => {
   const [totalCostSummary, setTotalCostSummary] = useState<{ "Cb/Sd": number; "St/Sgt": number; "Oficiais": number; "Total Geral": number; }>({ "Cb/Sd": 0, "St/Sgt": 0, "Oficiais": 0, "Total Geral": 0 });
 
   useEffect(() => {
-    // CORREÇÃO: Exibe para todos, só filtra se o horário tiver allowedMilitaryTypes
     const slotsToProcess = timeSlots.filter(slot => {
       if (
         isAdmin ||
@@ -562,6 +560,18 @@ const TimeSlotsList = () => {
     return null;
   };
 
+  // NOVO: função para exibir allowedMilitaryTypes de forma amigável
+  const renderAllowedMilitaryTypes = (allowedMilitaryTypes?: string[]) => {
+    if (!allowedMilitaryTypes || allowedMilitaryTypes.length === 0) {
+      return <span className="text-xs text-gray-400 italic">Sem restrição de categoria</span>;
+    }
+    return (
+      <span className="text-xs text-blue-700 bg-blue-50 rounded px-2 py-1">
+        Permitido para: {allowedMilitaryTypes.join(", ")}
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-6 p-4 py-0 my-0 px-0">
       <TimeSlotLimitControl slotLimit={slotLimit} onUpdateLimit={handleUpdateSlotLimit} userSlotCount={userSlotCount} isAdmin={isAdmin} />
@@ -608,6 +618,13 @@ const TimeSlotsList = () => {
                 <div className="space-y-3 mt-4">
                   {sortedSlots.map((slot, idx) => (
                     <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                      {/* Descrição das allowedMilitaryTypes só para admin */}
+                      {isAdmin && (
+                        <div className="mb-1">
+                          {renderAllowedMilitaryTypes(slot.allowedMilitaryTypes)}
+                        </div>
+                      )}
+
                       <div className="flex flex-col space-y-3">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
