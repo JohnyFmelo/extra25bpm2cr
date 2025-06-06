@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -15,7 +14,7 @@ import {
   QuerySnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { TimeSlot } from '@/types/timeSlot';
+import { TimeSlot } from '@/types/user';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -65,19 +64,13 @@ const safeClone = (data: DocumentData): Record<string, any> => {
 
 // Helper function to safely get documents from a query snapshot
 const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
-  return snapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      date: new Date(data.date),
-      startTime: data.start_time ? data.start_time.slice(0, 5) : "00:00",
-      endTime: data.end_time ? data.end_time.slice(0, 5) : "00:00", 
-      slots: data.total_slots || data.slots || 0,
-      slotsUsed: data.slots_used || 0,
-      description: data.description || "",
-      allowedMilitaryTypes: data.allowed_military_types || []
-    };
-  });
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    title: doc.data().title || '',
+    description: doc.data().description || '',
+    date: doc.data().date || '',
+    ...safeClone(doc.data())
+  }));
 };
 
 // Helper function to handle Firestore operations with proper cleanup
@@ -109,13 +102,6 @@ export const dataOperations = {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
       const clonedSlot = safeClone(newSlot);
-      
-      // Mapear allowedMilitaryTypes para allowed_military_types para o Firebase
-      if (newSlot.allowedMilitaryTypes) {
-        clonedSlot.allowed_military_types = newSlot.allowedMilitaryTypes;
-        delete clonedSlot.allowedMilitaryTypes;
-      }
-      
       await addDoc(timeSlotCollection, clonedSlot);
       return { success: true };
     }).catch(error => {
@@ -138,13 +124,6 @@ export const dataOperations = {
       if (!querySnapshot.empty) {
         const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
         const clonedSlot = safeClone(updatedSlot);
-        
-        // Mapear allowedMilitaryTypes para allowed_military_types para o Firebase
-        if (updatedSlot.allowedMilitaryTypes) {
-          clonedSlot.allowed_military_types = updatedSlot.allowedMilitaryTypes;
-          delete clonedSlot.allowedMilitaryTypes;
-        }
-        
         await updateDoc(docRef, clonedSlot);
         return { success: true };
       }
