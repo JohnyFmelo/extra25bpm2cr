@@ -64,13 +64,19 @@ const safeClone = (data: DocumentData): Record<string, any> => {
 
 // Helper function to safely get documents from a query snapshot
 const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    title: doc.data().title || '',
-    description: doc.data().description || '',
-    date: doc.data().date || '',
-    ...safeClone(doc.data())
-  }));
+  return snapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      date: data.date instanceof Date ? data.date : new Date(data.date),
+      startTime: data.start_time ? data.start_time.slice(0, 5) : '',
+      endTime: data.end_time ? data.end_time.slice(0, 5) : '',
+      slots: data.total_slots || 0,
+      slotsUsed: data.slots_used || 0,
+      description: data.description || '',
+      allowedMilitaryTypes: data.allowed_military_types || undefined
+    };
+  });
 };
 
 // Helper function to handle Firestore operations with proper cleanup
