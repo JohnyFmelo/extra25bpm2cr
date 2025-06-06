@@ -40,40 +40,33 @@ const TimeSlotDialog = ({
   const [description, setDescription] = useState("");
   const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
 
-  const slotOptions = [2, 3, 4, 5];
+  // IDs devem bater exatamente com o array do Firebase
   const militaryTypes = [
     { id: "Operacional", label: "Operacional" },
     { id: "Administrativo", label: "Administrativo" },
     { id: "Inteligencia", label: "Inteligência" }
   ];
+  const slotOptions = [2, 3, 4, 5];
 
-  // Função para calcular o horário final baseado no início e duração
   const calculateEndTime = (start: string, duration: string): string => {
     const [startHour, startMinute] = start.split(':').map(Number);
     const durationHours = parseFloat(duration);
-    
     const totalMinutes = startHour * 60 + startMinute + (durationHours * 60);
     const endHour = Math.floor(totalMinutes / 60) % 24;
     const endMinute = totalMinutes % 60;
-    
     return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
   };
 
-  // Função para calcular duração baseada no início e fim
   const calculateDuration = (start: string, end: string): string => {
     const [startHour, startMinute] = start.split(':').map(Number);
     let [endHour, endMinute] = end.split(':').map(Number);
-    
-    // Se o horário de fim for menor que o de início, assumir que é no dia seguinte
     if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
       endHour += 24;
     }
-    
     const startTotalMinutes = startHour * 60 + startMinute;
     const endTotalMinutes = endHour * 60 + endMinute;
     const durationMinutes = endTotalMinutes - startTotalMinutes;
     const durationHours = durationMinutes / 60;
-    
     return durationHours.toString();
   };
 
@@ -85,7 +78,7 @@ const TimeSlotDialog = ({
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
       setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []);
-      if (!slotOptions.includes(editingTimeSlot.slots)) {
+      if (![2, 3, 4, 5].includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
       } else {
@@ -99,18 +92,15 @@ const TimeSlotDialog = ({
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes([]); // Começa vazio para novos registros
+      setAllowedMilitaryTypes([]); // Começa vazio ao criar novo
       setUseWeeklyLogic(false);
     }
   }, [editingTimeSlot, open]);
 
-  // Corrigido para garantir que só aceita true/false (evita "indeterminate")
+  // Corrigido: só adiciona se checked === true e não duplica
   const handleMilitaryTypeChange = (typeId: string, checked: boolean | "indeterminate") => {
     if (checked === true) {
-      setAllowedMilitaryTypes(prev => {
-        if (!prev.includes(typeId)) return [...prev, typeId];
-        return prev;
-      });
+      setAllowedMilitaryTypes(prev => prev.includes(typeId) ? prev : [...prev, typeId]);
     } else {
       setAllowedMilitaryTypes(prev => prev.filter(type => type !== typeId));
     }
@@ -119,7 +109,9 @@ const TimeSlotDialog = ({
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
     const endTime = calculateEndTime(startTime, hours);
-    
+    // DEBUG: veja o que será enviado ao Firebase
+    // console.log("allowedMilitaryTypes a enviar:", allowedMilitaryTypes);
+
     const newTimeSlot: TimeSlot = {
       date: selectedDate,
       startTime,
@@ -130,7 +122,7 @@ const TimeSlotDialog = ({
       description: description.trim(),
       allowedMilitaryTypes
     };
-    
+
     if (editingTimeSlot) {
       onEditTimeSlot(newTimeSlot);
     } else {
@@ -147,6 +139,9 @@ const TimeSlotDialog = ({
     const hoursValue = parseFloat(hours);
     return isNaN(hoursValue) || hoursValue <= 0 || isLoading || allowedMilitaryTypes.length === 0;
   };
+
+  // DEBUG: monitore o state em tempo real
+  // console.log("allowedMilitaryTypes (atual):", allowedMilitaryTypes);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -268,7 +263,7 @@ const TimeSlotDialog = ({
                   <Checkbox
                     id={type.id}
                     checked={allowedMilitaryTypes.includes(type.id)}
-                    onCheckedChange={(checked) => handleMilitaryTypeChange(type.id, checked)}
+                    onCheckedChange={checked => handleMilitaryTypeChange(type.id, checked === true)}
                     disabled={isLoading}
                   />
                   <Label
