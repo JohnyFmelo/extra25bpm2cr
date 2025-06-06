@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -39,7 +38,7 @@ const TimeSlotDialog = ({
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>(["Operacional", "Administrativo", "Inteligencia"]);
+  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
 
   const slotOptions = [2, 3, 4, 5];
   const militaryTypes = [
@@ -85,8 +84,7 @@ const TimeSlotDialog = ({
       setHours(duration);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
-      // Corrigir o carregamento dos tipos permitidos
-      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]);
+      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []);
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
@@ -101,14 +99,18 @@ const TimeSlotDialog = ({
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes(["Operacional", "Administrativo", "Inteligencia"]);
+      setAllowedMilitaryTypes([]); // Começa vazio para novos registros
       setUseWeeklyLogic(false);
     }
   }, [editingTimeSlot, open]);
 
-  const handleMilitaryTypeChange = (typeId: string, checked: boolean) => {
-    if (checked) {
-      setAllowedMilitaryTypes(prev => [...prev, typeId]);
+  // Corrigido para garantir que só aceita true/false (evita "indeterminate")
+  const handleMilitaryTypeChange = (typeId: string, checked: boolean | "indeterminate") => {
+    if (checked === true) {
+      setAllowedMilitaryTypes(prev => {
+        if (!prev.includes(typeId)) return [...prev, typeId];
+        return prev;
+      });
     } else {
       setAllowedMilitaryTypes(prev => prev.filter(type => type !== typeId));
     }
@@ -266,7 +268,7 @@ const TimeSlotDialog = ({
                   <Checkbox
                     id={type.id}
                     checked={allowedMilitaryTypes.includes(type.id)}
-                    onCheckedChange={(checked) => handleMilitaryTypeChange(type.id, checked as boolean)}
+                    onCheckedChange={(checked) => handleMilitaryTypeChange(type.id, checked)}
                     disabled={isLoading}
                   />
                   <Label
