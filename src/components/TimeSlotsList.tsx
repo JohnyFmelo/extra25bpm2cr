@@ -1,6 +1,4 @@
-// --- START OF FILE TimeSlotsList.tsx ---
-
-import React, { useState, useEffect, useMemo } from "react"; // Added useMemo
+import React, { useState, useEffect, useMemo } from "react";
 import { format, parseISO, isPast, addDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
@@ -18,14 +16,14 @@ import supabase from "@/lib/supabaseClient";
 
 interface TimeSlot {
   id?: string;
-  date: string; // Expected to be "YYYY-MM-DD" string
+  date: string;
   start_time: string;
   end_time: string;
   total_slots: number;
   slots_used: number;
   volunteers?: string[];
   description?: string;
-  allowedMilitaryTypes?: string[]; // ADDED: To store allowed military types for the slot
+  allowedMilitaryTypes?: string[];
 }
 
 interface GroupedTimeSlots {
@@ -129,7 +127,7 @@ const getRankCategory = (rank: string): { category: string; hourlyRate: number; 
   if (cbSdRanks.includes(rank)) return { category: "Cb/Sd", hourlyRate: 41.13 };
   if (stSgtRanks.includes(rank)) return { category: "St/Sgt", hourlyRate: 56.28 };
   if (oficiaisRanks.includes(rank)) return { category: "Oficiais", hourlyRate: 87.02 };
-  return { category: "Outros", hourlyRate: 0 }; // "Outros" matches MilitaryType if defined, otherwise won't match
+  return { category: "Outros", hourlyRate: 0 };
 };
 
 const getVolunteerRank = (volunteerFullName: string): string => {
@@ -156,13 +154,8 @@ const TimeSlotsList = () => {
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
   const isAdmin = userData?.userType === 'admin';
 
-  // NEW: Determine user's military type category
-  const userMilitaryTypeCategory = useMemo(() => {
-    if (userData && userData.rank) {
-      return getRankCategory(userData.rank).category;
-    }
-    return null;
-  }, [userData]);
+  // CORREÇÃO: agora usamos service do usuário, não rank category
+  const userService = userData?.service;
 
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
@@ -181,7 +174,6 @@ const TimeSlotsList = () => {
   };
 
   const fetchVolunteerHours = async () => {
-    // ... (existing code)
     if (!isAdmin) return;
     try {
       const currentMonth = format(new Date(), 'MMMM', {
@@ -234,16 +226,13 @@ const TimeSlotsList = () => {
     const timeSlotsCollection = collection(db, 'timeSlots');
     const q = query(timeSlotsCollection);
     const unsubscribe = onSnapshot(q, snapshot => {
-      const formattedSlots: TimeSlot[] = snapshot.docs.map(docSnap => { // Renamed doc to docSnap to avoid conflict
+      const formattedSlots: TimeSlot[] = snapshot.docs.map(docSnap => {
         const data = docSnap.data();
-        // Ensure date is in "YYYY-MM-DD" string format.
-        // If data.date is a Firestore Timestamp, convert it.
-        // If it's already a string, use it directly.
         let slotDateStr: string;
-        if (data.date && typeof data.date.toDate === 'function') { // Check if it's a Firestore Timestamp
+        if (data.date && typeof data.date.toDate === 'function') {
             slotDateStr = format(data.date.toDate(), 'yyyy-MM-dd');
         } else {
-            slotDateStr = data.date as string; // Assume it's already a string
+            slotDateStr = data.date as string;
         }
 
         return {
@@ -253,9 +242,9 @@ const TimeSlotsList = () => {
           end_time: data.end_time,
           volunteers: data.volunteers || [],
           slots_used: data.slots_used || 0,
-          total_slots: data.total_slots || data.slots || 0, // 'slots' might be from TimeSlotDialog
+          total_slots: data.total_slots || data.slots || 0,
           description: data.description || "",
-          allowedMilitaryTypes: data.allowedMilitaryTypes || [], // MODIFIED: Fetch and default to empty array
+          allowedMilitaryTypes: data.allowedMilitaryTypes || [],
         };
       });
       setTimeSlots(formattedSlots);
@@ -273,10 +262,9 @@ const TimeSlotsList = () => {
       fetchVolunteerHours();
     }
     return () => unsubscribe();
-  }, [toast, isAdmin]); // Removed 'doc' from dependencies as it's not used here.
+  }, [toast, isAdmin]);
 
   const handleVolunteer = async (timeSlot: TimeSlot) => {
-    // ... (existing code)
     if (!volunteerName) {
       toast({
         title: "Erro",
@@ -333,7 +321,6 @@ const TimeSlotsList = () => {
   };
 
   const handleUnvolunteer = async (timeSlot: TimeSlot) => {
-    // ... (existing code)
     if (!volunteerName) {
       toast({
         title: "Erro 🤔",
@@ -371,7 +358,6 @@ const TimeSlotsList = () => {
   };
 
   const handleUpdateSlotLimit = async (limit: number) => {
-    // ... (existing code)
     if (isNaN(limit) || limit < 0) {
       toast({
         title: "Erro 😵‍💫",
@@ -420,7 +406,6 @@ const TimeSlotsList = () => {
   };
 
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
-    // ... (existing code remains valid, as filtering happens before rendering)
     const userDataString = localStorage.getItem('user');
     const userData = userDataString ? JSON.parse(userDataString) : null;
     if (userData?.rank === "Estágio") {
@@ -430,20 +415,20 @@ const TimeSlotsList = () => {
       return true;
     }
     if (isSlotFull(slot)) {
-      return true; // Show nothing if full for non-volunteered users
+      return true;
     }
     const userSlotCount = timeSlots.reduce((count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
-    if (userSlotCount >= slotLimit && !isAdmin) { // Check against unfiltered timeSlots for actual user count
+    if (userSlotCount >= slotLimit && !isAdmin) {
       return false;
     }
-    const slotsForDate = timeSlots.filter(s => s.date === slot.date); // Check against unfiltered timeSlots
+    const slotsForDate = timeSlots.filter(s => s.date === slot.date);
     const isVolunteeredForDate = slotsForDate.some(s => s.volunteers?.includes(volunteerName));
     return !isVolunteeredForDate;
   };
 
   const canVolunteerForSlot = (slot: TimeSlot) => {
     if (isAdmin) return true;
-    const userSlotCount = timeSlots.reduce((count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count, 0); // Check against unfiltered
+    const userSlotCount = timeSlots.reduce((count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
     return userSlotCount < slotLimit;
   };
 
@@ -460,18 +445,21 @@ const TimeSlotsList = () => {
   const [totalCostSummary, setTotalCostSummary] = useState<{ "Cb/Sd": number; "St/Sgt": number; "Oficiais": number; "Total Geral": number; }>({ "Cb/Sd": 0, "St/Sgt": 0, "Oficiais": 0, "Total Geral": 0 });
 
   useEffect(() => {
-    // CORRIGIDO: Exibe para todos, apenas filtra se houver restrição
+    // CORREÇÃO: Exibe para todos, só filtra se o horário tiver allowedMilitaryTypes
     const slotsToProcess = timeSlots.filter(slot => {
-      // Se não há restrição ou usuário é admin, mostra para todos
-      if (isAdmin || !slot.allowedMilitaryTypes || slot.allowedMilitaryTypes.length === 0 || !userMilitaryTypeCategory) {
+      if (
+        isAdmin ||
+        !slot.allowedMilitaryTypes ||
+        slot.allowedMilitaryTypes.length === 0 ||
+        !userService
+      ) {
         return true;
       }
-      // Usuário precisa estar dentro dos tipos permitidos
-      return slot.allowedMilitaryTypes.includes(userMilitaryTypeCategory);
+      return slot.allowedMilitaryTypes.includes(userService);
     });
 
-    const grouped = groupTimeSlotsByDate(slotsToProcess); // Use filtered slots
-    
+    const grouped = groupTimeSlotsByDate(slotsToProcess);
+
     const newTotalCostSummary = { "Cb/Sd": 0, "St/Sgt": 0, "Oficiais": 0, "Total Geral": 0 };
 
     Object.keys(grouped).forEach(date => {
@@ -480,7 +468,7 @@ const TimeSlotsList = () => {
         slot.volunteers?.forEach(volunteerFullName => {
           const volunteerRank = getVolunteerRank(volunteerFullName);
           const rankInfo = getRankCategory(volunteerRank);
-          if (rankInfo.category !== "Outros") { // Only include known categories in cost
+          if (rankInfo.category !== "Outros") {
             const hours = parseFloat(calculateTimeDifference(slot.start_time, slot.end_time));
             const slotCost = hours * rankInfo.hourlyRate;
             dailyCost += slotCost;
@@ -494,14 +482,13 @@ const TimeSlotsList = () => {
 
     setCalculatedGroupedTimeSlots(grouped);
     setTotalCostSummary(newTotalCostSummary);
-  }, [timeSlots, isAdmin, userMilitaryTypeCategory]); // Added dependencies
+  }, [timeSlots, isAdmin, userService]);
 
   const userSlotCount = timeSlots.reduce((count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
 
   const [volunteerToRemove, setVolunteerToRemove] = useState<{ name: string; timeSlot: TimeSlot; } | null>(null);
 
-  const handleRemoveVolunteer = async (timeSlot: TimeSlot, volunteerNameToRemove: string) => { // Renamed volunteerName
-    // ... (existing code)
+  const handleRemoveVolunteer = async (timeSlot: TimeSlot, volunteerNameToRemove: string) => {
     try {
       const updatedSlot = {
         ...timeSlot,
@@ -535,7 +522,7 @@ const TimeSlotsList = () => {
   let weeklyCost = 0;
   let weeklyCostDates: string[] = [];
 
-  if (calculatedGroupedTimeSlots) { // This will now be based on filtered slots for non-admins
+  if (calculatedGroupedTimeSlots) {
     Object.entries(calculatedGroupedTimeSlots).filter(([date]) => {
       const slotDate = parseISO(date);
       const isWeeklyDate = isAfter(slotDate, tomorrow) || format(slotDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
@@ -561,8 +548,7 @@ const TimeSlotsList = () => {
     return <div className="p-4">Carregando horários...</div>;
   }
 
-  const getVolunteerHours = (volunteerNameParam: string) => { // Renamed volunteerName
-    // ... (existing code)
+  const getVolunteerHours = (volunteerNameParam: string) => {
     if (volunteerHours[volunteerNameParam]) {
       return volunteerHours[volunteerNameParam];
     }
@@ -595,12 +581,10 @@ const TimeSlotsList = () => {
 
       {Object.entries(calculatedGroupedTimeSlots).sort().map(([date, groupedData]) => {
         const { slots, dailyCost } = groupedData;
-        if (slots.length === 0) return null; // Do not render day if no slots are visible for the user
+        if (slots.length === 0) return null;
 
         const isDatePast = isPast(parseISO(date));
-        // const isCollapsed = isDatePast; // All slots for past dates are hidden by default due to current logic
-                                      // Let's not collapse automatically, filtering will handle visibility
-        const isCollapsed = false; // Or some other logic if needed
+        const isCollapsed = false;
 
         const sortedSlots = [...slots].sort((a, b) => a.start_time.localeCompare(b.start_time));
         
@@ -713,4 +697,3 @@ const TimeSlotsList = () => {
 };
 
 export default TimeSlotsList;
-// --- END OF FILE TimeSlotsList.tsx ---
