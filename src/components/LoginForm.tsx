@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,7 +53,7 @@ const LoginForm = () => {
         return;
       }
 
-      // Store ALL user data in localStorage, including 'service'
+      // Store ALL user data in localStorage
       localStorage.setItem('user', JSON.stringify({
         id: userDoc.id,
         email: userData.email,
@@ -60,8 +61,7 @@ const LoginForm = () => {
         warName: userData.warName,
         registration: userData.registration,
         rank: userData.rank,
-        blocked: userData.blocked,
-        service: userData.service // <-- INCLUÍDO AQUI!
+        blocked: userData.blocked
       }));
 
       toast({
