@@ -1,4 +1,4 @@
-// --- START OF FILE TimeSlotsList (4).tsx ---
+// --- START OF FILE TimeSlotsList.tsx ---
 
 import React, { useState, useEffect, useMemo } from "react"; // Added useMemo
 import { format, parseISO, isPast, addDays, isAfter } from "date-fns";
@@ -460,16 +460,15 @@ const TimeSlotsList = () => {
   const [totalCostSummary, setTotalCostSummary] = useState<{ "Cb/Sd": number; "St/Sgt": number; "Oficiais": number; "Total Geral": number; }>({ "Cb/Sd": 0, "St/Sgt": 0, "Oficiais": 0, "Total Geral": 0 });
 
   useEffect(() => {
-    // MODIFIED: Filter timeSlots before grouping and calculations
-    const slotsToProcess = isAdmin || !userMilitaryTypeCategory
-      ? timeSlots
-      : timeSlots.filter(slot => {
-          if (!slot.allowedMilitaryTypes || slot.allowedMilitaryTypes.length === 0) {
-            return true; // No restrictions, show to everyone (or if user has no type)
-          }
-          // User must have a type, and it must be in the allowed list
-          return userMilitaryTypeCategory ? slot.allowedMilitaryTypes.includes(userMilitaryTypeCategory) : false;
-        });
+    // CORRIGIDO: Exibe para todos, apenas filtra se houver restrição
+    const slotsToProcess = timeSlots.filter(slot => {
+      // Se não há restrição ou usuário é admin, mostra para todos
+      if (isAdmin || !slot.allowedMilitaryTypes || slot.allowedMilitaryTypes.length === 0 || !userMilitaryTypeCategory) {
+        return true;
+      }
+      // Usuário precisa estar dentro dos tipos permitidos
+      return slot.allowedMilitaryTypes.includes(userMilitaryTypeCategory);
+    });
 
     const grouped = groupTimeSlotsByDate(slotsToProcess); // Use filtered slots
     
@@ -714,4 +713,4 @@ const TimeSlotsList = () => {
 };
 
 export default TimeSlotsList;
-// --- END OF FILE TimeSlotsList (4).tsx ---
+// --- END OF FILE TimeSlotsList.tsx ---
