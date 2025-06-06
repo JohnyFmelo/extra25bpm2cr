@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, differenceInHours, addHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
 import { Button } from "./ui/button";
@@ -33,6 +32,7 @@ const TimeSlotDialog = ({
 }: TimeSlotDialogProps) => {
   const [startTime, setStartTime] = useState("07:00");
   const [endTime, setEndTime] = useState("13:00");
+  const [hours, setHours] = useState("6");
   const [selectedSlots, setSelectedSlots] = useState<number>(2);
   const [showCustomSlots, setShowCustomSlots] = useState(false);
   const [customSlots, setCustomSlots] = useState("");
@@ -42,11 +42,31 @@ const TimeSlotDialog = ({
 
   const slotOptions = [2, 3, 4, 5];
 
+  // Função para calcular horas entre startTime e endTime
+  const calculateHours = (start: string, end: string) => {
+    if (!start || !end) return "";
+    const startDate = new Date(`2000-01-01T${start}:00`);
+    const endDate = new Date(`2000-01-01T${end}:00`);
+    const diff = differenceInHours(endDate, startDate);
+    return diff >= 0 ? diff.toString() : "";
+  };
+
+  // Função para calcular endTime com base em startTime e horas
+  const calculateEndTime = (start: string, hours: string) => {
+    if (!start || !hours) return endTime;
+    const startDate = new Date(`2000-01-01T${start}:00`);
+    const hoursNum = parseInt(hours);
+    if (isNaN(hoursNum)) return endTime;
+    const endDate = addHours(startDate, hoursNum);
+    return format(endDate, "HH:mm");
+  };
+
   // Reset ou preencher os campos quando o diálogo abrir
   useEffect(() => {
     if (editingTimeSlot) {
       setStartTime(editingTimeSlot.startTime);
       setEndTime(editingTimeSlot.endTime);
+      setHours(calculateHours(editingTimeSlot.startTime, editingTimeSlot.endTime));
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
       setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []);
@@ -61,6 +81,7 @@ const TimeSlotDialog = ({
       // Valores padrão para novo registro
       setStartTime("07:00");
       setEndTime("13:00");
+      setHours("6");
       setSelectedSlots(2);
       setShowCustomSlots(false);
       setCustomSlots("");
@@ -69,6 +90,11 @@ const TimeSlotDialog = ({
       setAllowedMilitaryTypes([]);
     }
   }, [editingTimeSlot, open]);
+
+  // Atualizar horas quando startTime ou endTime mudarem
+  useEffect(() => {
+    setHours(calculateHours(startTime, endTime));
+  }, [startTime, endTime]);
 
   const handleMilitaryTypeToggle = (type: MilitaryType) => {
     setAllowedMilitaryTypes(prev => {
@@ -129,13 +155,13 @@ const TimeSlotDialog = ({
         </DialogHeader>
 
         <div className="space-y-5 py-2">
-          {/* Horário de início e fim */}
+          {/* Horário de início, fim e horas */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Clock className="h-4 w-4 text-green-500" />
               Horário
             </Label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs text-gray-500">Início</Label>
                 <Input
@@ -152,7 +178,23 @@ const TimeSlotDialog = ({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
+                  className=" surfaceduo:text-center"
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-500">Horas</Label>
+                <Input
+                  type="number"
+                  value={hours}
+                  onChange={(e) => {
+                    setHours(e.target.value);
+                    if (e.target.value) {
+                      setEndTime(calculateEndTime(startTime, e.target.value));
+                    }
+                  }}
                   className="text-center"
+                  placeholder="Horas"
                   disabled={isLoading}
                 />
               </div>
