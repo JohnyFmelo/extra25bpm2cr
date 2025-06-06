@@ -14,7 +14,7 @@ import {
   QuerySnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { TimeSlot } from '@/types/user';
+import { TimeSlot } from '@/types/timeSlot';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -103,12 +103,21 @@ export const dataOperations = {
       const timeSlotCollection = collection(db, 'timeSlots');
       const clonedSlot = safeClone(newSlot);
       
-      // Ensure allowed_military_types is properly included
+      // Criar o objeto para inserir no Firebase
       const slotToInsert = {
-        ...clonedSlot,
-        allowed_military_types: newSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]
+        date: newSlot.date instanceof Date ? newSlot.date.toISOString() : newSlot.date,
+        start_time: newSlot.startTime,
+        end_time: newSlot.endTime,
+        total_slots: newSlot.slots,
+        slots_used: newSlot.slotsUsed || 0,
+        description: newSlot.description || '',
+        // Apenas incluir allowed_military_types se houver tipos selecionados
+        ...(newSlot.allowedMilitaryTypes && newSlot.allowedMilitaryTypes.length > 0 && {
+          allowed_military_types: newSlot.allowedMilitaryTypes
+        })
       };
       
+      console.log('Inserting slot:', slotToInsert);
       await addDoc(timeSlotCollection, slotToInsert);
       return { success: true };
     }).catch(error => {
@@ -130,14 +139,22 @@ export const dataOperations = {
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
         const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
-        const clonedSlot = safeClone(updatedSlot);
         
-        // Ensure allowed_military_types is properly included
+        // Criar o objeto para atualizar no Firebase
         const slotToUpdate = {
-          ...clonedSlot,
-          allowed_military_types: updatedSlot.allowedMilitaryTypes || updatedSlot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"]
+          date: updatedSlot.date instanceof Date ? updatedSlot.date.toISOString() : updatedSlot.date,
+          start_time: updatedSlot.startTime,
+          end_time: updatedSlot.endTime,
+          total_slots: updatedSlot.slots,
+          slots_used: updatedSlot.slotsUsed || 0,
+          description: updatedSlot.description || '',
+          // Apenas incluir allowed_military_types se houver tipos selecionados
+          ...(updatedSlot.allowedMilitaryTypes && updatedSlot.allowedMilitaryTypes.length > 0 && {
+            allowed_military_types: updatedSlot.allowedMilitaryTypes
+          })
         };
         
+        console.log('Updating slot:', slotToUpdate);
         await updateDoc(docRef, slotToUpdate);
         return { success: true };
       }

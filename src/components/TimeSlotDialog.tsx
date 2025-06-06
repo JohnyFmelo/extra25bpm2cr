@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -39,7 +38,7 @@ const TimeSlotDialog = ({
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
-  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>(["Operacional", "Administrativo", "Inteligencia"]);
+  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
 
   const slotOptions = [2, 3, 4, 5];
   const militaryTypes = [
@@ -85,8 +84,8 @@ const TimeSlotDialog = ({
       setHours(duration);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
-      // Corrigir o carregamento dos tipos permitidos
-      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]);
+      // Corrigir o carregamento dos tipos permitidos - usar apenas os tipos que realmente estão selecionados
+      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []);
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
@@ -101,7 +100,8 @@ const TimeSlotDialog = ({
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
-      setAllowedMilitaryTypes(["Operacional", "Administrativo", "Inteligencia"]);
+      // Inicializar sem nenhum tipo selecionado
+      setAllowedMilitaryTypes([]);
       setUseWeeklyLogic(false);
     }
   }, [editingTimeSlot, open]);
@@ -126,7 +126,7 @@ const TimeSlotDialog = ({
       slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
       isWeekly: useWeeklyLogic,
       description: description.trim(),
-      allowedMilitaryTypes
+      allowedMilitaryTypes: allowedMilitaryTypes.length > 0 ? allowedMilitaryTypes : undefined
     };
     
     if (editingTimeSlot) {
@@ -140,10 +140,10 @@ const TimeSlotDialog = ({
   const isButtonDisabled = () => {
     if (showCustomSlots) {
       const numSlots = parseInt(customSlots);
-      return isNaN(numSlots) || numSlots <= 0 || isLoading || allowedMilitaryTypes.length === 0;
+      return isNaN(numSlots) || numSlots <= 0 || isLoading;
     }
     const hoursValue = parseFloat(hours);
-    return isNaN(hoursValue) || hoursValue <= 0 || isLoading || allowedMilitaryTypes.length === 0;
+    return isNaN(hoursValue) || hoursValue <= 0 || isLoading;
   };
 
   return (
@@ -258,7 +258,7 @@ const TimeSlotDialog = ({
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
               <Shield className="h-4 w-4 text-green-500" />
-              Tipos de militares permitidos
+              Tipos de militares permitidos (opcional)
             </Label>
             <div className="space-y-2">
               {militaryTypes.map((type) => (
@@ -278,11 +278,9 @@ const TimeSlotDialog = ({
                 </div>
               ))}
             </div>
-            {allowedMilitaryTypes.length === 0 && (
-              <p className="text-xs text-red-500">
-                Selecione pelo menos um tipo de militar
-              </p>
-            )}
+            <p className="text-xs text-gray-500">
+              Se nenhum tipo for selecionado, todos os militares poderão acessar
+            </p>
           </div>
 
           {/* Descrição */}
