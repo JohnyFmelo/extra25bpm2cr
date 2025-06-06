@@ -56,7 +56,7 @@ const ToastIcon = ({ variant }: { variant?: VariantProps<typeof toastVariants>["
     case "destructive":
       return <XCircle className={cn(iconSize, "text-red-100")} />;
     case "info":
-      return <Info className={cn(iconSize, "text-blue-500")} />;
+      return <Info className={cn(iconSize, "text-blue-100")} />;
     default:
       return <Info className={cn(iconSize, "text-neutral-500 dark:text-neutral-400")} />;
   }

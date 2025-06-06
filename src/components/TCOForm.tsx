@@ -1307,7 +1307,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
                   type="button"
                   variant="outline"
                   onClick={() => imageInputRef.current?.click()}
-                  className="border-blue-600 text-blue-600 hover:bg-blue-500 w-full sm:w-auto mx-auto"
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto mx-auto"
                   aria-label="Selecionar imagens para anexar"
                 >
                   <Plus className="mr-2 h-5 w-5" />
