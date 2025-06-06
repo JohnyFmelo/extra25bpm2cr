@@ -87,7 +87,7 @@ const NotificationCard = ({
       className={`
         relative transition-all duration-200 cursor-pointer border-l-4 hover:shadow-md
         ${isUnread 
-          ? 'border-l-blue-500 bg-blue-500 shadow-sm' 
+          ? 'border-l-blue-500 bg-blue-50 shadow-sm' 
           : 'border-l-gray-300 bg-white'
         }
         ${isExpanded ? 'shadow-lg' : ''}
