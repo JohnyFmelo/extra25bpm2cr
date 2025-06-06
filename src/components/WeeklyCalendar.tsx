@@ -181,7 +181,8 @@ const WeeklyCalendar = ({
         endTime: slot.end_time ? slot.end_time.slice(0, 5) : "00:00",
         slots: slot.total_slots || slot.slots || 0,
         slotsUsed: slot.slots_used || 0,
-        description: slot.description || ""
+        description: slot.description || "",
+        allowedMilitaryTypes: slot.allowedMilitaryTypes || []
       }));
       setTimeSlots(formattedSlots);
     } catch (error) {
@@ -233,7 +234,8 @@ const WeeklyCalendar = ({
             end_time: formatTimeForDB(timeSlot.endTime),
             total_slots: timeSlot.slots,
             slots_used: 0,
-            description: timeSlot.description || ""
+            description: timeSlot.description || "",
+            allowedMilitaryTypes: timeSlot.allowedMilitaryTypes || []
           }));
         }
         const results = await Promise.all(promises);
@@ -253,7 +255,8 @@ const WeeklyCalendar = ({
           end_time: formatTimeForDB(timeSlot.endTime),
           total_slots: timeSlot.slots,
           slots_used: 0,
-          description: timeSlot.description || ""
+          description: timeSlot.description || "",
+          allowedMilitaryTypes: timeSlot.allowedMilitaryTypes || []
         });
         if (!result.success) {
           throw new Error('Failed to insert time slot');
@@ -286,7 +289,8 @@ const WeeklyCalendar = ({
         end_time: formatTimeForDB(updatedTimeSlot.endTime),
         total_slots: updatedTimeSlot.slots,
         slots_used: updatedTimeSlot.slotsUsed,
-        description: updatedTimeSlot.description || ""
+        description: updatedTimeSlot.description || "",
+        allowedMilitaryTypes: updatedTimeSlot.allowedMilitaryTypes || []
       }, {
         date: format(editingTimeSlot.date, 'yyyy-MM-dd'),
         start_time: formatTimeForDB(editingTimeSlot.startTime),
@@ -355,7 +359,7 @@ const WeeklyCalendar = ({
       key={slot.id || `${format(slot.date, 'yyyy-MM-dd')}-${slot.startTime}-${index}`} 
       className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:shadow-md hover:border-green-300 transition-all duration-200 ease-in-out bg-white"
     >
-      <div className="flex-1 min-w-0"> {/* Garante que o texto quebra se necessário */}
+      <div className="flex-1 min-w-0">
         <div className="font-medium text-gray-800 truncate">
           {slot.startTime} - {slot.endTime}
           {slot.description && (
@@ -364,14 +368,24 @@ const WeeklyCalendar = ({
         </div>
         <div className="text-xs text-gray-500 mt-1 flex items-center">
           <span className={cn(
-            "inline-block w-2.5 h-2.5 rounded-full mr-1.5 shrink-0", // shrink-0 para não encolher o ponto
+            "inline-block w-2.5 h-2.5 rounded-full mr-1.5 shrink-0",
             slot.slotsUsed >= slot.slots ? "bg-red-500" : 
             slot.slotsUsed > slot.slots / 2 ? "bg-yellow-500" : "bg-green-500"
           )}></span>
           {slot.slotsUsed}/{slot.slots} vagas
         </div>
+        {slot.allowedMilitaryTypes && slot.allowedMilitaryTypes.length > 0 && (
+          <div className="text-xs text-blue-600 mt-1 flex items-center flex-wrap gap-1">
+            <span className="font-medium">Tipos:</span>
+            {slot.allowedMilitaryTypes.map((type, idx) => (
+              <span key={idx} className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">
+                {type}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
-      <div className="flex gap-1 sm:gap-2 ml-2 shrink-0"> {/* ml-2 para dar espaço, shrink-0 para não encolher botões */}
+      <div className="flex gap-1 sm:gap-2 ml-2 shrink-0">
         {showEditButton && (
           <Button 
             variant="ghost" 
