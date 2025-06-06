@@ -170,8 +170,7 @@ const WeeklyCalendar = ({
       const data = await dataOperations.fetch();
       if (!Array.isArray(data)) {
         console.warn('Fetched data is not an array:', data);
-        setTimeSlots([]); // Define como array vazio para evitar erros
-        // throw new Error('Invalid data format'); // Opcional: lançar erro se preferir
+        setTimeSlots([]);
         return;
       }
       const formattedSlots = data.map((slot: any) => ({
@@ -181,7 +180,8 @@ const WeeklyCalendar = ({
         endTime: slot.end_time ? slot.end_time.slice(0, 5) : "00:00",
         slots: slot.total_slots || slot.slots || 0,
         slotsUsed: slot.slots_used || 0,
-        description: slot.description || ""
+        description: slot.description || "",
+        allowedMilitaryTypes: slot.allowed_military_types || []
       }));
       setTimeSlots(formattedSlots);
     } catch (error) {
@@ -233,7 +233,8 @@ const WeeklyCalendar = ({
             end_time: formatTimeForDB(timeSlot.endTime),
             total_slots: timeSlot.slots,
             slots_used: 0,
-            description: timeSlot.description || ""
+            description: timeSlot.description || "",
+            allowedMilitaryTypes: timeSlot.allowedMilitaryTypes || []
           }));
         }
         const results = await Promise.all(promises);
@@ -253,7 +254,8 @@ const WeeklyCalendar = ({
           end_time: formatTimeForDB(timeSlot.endTime),
           total_slots: timeSlot.slots,
           slots_used: 0,
-          description: timeSlot.description || ""
+          description: timeSlot.description || "",
+          allowedMilitaryTypes: timeSlot.allowedMilitaryTypes || []
         });
         if (!result.success) {
           throw new Error('Failed to insert time slot');
@@ -263,7 +265,7 @@ const WeeklyCalendar = ({
           description: "Horário adicionado com sucesso!"
         });
       }
-      await fetchTimeSlots(); // Atualiza a lista após adicionar
+      await fetchTimeSlots();
     } catch (error) {
       console.error('Erro ao adicionar horário:', error);
       toast({
@@ -286,7 +288,8 @@ const WeeklyCalendar = ({
         end_time: formatTimeForDB(updatedTimeSlot.endTime),
         total_slots: updatedTimeSlot.slots,
         slots_used: updatedTimeSlot.slotsUsed,
-        description: updatedTimeSlot.description || ""
+        description: updatedTimeSlot.description || "",
+        allowedMilitaryTypes: updatedTimeSlot.allowedMilitaryTypes || []
       }, {
         date: format(editingTimeSlot.date, 'yyyy-MM-dd'),
         start_time: formatTimeForDB(editingTimeSlot.startTime),

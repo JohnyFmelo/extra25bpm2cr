@@ -2,32 +2,34 @@
 import React, { useState, useEffect } from "react";
 import { format, parseISO, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { collection, query, onSnapshot, where } from "firebase/firestore";
+import { collection, query, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock, Calendar } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useUserService, canUserViewTimeSlot } from "@/hooks/useUserService";
 
-// Update interface to match Firestore document structure
 interface TimeSlot {
   id?: string;
-  date: string; // Changed from Date to string to match Firestore
-  start_time: string; // Updated to match Firestore field name
-  end_time: string; // Updated to match Firestore field name
+  date: string;
+  start_time: string;
+  end_time: string;
   volunteers?: string[];
   description?: string;
+  allowed_military_types?: string[];
 }
 
 const UpcomingShifts = () => {
   const [shifts, setShifts] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { userService, isLoading: userLoading } = useUserService();
   
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
   
   useEffect(() => {
-    if (!volunteerName) {
+    if (!volunteerName || userLoading) {
       setIsLoading(false);
       return;
     }
@@ -43,6 +45,11 @@ const UpcomingShifts = () => {
         id: doc.id,
         ...doc.data()
       })).filter((slot: any) => {
+        // Verificar se o usuário pode ver este horário baseado na categoria
+        if (!canUserViewTimeSlot(slot.allowed_military_types, userService)) {
+          return false;
+        }
+
         // Check if the user is in the volunteers array
         const isUserVolunteer = slot.volunteers?.includes(volunteerName);
         if (!isUserVolunteer) return false;
@@ -57,13 +64,12 @@ const UpcomingShifts = () => {
         return dateA.getTime() - dateB.getTime();
       });
 
-      // Type assertion to ensure TypeScript knows these objects match the TimeSlot interface
       setShifts(upcomingShifts.slice(0, 3) as TimeSlot[]);
       setIsLoading(false);
     });
     
     return () => unsubscribe();
-  }, [volunteerName]);
+  }, [volunteerName, userService, userLoading]);
   
   const formatDateLabel = (dateString: string) => {
     const date = parseISO(dateString);
@@ -84,7 +90,7 @@ const UpcomingShifts = () => {
     }
   };
   
-  if (isLoading) {
+  if (isLoading || userLoading) {
     return <div className="text-center p-4">Carregando próximos serviços...</div>;
   }
   
@@ -124,6 +130,12 @@ const UpcomingShifts = () => {
                     {shift.description && (
                       <div className="mt-2 text-sm text-gray-600 italic">
                         {shift.description}
+                      </div>
+                    )}
+
+                    {shift.allowed_military_types && shift.allowed_military_types.length > 0 && (
+                      <div className="mt-2 text-xs text-gray-500">
+                        Categorias: {shift.allowed_military_types.join(', ')}
                       </div>
                     )}
                   </CardContent>

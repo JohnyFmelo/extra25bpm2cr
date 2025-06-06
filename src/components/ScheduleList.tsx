@@ -5,6 +5,7 @@ import { ptBR } from "date-fns/locale";
 import { collection, query, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { useUserService, canUserViewTimeSlot } from "@/hooks/useUserService";
 
 interface TimeSlot {
   id?: string;
@@ -14,6 +15,7 @@ interface TimeSlot {
   total_slots: number;
   slots_used: number;
   volunteers?: string[];
+  allowed_military_types?: string[];
 }
 
 interface GroupedTimeSlots {
@@ -24,10 +26,10 @@ const ScheduleList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { userService, isLoading: userLoading } = useUserService();
 
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
-    // Detecta quando é meia-noite e ajusta para 24
     let [endHour, endMinute] = endTime.split(':').map(Number);
     if (endHour === 0) endHour = 24;
     
@@ -39,7 +41,6 @@ const ScheduleList = () => {
       diffMinutes += 60;
     }
     
-    // Se ainda houver minutos, adiciona ao resultado
     const hourText = diffHours > 0 ? `${diffHours}h` : '';
     const minuteText = diffMinutes > 0 ? `${diffMinutes}min` : '';
     
@@ -61,6 +62,7 @@ const ScheduleList = () => {
           volunteers: data.volunteers || [],
           slots_used: data.slots_used || 0,
           total_slots: data.total_slots || data.slots || 0,
+          allowed_military_types: data.allowed_military_types || [],
         };
       });
       setTimeSlots(formattedSlots);
@@ -78,6 +80,11 @@ const ScheduleList = () => {
   }, [toast]);
 
   const shouldShowTimeSlot = (slot: TimeSlot) => {
+    // Verificar se o usuário pode ver este horário baseado na categoria
+    if (!canUserViewTimeSlot(slot.allowed_military_types, userService)) {
+      return false;
+    }
+
     if (!slot.volunteers || slot.volunteers.length === 0) {
       return false;
     }
@@ -104,12 +111,12 @@ const ScheduleList = () => {
 
   const groupedTimeSlots = groupTimeSlotsByDate(timeSlots);
 
-  if (isLoading) {
+  if (isLoading || userLoading) {
     return <div className="text-center py-4">Carregando escala...</div>;
   }
 
   if (Object.keys(groupedTimeSlots).length === 0) {
-    return <div className="text-center py-4">Nenhum horário encontrado.</div>;
+    return <div className="text-center py-4">Nenhum horário encontrado para sua categoria.</div>;
   }
 
   return (
@@ -129,6 +136,11 @@ const ScheduleList = () => {
                   <p className="font-medium">
                     {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)} - {calculateTimeDifference(slot.start_time, slot.end_time)}
                   </p>
+                  {slot.allowed_military_types && slot.allowed_military_types.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Categorias: {slot.allowed_military_types.join(', ')}
+                    </p>
+                  )}
                 </div>
                 {slot.volunteers && slot.volunteers.length > 0 && (
                   <div className="pt-2 border-t">

@@ -1,3 +1,4 @@
+
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -14,7 +15,7 @@ import {
   QuerySnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { TimeSlot } from '@/types/user';
+import { TimeSlot } from '@/types/timeSlot';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -69,6 +70,7 @@ const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
     title: doc.data().title || '',
     description: doc.data().description || '',
     date: doc.data().date || '',
+    allowedMilitaryTypes: doc.data().allowed_military_types || [],
     ...safeClone(doc.data())
   }));
 };
@@ -102,6 +104,13 @@ export const dataOperations = {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
       const clonedSlot = safeClone(newSlot);
+      
+      // Mapear allowedMilitaryTypes para allowed_military_types para o Firebase
+      if (newSlot.allowedMilitaryTypes) {
+        clonedSlot.allowed_military_types = newSlot.allowedMilitaryTypes;
+        delete clonedSlot.allowedMilitaryTypes;
+      }
+      
       await addDoc(timeSlotCollection, clonedSlot);
       return { success: true };
     }).catch(error => {
@@ -124,6 +133,13 @@ export const dataOperations = {
       if (!querySnapshot.empty) {
         const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
         const clonedSlot = safeClone(updatedSlot);
+        
+        // Mapear allowedMilitaryTypes para allowed_military_types para o Firebase
+        if (updatedSlot.allowedMilitaryTypes) {
+          clonedSlot.allowed_military_types = updatedSlot.allowedMilitaryTypes;
+          delete clonedSlot.allowedMilitaryTypes;
+        }
+        
         await updateDoc(docRef, clonedSlot);
         return { success: true };
       }

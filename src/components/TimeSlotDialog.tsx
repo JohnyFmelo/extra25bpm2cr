@@ -7,9 +7,10 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Switch } from "./ui/switch";
-import { Clock, Calendar, Users, RefreshCw, FileText } from "lucide-react";
+import { Checkbox } from "./ui/checkbox";
+import { Clock, Calendar, Users, RefreshCw, FileText, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TimeSlot } from "@/types/timeSlot";
+import { TimeSlot, MILITARY_TYPES, MilitaryType } from "@/types/timeSlot";
 import { Label } from "./ui/label";
 
 interface TimeSlotDialogProps {
@@ -19,7 +20,7 @@ interface TimeSlotDialogProps {
   onAddTimeSlot: (timeSlot: TimeSlot) => void;
   onEditTimeSlot: (timeSlot: TimeSlot) => void;
   editingTimeSlot: TimeSlot | null;
-  isLoading?: boolean; // Added isLoading prop
+  isLoading?: boolean;
 }
 
 const TimeSlotDialog = ({
@@ -29,7 +30,7 @@ const TimeSlotDialog = ({
   onAddTimeSlot,
   onEditTimeSlot,
   editingTimeSlot,
-  isLoading = false, // Default to false
+  isLoading = false,
 }: TimeSlotDialogProps) => {
   const [startTime, setStartTime] = useState("07:00");
   const [endTime, setEndTime] = useState("13:00");
@@ -38,6 +39,7 @@ const TimeSlotDialog = ({
   const [customSlots, setCustomSlots] = useState("");
   const [useWeeklyLogic, setUseWeeklyLogic] = useState(false);
   const [description, setDescription] = useState("");
+  const [allowedMilitaryTypes, setAllowedMilitaryTypes] = useState<string[]>([]);
 
   const slotOptions = [2, 3, 4, 5];
 
@@ -48,13 +50,14 @@ const TimeSlotDialog = ({
       setEndTime(editingTimeSlot.endTime);
       setSelectedSlots(editingTimeSlot.slots);
       setDescription(editingTimeSlot.description || "");
+      setAllowedMilitaryTypes(editingTimeSlot.allowedMilitaryTypes || []);
       if (!slotOptions.includes(editingTimeSlot.slots)) {
         setShowCustomSlots(true);
         setCustomSlots(editingTimeSlot.slots.toString());
       } else {
         setShowCustomSlots(false);
       }
-      setUseWeeklyLogic(false); // Não permitir editar como semanal
+      setUseWeeklyLogic(false);
     } else {
       // Valores padrão para novo registro
       setStartTime("07:00");
@@ -63,9 +66,18 @@ const TimeSlotDialog = ({
       setShowCustomSlots(false);
       setCustomSlots("");
       setDescription("");
+      setAllowedMilitaryTypes([]);
       setUseWeeklyLogic(false);
     }
   }, [editingTimeSlot, open]);
+
+  const handleMilitaryTypeChange = (type: string, checked: boolean) => {
+    if (checked) {
+      setAllowedMilitaryTypes(prev => [...prev, type]);
+    } else {
+      setAllowedMilitaryTypes(prev => prev.filter(t => t !== type));
+    }
+  };
 
   const handleRegister = () => {
     const slots = showCustomSlots ? parseInt(customSlots) : selectedSlots;
@@ -77,7 +89,8 @@ const TimeSlotDialog = ({
       slots,
       slotsUsed: editingTimeSlot ? editingTimeSlot.slotsUsed : 0,
       isWeekly: useWeeklyLogic,
-      description: description.trim()
+      description: description.trim(),
+      allowedMilitaryTypes: allowedMilitaryTypes.length > 0 ? allowedMilitaryTypes : MILITARY_TYPES // Se nenhuma for selecionada, permite todas
     };
     
     if (editingTimeSlot) {
@@ -91,9 +104,9 @@ const TimeSlotDialog = ({
   const isButtonDisabled = () => {
     if (showCustomSlots) {
       const numSlots = parseInt(customSlots);
-      return isNaN(numSlots) || numSlots <= 0 || isLoading; // Added isLoading check
+      return isNaN(numSlots) || numSlots <= 0 || isLoading;
     }
-    return isLoading; // Added isLoading check
+    return isLoading;
   };
 
   return (
@@ -194,6 +207,34 @@ const TimeSlotDialog = ({
                   disabled={isLoading}
                 />
               </div>
+            )}
+          </div>
+
+          {/* Categorias de militares */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Shield className="h-4 w-4 text-green-500" />
+              Categorias de militares permitidas
+            </Label>
+            <div className="space-y-2">
+              {MILITARY_TYPES.map((type) => (
+                <div key={type} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={type}
+                    checked={allowedMilitaryTypes.includes(type)}
+                    onCheckedChange={(checked) => handleMilitaryTypeChange(type, checked as boolean)}
+                    disabled={isLoading}
+                  />
+                  <Label htmlFor={type} className="text-sm text-gray-700 cursor-pointer">
+                    {type}
+                  </Label>
+                </div>
+              ))}
+            </div>
+            {allowedMilitaryTypes.length === 0 && (
+              <p className="text-xs text-gray-500 italic">
+                Nenhuma categoria selecionada permitirá acesso a todos os militares
+              </p>
             )}
           </div>
 
