@@ -233,8 +233,7 @@ const WeeklyCalendar = ({
             end_time: formatTimeForDB(timeSlot.endTime),
             total_slots: timeSlot.slots,
             slots_used: 0,
-            description: timeSlot.description || "",
-            allowedMilitaryTypes: timeSlot.allowedMilitaryTypes || []
+            description: timeSlot.description || ""
           }));
         }
         const results = await Promise.all(promises);
@@ -254,8 +253,7 @@ const WeeklyCalendar = ({
           end_time: formatTimeForDB(timeSlot.endTime),
           total_slots: timeSlot.slots,
           slots_used: 0,
-          description: timeSlot.description || "",
-          allowedMilitaryTypes: timeSlot.allowedMilitaryTypes || []
+          description: timeSlot.description || ""
         });
         if (!result.success) {
           throw new Error('Failed to insert time slot');
@@ -265,7 +263,7 @@ const WeeklyCalendar = ({
           description: "Horário adicionado com sucesso!"
         });
       }
-      await fetchTimeSlots();
+      await fetchTimeSlots(); // Atualiza a lista após adicionar
     } catch (error) {
       console.error('Erro ao adicionar horário:', error);
       toast({
@@ -288,8 +286,7 @@ const WeeklyCalendar = ({
         end_time: formatTimeForDB(updatedTimeSlot.endTime),
         total_slots: updatedTimeSlot.slots,
         slots_used: updatedTimeSlot.slotsUsed,
-        description: updatedTimeSlot.description || "",
-        allowedMilitaryTypes: updatedTimeSlot.allowedMilitaryTypes || []
+        description: updatedTimeSlot.description || ""
       }, {
         date: format(editingTimeSlot.date, 'yyyy-MM-dd'),
         start_time: formatTimeForDB(editingTimeSlot.startTime),

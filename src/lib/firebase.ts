@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -15,8 +14,7 @@ import {
   QuerySnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { TimeSlot } from '@/types/timeSlot';
-import { parseISO } from 'date-fns';
+import { TimeSlot } from '@/types/user';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -66,19 +64,13 @@ const safeClone = (data: DocumentData): Record<string, any> => {
 
 // Helper function to safely get documents from a query snapshot
 const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
-  return snapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      date: data.date ? parseISO(data.date) : new Date(),
-      startTime: data.start_time ? data.start_time.slice(0, 5) : "00:00",
-      endTime: data.end_time ? data.end_time.slice(0, 5) : "00:00",
-      slots: data.total_slots || data.slots || 0,
-      slotsUsed: data.slots_used || 0,
-      description: data.description || "",
-      allowedMilitaryTypes: data.allowed_military_types || []
-    };
-  });
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    title: doc.data().title || '',
+    description: doc.data().description || '',
+    date: doc.data().date || '',
+    ...safeClone(doc.data())
+  }));
 };
 
 // Helper function to handle Firestore operations with proper cleanup
@@ -109,11 +101,15 @@ export const dataOperations = {
   async insert(newSlot: any) {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
-      const clonedSlot = safeClone({
-        ...newSlot,
-        allowed_military_types: newSlot.allowedMilitaryTypes || []
-      });
-      await addDoc(timeSlotCollection, clonedSlot);
+      const clonedSlot = safeClone(newSlot);
+      
+      // Ensure allowed_military_types is properly included
+      const slotToInsert = {
+        ...clonedSlot,
+        allowed_military_types: newSlot.allowedMilitaryTypes || ["Operacional", "Administrativo", "Inteligencia"]
+      };
+      
+      await addDoc(timeSlotCollection, slotToInsert);
       return { success: true };
     }).catch(error => {
       console.error('Error inserting data:', error);
@@ -134,11 +130,15 @@ export const dataOperations = {
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
         const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
-        const clonedSlot = safeClone({
-          ...updatedSlot,
-          allowed_military_types: updatedSlot.allowedMilitaryTypes || []
-        });
-        await updateDoc(docRef, clonedSlot);
+        const clonedSlot = safeClone(updatedSlot);
+        
+        // Ensure allowed_military_types is properly included
+        const slotToUpdate = {
+          ...clonedSlot,
+          allowed_military_types: updatedSlot.allowedMilitaryTypes || updatedSlot.allowed_military_types || ["Operacional", "Administrativo", "Inteligencia"]
+        };
+        
+        await updateDoc(docRef, slotToUpdate);
         return { success: true };
       }
       return { success: false };
