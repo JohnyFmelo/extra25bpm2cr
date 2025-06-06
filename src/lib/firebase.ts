@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { TimeSlot } from '@/types/user';
+import { parseISO } from 'date-fns';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -64,13 +65,19 @@ const safeClone = (data: DocumentData): Record<string, any> => {
 
 // Helper function to safely get documents from a query snapshot
 const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    title: doc.data().title || '',
-    description: doc.data().description || '',
-    date: doc.data().date || '',
-    ...safeClone(doc.data())
-  }));
+  return snapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      date: data.date ? parseISO(data.date) : new Date(),
+      startTime: data.start_time ? data.start_time.slice(0, 5) : "00:00",
+      endTime: data.end_time ? data.end_time.slice(0, 5) : "00:00",
+      slots: data.total_slots || data.slots || 0,
+      slotsUsed: data.slots_used || 0,
+      description: data.description || "",
+      allowedMilitaryTypes: data.allowed_military_types || []
+    };
+  });
 };
 
 // Helper function to handle Firestore operations with proper cleanup
@@ -101,7 +108,10 @@ export const dataOperations = {
   async insert(newSlot: any) {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
-      const clonedSlot = safeClone(newSlot);
+      const clonedSlot = safeClone({
+        ...newSlot,
+        allowed_military_types: newSlot.allowedMilitaryTypes || []
+      });
       await addDoc(timeSlotCollection, clonedSlot);
       return { success: true };
     }).catch(error => {
@@ -123,7 +133,10 @@ export const dataOperations = {
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
         const docRef = doc(db, 'timeSlots', querySnapshot.docs[0].id);
-        const clonedSlot = safeClone(updatedSlot);
+        const clonedSlot = safeClone({
+          ...updatedSlot,
+          allowed_military_types: updatedSlot.allowedMilitaryTypes || []
+        });
         await updateDoc(docRef, clonedSlot);
         return { success: true };
       }

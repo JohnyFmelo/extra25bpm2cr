@@ -8,6 +8,7 @@ export interface TimeSlot {
   id?: string;
   isWeekly?: boolean;
   description?: string;
+  allowedMilitaryTypes?: string[];
 }
 
 export interface FirebaseTimeSlot {
@@ -18,4 +19,5 @@ export interface FirebaseTimeSlot {
   slots_used: number;
   id?: string;
   description?: string;
+  allowed_military_types?: string[];
 }
