@@ -41,6 +41,15 @@ const TopBar = () => {
     return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
   };
 
+  // Get service display text
+  const getServiceDisplay = (service: string, userType: string) => {
+    if (service) {
+      return service;
+    }
+    // Fallback to userType if service is not available
+    return userType === "admin" ? "Administrador" : "Usuário";
+  };
+
   return (
     <header className="bg-gradient-to-r from-primary-dark via-primary to-primary-light sticky top-0 z-50 shadow-md">
       <div className="flex h-16 items-center px-6 gap-4 max-w-7xl mx-auto">
@@ -53,7 +62,7 @@ const TopBar = () => {
               {userData.rank} {userData.warName}
             </h2>
             <div className="flex items-center gap-2">
-              <p className="text-xs text-white/80">{userData.userType === "admin" ? "Administrador" : "Usuário"}</p>
+              <p className="text-xs text-white/80">{getServiceDisplay(userData.service, userData.userType)}</p>
               {userData.rgpm && (
                 <span className="text-xs text-white/60">• RGPM: {userData.rgpm}</span>
               )}
