@@ -61,13 +61,15 @@ export const addTermoManifestacao = (doc, data) => {
         yPos = addWrappedText(doc, yPos, option2Text, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
         yPos += 5;
 
-        // Obter data e horário das informações básicas e formatar a data para DD/MM/YYYY (mesma lógica do Termo de Compromisso)
-        const dataAudiencia = data.juizadoEspecialData ? formatarDataSimples(data.juizadoEspecialData) : "___/___/______";
-        const horaAudiencia = data.juizadoEspecialHora || "__:__";
-        
-        const audienciaText = `ESTOU CIENTE DE QUE A AUDIENCIA OCORRERÁ NO DIA ${dataAudiencia}, ÀS ${horaAudiencia} HORAS, DAS DEPENDÊNCIAS DO JUIZADO ESPECIAL CRIMINAL DE VÁRZEA GRANDE NO BAIRRO CHAPÉU DO SOL, AVENIDA CHAPÉU DO SOL, S/N, E QUE O NÃO COMPARECIMENTO IMPORTARÁ EM RENUNCIA À REPRESENTAÇÃO E O ARQUIVAMENTO DO PROCESSO.`;
-        yPos = addWrappedText(doc, yPos, audienciaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-        yPos += 5;
+        // ALTERAÇÃO: Adiciona o parágrafo da audiência somente se a vítima escolheu representar
+        if (vitima.representacao === 'representar') {
+            const dataAudiencia = data.juizadoEspecialData ? formatarDataSimples(data.juizadoEspecialData) : "___/___/______";
+            const horaAudiencia = data.juizadoEspecialHora || "__:__";
+            
+            const audienciaText = `ESTOU CIENTE DE QUE A AUDIENCIA OCORRERÁ NO DIA ${dataAudiencia}, ÀS ${horaAudiencia} HORAS, DAS DEPENDÊNCIAS DO JUIZADO ESPECIAL CRIMINAL DE VÁRZEA GRANDE NO BAIRRO CHAPÉU DO SOL, AVENIDA CHAPÉU DO SOL, S/N, E QUE O NÃO COMPARECIMENTO IMPORTARÁ EM RENUNCIA À REPRESENTAÇÃO E O ARQUIVAMENTO DO PROCESSO.`;
+            yPos = addWrappedText(doc, yPos, audienciaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+            yPos += 5;
+        }
 
         yPos = addSignatureWithNameAndRole(doc, yPos, vitima.nome, "VÍTIMA", data);
         const nomeCondutorManif = `${condutor?.nome || ""} ${condutor?.posto || ""}`.trim();
