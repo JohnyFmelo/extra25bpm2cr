@@ -4,6 +4,19 @@ import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useNavigate } from "react-router-dom";
 
+interface UserData {
+  id: string;
+  currentVersion?: string;
+  [key: string]: any;
+}
+
+interface SystemVersionData {
+  version: string;
+  improvements?: string;
+  updatedAt?: any;
+  updatedBy?: string;
+}
+
 export const useVersioning = () => {
   const [currentSystemVersion, setCurrentSystemVersion] = useState("");
   const [userVersion, setUserVersion] = useState("");
@@ -12,14 +25,17 @@ export const useVersioning = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const userStr = localStorage.getItem("user");
+    if (!userStr) return;
+
+    const user: UserData = JSON.parse(userStr);
     if (!user.id) return;
 
     // Listener para mudanças na versão do sistema
     const versionDocRef = doc(db, "system", "version");
-    const unsubscribeVersion = onSnapshot(versionDocRef, async (doc) => {
-      if (doc.exists()) {
-        const systemData = doc.data();
+    const unsubscribeVersion = onSnapshot(versionDocRef, async (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const systemData = docSnapshot.data() as SystemVersionData;
         const systemVersion = systemData.version || "1.0.0";
         setCurrentSystemVersion(systemVersion);
         setImprovements(systemData.improvements || "");
@@ -29,7 +45,7 @@ export const useVersioning = () => {
         const userDoc = await getDoc(userDocRef);
         
         if (userDoc.exists()) {
-          const userData = userDoc.data();
+          const userData = userDoc.data() as UserData;
           const currentUserVersion = userData.currentVersion || "0.0.0";
           setUserVersion(currentUserVersion);
 
@@ -48,7 +64,8 @@ export const useVersioning = () => {
         }
       } else {
         // Criar documento de versão se não existir
-        await updateDoc(doc(db, "system", "version"), {
+        const versionDocRef = doc(db, "system", "version");
+        await updateDoc(versionDocRef, {
           version: "1.0.0",
           improvements: "Versão inicial do sistema",
           updatedAt: new Date()
@@ -60,11 +77,15 @@ export const useVersioning = () => {
   }, [navigate]);
 
   const updateUserVersion = async () => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const userStr = localStorage.getItem("user");
+    if (!userStr) return;
+
+    const user: UserData = JSON.parse(userStr);
     if (!user.id) return;
 
     try {
-      await updateDoc(doc(db, "users", user.id), {
+      const userDocRef = doc(db, "users", user.id);
+      await updateDoc(userDocRef, {
         currentVersion: currentSystemVersion,
         lastVersionUpdate: new Date()
       });
