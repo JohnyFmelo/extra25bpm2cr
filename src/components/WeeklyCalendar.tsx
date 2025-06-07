@@ -496,7 +496,7 @@ const WeeklyCalendar = ({
                 size="icon" 
                 className="h-8 w-8 md:h-9 md:w-9 bg-white/20 hover:bg-white/30 text-white rounded-full" 
                 onClick={() => setShowDeleteAlert(true)} 
-                disabled={isLocked || isLoading || timeSlots.length === 0} // Desabilitar se não houver horários
+                disabled={isLocked || isLoading || timeSlots.length === 0}
                 aria-label="Excluir todos os horários"
               >
                 <Trash className="h-4 w-4" />
@@ -564,7 +564,7 @@ const WeeklyCalendar = ({
                 )}>
                   {day.date}
                 </span>
-                {isSelected && day.hasTimeSlots && ( // Bolinha para dia selecionado com horários, mais centralizada
+                {isSelected && day.hasTimeSlots && (
                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-green-500 rounded-full"></span>
                 )}
               </div>
@@ -592,7 +592,7 @@ const WeeklyCalendar = ({
                     {format(date, "EEEE, dd 'de' MMMM", { locale: ptBR })}
                   </h3>
                   <div className="space-y-2 pt-1">
-                    {slots.map((slot, index) => renderTimeSlotItem(slot, index, false))} {/* Sem botão de editar na visão semanal */}
+                    {slots.map((slot, index) => renderTimeSlotItem(slot, index, false))}
                   </div>
                 </div>
               ))
@@ -617,7 +617,7 @@ const WeeklyCalendar = ({
             {!isLocked && (
               <div className="mt-6 flex justify-center border-t border-gray-200 pt-4">
                 <Button
-                  size="default" // Changed from "md" to "default" which is a valid size
+                  size="default"
                   className="bg-green-500 hover:bg-green-600 text-white shadow-md hover:shadow-lg transition-shadow"
                   onClick={handlePlusClick}
                   disabled={isLoading}

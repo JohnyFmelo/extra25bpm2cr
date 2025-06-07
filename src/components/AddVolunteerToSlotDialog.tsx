@@ -5,10 +5,20 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Plus, X } from "lucide-react";
-import { supabaseOperations } from "@/lib/supabaseOperations";
+import { Plus, X, Search, Loader2 } from "lucide-react";
+import { dataOperations } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { TimeSlot } from "@/types/timeSlot";
+import { ScrollArea } from "./ui/scroll-area";
+
+interface User {
+  id: string;
+  warName?: string;
+  rank?: string;
+  email: string;
+}
 
 interface AddVolunteerToSlotDialogProps {
   open: boolean;
@@ -23,31 +33,92 @@ const AddVolunteerToSlotDialog = ({
   timeSlot,
   onSuccess
 }: AddVolunteerToSlotDialogProps) => {
-  const [volunteerName, setVolunteerName] = useState("");
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const { toast } = useToast();
 
-  const handleAddVolunteer = async () => {
-    if (!volunteerName.trim()) {
+  useEffect(() => {
+    if (open) {
+      fetchUsers();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    filterUsers();
+  }, [users, searchQuery]);
+
+  const fetchUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const usersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as User[];
+
+      // Filtrar usuários que têm graduação e nome de guerra
+      const validUsers = usersData.filter(user => user.rank && user.warName);
+      setUsers(validUsers);
+    } catch (error) {
+      console.error("Erro ao carregar usuários:", error);
       toast({
         title: "Erro",
-        description: "Digite o nome do voluntário.",
+        description: "Não foi possível carregar a lista de usuários.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const filterUsers = () => {
+    if (!searchQuery.trim()) {
+      setFilteredUsers(users);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = users.filter(user => {
+      const fullName = `${user.rank} ${user.warName}`.toLowerCase();
+      const warName = user.warName?.toLowerCase() || "";
+      const rank = user.rank?.toLowerCase() || "";
+      
+      return fullName.includes(query) || 
+             warName.includes(query) || 
+             rank.includes(query);
+    });
+    
+    setFilteredUsers(filtered);
+  };
+
+  const handleAddVolunteer = async () => {
+    if (!selectedUserId) {
+      toast({
+        title: "Erro",
+        description: "Selecione um voluntário para adicionar.",
         variant: "destructive"
       });
       return;
     }
 
-    if (!timeSlot.id) {
+    const selectedUser = users.find(u => u.id === selectedUserId);
+    if (!selectedUser) {
       toast({
         title: "Erro",
-        description: "ID do horário não encontrado.",
+        description: "Usuário não encontrado.",
         variant: "destructive"
       });
       return;
     }
+
+    const volunteerName = `${selectedUser.rank} ${selectedUser.warName}`;
 
     // Verificar se o voluntário já está na lista
-    if (timeSlot.volunteers?.includes(volunteerName.trim())) {
+    if (timeSlot.volunteers?.includes(volunteerName)) {
       toast({
         title: "Erro",
         description: "Este voluntário já está adicionado a este horário.",
@@ -69,21 +140,31 @@ const AddVolunteerToSlotDialog = ({
     try {
       setIsLoading(true);
       
-      const updatedVolunteers = [...(timeSlot.volunteers || []), volunteerName.trim()];
-      const updatedSlot = {
-        ...timeSlot,
-        volunteers: updatedVolunteers,
-        slotsUsed: updatedVolunteers.length
-      };
-
-      const result = await supabaseOperations.update(updatedSlot, { id: timeSlot.id });
+      const updatedVolunteers = [...(timeSlot.volunteers || []), volunteerName];
+      
+      // Usar o Firebase para atualizar o slot
+      const result = await dataOperations.update({
+        date: timeSlot.date.toISOString().split('T')[0],
+        start_time: `${timeSlot.startTime}:00`,
+        end_time: `${timeSlot.endTime}:00`,
+        total_slots: timeSlot.slots,
+        slots_used: updatedVolunteers.length,
+        description: timeSlot.description || "",
+        allowedMilitaryTypes: timeSlot.allowedMilitaryTypes || [],
+        volunteers: updatedVolunteers
+      }, {
+        date: timeSlot.date.toISOString().split('T')[0],
+        start_time: `${timeSlot.startTime}:00`,
+        end_time: `${timeSlot.endTime}:00`
+      });
       
       if (result.success) {
         toast({
           title: "Sucesso",
           description: "Voluntário adicionado com sucesso!"
         });
-        setVolunteerName("");
+        setSelectedUserId("");
+        setSearchQuery("");
         onSuccess();
         onOpenChange(false);
       } else {
@@ -125,20 +206,66 @@ const AddVolunteerToSlotDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="volunteerName">Nome do Voluntário</Label>
-            <Input
-              id="volunteerName"
-              type="text"
-              value={volunteerName}
-              onChange={(e) => setVolunteerName(e.target.value)}
-              placeholder="Ex: Sd PM João Silva"
-              disabled={isLoading}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleAddVolunteer();
-                }
-              }}
-            />
+            <Label>Buscar voluntário</Label>
+            <div className="relative">
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Digite para buscar por graduação ou nome..."
+                disabled={isLoadingUsers || isLoading}
+                className="pl-8"
+              />
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Selecionar voluntário</Label>
+            {isLoadingUsers ? (
+              <div className="flex justify-center items-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                <span className="ml-2 text-sm text-gray-500">Carregando usuários...</span>
+              </div>
+            ) : (
+              <ScrollArea className="h-48 border rounded-md">
+                <div className="p-2 space-y-1">
+                  {filteredUsers.length > 0 ? (
+                    filteredUsers.map((user) => {
+                      const volunteerName = `${user.rank} ${user.warName}`;
+                      const isAlreadyAdded = timeSlot.volunteers?.includes(volunteerName);
+                      
+                      return (
+                        <div
+                          key={user.id}
+                          onClick={() => !isAlreadyAdded && setSelectedUserId(user.id)}
+                          className={`p-2 rounded cursor-pointer transition-colors ${
+                            isAlreadyAdded 
+                              ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                              : selectedUserId === user.id 
+                                ? 'bg-green-100 border border-green-300' 
+                                : 'hover:bg-gray-50 border border-transparent'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">{volunteerName}</span>
+                            {isAlreadyAdded && (
+                              <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
+                                Já adicionado
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">
+                      {searchQuery ? "Nenhum usuário encontrado" : "Nenhum usuário disponível"}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            )}
           </div>
 
           {timeSlot.volunteers && timeSlot.volunteers.length > 0 && (
@@ -165,15 +292,12 @@ const AddVolunteerToSlotDialog = ({
           </Button>
           <Button 
             onClick={handleAddVolunteer}
-            disabled={isLoading || timeSlot.slotsUsed >= timeSlot.slots}
+            disabled={isLoading || !selectedUserId || timeSlot.slotsUsed >= timeSlot.slots}
             className="bg-green-500 hover:bg-green-600"
           >
             {isLoading ? (
               <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
                 Adicionando...
               </span>
             ) : (
