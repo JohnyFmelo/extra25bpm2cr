@@ -7,8 +7,7 @@ import { cn } from "@/lib/utils"
 
 const ToastProvider = ToastPrimitives.Provider
 
-// --- CORREÇÃO APLICADA AQUI ---
-// Alinhar os toasts ao centro (parte inferior central)
+// Alinha os toasts centralizados na parte inferior da tela
 const ToastViewport = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Viewport>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
@@ -16,7 +15,6 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      // Alinhamento central inferior
       "fixed bottom-4 left-1/2 z-[100] flex w-full max-w-[420px] -translate-x-1/2 flex-col gap-4 p-4",
       className
     )}
@@ -48,21 +46,29 @@ const toastVariants = cva(
   }
 )
 
-const ToastIcon = ({ variant }: { variant?: VariantProps<typeof toastVariants>["variant"] }) => {
+const ToastIcon = ({
+  variant,
+}: {
+  variant?: VariantProps<typeof toastVariants>["variant"]
+}) => {
   const iconSize = "h-5 w-5"
   switch (variant) {
     case "success":
-      return <CheckCircle className={cn(iconSize, "text-green-100")} />;
+      return <CheckCircle className={cn(iconSize, "text-green-100")} />
     case "warning":
-      return <AlertTriangle className={cn(iconSize, "text-yellow-900 dark:text-yellow-100")} />;
+      return (
+        <AlertTriangle
+          className={cn(iconSize, "text-yellow-900 dark:text-yellow-100")}
+        />
+      )
     case "destructive":
-      return <XCircle className={cn(iconSize, "text-red-100")} />;
+      return <XCircle className={cn(iconSize, "text-red-100")} />
     case "info":
-      return <Info className={cn(iconSize, "text-blue-100")} />;
+      return <Info className={cn(iconSize, "text-blue-100")} />
     default:
-      return <Info className={cn(iconSize, "text-neutral-500 dark:text-neutral-400")} />;
+      return <Info className={cn(iconSize, "text-neutral-500 dark:text-neutral-400")} />
   }
-};
+}
 
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
