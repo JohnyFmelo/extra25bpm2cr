@@ -27,6 +27,7 @@ import ActiveTrips from "@/components/ActiveTrips";
 import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
 import RankingChart from "@/components/RankingChart";
 import ManualUserRegistration from "@/components/ManualUserRegistration";
+import VersionDialog from "@/components/VersionDialog";
 interface IndexProps {
   initialActiveTab?: string;
 }
@@ -40,6 +41,7 @@ const Index = ({
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showInformationDialog, setShowInformationDialog] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showVersionDialog, setShowVersionDialog] = useState(false);
   const [hasNotifications, setHasNotifications] = useState(false);
   const [activeTrips, setActiveTrips] = useState<any[]>([]);
   const [travelTab, setTravelTab] = useState("trips");
@@ -245,6 +247,13 @@ const Index = ({
                           </div>
                           <p className="text-sm text-gray-600">Cadastrar novos usuários manualmente</p>
                         </button>
+                        <button onClick={() => setShowVersionDialog(true)} className="p-4 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                          <div className="flex items-center gap-3">
+                            <RefreshCw className="h-5 w-5 text-gray-600" />
+                            <h3 className="font-semibold text-gray-800">Versão</h3>
+                          </div>
+                          <p className="text-sm text-gray-600">Gerenciar versão do sistema</p>
+                        </button>
                       </>}
                     <button onClick={() => setShowLogoutDialog(true)} className="p-4 text-left bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                       <div className="flex items-center gap-3">
@@ -367,6 +376,8 @@ const Index = ({
       <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={user} />
       <PasswordChangeDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} userId={user.id || ''} currentPassword="" />
       <InformationDialog open={showInformationDialog} onOpenChange={setShowInformationDialog} isAdmin={user.userType === 'admin'} />
+      <VersionDialog open={showVersionDialog} onOpenChange={setShowVersionDialog} />
+      
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

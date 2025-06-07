@@ -8,6 +8,7 @@ import NotificationsDialog from "./NotificationsDialog";
 import { useNotifications } from "./NotificationsList";
 import Messages from "./Messages";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useVersioning } from "@/hooks/useVersioning";
 
 const TopBar = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
@@ -19,6 +20,7 @@ const TopBar = () => {
   );
 
   const unreadCount = useNotifications();
+  const { currentSystemVersion } = useVersioning();
   
   // Listen for user data updates
   useEffect(() => {
@@ -71,6 +73,12 @@ const TopBar = () => {
         </div>
         
         <div className="flex items-center gap-2">
+          {currentSystemVersion && (
+            <div className="px-2 py-1 bg-white/10 rounded text-xs text-white/80">
+              v{currentSystemVersion}
+            </div>
+          )}
+          
           <Button 
             variant="ghost" 
             size="icon" 

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -10,7 +11,9 @@ import Hours from "./pages/Hours";
 import TopBar from "./components/TopBar";
 import BottomMenuBar from "./components/BottomMenuBar";
 import { useUserBlockListener } from "./hooks/useUserBlockListener";
-import { UserProvider } from "@/context/UserContext"; // <-- Adicionado
+import { UserProvider } from "@/context/UserContext";
+import { useVersioning } from "./hooks/useVersioning";
+import ImprovementsDialog from "./components/ImprovementsDialog";
 
 // Protected Route component
 const ProtectedRoute = ({
@@ -40,13 +43,35 @@ const Layout = ({
   onTabChange: (tab: string) => void;
 }) => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  return <div className="flex min-h-screen flex-col">
+  const { 
+    shouldShowImprovements, 
+    currentSystemVersion, 
+    improvements, 
+    updateUserVersion,
+    setShouldShowImprovements 
+  } = useVersioning();
+
+  const handleImprovementsClose = () => {
+    updateUserVersion();
+    setShouldShowImprovements(false);
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col">
       <TopBar />
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 mb-20 py-0 lg:px-0">
         {children}
       </main>
       <BottomMenuBar activeTab={activeTab} onTabChange={onTabChange} isAdmin={user?.userType === 'admin'} />
-    </div>;
+      
+      <ImprovementsDialog
+        open={shouldShowImprovements}
+        onOpenChange={handleImprovementsClose}
+        version={currentSystemVersion}
+        improvements={improvements}
+      />
+    </div>
+  );
 };
 
 const App = () => {

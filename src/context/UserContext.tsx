@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 type UserType = {
@@ -9,6 +10,8 @@ type UserType = {
   rank: string;
   blocked: boolean;
   service?: string;
+  currentVersion?: string;
+  lastVersionUpdate?: Date;
 };
 
 type UserContextType = {
