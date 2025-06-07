@@ -41,6 +41,10 @@ const WeeklyCalendar = ({
   const [selectedTimeSlotForVolunteer, setSelectedTimeSlotForVolunteer] = useState<TimeSlot | null>(null);
   const { toast } = useToast();
   
+  // Definir isAdmin - assumindo que é sempre true para administradores por enquanto
+  // TODO: Integrar com contexto de usuário real
+  const isAdmin = true;
+  
   const currentDateValue = externalCurrentDate !== undefined ? externalCurrentDate : internalCurrentDate;
   const weekDays = ["TER", "QUA", "QUI", "SEX", "SÁB", "DOM", "SEG"]; 
   const currentMonth = format(currentDateValue, "MMMM yyyy", { locale: ptBR });
@@ -164,14 +168,26 @@ const WeeklyCalendar = ({
     setIsDialogOpen(true);
   };
 
+  // Função para lidar com o clique no botão de adicionar voluntário
+  const handleAddVolunteerClick = (timeSlot: TimeSlot) => {
+    setSelectedTimeSlotForVolunteer(timeSlot);
+    setShowAddVolunteerDialog(true);
+  };
+
+  // Função para lidar com o sucesso ao adicionar voluntário
+  const handleAddVolunteerSuccess = () => {
+    fetchTimeSlots(); // Recarrega os dados
+    setShowAddVolunteerDialog(false);
+    setSelectedTimeSlotForVolunteer(null);
+  };
+
   const fetchTimeSlots = async () => {
     try {
       setIsLoading(true);
       const data = await dataOperations.fetch();
       if (!Array.isArray(data)) {
         console.warn('Fetched data is not an array:', data);
-        setTimeSlots([]); // Define como array vazio para evitar erros
-        // throw new Error('Invalid data format'); // Opcional: lançar erro se preferir
+        setTimeSlots([]);
         return;
       }
       const formattedSlots = data.map((slot: any) => ({

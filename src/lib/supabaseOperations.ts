@@ -20,12 +20,10 @@ export interface SupabaseTimeSlot {
 export const supabaseOperations = {
   async fetch(): Promise<TimeSlot[]> {
     try {
-      // Using raw SQL query since the table types are not in the generated types
-      const { data, error } = await supabase.rpc('get_extra_time_slots') as any;
+      const { data, error } = await supabase.rpc('get_extra_time_slots');
 
       if (error) {
         console.error('Error fetching time slots:', error);
-        // Fallback to empty array if function doesn't exist
         return [];
       }
 
@@ -59,7 +57,7 @@ export const supabaseOperations = {
         volunteers: timeSlot.volunteers || []
       };
 
-      const { error } = await supabase.rpc('insert_extra_time_slot', supabaseSlot) as any;
+      const { error } = await supabase.rpc('insert_extra_time_slot', supabaseSlot);
 
       if (error) {
         console.error('Error inserting time slot:', error);
@@ -94,7 +92,7 @@ export const supabaseOperations = {
         }
       });
 
-      const { error } = await supabase.rpc('update_extra_time_slot', supabaseSlot) as any;
+      const { error } = await supabase.rpc('update_extra_time_slot', supabaseSlot);
 
       if (error) {
         console.error('Error updating time slot:', error);
@@ -110,7 +108,7 @@ export const supabaseOperations = {
 
   async delete(conditions: { id: string }): Promise<{ success: boolean }> {
     try {
-      const { error } = await supabase.rpc('delete_extra_time_slot', { slot_id: conditions.id }) as any;
+      const { error } = await supabase.rpc('delete_extra_time_slot', { slot_id: conditions.id });
 
       if (error) {
         console.error('Error deleting time slot:', error);
@@ -126,7 +124,7 @@ export const supabaseOperations = {
 
   async clear(): Promise<{ success: boolean }> {
     try {
-      const { error } = await supabase.rpc('clear_extra_time_slots') as any;
+      const { error } = await supabase.rpc('clear_extra_time_slots');
 
       if (error) {
         console.error('Error clearing time slots:', error);
