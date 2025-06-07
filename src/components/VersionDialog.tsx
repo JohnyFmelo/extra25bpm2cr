@@ -6,7 +6,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { doc, updateDoc, getDoc, collection, getDocs } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface VersionDialogProps {
@@ -62,7 +62,7 @@ const VersionDialog = ({ open, onOpenChange }: VersionDialogProps) => {
     setIsLoading(true);
     try {
       // Atualizar a versão do sistema
-      await updateDoc(doc(db, "system", "version"), {
+      await setDoc(doc(db, "system", "version"), {
         version: newVersion,
         improvements: improvements,
         updatedAt: new Date(),
@@ -75,7 +75,8 @@ const VersionDialog = ({ open, onOpenChange }: VersionDialogProps) => {
       
       usersSnapshot.docs.forEach((userDoc) => {
         batch.push(
-          updateDoc(doc(db, "users", userDoc.id), {
+          setDoc(doc(db, "users", userDoc.id), {
+            ...userDoc.data(),
             currentVersion: "0.0.0" // Versão antiga para forçar atualização
           })
         );

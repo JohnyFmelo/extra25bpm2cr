@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useNavigate } from "react-router-dom";
 
@@ -65,7 +65,7 @@ export const useVersioning = () => {
       } else {
         // Criar documento de versão se não existir
         const versionDocRef = doc(db, "system", "version");
-        await updateDoc(versionDocRef, {
+        await setDoc(versionDocRef, {
           version: "1.0.0",
           improvements: "Versão inicial do sistema",
           updatedAt: new Date()
@@ -85,10 +85,10 @@ export const useVersioning = () => {
 
     try {
       const userDocRef = doc(db, "users", user.id);
-      await updateDoc(userDocRef, {
+      await setDoc(userDocRef, {
         currentVersion: currentSystemVersion,
         lastVersionUpdate: new Date()
-      });
+      }, { merge: true });
       setUserVersion(currentSystemVersion);
       setShouldShowImprovements(false);
     } catch (error) {
