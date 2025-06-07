@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, Trash, Calendar, Info, AlertTriangle } from "lucide-react"; // Adicionado Info e AlertTriangle
+import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, Trash, Calendar, Info, AlertTriangle, UserPlus } from "lucide-react";
 import { format, addWeeks, subWeeks, parseISO, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
@@ -10,6 +10,7 @@ import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import AddVolunteerToSlotDialog from "./AddVolunteerToSlotDialog";
 
 interface WeeklyCalendarProps {
   className?: string;
@@ -36,10 +37,11 @@ const WeeklyCalendar = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showAllWeekSlots, setShowAllWeekSlots] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showAddVolunteerDialog, setShowAddVolunteerDialog] = useState(false);
+  const [selectedTimeSlotForVolunteer, setSelectedTimeSlotForVolunteer] = useState<TimeSlot | null>(null);
   const { toast } = useToast();
   
   const currentDateValue = externalCurrentDate !== undefined ? externalCurrentDate : internalCurrentDate;
-  // Ajuste para nomes mais curtos e consistentes para mobile e desktop.
   const weekDays = ["TER", "QUA", "QUI", "SEX", "SÁB", "DOM", "SEG"]; 
   const currentMonth = format(currentDateValue, "MMMM yyyy", { locale: ptBR });
   const isMobile = useIsMobile();
@@ -65,11 +67,9 @@ const WeeklyCalendar = ({
 
   const getCurrentWeekTimeSlots = () => {
     const startDate = new Date(currentDateValue);
-    // Ajuste para iniciar a semana na Terça-feira
     const dayOfWeek = startDate.getDay(); // 0 (Dom) - 6 (Sáb)
     const daysToSubtract = (dayOfWeek === 0) ? 5 : (dayOfWeek === 1) ? 6 : (dayOfWeek - 2);
     startDate.setDate(currentDateValue.getDate() - daysToSubtract);
-
 
     const weekSlots = [];
     for (let i = 0; i < 7; i++) {
@@ -182,7 +182,8 @@ const WeeklyCalendar = ({
         slots: slot.total_slots || slot.slots || 0,
         slotsUsed: slot.slots_used || 0,
         description: slot.description || "",
-        allowedMilitaryTypes: slot.allowedMilitaryTypes || []
+        allowedMilitaryTypes: slot.allowedMilitaryTypes || [],
+        volunteers: slot.volunteers || []
       }));
       setTimeSlots(formattedSlots);
     } catch (error) {
@@ -384,8 +385,27 @@ const WeeklyCalendar = ({
             ))}
           </div>
         )}
+        {slot.volunteers && slot.volunteers.length > 0 && (
+          <div className="text-xs text-gray-600 mt-1">
+            <span className="font-medium">Voluntários: </span>
+            {slot.volunteers.slice(0, 2).join(", ")}
+            {slot.volunteers.length > 2 && ` +${slot.volunteers.length - 2} mais`}
+          </div>
+        )}
       </div>
       <div className="flex gap-1 sm:gap-2 ml-2 shrink-0">
+        {isAdmin && slot.slotsUsed < slot.slots && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-gray-500 hover:text-green-600 hover:bg-green-50" 
+            onClick={() => handleAddVolunteerClick(slot)}
+            disabled={isLocked || isLoading}
+            aria-label="Adicionar voluntário"
+          >
+            <UserPlus className="h-4 w-4" />
+          </Button>
+        )}
         {showEditButton && (
           <Button 
             variant="ghost" 
@@ -636,7 +656,16 @@ const WeeklyCalendar = ({
           onAddTimeSlot={handleTimeSlotAdd} 
           onEditTimeSlot={handleTimeSlotEdit} 
           editingTimeSlot={editingTimeSlot} 
-          isLoading={isLoading} // Passar isLoading para o dialog
+          isLoading={isLoading}
+        />
+      )}
+
+      {selectedTimeSlotForVolunteer && (
+        <AddVolunteerToSlotDialog
+          open={showAddVolunteerDialog}
+          onOpenChange={setShowAddVolunteerDialog}
+          timeSlot={selectedTimeSlotForVolunteer}
+          onSuccess={handleAddVolunteerSuccess}
         />
       )}
     </div>

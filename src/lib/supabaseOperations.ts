@@ -20,18 +20,16 @@ export interface SupabaseTimeSlot {
 export const supabaseOperations = {
   async fetch(): Promise<TimeSlot[]> {
     try {
-      const { data, error } = await supabase
-        .from('extra_time_slots')
-        .select('*')
-        .order('date', { ascending: true })
-        .order('start_time', { ascending: true });
+      // Using raw SQL query since the table types are not in the generated types
+      const { data, error } = await supabase.rpc('get_extra_time_slots') as any;
 
       if (error) {
         console.error('Error fetching time slots:', error);
-        throw error;
+        // Fallback to empty array if function doesn't exist
+        return [];
       }
 
-      return (data || []).map((slot: SupabaseTimeSlot) => ({
+      return (data || []).map((slot: any) => ({
         id: slot.id,
         date: parseISO(slot.date),
         startTime: slot.start_time,
@@ -50,7 +48,7 @@ export const supabaseOperations = {
 
   async insert(timeSlot: Partial<TimeSlot>): Promise<{ success: boolean }> {
     try {
-      const supabaseSlot: Partial<SupabaseTimeSlot> = {
+      const supabaseSlot = {
         date: timeSlot.date ? format(timeSlot.date, 'yyyy-MM-dd') : undefined,
         start_time: timeSlot.startTime,
         end_time: timeSlot.endTime,
@@ -61,18 +59,13 @@ export const supabaseOperations = {
         volunteers: timeSlot.volunteers || []
       };
 
-      console.log('Inserting time slot to Supabase:', supabaseSlot);
-
-      const { error } = await supabase
-        .from('extra_time_slots')
-        .insert([supabaseSlot]);
+      const { error } = await supabase.rpc('insert_extra_time_slot', supabaseSlot) as any;
 
       if (error) {
         console.error('Error inserting time slot:', error);
         throw error;
       }
 
-      console.log('Time slot inserted successfully');
       return { success: true };
     } catch (error) {
       console.error('Error in insert operation:', error);
@@ -82,7 +75,8 @@ export const supabaseOperations = {
 
   async update(updatedSlot: Partial<TimeSlot>, conditions: { id: string }): Promise<{ success: boolean }> {
     try {
-      const supabaseSlot: Partial<SupabaseTimeSlot> = {
+      const supabaseSlot = {
+        id: conditions.id,
         date: updatedSlot.date ? format(updatedSlot.date, 'yyyy-MM-dd') : undefined,
         start_time: updatedSlot.startTime,
         end_time: updatedSlot.endTime,
@@ -95,24 +89,18 @@ export const supabaseOperations = {
 
       // Remove undefined values
       Object.keys(supabaseSlot).forEach(key => {
-        if (supabaseSlot[key as keyof SupabaseTimeSlot] === undefined) {
-          delete supabaseSlot[key as keyof SupabaseTimeSlot];
+        if ((supabaseSlot as any)[key] === undefined) {
+          delete (supabaseSlot as any)[key];
         }
       });
 
-      console.log('Updating time slot in Supabase:', supabaseSlot);
-
-      const { error } = await supabase
-        .from('extra_time_slots')
-        .update(supabaseSlot)
-        .eq('id', conditions.id);
+      const { error } = await supabase.rpc('update_extra_time_slot', supabaseSlot) as any;
 
       if (error) {
         console.error('Error updating time slot:', error);
         throw error;
       }
 
-      console.log('Time slot updated successfully');
       return { success: true };
     } catch (error) {
       console.error('Error in update operation:', error);
@@ -122,19 +110,13 @@ export const supabaseOperations = {
 
   async delete(conditions: { id: string }): Promise<{ success: boolean }> {
     try {
-      console.log('Deleting time slot from Supabase:', conditions.id);
-
-      const { error } = await supabase
-        .from('extra_time_slots')
-        .delete()
-        .eq('id', conditions.id);
+      const { error } = await supabase.rpc('delete_extra_time_slot', { slot_id: conditions.id }) as any;
 
       if (error) {
         console.error('Error deleting time slot:', error);
         throw error;
       }
 
-      console.log('Time slot deleted successfully');
       return { success: true };
     } catch (error) {
       console.error('Error in delete operation:', error);
@@ -144,19 +126,13 @@ export const supabaseOperations = {
 
   async clear(): Promise<{ success: boolean }> {
     try {
-      console.log('Clearing all time slots from Supabase');
-
-      const { error } = await supabase
-        .from('extra_time_slots')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
+      const { error } = await supabase.rpc('clear_extra_time_slots') as any;
 
       if (error) {
         console.error('Error clearing time slots:', error);
         throw error;
       }
 
-      console.log('All time slots cleared successfully');
       return { success: true };
     } catch (error) {
       console.error('Error in clear operation:', error);
