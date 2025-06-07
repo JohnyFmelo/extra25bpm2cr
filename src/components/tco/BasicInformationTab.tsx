@@ -319,7 +319,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
               <AlertTitle className="text-red-800 dark:text-red-300">Atenção: Pena Máxima Superior a 2 Anos</AlertTitle>
               <AlertDescription className="text-red-700 dark:text-red-400">
                 A soma das penas máximas ({formatarPena(totalPenaAnos)}) excede o limite de 2 anos. 
-                Não é permitido registrar TCO nesta situação. Proceda com o registro adequado.
+                Não é permitido registrar TCO nesta situação. Verifique a existência de subsunção (se um crime absorve o outro), se mesmo assim ultrapassar 2 anos proceda com o registro do B.O.
               </AlertDescription>
             </Alert>
           )}
