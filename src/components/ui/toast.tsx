@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 const ToastProvider = ToastPrimitives.Provider
 
 // --- CORREÇÃO APLICADA AQUI ---
+// Alinhar os toasts ao centro (parte inferior central)
 const ToastViewport = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Viewport>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
@@ -15,8 +16,8 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      // Esta combinação garante o alinhamento no TOPO e CENTRO
-      "fixed top-4 left-1/2 z-[100] flex w-full max-w-[420px] -translate-x-1/2 flex-col gap-4 p-4",
+      // Alinhamento central inferior
+      "fixed bottom-4 left-1/2 z-[100] flex w-full max-w-[420px] -translate-x-1/2 flex-col gap-4 p-4",
       className
     )}
     {...props}
