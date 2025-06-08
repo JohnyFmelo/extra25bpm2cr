@@ -66,7 +66,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
         yPos += (vitimasNomes.length * lineHeight);
         
         // Adiciona um espaçamento extra após o bloco de vítimas
-        yPos += 5;
+        yPos += 1;
     }
 
     yPos += 15; // Espaço extra
