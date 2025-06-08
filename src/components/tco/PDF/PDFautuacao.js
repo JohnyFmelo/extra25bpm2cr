@@ -37,7 +37,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     // --- LÓGICA CORRIGIDA PARA VÍTIMAS EM LISTA VERTICAL ---
     if (data.vitimas && data.vitimas.length > 0) {
         const labelText = data.vitimas.length > 1 ? "VÍTIMAS:" : "VÍTIMA:";
-        const labelWidth = 40; // Largura fixa da coluna do rótulo para alinhamento
+        const labelWidth = 10; // Largura fixa da coluna do rótulo para alinhamento
         const valueX = MARGIN_LEFT + labelWidth;
         const lineHeight = 5; // Espaçamento vertical entre os nomes
 
@@ -66,7 +66,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
         yPos += (vitimasNomes.length * lineHeight);
         
         // Adiciona um espaçamento extra após o bloco de vítimas
-        yPos += 1;
+        yPos += 5;
     }
 
     yPos += 15; // Espaço extra
