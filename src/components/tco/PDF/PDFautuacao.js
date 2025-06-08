@@ -25,6 +25,15 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     doc.text(`TERMO CIRCUNSTANCIADO DE OCORRÊNCIA Nº ${data.tcoNumber || "Não informado."}/25ºBPM/2ºCR/${year}`, PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 12; // Espaço após o título TCO
 
+    // --- Informações Principais (Natureza, Autor, Vítima) ---
+    const primeiroAutor = data.autores?.[0];
+
+    const naturezaDisplay = data.natureza ? data.natureza.toUpperCase() : "NÃO INFORMADA";
+    yPos = addFieldBoldLabel(doc, yPos, "NATUREZA", naturezaDisplay, data);
+
+    const autorNomeDisplay = primeiroAutor?.nome ? primeiroAutor.nome.toUpperCase() : "NÃO INFORMADO(A)";
+    yPos = addFieldBoldLabel(doc, yPos, "AUTOR DO FATO", autorNomeDisplay, data);
+
     // --- LÓGICA CORRIGIDA PARA VÍTIMAS EM LISTA VERTICAL ---
     if (data.vitimas && data.vitimas.length > 0) {
         const labelText = data.vitimas.length > 1 ? "VÍTIMAS:" : "VÍTIMA:";
@@ -61,6 +70,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     }
 
     yPos += 15; // Espaço extra
+
     // --- Título "AUTUAÇÃO" ---
     yPos = checkPageBreak(doc, yPos, 85, data);
     doc.setFont("helvetica", "bold"); doc.setFontSize(14);
