@@ -11,26 +11,26 @@ import { useVersioning } from "@/hooks/useVersioning";
 import { useUser } from "@/context/UserContext";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
 const TopBar = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showMessagesDialog, setShowMessagesDialog] = useState(false);
   const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
-  const [userData, setUserData] = useState(() => 
-    JSON.parse(localStorage.getItem('user') || '{}')
-  );
-
-  const { user, setUser } = useUser();
+  const [userData, setUserData] = useState(() => JSON.parse(localStorage.getItem('user') || '{}'));
+  const {
+    user,
+    setUser
+  } = useUser();
   const unreadCount = useNotifications();
-  const { currentSystemVersion } = useVersioning();
-  
+  const {
+    currentSystemVersion
+  } = useVersioning();
+
   // Listen for real-time updates from Firebase
   useEffect(() => {
     if (!userData?.id) return;
-
     const userDocRef = doc(db, "users", userData.id);
-    const unsubscribe = onSnapshot(userDocRef, (doc) => {
+    const unsubscribe = onSnapshot(userDocRef, doc => {
       if (doc.exists()) {
         const firebaseData = doc.data();
         const updatedUserData = {
@@ -42,34 +42,30 @@ const TopBar = () => {
           email: firebaseData.email || userData.email,
           registration: firebaseData.registration || userData.registration
         };
-        
+
         // Update both local state and localStorage
         setUserData(updatedUserData);
         localStorage.setItem('user', JSON.stringify(updatedUserData));
-        
+
         // Update context as well
         setUser(updatedUserData);
-        
         console.log("TopBar - Real-time update from Firebase:", updatedUserData);
       }
     });
-
     return () => unsubscribe();
   }, [userData?.id, setUser]);
-  
+
   // Listen for user data updates from localStorage events
   useEffect(() => {
     const handleUserDataUpdate = (event: CustomEvent) => {
       setUserData(event.detail);
     };
-
     window.addEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
-    
     return () => {
       window.removeEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
     };
   }, []);
-  
+
   // Get user initials for avatar
   const getInitials = (name: string) => {
     if (!name) return "U";
@@ -86,102 +82,54 @@ const TopBar = () => {
     // Fallback to userType if service is not available
     return userType === "admin" ? "Administrador" : "Usuário";
   };
-
-  return (
-    <header className="bg-gradient-to-r from-primary-dark via-primary to-primary-light sticky top-0 z-50 shadow-md">
+  return <header className="bg-gradient-to-r from-primary-dark via-primary to-primary-light sticky top-0 z-50 shadow-md">
       <div className="flex h-16 items-center px-6 gap-4 max-w-7xl mx-auto">
         <div className="flex-1 flex items-center gap-3">
-          <Avatar className="h-9 w-9 bg-primary-dark/50 text-white border-2 border-white/20">
-            <AvatarFallback>{getInitials(userData.warName)}</AvatarFallback>
-          </Avatar>
+          
           <div className="flex flex-col">
             <h2 className="text-base font-semibold text-white">
               {userData.rank} {userData.warName}
             </h2>
             <div className="flex items-center gap-2">
               <p className="text-xs text-white/80">{getServiceDisplay(userData.service, userData.userType)}</p>
-              {userData.rgpm && (
-                <span className="text-xs text-white/60">• RGPM: {userData.rgpm}</span>
-              )}
+              {userData.rgpm && <span className="text-xs text-white/60">• RGPM: {userData.rgpm}</span>}
             </div>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
-          {currentSystemVersion && (
-            <div className="px-2 py-1 bg-white/10 rounded text-xs text-white/80">
+          {currentSystemVersion && <div className="px-2 py-1 bg-white/10 rounded text-xs text-white/80">
               v{currentSystemVersion}
-            </div>
-          )}
+            </div>}
           
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setShowNotificationsDialog(true)}
-            className="text-white hover:bg-white/10 relative"
-          >
-            {unreadCount > 0 ? (
-              <>
+          <Button variant="ghost" size="icon" onClick={() => setShowNotificationsDialog(true)} className="text-white hover:bg-white/10 relative">
+            {unreadCount > 0 ? <>
                 <BellDot className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 bg-highlight text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
-              </>
-            ) : (
-              <Bell className="h-5 w-5" />
-            )}
+              </> : <Bell className="h-5 w-5" />}
             <span className="sr-only">Notificações</span>
           </Button>
           
-          {userData.userType === "admin" && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setShowMessagesDialog(prev => !prev)}
-              className="text-white hover:bg-white/10"
-            >
+          {userData.userType === "admin" && <Button variant="ghost" size="icon" onClick={() => setShowMessagesDialog(prev => !prev)} className="text-white hover:bg-white/10">
               <MessageSquare className="h-5 w-5" />
               <span className="sr-only">Enviar Recado</span>
-            </Button>
-          )}
+            </Button>}
         </div>
         
-        {showProfileDialog && (
-          <ProfileUpdateDialog
-            open={showProfileDialog}
-            onOpenChange={setShowProfileDialog}
-            userData={userData}
-          />
-        )}
+        {showProfileDialog && <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={userData} />}
         
-        {showPasswordDialog && (
-          <PasswordChangeDialog
-            open={showPasswordDialog}
-            onOpenChange={setShowPasswordDialog}
-            userId={userData.id}
-            currentPassword={userData.password}
-          />
-        )}
+        {showPasswordDialog && <PasswordChangeDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} userId={userData.id} currentPassword={userData.password} />}
         
-        {showNotificationsDialog && (
-          <NotificationsDialog 
-            open={showNotificationsDialog}
-            onOpenChange={setShowNotificationsDialog}
-          />
-        )}
+        {showNotificationsDialog && <NotificationsDialog open={showNotificationsDialog} onOpenChange={setShowNotificationsDialog} />}
         
-        {showMessagesDialog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 animate-fade-in">
+        {showMessagesDialog && <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-white rounded-lg w-full max-w-md shadow-xl">
               <div className="p-4 bg-gradient-to-r from-primary-dark to-primary rounded-t-lg">
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-semibold text-white">Enviar Recado</h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowMessagesDialog(false)}
-                    className="text-white hover:bg-white/10"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setShowMessagesDialog(false)} className="text-white hover:bg-white/10">
                     X
                   </Button>
                 </div>
@@ -190,11 +138,8 @@ const TopBar = () => {
                 <Messages onClose={() => setShowMessagesDialog(false)} />
               </div>
             </div>
-          </div>
-        )}
+          </div>}
       </div>
-    </header>
-  );
+    </header>;
 };
-
 export default TopBar;
