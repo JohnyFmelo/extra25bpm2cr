@@ -288,13 +288,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                 yPos += 5; // Espaço entre testemunhas
             }
         });
-    } else {
-        // Se não houver testemunhas válidas, não exibir a seção de testemunhas
-        // currentSectionNumber não precisa ser incrementado se a seção não for adicionada.
-        // yPos = addSectionTitle(doc, yPos, "TESTEMUNHAS", currentSectionNumber.toFixed(1), 2, data);
-        // currentSectionNumber += 0.1;
-        // yPos = addWrappedText(doc, yPos, "Nenhuma testemunha informada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
-        // yPos += 2;
     }
 
     // --- SEÇÃO 3: HISTÓRICO ---
@@ -311,7 +304,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addWrappedText(doc, yPos, data.relatoPolicial || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
-    // Determinar o título e o papel do autor com base no sexo do primeiro autor válido
     let tituloRelatoAutor = "RELATO DO(A) AUTOR(A) DO FATO";
     let autorRole = "AUTOR(A) DO FATO";
     if (primeiroAutor && primeiroAutor.sexo) {
@@ -344,7 +336,6 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         });
     }
 
-    // Apenas adicionar a seção de relato de testemunhas se houver testemunhas com nome e relato
     if (testemunhasComRelato.length > 0) {
         testemunhasComRelato.forEach((testemunha, index) => {
             const tituloRelatoTestemunha = `RELATO DA TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
@@ -355,19 +346,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             yPos = addSignatureWithNameAndRole(doc, yPos, testemunha.nome, "TESTEMUNHA", data);
         });
     }
-    // REMOVIDO: Não exibir nada se não houver testemunhas com nome e relato
-    // else {
-    //     yPos = addSectionTitle(doc, yPos, "RELATO DAS TESTEMUNHAS", historicoSectionNumber.toFixed(1), 2, data);
-    //     historicoSectionNumber += 0.1;
-    //     let relatoTestText = "Nenhuma testemunha identificada com relato.";
-    //     if (data.relatoTestemunha && data.relatoTestemunha.trim() !== "" && data.relatoTestemunha.toUpperCase() !== "NENHUMA TESTEMUNHA IDENTIFICADA.") {
-    //        // relatoTestText = data.relatoTestemunha; // This might be the generic one, avoid if no named witnesses
-    //     }
-    //     yPos = addWrappedText(doc, yPos, relatoTestText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-    //     yPos += 10;
-    // }
-
-
+    
     yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", historicoSectionNumber.toFixed(1), 2, data);
     yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
@@ -461,22 +440,19 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         const componentesApoio = data.componentesGuarnicao.filter((comp, index) => index > 0 && comp.apoio === true);
         
         componentesPrincipais.forEach((componente, index) => {
-            const isCondutor = index === 0;
             const fieldsHeight = 3 * 6;
             const signatureHeight = 7;
             let currentOfficerContentHeight = fieldsHeight + signatureHeight;
             let spaceToReserve = currentOfficerContentHeight;
             
             if (index > 0) {
-                spaceToReserve += 20;
+                spaceToReserve += 10; // <<< ALTERAÇÃO AQUI: Espaçamento reduzido para metade
             }
             
             yPos = checkPageBreak(doc, yPos, spaceToReserve, data);
             
             if (index > 0) {
-                // CORREÇÃO: A linha que separava os componentes foi removida, 
-                // mantendo o espaçamento original de 20 unidades.
-                yPos += 20;
+                yPos += 10; // <<< ALTERAÇÃO AQUI: Espaçamento reduzido para metade
             }
             
             let nomeDisplay = componente.nome ? componente.nome.toUpperCase() : "NOME Não Informado";
