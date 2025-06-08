@@ -5,6 +5,60 @@ import {
 } from './pdfUtils.js';
 import QRCode from 'qrcode';
 
+// Mapeamento de naturezas para tipificações
+const naturezaTipificacoes = {
+    "Ameaça": "ART. 147 DO CÓDIGO PENAL",
+    "Vias de Fato": "ART. 21 DA LEI DE CONTRAVENÇÕES PENAIS",
+    "Lesão Corporal": "ART. 129 DO CÓDIGO PENAL",
+    "Dano": "ART. 163 DO CÓDIGO PENAL",
+    "Injúria": "ART. 140 DO CÓDIGO PENAL",
+    "Difamação": "ART. 139 DO CÓDIGO PENAL",
+    "Calúnia": "ART. 138 DO CÓDIGO PENAL",
+    "Perturbação do Sossego": "ART. 42 DA LEI DE CONTRAVENÇÕES PENAIS",
+    "Porte de drogas para consumo": "ART. 28 DA LEI Nº 11.343/2006 (LEI DE DROGAS)",
+    "Conduzir veículo sem CNH gerando perigo de dano": "ART. 309 DO CÓDIGO DE TRÂNSITO BRASILEIRO",
+    "Entregar veículo automotor a pessoa não habilitada": "ART. 310 DO CÓDIGO DE TRÂNSITO BRASILEIRO",
+    "Trafegar em velocidade incompatível com segurança": "ART. 311 DO CÓDIGO DE TRÂNSITO BRASILEIRO",
+    "Omissão de socorro": "ART. 135 DO CÓDIGO PENAL",
+    "Rixa": "ART. 137 DO CÓDIGO PENAL",
+    "Invasão de domicílio": "ART. 150 DO CÓDIGO PENAL",
+    "Fraude em comércio": "ART. 176 DO CÓDIGO PENAL",
+    "Ato obsceno": "ART. 233 DO CÓDIGO PENAL",
+    "Falsa identidade": "ART. 307 DO CÓDIGO PENAL",
+    "Resistência": "ART. 329 DO CÓDIGO PENAL",
+    "Desobediência": "ART. 330 DO CÓDIGO PENAL",
+    "Desacato": "ART. 331 DO CÓDIGO PENAL",
+    "Exercício arbitrário das próprias razões": "ART. 345 DO CÓDIGO PENAL",
+};
+
+// Função para calcular a tipificação completa baseada nas naturezas
+const getTipificacaoCompleta = (natureza, tipificacao, isCustomNatureza) => {
+    if (!natureza) return "Não Informado";
+    
+    // Se for natureza personalizada, usar a tipificação editável
+    if (isCustomNatureza) {
+        return tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
+    }
+    
+    // Para naturezas múltiplas, dividir e mapear
+    const naturezas = natureza.split(" + ");
+    const tipificacoes = naturezas.map(nat => {
+        return naturezaTipificacoes[nat.trim()] || "[TIPIFICAÇÃO NÃO MAPEADA]";
+    });
+    
+    // Formato da tipificação: usar vírgulas e "E" apenas antes do último item
+    if (tipificacoes.length === 1) {
+        return tipificacoes[0];
+    } else if (tipificacoes.length === 2) {
+        return tipificacoes.join(" E ");
+    } else if (tipificacoes.length > 2) {
+        const ultimoItem = tipificacoes.pop();
+        return tipificacoes.join(", ") + " E " + ultimoItem;
+    }
+    
+    return "Não Informado";
+};
+
 // Função auxiliar para adicionar imagens (mantida sem alterações)
 const addImagesToPDF = (doc, yPosition, images, pageWidth, pageHeight) => {
     const maxImageWidth = pageWidth - MARGIN_RIGHT * 2;
@@ -74,10 +128,13 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
         comunicante: data.comunicante ? data.comunicante.toUpperCase() : '',
     };
 
+    // Calcular a tipificação completa corretamente
+    const tipificacaoCompleta = getTipificacaoCompleta(data.natureza, data.tipificacao, data.isCustomNatureza);
+
     // --- SEÇÃO 1: DADOS GERAIS ---
     yPos = addSectionTitle(doc, yPos, "DADOS GERAIS E IDENTIFICADORES DA OCORRÊNCIA", "1", 1, data);
     yPos = addField(doc, yPos, "NATUREZA DA OCORRÊNCIA", upperCaseData.natureza, data);
-    yPos = addField(doc, yPos, "TIPIFICAÇÃO LEGAL", upperCaseData.tipificacao, data);
+    yPos = addField(doc, yPos, "TIPIFICAÇÃO LEGAL", tipificacaoCompleta.toUpperCase(), data);
     yPos = addField(doc, yPos, "DATA E HORA DO FATO", formatarDataHora(data.dataFato, data.horaFato), data);
     yPos = addField(doc, yPos, "DATA E HORA DO INÍCIO DO REGISTRO", formatarDataHora(data.dataInicioRegistro, data.horaInicioRegistro), data);
     yPos = addField(doc, yPos, "DATA E HORA DO TÉRMINO DO REGISTRO", formatarDataHora(data.dataTerminoRegistro, data.horaTerminoRegistro), data);

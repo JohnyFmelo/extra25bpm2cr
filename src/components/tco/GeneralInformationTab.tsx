@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ interface GeneralInformationTabProps {
   setHoraFato: (value: string) => void;
   dataInicioRegistro: string;
   horaInicioRegistro: string;
+  setHoraInicioRegistro: (value: string) => void;
   dataTerminoRegistro: string;
   horaTerminoRegistro: string;
   localFato: string;
@@ -72,6 +74,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   setHoraFato,
   dataInicioRegistro,
   horaInicioRegistro,
+  setHoraInicioRegistro,
   dataTerminoRegistro,
   horaTerminoRegistro,
   localFato,
@@ -89,6 +92,15 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   condutorPosto,
   condutorRg
 }) => {
+  
+  // Registrar horário de início automaticamente quando o componente é montado
+  useEffect(() => {
+    if (!horaInicioRegistro) {
+      const agora = new Date();
+      const horaAtual = agora.toTimeString().slice(0, 5); // HH:MM
+      setHoraInicioRegistro(horaAtual);
+    }
+  }, [horaInicioRegistro, setHoraInicioRegistro]);
   
   // Função para calcular a tipificação baseada nas naturezas selecionadas
   const getTipificacaoCompleta = () => {
@@ -137,6 +149,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
               readOnly 
               value={isCustomNatureza ? customNatureza : natureza} 
               className="bg-gray-100" 
+              placeholder="Nenhuma natureza selecionada"
             />
           </div>
 
@@ -156,6 +169,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
                 readOnly 
                 value={getTipificacaoCompleta()} 
                 className="bg-gray-100" 
+                placeholder="Tipificação será gerada automaticamente"
               />
             )}
           </div>
