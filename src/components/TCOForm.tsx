@@ -35,8 +35,6 @@ interface Pessoa {
   celular: string;
   email: string;
   laudoPericial: string;
-  fielDepositario: string;
-  objetoDepositado?: string;
   relato?: string; // Added for victim testimony
   representacao?: string; // Added for victim representation
 }
@@ -58,9 +56,7 @@ const initialPersonData: Pessoa = {
   cpf: "",
   celular: "",
   email: "",
-  laudoPericial: "Não",
-  fielDepositario: "Não",
-  objetoDepositado: ""
+  laudoPericial: "Não"
 };
 const formatRepresentacao = (representacao: string): string => {
   if (representacao === "representar") return "representar";
