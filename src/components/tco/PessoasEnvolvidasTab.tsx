@@ -1,10 +1,12 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Trash2, User, Users } from "lucide-react";
 import PersonalInfoFields from "./PersonalInfoFields";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 
 interface PersonalInfo {
   nome: string;
@@ -23,6 +25,8 @@ interface PersonalInfo {
   laudoPericial: string;
   relato?: string; // Added for victim and witness testimony
   representacao?: string; // Added for victim representation
+  fielDepositario?: string; // 'Sim' or 'Não'
+  objetoDepositado?: string; 
 }
 
 interface PessoasEnvolvidasTabProps {
@@ -98,6 +102,30 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                 </CardHeader>
                 <CardContent className="px-[5px]">
                   <PersonalInfoFields data={autor} onChangeHandler={handleAutorDetalhadoChange} prefix={`autor_${index}_`} index={index} isAuthor={true} />
+                    {/* New fields for Fiel Depositário */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-2 border-t border-dashed">
+                        <div>
+                            <Label>Fiel Depositário?</Label>
+                            <RadioGroup
+                                value={autor.fielDepositario || "Não"}
+                                onValueChange={(value) => handleAutorDetalhadoChange(index, 'fielDepositario', value)}
+                                className="flex space-x-4 mt-2"
+                            >
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="Sim" id={`fiel-sim-${index}`} />
+                                    <Label htmlFor={`fiel-sim-${index}`}>Sim</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="Não" id={`fiel-nao-${index}`} />
+                                    <Label htmlFor={`fiel-nao-${index}`}>Não</Label>
+                                </div>
+                            </RadioGroup>
+                        </div>
+                        {autor.fielDepositario === "Sim" && <div className="md:col-span-2">
+                            <Label htmlFor={`objeto-depositado-${index}`}>Objeto Depositado</Label>
+                            <Textarea id={`objeto-depositado-${index}`} placeholder="Descreva o bem deixado sob a posse do autor" value={autor.objetoDepositado || ""} onChange={e => handleAutorDetalhadoChange(index, 'objetoDepositado', e.target.value)} className="mt-2" />
+                          </div>}
+                    </div>
                 </CardContent>
               </Card>)}
             
