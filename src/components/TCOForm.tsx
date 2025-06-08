@@ -1,3 +1,5 @@
+--- START OF FILE TCOForm (19).tsx ---
+```tsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +39,8 @@ interface Pessoa {
   laudoPericial: string;
   relato?: string; // Added for victim testimony
   representacao?: string; // Added for victim representation
+  fielDepositario?: string; // 'Sim' or 'Não'
+  objetoDepositado?: string;
 }
 interface TCOFormProps {
   selectedTco?: any;
@@ -56,7 +60,9 @@ const initialPersonData: Pessoa = {
   cpf: "",
   celular: "",
   email: "",
-  laudoPericial: "Não"
+  laudoPericial: "Não",
+  fielDepositario: "Não",
+  objetoDepositado: "",
 };
 const formatRepresentacao = (representacao: string): string => {
   if (representacao === "representar") return "representar";
@@ -1465,3 +1471,5 @@ const TCOForm: React.FC<TCOFormProps> = ({
 };
 
 export default TCOForm;
+```
+--- END OF FILE TCOForm (19).tsx ---
