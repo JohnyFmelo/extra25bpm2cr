@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -333,8 +334,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           </div>
         )}
         
-        {/* Only show victim fields if it's NOT a drug case AND we have valid victims */}
-        {!isDrugCase && validVitimas.length > 0 && 
+        {/* Show victim fields if we have valid victims (regardless of case type) */}
+        {validVitimas.length > 0 && 
           validVitimas.map((vitima, index) => (
             <div key={`vitima-relato-${index}`} className="space-y-4">
               <div>
