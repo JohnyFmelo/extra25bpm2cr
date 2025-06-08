@@ -459,29 +459,33 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     if (data.componentesGuarnicao && data.componentesGuarnicao.length > 0) {
         const componentesPrincipais = data.componentesGuarnicao.filter((comp, index) => index === 0 || !comp.apoio);
         const componentesApoio = data.componentesGuarnicao.filter((comp, index) => index > 0 && comp.apoio === true);
+        
         componentesPrincipais.forEach((componente, index) => {
             const isCondutor = index === 0;
             const fieldsHeight = 3 * 6;
             const signatureHeight = 7;
             let currentOfficerContentHeight = fieldsHeight + signatureHeight;
             let spaceToReserve = currentOfficerContentHeight;
+            
             if (index > 0) {
                 spaceToReserve += 20;
             }
+            
             yPos = checkPageBreak(doc, yPos, spaceToReserve, data);
+            
             if (index > 0) {
-                yPos += 15;
-                doc.setLineWidth(0.1);
-                doc.setDrawColor(200, 200, 200);
-                doc.line(MARGIN_LEFT, yPos - 10, PAGE_WIDTH - MARGIN_RIGHT, yPos - 10);
-                doc.setDrawColor(0);
-                yPos += 5;
+                // CORREÇÃO: A linha que separava os componentes foi removida, 
+                // mantendo o espaçamento original de 20 unidades.
+                yPos += 20;
             }
+            
             let nomeDisplay = componente.nome ? componente.nome.toUpperCase() : "NOME Não Informado";
             yPos = addField(doc, yPos, "NOME COMPLETO", nomeDisplay, data);
             yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto ? componente.posto.toUpperCase() : "POSTO Não Informado", data);
             yPos = addField(doc, yPos, "RG PMMT", componente.rg || "RG Não Informado", data);
+            
             yPos = checkPageBreak(doc, yPos, 7, data);
+            
             const sigLineY = yPos;
             doc.setFont("helvetica", "normal");
             doc.setFontSize(12);
@@ -493,6 +497,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             doc.line(lineStartX, sigLineY, lineEndX, sigLineY);
             yPos = sigLineY + 7;
         });
+
         if (componentesApoio.length > 0) {
             yPos += 10;
             yPos = checkPageBreak(doc, yPos, 20, data);
@@ -502,6 +507,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             yPos += 7;
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
+            
             componentesApoio.forEach((componente, index) => {
                 yPos = checkPageBreak(doc, yPos, 6, data);
                 const posto = componente.posto ? componente.posto.toUpperCase() : "POSTO Não Informado";
