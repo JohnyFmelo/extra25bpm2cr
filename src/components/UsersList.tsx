@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Ban, Trash2, Loader2, UserCircle, Search, Users, Filter, Mail, Shield, AlertCircle, CheckCircle, MoreVertical } from "lucide-react";
+import { Ban, Trash2, Loader2, UserCircle, Search, Users, Filter, Mail, Shield, AlertCircle, CheckCircle, MoreVertical, AlertTriangle } from "lucide-react";
 import UserDetailsDialog from "./UserDetailsDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -22,7 +22,7 @@ interface User {
   userType?: string;
   service?: string;
   blocked?: boolean;
-  version?: string;
+  currentVersion?: string;
 }
 
 const UsersList = () => {
@@ -33,40 +33,37 @@ const UsersList = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "blocked">("all");
+  const [currentSystemVersion, setCurrentSystemVersion] = useState("1.0.0");
   const { toast } = useToast();
 
   useEffect(() => {
     fetchUsers();
+    fetchSystemVersion();
   }, []);
 
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm, filterStatus]);
 
+  const fetchSystemVersion = async () => {
+    try {
+      const versionDoc = await getDoc(doc(db, "system", "version"));
+      if (versionDoc.exists()) {
+        setCurrentSystemVersion(versionDoc.data().version || "1.0.0");
+      }
+    } catch (error) {
+      console.error("Error fetching system version:", error);
+    }
+  };
+
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
       const querySnapshot = await getDocs(collection(db, "users"));
-      const usersData = await Promise.all(
-        querySnapshot.docs.map(async (userDoc) => {
-          const userData = { id: userDoc.id, ...userDoc.data() } as User;
-          
-          // Buscar versão do usuário
-          try {
-            const versionDoc = await getDoc(doc(db, "userVersions", userDoc.id));
-            if (versionDoc.exists()) {
-              userData.version = versionDoc.data().version || "1.0.0";
-            } else {
-              userData.version = "1.0.0";
-            }
-          } catch (error) {
-            console.error("Error fetching user version:", error);
-            userData.version = "1.0.0";
-          }
-          
-          return userData;
-        })
-      );
+      const usersData = querySnapshot.docs.map((userDoc) => {
+        const userData = { id: userDoc.id, ...userDoc.data() } as User;
+        return userData;
+      });
       setUsers(usersData);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -174,6 +171,18 @@ const UsersList = () => {
     const active = users.filter(user => !user.blocked).length;
     const blocked = users.filter(user => user.blocked).length;
     return { active, blocked, total: users.length };
+  };
+
+  const getVersionStatus = (userVersion?: string) => {
+    if (!userVersion) {
+      return { status: "outdated", text: "Desatualizado", variant: "destructive" as const };
+    }
+    
+    if (userVersion === currentSystemVersion) {
+      return { status: "updated", text: userVersion, variant: "default" as const };
+    }
+    
+    return { status: "outdated", text: userVersion, variant: "secondary" as const };
   };
 
   if (isLoading) {
@@ -307,89 +316,96 @@ const UsersList = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-muted/50">
-                      <TableCell>
-                        <button 
-                          onClick={() => handleUserClick(user)} 
-                          className="flex items-center space-x-3 text-left w-full hover:bg-muted/30 rounded-md p-2 -m-2 transition-colors"
-                        >
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                              {getInitials(user.warName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-primary hover:underline">
-                              {formatUserName(user)}
-                            </p>
-                            {user.registration && (
-                              <p className="text-sm text-muted-foreground text-stone-500">
-                                Matrícula: {user.registration}
+                  {filteredUsers.map((user) => {
+                    const versionStatus = getVersionStatus(user.currentVersion);
+                    
+                    return (
+                      <TableRow key={user.id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <button 
+                            onClick={() => handleUserClick(user)} 
+                            className="flex items-center space-x-3 text-left w-full hover:bg-muted/30 rounded-md p-2 -m-2 transition-colors"
+                          >
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                {getInitials(user.warName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-primary hover:underline">
+                                {formatUserName(user)}
                               </p>
+                              {user.registration && (
+                                <p className="text-sm text-muted-foreground text-stone-500">
+                                  Matrícula: {user.registration}
+                                </p>
+                              )}
+                            </div>
+                          </button>
+                        </TableCell>
+                        
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{user.email}</span>
+                          </div>
+                        </TableCell>
+                        
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Badge 
+                              variant={user.blocked ? "destructive" : "default"} 
+                              className="flex items-center space-x-1"
+                            >
+                              {user.blocked ? <AlertCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
+                              <span>{user.blocked ? "Bloqueado" : "Ativo"}</span>
+                            </Badge>
+                            {user.userType && (
+                              <Badge variant="outline" className="flex items-center space-x-1">
+                                <Shield className="h-3 w-3" />
+                                <span>{user.userType}</span>
+                              </Badge>
                             )}
                           </div>
-                        </button>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{user.email}</span>
-                        </div>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Badge 
-                            variant={user.blocked ? "destructive" : "default"} 
-                            className="flex items-center space-x-1"
-                          >
-                            {user.blocked ? <AlertCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
-                            <span>{user.blocked ? "Bloqueado" : "Ativo"}</span>
-                          </Badge>
-                          {user.userType && (
-                            <Badge variant="outline" className="flex items-center space-x-1">
-                              <Shield className="h-3 w-3" />
-                              <span>{user.userType}</span>
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
+                        </TableCell>
 
-                      <TableCell>
-                        <Badge variant="secondary" className="text-xs">
-                          v{user.version || "1.0.0"}
-                        </Badge>
-                      </TableCell>
-                      
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              onClick={() => handleToggleBlock(user)}
-                              className="flex items-center gap-2"
-                            >
-                              <Ban className="h-4 w-4" />
-                              {user.blocked ? "Desbloquear" : "Bloquear"}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="flex items-center gap-2 text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant={versionStatus.variant} className="text-xs flex items-center space-x-1">
+                              {versionStatus.status === "outdated" && <AlertTriangle className="h-3 w-3" />}
+                              <span>{versionStatus.text}</span>
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={() => handleToggleBlock(user)}
+                                className="flex items-center gap-2"
+                              >
+                                <Ban className="h-4 w-4" />
+                                {user.blocked ? "Desbloquear" : "Bloquear"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="flex items-center gap-2 text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
