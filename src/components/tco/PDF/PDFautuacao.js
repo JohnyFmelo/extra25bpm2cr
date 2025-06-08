@@ -27,8 +27,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
 
     // --- Informações Principais (Natureza, Autor, Vítima) ---
     const primeiroAutor = data.autores?.[0];
-    const primeiraVitima = data.vitimas?.[0];
-
+    
     // Adiciona campos usando a função utilitária, passando doc, yPos e data
     const naturezaDisplay = data.natureza ? data.natureza.toUpperCase() : "NÃO INFORMADA";
     yPos = addFieldBoldLabel(doc, yPos, "NATUREZA", naturezaDisplay, data);
@@ -36,12 +35,18 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     const autorNomeDisplay = primeiroAutor?.nome ? primeiroAutor.nome.toUpperCase() : "NÃO INFORMADO(A)";
     yPos = addFieldBoldLabel(doc, yPos, "AUTOR DO FATO", autorNomeDisplay, data);
 
-    // Verifica se a natureza está relacionada a drogas (case-insensitive)
-    const isDrugRelated = data.natureza && /droga|narcotráfico/i.test(data.natureza);
-    if (!isDrugRelated) {
-        const vitimaNomeDisplay = primeiraVitima?.nome ? primeiraVitima.nome.toUpperCase() : "NÃO INFORMADA";
-        yPos = addFieldBoldLabel(doc, yPos, "VÍTIMA", vitimaNomeDisplay, data);
+    // --- LÓGICA CORRIGIDA PARA VÍTIMAS ---
+    // Verifica se o array de vítimas existe e não está vazio.
+    if (data.vitimas && data.vitimas.length > 0) {
+        // Concatena o nome de todas as vítimas em uma única string, separadas por vírgula.
+        const vitimasNomesDisplay = data.vitimas
+            .map(vitima => (vitima.nome ? vitima.nome.toUpperCase() : "NOME NÃO INFORMADO"))
+            .join(', ');
+        
+        // Adiciona o campo ao PDF. O rótulo "VÍTIMA(S)" se adapta a um ou mais nomes.
+        yPos = addFieldBoldLabel(doc, yPos, "VÍTIMA(S)", vitimasNomesDisplay, data);
     }
+    // Se não houver vítimas, o campo simplesmente não é exibido.
 
     yPos += 15; // Espaço extra
 
