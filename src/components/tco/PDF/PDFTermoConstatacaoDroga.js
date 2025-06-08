@@ -41,7 +41,7 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     doc.setFont("helvetica", "normal"); doc.setFontSize(12);
     doc.text("-", MARGIN_LEFT, yPos);
     const itemText = `${qtdeText} ${porcaoText} DE MATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}, E CARACTERÍSTICAS SEMELHANTES AO ENTORPECENTE CONHECIDO COMO ${nomeComum.toUpperCase()}, SOB LACRE N° ${lacreNumero}.`;
-    yPos = addWrappedText(doc, yPos, itemText, MARGIN_LEFT + 4, 12, "normal", MAX_LINE_WIDTH - 4, 'left', data);
+    yPos = addWrappedText(doc, yPos, itemText, MARGIN_LEFT + 4, 12, "normal", MAX_LINE_WIDTH - 4, 'justify', data);
     yPos += 5;
 
     const textoConclusao = "O PRESENTE TERMO TEM POR OBJETIVO APENAS A CONSTATAÇÃO PRELIMINAR DA NATUREZA DA SUBSTÂNCIA PARA FINS DE LAVRATURA DO TERMO CIRCUNSTANCIADO, NOS TERMOS DA LEGISLAÇÃO VIGENTE (NOTADAMENTE ART. 50, §1º DA LEI 11.343/2006), NÃO SUPRINDO O EXAME PERICIAL DEFINITIVO. PARA A VERIFICAÇÃO PRELIMINAR, FOI REALIZADA ANÁLISE VISUAL E OLFATIVA DO MATERIAL.";
