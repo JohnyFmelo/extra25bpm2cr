@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -89,6 +88,8 @@ interface HistoricoTabProps {
     email: string;
     laudoPericial: string;
     relato?: string;
+    fielDepositario?: string;
+    objetoDepositado?: string;
   }[];
   setAutorRelato?: (index: number, relato: string) => void;
 }
@@ -209,6 +210,11 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       anexos.push("TERMO DE MANIFESTAÇÃO");
     }
     
+    const hasFielDepositario = autores.some(a => a.fielDepositario === "Sim");
+    if (hasFielDepositario) {
+      anexos.push("TERMO DE DEPÓSITO");
+    }
+
     if (apreensoes && apreensoes.trim() !== "") {
       anexos.push("TERMO DE APREENSÃO");
     }
@@ -224,7 +230,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     }
     
     setDocumentosAnexos(anexos.join("\n"));
-  }, [isDrugCase, apreensoes, solicitarCorpoDelito, autorSexo, setDocumentosAnexos, lacreNumero]);
+  }, [isDrugCase, apreensoes, solicitarCorpoDelito, autorSexo, setDocumentosAnexos, lacreNumero, autores]);
 
   // Update the conclusion text based on solicitarCorpoDelito
   useEffect(() => {
