@@ -25,39 +25,44 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     doc.text(`TERMO CIRCUNSTANCIADO DE OCORRÊNCIA Nº ${data.tcoNumber || "Não informado."}/25ºBPM/2ºCR/${year}`, PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 12; // Espaço após o título TCO
 
-    // --- LÓGICA CORRIGIDA PARA VÍTIMAS EM LISTA VERTICAL ---
+    // --- LÓGICA CORRIGIDA E ROBUSTA PARA VÍTIMAS EM LISTA VERTICAL ---
     if (data.vitimas && data.vitimas.length > 0) {
         const labelText = data.vitimas.length > 1 ? "VÍTIMAS:" : "VÍTIMA:";
-        const labelWidth = 40; // Largura fixa da coluna do rótulo para alinhamento
+        const labelWidth = 40; // Largura fixa para o rótulo, para alinhar os nomes
         const valueX = MARGIN_LEFT + labelWidth;
-        const lineHeight = 5; // Espaçamento vertical entre os nomes
-
+        const lineHeight = 6; // Aumentei um pouco para melhor legibilidade
+    
+        // Prepara a lista de nomes
+        const vitimasNomes = data.vitimas.map(v => v.nome ? v.nome.toUpperCase() : "NOME NÃO INFORMADO");
+        
+        // --- Desenho da Lista ---
+        
+        // Vamos usar uma variável local 'currentLineY' para gerenciar a posição vertical da lista.
+        // Primeiro, verificamos se o rótulo e a primeira vítima cabem na página.
+        let currentLineY = checkPageBreak(doc, yPos, lineHeight, data);
+        
         // Desenha o rótulo ("VÍTIMA:" ou "VÍTIMAS:")
         doc.setFont("helvetica", "bold");
         doc.setFontSize(12);
-        doc.text(labelText, MARGIN_LEFT, yPos);
-
-        // Mapeia os nomes das vítimas
-        const vitimasNomes = data.vitimas.map(v => v.nome ? v.nome.toUpperCase() : "NOME NÃO INFORMADO");
-
-        // Desenha os nomes, um por linha
+        doc.text(labelText, MARGIN_LEFT, currentLineY);
+    
+        // Agora, iteramos sobre cada nome e o desenhamos, um por linha.
         doc.setFont("helvetica", "normal");
         vitimasNomes.forEach((nome, index) => {
-            // A primeira vítima fica na mesma linha do rótulo.
-            // As demais são impressas em novas linhas abaixo.
-            const currentLineY = yPos + (index * lineHeight);
-            
-            // Verifica a quebra de página para cada linha a ser adicionada
-            const finalY = checkPageBreak(doc, currentLineY, lineHeight, data);
-            
-            doc.text(nome, valueX, finalY);
+            // Se não for o primeiro nome, precisamos avançar para a próxima linha
+            if (index > 0) {
+                // Calcula a posição da próxima linha
+                currentLineY += lineHeight;
+                // E verifica se essa nova linha causa uma quebra de página
+                currentLineY = checkPageBreak(doc, currentLineY, lineHeight, data);
+            }
+            // Desenha o nome na posição correta (seja na mesma página ou na nova)
+            doc.text(nome, valueX, currentLineY);
         });
-
-        // Atualiza a posição Y para depois da lista de vítimas
-        yPos += (vitimasNomes.length * lineHeight);
-        
-        // Adiciona um espaçamento extra após o bloco de vítimas
-        yPos += 5;
+    
+        // Ao final do loop, atualizamos a variável principal 'yPos'
+        // para a posição logo abaixo do último nome adicionado, mais um espaço.
+        yPos = currentLineY + lineHeight + 5;
     }
 
     yPos += 15; // Espaço extra
