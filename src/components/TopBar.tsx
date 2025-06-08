@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { MessageSquare, BellDot, Bell, User } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -9,6 +8,9 @@ import { useNotifications } from "./NotificationsList";
 import Messages from "./Messages";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useVersioning } from "@/hooks/useVersioning";
+import { useUser } from "@/context/UserContext";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const TopBar = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
@@ -19,10 +21,43 @@ const TopBar = () => {
     JSON.parse(localStorage.getItem('user') || '{}')
   );
 
+  const { user, setUser } = useUser();
   const unreadCount = useNotifications();
   const { currentSystemVersion } = useVersioning();
   
-  // Listen for user data updates
+  // Listen for real-time updates from Firebase
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    const userDocRef = doc(db, "users", userData.id);
+    const unsubscribe = onSnapshot(userDocRef, (doc) => {
+      if (doc.exists()) {
+        const firebaseData = doc.data();
+        const updatedUserData = {
+          ...userData,
+          warName: firebaseData.warName || userData.warName,
+          rank: firebaseData.rank || userData.rank,
+          service: firebaseData.service || userData.service,
+          rgpm: firebaseData.rgpm || userData.rgpm,
+          email: firebaseData.email || userData.email,
+          registration: firebaseData.registration || userData.registration
+        };
+        
+        // Update both local state and localStorage
+        setUserData(updatedUserData);
+        localStorage.setItem('user', JSON.stringify(updatedUserData));
+        
+        // Update context as well
+        setUser(updatedUserData);
+        
+        console.log("TopBar - Real-time update from Firebase:", updatedUserData);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [userData?.id, setUser]);
+  
+  // Listen for user data updates from localStorage events
   useEffect(() => {
     const handleUserDataUpdate = (event: CustomEvent) => {
       setUserData(event.detail);

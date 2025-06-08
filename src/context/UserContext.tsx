@@ -1,5 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 type UserType = {
   id: string;
@@ -12,6 +14,7 @@ type UserType = {
   service?: string;
   currentVersion?: string;
   lastVersionUpdate?: Date;
+  rgpm?: string;
 };
 
 type UserContextType = {
@@ -28,10 +31,40 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserType | null>(null);
 
   useEffect(() => {
-    // Ao iniciar, carrega do localStorage (pode ser adaptado para buscar direto do backend se desejado)
+    // Ao iniciar, carrega do localStorage
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
+      
+      // Se tem um usuário, escuta mudanças em tempo real do Firebase
+      if (userData?.id) {
+        const userDocRef = doc(db, "users", userData.id);
+        const unsubscribe = onSnapshot(userDocRef, (doc) => {
+          if (doc.exists()) {
+            const firebaseData = doc.data();
+            const updatedUserData = {
+              ...userData,
+              warName: firebaseData.warName || userData.warName,
+              rank: firebaseData.rank || userData.rank,
+              service: firebaseData.service || userData.service,
+              rgpm: firebaseData.rgpm || userData.rgpm,
+              email: firebaseData.email || userData.email,
+              registration: firebaseData.registration || userData.registration,
+              currentVersion: firebaseData.currentVersion || userData.currentVersion,
+              lastVersionUpdate: firebaseData.lastVersionUpdate || userData.lastVersionUpdate
+            };
+            
+            // Atualiza tanto o estado quanto o localStorage
+            setUser(updatedUserData);
+            localStorage.setItem('user', JSON.stringify(updatedUserData));
+            
+            console.log("UserContext - Real-time update from Firebase:", updatedUserData);
+          }
+        });
+
+        return () => unsubscribe();
+      }
     }
   }, []);
 
