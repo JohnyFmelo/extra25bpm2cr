@@ -27,55 +27,73 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
 
     // --- Informações Principais (Natureza, Autor, Vítima) ---
     const primeiroAutor = data.autores?.[0];
-    
-    // Adiciona campos usando a função utilitária, passando doc, yPos e data
+
     const naturezaDisplay = data.natureza ? data.natureza.toUpperCase() : "NÃO INFORMADA";
     yPos = addFieldBoldLabel(doc, yPos, "NATUREZA", naturezaDisplay, data);
 
     const autorNomeDisplay = primeiroAutor?.nome ? primeiroAutor.nome.toUpperCase() : "NÃO INFORMADO(A)";
     yPos = addFieldBoldLabel(doc, yPos, "AUTOR DO FATO", autorNomeDisplay, data);
 
-    // --- LÓGICA CORRIGIDA PARA VÍTIMAS ---
-    // Verifica se o array de vítimas existe e não está vazio.
+    // --- LÓGICA CORRIGIDA PARA VÍTIMAS EM LISTA VERTICAL ---
     if (data.vitimas && data.vitimas.length > 0) {
-        // Concatena o nome de todas as vítimas em uma única string, separadas por vírgula.
-        const vitimasNomesDisplay = data.vitimas
-            .map(vitima => (vitima.nome ? vitima.nome.toUpperCase() : "NOME NÃO INFORMADO"))
-            .join(', ');
+        const labelText = data.vitimas.length > 1 ? "VÍTIMAS:" : "VÍTIMA:";
+        const labelWidth = 40; // Largura fixa da coluna do rótulo para alinhamento
+        const valueX = MARGIN_LEFT + labelWidth;
+        const lineHeight = 5; // Espaçamento vertical entre os nomes
+
+        // Desenha o rótulo ("VÍTIMA:" ou "VÍTIMAS:")
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text(labelText, MARGIN_LEFT, yPos);
+
+        // Mapeia os nomes das vítimas
+        const vitimasNomes = data.vitimas.map(v => v.nome ? v.nome.toUpperCase() : "NOME NÃO INFORMADO");
+
+        // Desenha os nomes, um por linha
+        doc.setFont("helvetica", "normal");
+        vitimasNomes.forEach((nome, index) => {
+            // A primeira vítima fica na mesma linha do rótulo.
+            // As demais são impressas em novas linhas abaixo.
+            const currentLineY = yPos + (index * lineHeight);
+            
+            // Verifica a quebra de página para cada linha a ser adicionada
+            const finalY = checkPageBreak(doc, currentLineY, lineHeight, data);
+            
+            doc.text(nome, valueX, finalY);
+        });
+
+        // Atualiza a posição Y para depois da lista de vítimas
+        yPos += (vitimasNomes.length * lineHeight);
         
-        // Adiciona o campo ao PDF. O rótulo "VÍTIMA(S)" se adapta a um ou mais nomes.
-        yPos = addFieldBoldLabel(doc, yPos, "VÍTIMA(S)", vitimasNomesDisplay, data);
+        // Adiciona um espaçamento extra após o bloco de vítimas
+        yPos += 5;
     }
-    // Se não houver vítimas, o campo simplesmente não é exibido.
 
     yPos += 15; // Espaço extra
 
     // --- Título "AUTUAÇÃO" ---
-    // Precisamos verificar a página antes de adicionar conteúdo potencialmente grande
-    // Estima a altura: Título + Texto + Assinatura = ~15 + 40 + 30 = 85
-    yPos = checkPageBreak(doc, yPos, 85, data); // checkPageBreak usa 'data' para o header em nova página
+    yPos = checkPageBreak(doc, yPos, 85, data);
     doc.setFont("helvetica", "bold"); doc.setFontSize(14);
     doc.text("AUTUAÇÃO", PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 15;
 
     // --- Texto da Autuação ---
     const dataAtualExtenso = getDataAtualExtenso();
-    const cidadeAutuacao = data.municipio || "VÁRZEA GRANDE"; // Usa município do TCO ou padrão
-    const localAutuacao = data.localEncerramento || "NO CISC DO PARQUE DO LADGO"; // Local padrão
+    const cidadeAutuacao = data.municipio || "VÁRZEA GRANDE";
+    const localAutuacao = data.localEncerramento || "NO CISC DO PARQUE DO LADGO";
     const autuacaoText = `${dataAtualExtenso}, NESTA CIDADE DE ${cidadeAutuacao.toUpperCase()}, ESTADO DE MATO GROSSO, ${localAutuacao.toUpperCase()}, AUTUO AS PEÇAS QUE ADIANTE SE SEGUEM, DO QUE PARA CONSTAR, LAVREI E ASSINO ESTE TERMO.`;
-    // Usa MAX_LINE_WIDTH implícito pelo getPageConstants dentro de addWrappedText
     yPos = addWrappedText(doc, yPos, autuacaoText, MARGIN_LEFT, 12, "normal", null, 'justify', data);
     yPos += 20; // Espaço antes da assinatura
 
     // --- Assinatura do Condutor na Autuação ---
-    yPos = checkPageBreak(doc, yPos, 35, data); // Verifica espaço para assinatura (aumentei um pouco para 3 linhas de texto)
+    yPos = checkPageBreak(doc, yPos, 35, data);
     const condutorAutuacao = data.componentesGuarnicao?.[0];
     const signatureLineLength = 80;
-    const signatureLineStartX = (PAGE_WIDTH - signatureLineLength) / 2; // Centraliza a linha
+    const signatureLineStartX = (PAGE_WIDTH - signatureLineLength) / 2;
     const signatureLineY = yPos;
     doc.setLineWidth(0.3);
     doc.line(signatureLineStartX, signatureLineY, signatureLineStartX + signatureLineLength, signatureLineY);
-    yPos += 5; // Espaço após linha
+    yPos += 5;
 
     const nomeCondutor = condutorAutuacao?.nome || "NOME NÃO INFORMADO";
     const postoCondutor = condutorAutuacao?.posto || "POSTO NÃO INFORMADO";
@@ -85,14 +103,13 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     const linhaRg = `RG PMMT: ${rgCondutor}`.toUpperCase();
 
     doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-    // Centraliza o texto da assinatura
     doc.text(linhaNomePosto, PAGE_WIDTH / 2, yPos, { align: "center" }); yPos += 4;
     doc.text(linhaRg, PAGE_WIDTH / 2, yPos, { align: "center" }); yPos += 4;
     doc.text("CONDUTOR DA OCORRÊNCIA", PAGE_WIDTH / 2, yPos, { align: "center" });
-    yPos += 10; // Espaço após assinatura
+    yPos += 10;
 
     // --- Rodapé Específico da Página 1 ---
-    addStandardFooterContent(doc); // Adiciona o rodapé padrão
+    addStandardFooterContent(doc);
 
-    return yPos; // Retorna a posição Y final nesta página
+    return yPos;
 };
