@@ -13,7 +13,7 @@ import { generateHistoricoContent } from './PDF/PDFhistorico.js';
 import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
 import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
-import { addTermoDeposito } from './PDF/addTermoDeposito.js'; // CORREÇÃO: Importação adicionada
+import { addTermoDeposito } from './PDF/addTermoDeposito.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
@@ -165,7 +165,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
 
             // CORREÇÃO: Lógica movida para o fluxo de geração de termos
             // Adicionar termo de depósito se algum autor for fiel depositário
-            const temFielDepositario = data.autores?.some(a => a.fielDepositario === 'Sim');
+            const temFielDepositario = data.autores?.some(a => String(a.fielDepositario).trim().toLowerCase() === 'sim');
             if (temFielDepositario) {
                 documentosAnexosList.push("TERMO DE DEPÓSITO");
             }
