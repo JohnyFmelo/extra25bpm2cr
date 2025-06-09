@@ -7,7 +7,6 @@ import PersonalInfoFields from "./PersonalInfoFields";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-
 interface PersonalInfo {
   nome: string;
   sexo: string;
@@ -26,9 +25,8 @@ interface PersonalInfo {
   relato?: string; // Added for victim and witness testimony
   representacao?: string; // Added for victim representation
   fielDepositario?: string; // 'Sim' or 'Não'
-  objetoDepositado?: string; 
+  objetoDepositado?: string;
 }
-
 interface PessoasEnvolvidasTabProps {
   vitimas: PersonalInfo[];
   handleVitimaChange: (index: number, field: string, value: string) => void;
@@ -44,7 +42,6 @@ interface PessoasEnvolvidasTabProps {
   handleRemoveAutor: (index: number) => void;
   natureza: string;
 }
-
 const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
   vitimas,
   handleVitimaChange,
@@ -105,12 +102,8 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                     {/* New fields for Fiel Depositário */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-2 border-t border-dashed">
                         <div>
-                            <Label>Fiel Depositário?</Label>
-                            <RadioGroup
-                                value={autor.fielDepositario || "Não"}
-                                onValueChange={(value) => handleAutorDetalhadoChange(index, 'fielDepositario', value)}
-                                className="flex space-x-4 mt-2"
-                            >
+                            
+                            <RadioGroup value={autor.fielDepositario || "Não"} onValueChange={value => handleAutorDetalhadoChange(index, 'fielDepositario', value)} className="flex space-x-4 mt-2">
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="Sim" id={`fiel-sim-${index}`} />
                                     <Label htmlFor={`fiel-sim-${index}`}>Sim</Label>
@@ -192,5 +185,4 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
       </CardContent>
     </Card>;
 };
-
 export default PessoasEnvolvidasTab;
