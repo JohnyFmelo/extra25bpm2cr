@@ -37,52 +37,52 @@ const removeAccents = (str: string): string => {
  */
 export const generateTCOFilename = (data: any): string => {
     console.log("Gerando nome do arquivo TCO", data);
-    
+
     // Processar o número do TCO
     const tcoNum = data.tcoNumber?.trim() || 'SEM_NUMERO';
-    
+
     // Formatar data do evento (DD-MM-YYYY) - usando hífen em vez de ponto
     const eventDate = data.dataFato ? data.dataFato.split('-') : [];
-    const formattedDate = eventDate.length === 3 ? 
-        `${eventDate[2]}-${eventDate[1]}-${eventDate[0]}` : 
+    const formattedDate = eventDate.length === 3 ?
+        `${eventDate[2]}-${eventDate[1]}-${eventDate[0]}` :
         new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-    
+
     // Obter natureza e remover acentos/caracteres especiais
-    let natureza = data.natureza === "Outros" && data.customNatureza ? 
-        data.customNatureza.trim() : 
+    let natureza = data.natureza === "Outros" && data.customNatureza ?
+        data.customNatureza.trim() :
         data.natureza || 'Sem_Natureza';
-        
+
     // Limpar a natureza para o nome do arquivo
     natureza = removeAccents(natureza);
     console.log("Natureza formatada para o nome do arquivo:", natureza);
 
     // Processar RGPMs dos componentes da guarnição
     const componentes = Array.isArray(data.componentesGuarnicao) ? data.componentesGuarnicao : [];
-    
+
     // Separar em principais e apoio
     const principais = componentes.filter(c => c && c.rg && !c.apoio);
     const apoio = componentes.filter(c => c && c.rg && c.apoio);
-    
+
     // Garantir que há pelo menos um componente principal (condutor)
     if (principais.length === 0 && apoio.length > 0) {
-        principais.push({...apoio.shift(), apoio: false});
+        principais.push({ ...apoio.shift(), apoio: false });
     }
-    
+
     // Extrair apenas os dígitos dos RGs
     const rgsPrincipais = principais.map(p => p.rg.replace(/\D/g, ''));
     const rgsApoio = apoio.map(p => p.rg.replace(/\D/g, ''));
-    
+
     console.log("RGs Principais:", rgsPrincipais);
     console.log("RGs Apoio:", rgsApoio);
-    
+
     // Construir a parte do código de barras do nome do arquivo
     let rgCode = rgsPrincipais.length > 0 ? rgsPrincipais.join('') : 'RG_INDISPONIVEL';
-    
+
     // Adicionar RGs de apoio com hífen separador, se existirem
     if (rgsApoio.length > 0) {
         rgCode += '-' + rgsApoio.join('');
     }
-    
+
     // Construir o nome do arquivo final
     const fileName = `TCO_${tcoNum}_${formattedDate}_${natureza}_${rgCode}.pdf`;
     console.log("Nome do arquivo TCO gerado:", fileName);
@@ -96,7 +96,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
         const timeout = setTimeout(() => {
             reject(new Error("Tempo limite excedido ao gerar PDF. Por favor, tente novamente."));
         }, 60000); // 60 segundos de timeout
-        
+
         try {
             if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
                 clearTimeout(timeout);
@@ -134,7 +134,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             }
 
             // Clona os dados para evitar mutações inesperadas
-            const data = { 
+            const data = {
                 ...inputData,
                 // Garante que os dados do juizado estão disponíveis para o termo de compromisso
                 juizadoEspecialData: juizadoData,
@@ -157,51 +157,56 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             // --- Preparar a lista de documentos anexos ---
             const isDroga = data.natureza === "Porte de drogas para consumo";
             const documentosAnexosList = ["TERMO DE COMPROMISSO"];
-            
+
             // Adicionar termo de manifestação se não for caso de droga e tiver vítimas
             if (!isDroga && data.vitimas && data.vitimas.length > 0) {
                 documentosAnexosList.push("TERMO DE MANIFESTAÇÃO");
             }
 
-            // CORREÇÃO: Lógica movida para o fluxo de geração de termos
             // Adicionar termo de depósito se algum autor for fiel depositário
-            const temFielDepositario = data.autores?.some(a => String(a.fielDepositario).trim().toLowerCase() === 'sim');
+            let temFielDepositario = false;
+            if (Array.isArray(data.autores)) {
+                temFielDepositario = data.autores.some(
+                    (a: any) => typeof a.fielDepositario === 'string'
+                        && a.fielDepositario.trim().toLowerCase() === 'sim'
+                );
+            }
             if (temFielDepositario) {
                 documentosAnexosList.push("TERMO DE DEPÓSITO");
             }
-            
+
             // Adicionar termo de apreensão se houver descrição
             if ((data.apreensaoDescrição || data.apreensoes) && (isDroga || data.apreensoes)) {
                 const lacreTexto = data.lacreNumero ? ` LACRE Nº ${data.lacreNumero}` : '';
                 documentosAnexosList.push(`TERMO DE APREENSÃO${lacreTexto}`);
             }
-            
+
             // Adicionar documentos relacionados a drogas
             if (data.drogaTipo || data.drogaNomeComum) {
                 const lacreTexto = data.lacreNumero ? ` LACRE Nº ${data.lacreNumero}` : '';
                 documentosAnexosList.push(`TERMO DE CONSTATAÇÃO PRELIMINAR DE DROGA${lacreTexto}`);
-                
+
                 if (isDroga) {
                     documentosAnexosList.push("REQUISIÇÃO DE EXAME EM DROGAS DE ABUSO");
                 }
             }
-            
+
             // Adicionar requisição de exame de lesão corporal se necessário
             const pessoasComLaudo = [
-                ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
-                ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-            ].filter(p => p.nome && p.nome.trim());
-            
+                ...(data.autores || []).filter((a: any) => a.laudoPericial === "Sim").map((a: any) => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
+                ...(data.vitimas || []).filter((v: any) => v.laudoPericial === "Sim").map((v: any) => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
+            ].filter((p: any) => p.nome && p.nome.trim());
+
             if (pessoasComLaudo.length > 0) {
-                pessoasComLaudo.forEach(pessoa => {
+                pessoasComLaudo.forEach((pessoa: any) => {
                     const generoArtigo = pessoa.sexo?.toLowerCase() === 'feminino' ? 'DA' : 'DO';
-                    const generoTipo = pessoa.tipo === 'Autor' ? 
-                        (pessoa.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR') : 
+                    const generoTipo = pessoa.tipo === 'Autor' ?
+                        (pessoa.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR') :
                         (pessoa.sexo?.toLowerCase() === 'feminino' ? 'VÍTIMA' : 'VÍTIMA');
                     documentosAnexosList.push(`REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ${generoArtigo} ${generoTipo}`);
                 });
             }
-            
+
             // Atualizar os dados com a lista de documentos anexos
             const updatedData = {
                 ...data,
@@ -225,7 +230,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível ou sem vítimas.");
                     }
 
-                    // CORREÇÃO: Adicionando a chamada condicional para o Termo de Depósito
+                    // Adicionando a chamada condicional para o Termo de Depósito
                     if (temFielDepositario) {
                         console.log("Adicionando Termo de Depósito");
                         addTermoDeposito(doc, updatedData);
@@ -233,7 +238,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Depósito: nenhum autor marcado como fiel depositário.");
                     }
 
-                    if ((updatedData.apreensaoDescrição || updatedData.apreensoes) && 
+                    if ((updatedData.apreensaoDescrição || updatedData.apreensoes) &&
                         (isDroga || updatedData.apreensoes)) {
                         console.log("Adicionando Termo de Apreensão");
                         addTermoApreensao(doc, updatedData);
@@ -243,14 +248,14 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
 
                     if (updatedData.drogaTipo || updatedData.drogaNomeComum) {
                         addTermoConstatacaoDroga(doc, updatedData);
-                        
+
                         if (updatedData.natureza === "Porte de drogas para consumo") {
                             addRequisicaoExameDrogas(doc, updatedData);
                         }
                     }
 
                     if (pessoasComLaudo.length > 0) {
-                        pessoasComLaudo.forEach(pessoa => {
+                        pessoasComLaudo.forEach((pessoa: any) => {
                             console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
                             addRequisicaoExameLesao(doc, { ...updatedData, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
                         });
