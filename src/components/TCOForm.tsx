@@ -277,7 +277,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco }) => {
       componentesGuarnicao,
       downloadLocal,
       videoLinks,
-      apreensoes: apreensoesList,
+      apreensoesList,
       drogaTipo,
       drogaNomeComum,
       condutorNome,
@@ -346,6 +346,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco }) => {
             dataInicioRegistro={dataInicioRegistro}
             horaInicioRegistro={horaInicioRegistro}
             setHoraInicioRegistro={setHoraInicioRegistro}
+            dataTerminoRegistro=""
+            horaTerminoRegistro=""
             localFato={localFato}
             setLocalFato={setLocalFato}
             endereco={endereco}
