@@ -181,6 +181,10 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const [penaDescricao, setPenaDescricao] = useState("");
   const [dataFato, setDataFato] = useState(formattedDate);
   const [horaFato, setHoraFato] = useState(formattedTime);
+  const [dataInicioRegistro, setDataInicioRegistro] = useState(formattedDate);
+  const [horaInicioRegistro, setHoraInicioRegistro] = useState(formattedTime);
+  const [dataTerminoRegistro, setDataTerminoRegistro] = useState(formattedDate);
+  const [horaTerminoRegistro, setHoraTerminoRegistro] = useState(formattedTime);
   const [localFato, setLocalFato] = useState("");
   const [endereco, setEndereco] = useState("");
   const [municipio] = useState("Várzea Grande");
@@ -960,8 +964,8 @@ const TCOForm: React.FC<TCOFormProps> = ({
         penaDescricao: penaDescricao.trim(), // Pena é baseada na primeira natureza
         dataFato,
         horaFato,
-        dataInicioRegistro: startTime ? new Date(startTime).toISOString().split('T')[0] : formattedDate,
-        horaInicioRegistro: startTime ? new Date(startTime).toTimeString().slice(0,5) : formattedTime,
+        dataInicioRegistro,
+        horaInicioRegistro,
         dataTerminoRegistro: completionDate,
         horaTerminoRegistro: completionTime,
         localFato: localFato.trim(),
@@ -1187,6 +1191,11 @@ const TCOForm: React.FC<TCOFormProps> = ({
             setDataFato={setDataFato}
             horaFato={horaFato}
             setHoraFato={setHoraFato}
+            dataInicioRegistro={dataInicioRegistro}
+            horaInicioRegistro={horaInicioRegistro}
+            setHoraInicioRegistro={setHoraInicioRegistro}
+            dataTerminoRegistro={dataTerminoRegistro}
+            horaTerminoRegistro={horaTerminoRegistro}
             localFato={localFato}
             setLocalFato={setLocalFato}
             endereco={endereco}
