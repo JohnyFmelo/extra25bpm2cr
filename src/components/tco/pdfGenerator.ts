@@ -1,3 +1,4 @@
+
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -156,11 +157,24 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
 
             // --- Preparar a lista de documentos anexos ---
             const isDroga = data.natureza === "Porte de drogas para consumo";
-            const documentosAnexosList = ["TERMO DE COMPROMISSO"];
+            const documentosAnexosList = [];
             
-            // Adicionar termo de manifestação se não for caso de droga e tiver vítimas
+            // Adicionar termo de compromisso específico para cada autor
+            if (data.autores && data.autores.length > 0) {
+                data.autores.forEach((autor: any) => {
+                    if (autor.nome && autor.nome.trim() !== "") {
+                        documentosAnexosList.push(`TERMO DE COMPROMISSO DE ${autor.nome.toUpperCase()}`);
+                    }
+                });
+            }
+            
+            // Adicionar termo de manifestação específico para cada vítima se não for caso de droga e tiver vítimas
             if (!isDroga && data.vitimas && data.vitimas.length > 0) {
-                documentosAnexosList.push("TERMO DE MANIFESTAÇÃO");
+                data.vitimas.forEach((vitima: any) => {
+                    if (vitima.nome && vitima.nome.trim() !== "") {
+                        documentosAnexosList.push(`TERMO DE MANIFESTAÇÃO DA VÍTIMA ${vitima.nome.toUpperCase()}`);
+                    }
+                });
             }
             
             // Adicionar termo de apreensão se houver descrição
@@ -208,100 +222,100 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             };
 
             // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
-            generateHistoricoContent(doc, yPosition, updatedData)
-                .then(() => {
-                    // --- ADIÇÃO DOS TERMOS ---
-                    if (updatedData.autores && updatedData.autores.length > 0) {
-                        addTermoCompromisso(doc, updatedData);
-                    } else {
-                        console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
-                    }
+            try {
+                await generateHistoricoContent(doc, yPosition, updatedData);
+                
+                // --- ADIÇÃO DOS TERMOS ---
+                if (updatedData.autores && updatedData.autores.length > 0) {
+                    addTermoCompromisso(doc, updatedData);
+                } else {
+                    console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
+                }
 
-                    // Corrigindo a lógica para incluir o Termo de Manifestação
-                    // Verifica se NÃO é um caso de droga para consumo OU se tem vítimas informadas
-                    if ((updatedData.natureza !== "Porte de drogas para consumo") && (updatedData.vitimas && updatedData.vitimas.length > 0)) {
-                        console.log("Adicionando Termo de Manifestação da Vítima");
-                        addTermoManifestacao(doc, updatedData);
-                    } else {
-                        console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível ou sem vítimas.");
-                    }
+                // Corrigindo a lógica para incluir o Termo de Manifestação
+                // Verifica se NÃO é um caso de droga para consumo OU se tem vítimas informadas
+                if ((updatedData.natureza !== "Porte de drogas para consumo") && (updatedData.vitimas && updatedData.vitimas.length > 0)) {
+                    console.log("Adicionando Termo de Manifestação da Vítima");
+                    addTermoManifestacao(doc, updatedData);
+                } else {
+                    console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível ou sem vítimas.");
+                }
 
-                    // Incluir o termo de apreensão quando houver uma descrição de apreensão
-                    if ((updatedData.apreensaoDescrição || updatedData.apreensoes) && 
-                        (isDroga || updatedData.apreensoes)) {
-                        console.log("Adicionando Termo de Apreensão");
-                        addTermoApreensao(doc, updatedData);
-                    } else {
-                        console.log("Pulando Termo de Apreensão: sem descrição de apreensão.");
-                    }
+                // Incluir o termo de apreensão quando houver uma descrição de apreensão
+                if ((updatedData.apreensaoDescrição || updatedData.apreensoes) && 
+                    (isDroga || updatedData.apreensoes)) {
+                    console.log("Adicionando Termo de Apreensão");
+                    addTermoApreensao(doc, updatedData);
+                } else {
+                    console.log("Pulando Termo de Apreensão: sem descrição de apreensão.");
+                }
 
-                    // Adicionar termo de depósito se houver fiel depositário
-                    if (hasFielDepositario) {
-                        console.log("Adicionando Termo de Depósito");
-                        addTermoDeposito(doc, updatedData);
-                    } else {
-                        console.log("Pulando Termo de Depósito: nenhum autor marcado como fiel depositário.");
-                    }
+                // Adicionar termo de depósito se houver fiel depositário
+                if (hasFielDepositario) {
+                    console.log("Adicionando Termo de Depósito");
+                    addTermoDeposito(doc, updatedData);
+                } else {
+                    console.log("Pulando Termo de Depósito: nenhum autor marcado como fiel depositário.");
+                }
 
-                    if (updatedData.drogaTipo || updatedData.drogaNomeComum) {
-                        addTermoConstatacaoDroga(doc, updatedData);
+                if (updatedData.drogaTipo || updatedData.drogaNomeComum) {
+                    addTermoConstatacaoDroga(doc, updatedData);
+                    
+                    // Adiciona Requisição de Exame em Drogas logo após o Termo de Constatação de Droga
+                    if (updatedData.natureza === "Porte de drogas para consumo") {
+                        addRequisicaoExameDrogas(doc, updatedData);
+                    }
+                }
+
+                // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
+                if (pessoasComLaudo.length > 0) {
+                    pessoasComLaudo.forEach(pessoa => {
+                        console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
+                        addRequisicaoExameLesao(doc, { ...updatedData, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
+                    });
+                } else {
+                    console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
+                }
+
+                addTermoEncerramentoRemessa(doc, updatedData);
+
+                // --- Finalização: Adiciona Números de Página apenas se hidePagination for false (deixamos sempre oculto) ---
+                // A paginação está desativada por padrão
+                const pageCount = doc.internal.pages.length - 1;
+                if (!updatedData.hidePagination) {
+                    for (let i = 1; i <= pageCount; i++) {
+                        doc.setPage(i);
+                        doc.setFont("helvetica", "normal");
+                        doc.setFontSize(8);
+                        doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
+
+                        if (i > 1) {
+                            addStandardFooterContent(doc);
+                        }
+                    }
+                }
+
+                // Opcionalmente, gera um download local
+                if (updatedData.downloadLocal) {
+                    try {
+                        const fileName = generateTCOFilename(updatedData);
                         
-                        // Adiciona Requisição de Exame em Drogas logo após o Termo de Constatação de Droga
-                        if (updatedData.natureza === "Porte de drogas para consumo") {
-                            addRequisicaoExameDrogas(doc, updatedData);
-                        }
+                        doc.save(fileName);
+                        console.log(`PDF salvo localmente: ${fileName}`);
+                    } catch (downloadError) {
+                        console.error("Erro ao salvar o PDF localmente:", downloadError);
+                        // Não falha a Promise principal se o download falhar
                     }
+                }
 
-                    // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
-                    if (pessoasComLaudo.length > 0) {
-                        pessoasComLaudo.forEach(pessoa => {
-                            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
-                            addRequisicaoExameLesao(doc, { ...updatedData, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
-                        });
-                    } else {
-                        console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
-                    }
-
-                    addTermoEncerramentoRemessa(doc, updatedData);
-
-                    // --- Finalização: Adiciona Números de Página apenas se hidePagination for false (deixamos sempre oculto) ---
-                    // A paginação está desativada por padrão
-                    const pageCount = doc.internal.pages.length - 1;
-                    if (!updatedData.hidePagination) {
-                        for (let i = 1; i <= pageCount; i++) {
-                            doc.setPage(i);
-                            doc.setFont("helvetica", "normal");
-                            doc.setFontSize(8);
-                            doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
-
-                            if (i > 1) {
-                                addStandardFooterContent(doc);
-                            }
-                        }
-                    }
-
-                    // Opcionalmente, gera um download local
-                    if (updatedData.downloadLocal) {
-                        try {
-                            const fileName = generateTCOFilename(updatedData);
-                            
-                            doc.save(fileName);
-                            console.log(`PDF salvo localmente: ${fileName}`);
-                        } catch (downloadError) {
-                            console.error("Erro ao salvar o PDF localmente:", downloadError);
-                            // Não falha a Promise principal se o download falhar
-                        }
-                    }
-
-                    // Generate blob and resolve the promise
-                    const pdfBlob = doc.output('blob');
-                    clearTimeout(timeout);
-                    resolve(pdfBlob);
-                })
-                .catch(histError => {
-                    clearTimeout(timeout);
-                    reject(new Error(`Erro ao gerar histórico do PDF: ${histError.message}`));
-                });
+                // Generate blob and resolve the promise
+                const pdfBlob = doc.output('blob');
+                clearTimeout(timeout);
+                resolve(pdfBlob);
+            } catch (histError) {
+                clearTimeout(timeout);
+                reject(new Error(`Erro ao gerar histórico do PDF: ${histError.message}`));
+            }
         } catch (error) {
             clearTimeout(timeout);
             reject(new Error(`Erro na geração do PDF: ${error.message}`));
