@@ -102,22 +102,34 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                 </CardHeader>
                 <CardContent className="px-[5px]">
                   <PersonalInfoFields data={autor} onChangeHandler={handleAutorDetalhadoChange} prefix={`autor_${index}_`} index={index} isAuthor={true} />
-                    {/* New fields for Fiel Depositário */}
+                    {/* New fields for Fiel Depositário and Corpo de Delito, re-ordered */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-2 border-t border-dashed">
                         <div>
-                            <Label>Fiel Depositário?</Label>
+                            <Label htmlFor={`fiel-depositario-select-${index}`}>Fiel Depositário?</Label>
+                            <select
+                              id={`fiel-depositario-select-${index}`}
+                              value={autor.fielDepositario || "Não"}
+                              onChange={e => handleAutorDetalhadoChange(index, 'fielDepositario', e.target.value)}
+                              className="mt-2 flex h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <option value="Não">Não</option>
+                              <option value="Sim">Sim</option>
+                            </select>
+                        </div>
+                        <div>
+                            <Label>Requer Laudo Pericial (Corpo de Delito)?</Label>
                             <RadioGroup
-                                value={autor.fielDepositario || "Não"}
-                                onValueChange={(value) => handleAutorDetalhadoChange(index, 'fielDepositario', value)}
+                                value={autor.laudoPericial || "Não"}
+                                onValueChange={(value) => handleAutorDetalhadoChange(index, 'laudoPericial', value)}
                                 className="flex space-x-4 mt-2"
                             >
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="Sim" id={`fiel-sim-${index}`} />
-                                    <Label htmlFor={`fiel-sim-${index}`}>Sim</Label>
+                                    <RadioGroupItem value="Sim" id={`laudo-sim-${index}`} />
+                                    <Label htmlFor={`laudo-sim-${index}`}>Sim</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="Não" id={`fiel-nao-${index}`} />
-                                    <Label htmlFor={`fiel-nao-${index}`}>Não</Label>
+                                    <RadioGroupItem value="Não" id={`laudo-nao-${index}`} />
+                                    <Label htmlFor={`laudo-nao-${index}`}>Não</Label>
                                 </div>
                             </RadioGroup>
                         </div>
