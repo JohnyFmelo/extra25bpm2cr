@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -18,6 +17,7 @@ import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
+import { addTermoDeposito } from './PDF/PDFtermoDeposito.js';
 
 /**
  * Remove acentos e caracteres especiais de uma string
@@ -169,6 +169,12 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 documentosAnexosList.push(`TERMO DE APREENSÃO${lacreTexto}`);
             }
             
+            // Adicionar termo de depósito se houver fiel depositário
+            const hasFielDepositario = data.autores && data.autores.some((a: any) => a.fielDepositario === 'Sim');
+            if (hasFielDepositario) {
+                documentosAnexosList.push("TERMO DE DEPÓSITO");
+            }
+            
             // Adicionar documentos relacionados a drogas
             if (data.drogaTipo || data.drogaNomeComum) {
                 const lacreTexto = data.lacreNumero ? ` LACRE Nº ${data.lacreNumero}` : '';
@@ -227,6 +233,14 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         addTermoApreensao(doc, updatedData);
                     } else {
                         console.log("Pulando Termo de Apreensão: sem descrição de apreensão.");
+                    }
+
+                    // Adicionar termo de depósito se houver fiel depositário
+                    if (hasFielDepositario) {
+                        console.log("Adicionando Termo de Depósito");
+                        addTermoDeposito(doc, updatedData);
+                    } else {
+                        console.log("Pulando Termo de Depósito: nenhum autor marcado como fiel depositário.");
                     }
 
                     if (updatedData.drogaTipo || updatedData.drogaNomeComum) {
