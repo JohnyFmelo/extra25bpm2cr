@@ -1,4 +1,3 @@
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, MARGIN_TOP, getPageConstants,
     getDataAtualExtenso, addFieldBoldLabel, addWrappedText, addStandardFooterContent,
@@ -29,15 +28,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     // --- Informações Principais (Natureza, Autor, Vítima) ---
     const primeiroAutor = data.autores?.[0];
 
-    // Natureza - corrigindo para mostrar customNatureza quando aplicável
-    let naturezaDisplay = "NÃO INFORMADA";
-    if (data.natureza) {
-        if (data.natureza === "Outros" && data.customNatureza) {
-            naturezaDisplay = data.customNatureza.toUpperCase();
-        } else {
-            naturezaDisplay = data.natureza.toUpperCase();
-        }
-    }
+    const naturezaDisplay = data.natureza ? data.natureza.toUpperCase() : "NÃO INFORMADA";
     yPos = addFieldBoldLabel(doc, yPos, "NATUREZA", naturezaDisplay, data);
 
     const autorNomeDisplay = primeiroAutor?.nome ? primeiroAutor.nome.toUpperCase() : "NÃO INFORMADO(A)";
@@ -45,42 +36,37 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
 
     // --- LÓGICA CORRIGIDA PARA VÍTIMAS EM LISTA VERTICAL ---
     if (data.vitimas && data.vitimas.length > 0) {
-        // Filtrar vítimas com nomes válidos
-        const vitimasValidas = data.vitimas.filter(v => v.nome && v.nome.trim() !== '');
-        
-        if (vitimasValidas.length > 0) {
-            const labelText = vitimasValidas.length > 1 ? "VÍTIMAS:" : "VÍTIMA:";
-            const labelWidth = 20; // Largura fixa da coluna do rótulo para alinhamento
-            const valueX = MARGIN_LEFT + labelWidth;
-            const lineHeight = 5; // Espaçamento vertical entre os nomes
+        const labelText = data.vitimas.length > 1 ? "VÍTIMAS:" : "VÍTIMA:";
+        const labelWidth = 20; // Largura fixa da coluna do rótulo para alinhamento
+        const valueX = MARGIN_LEFT + labelWidth;
+        const lineHeight = 5; // Espaçamento vertical entre os nomes
 
-            // Desenha o rótulo ("VÍTIMA:" ou "VÍTIMAS:")
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(12);
-            doc.text(labelText, MARGIN_LEFT, yPos);
+        // Desenha o rótulo ("VÍTIMA:" ou "VÍTIMAS:")
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text(labelText, MARGIN_LEFT, yPos);
 
-            // Mapeia os nomes das vítimas
-            const vitimasNomes = vitimasValidas.map(v => v.nome.toUpperCase());
+        // Mapeia os nomes das vítimas
+        const vitimasNomes = data.vitimas.map(v => v.nome ? v.nome.toUpperCase() : "NOME NÃO INFORMADO");
 
-            // Desenha os nomes, um por linha
-            doc.setFont("helvetica", "normal");
-            vitimasNomes.forEach((nome, index) => {
-                // A primeira vítima fica na mesma linha do rótulo.
-                // As demais são impressas em novas linhas abaixo.
-                const currentLineY = yPos + (index * lineHeight);
-                
-                // Verifica a quebra de página para cada linha a ser adicionada
-                const finalY = checkPageBreak(doc, currentLineY, lineHeight, data);
-                
-                doc.text(nome, valueX, finalY);
-            });
-
-            // Atualiza a posição Y para depois da lista de vítimas
-            yPos += (vitimasNomes.length * lineHeight);
+        // Desenha os nomes, um por linha
+        doc.setFont("helvetica", "normal");
+        vitimasNomes.forEach((nome, index) => {
+            // A primeira vítima fica na mesma linha do rótulo.
+            // As demais são impressas em novas linhas abaixo.
+            const currentLineY = yPos + (index * lineHeight);
             
-            // Adiciona um espaçamento extra após o bloco de vítimas
-            yPos += 5;
-        }
+            // Verifica a quebra de página para cada linha a ser adicionada
+            const finalY = checkPageBreak(doc, currentLineY, lineHeight, data);
+            
+            doc.text(nome, valueX, finalY);
+        });
+
+        // Atualiza a posição Y para depois da lista de vítimas
+        yPos += (vitimasNomes.length * lineHeight);
+        
+        // Adiciona um espaçamento extra após o bloco de vítimas
+        yPos += 5;
     }
 
     yPos += 15; // Espaço extra

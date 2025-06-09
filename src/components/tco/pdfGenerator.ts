@@ -16,7 +16,6 @@ import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
-import { addTermoDeposito } from './PDF/PDFtermoDeposito';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
 
@@ -145,17 +144,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 hidePagination: true
             };
 
-            // Concatenar descrição de objeto depositado ao campo de apreensões para o PDF
-            const depositarios = (data.autores || []).filter((a:any) => a.fielDepositario === 'Sim' && a.objetoDepositado);
-            if (depositarios.length > 0) {
-                const descricoesDeposito = depositarios
-                    .map((a:any) => `BEM DEIXADO EM DEPÓSITO COM ${a.nome.toUpperCase()}: ${a.objetoDepositado}`)
-                    .join('\n');
-                if (data.apreensoes && data.apreensoes.trim() !== '') {
-                    data.apreensoes = `${data.apreensoes}\n${descricoesDeposito}`;
-                } else { data.apreensoes = descricoesDeposito; }
-            }
-
             // Pega as constantes da página
             const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
             let yPosition;
@@ -193,8 +181,8 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             
             // Adicionar requisição de exame de lesão corporal se necessário
             const pessoasComLaudo = [
-                ...(data.autores || []).filter((a: any) => a.laudoPericial === "Sim").map((a: any) => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
-                ...(data.vitimas || []).filter((v: any) => v.laudoPericial === "Sim").map((v: any) => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
+                ...(data.autores || []).filter(a => a.laudoPericial === "Sim").map(a => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
+                ...(data.vitimas || []).filter(v => v.laudoPericial === "Sim").map(v => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
             ].filter(p => p.nome && p.nome.trim());
             
             if (pessoasComLaudo.length > 0) {
@@ -205,10 +193,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         (pessoa.sexo?.toLowerCase() === 'feminino' ? 'VÍTIMA' : 'VÍTIMA');
                     documentosAnexosList.push(`REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ${generoArtigo} ${generoTipo}`);
                 });
-            }
-
-            if (depositarios.length > 0) {
-                documentosAnexosList.push("TERMO DE DEPÓSITO");
             }
             
             // Atualizar os dados com a lista de documentos anexos
@@ -243,11 +227,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         addTermoApreensao(doc, updatedData);
                     } else {
                         console.log("Pulando Termo de Apreensão: sem descrição de apreensão.");
-                    }
-                    
-                    if (depositarios.length > 0) {
-                        console.log("Adicionando Termo de Depósito");
-                        addTermoDeposito(doc, updatedData);
                     }
 
                     if (updatedData.drogaTipo || updatedData.drogaNomeComum) {
@@ -309,11 +288,9 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     clearTimeout(timeout);
                     reject(new Error(`Erro ao gerar histórico do PDF: ${histError.message}`));
                 });
-        } catch (error: any) {
+        } catch (error) {
             clearTimeout(timeout);
             reject(new Error(`Erro na geração do PDF: ${error.message}`));
         }
     });
 };
-
-export const generateTCOPDF = generatePDF;
