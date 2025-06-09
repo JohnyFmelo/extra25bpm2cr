@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -14,6 +13,7 @@ import { generateHistoricoContent } from './PDF/PDFhistorico.js';
 import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
 import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
+import { addTermoDeposito } from './PDF/addTermoDeposito.js'; // CORREÇÃO: Importação adicionada
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
@@ -162,6 +162,13 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             if (!isDroga && data.vitimas && data.vitimas.length > 0) {
                 documentosAnexosList.push("TERMO DE MANIFESTAÇÃO");
             }
+
+            // CORREÇÃO: Lógica movida para o fluxo de geração de termos
+            // Adicionar termo de depósito se algum autor for fiel depositário
+            const temFielDepositario = data.autores?.some(a => a.fielDepositario === 'Sim');
+            if (temFielDepositario) {
+                documentosAnexosList.push("TERMO DE DEPÓSITO");
+            }
             
             // Adicionar termo de apreensão se houver descrição
             if ((data.apreensaoDescrição || data.apreensoes) && (isDroga || data.apreensoes)) {
@@ -211,8 +218,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
                     }
 
-                    // Corrigindo a lógica para incluir o Termo de Manifestação
-                    // Verifica se NÃO é um caso de droga para consumo OU se tem vítimas informadas
                     if ((updatedData.natureza !== "Porte de drogas para consumo") && (updatedData.vitimas && updatedData.vitimas.length > 0)) {
                         console.log("Adicionando Termo de Manifestação da Vítima");
                         addTermoManifestacao(doc, updatedData);
@@ -220,7 +225,14 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível ou sem vítimas.");
                     }
 
-                    // Incluir o termo de apreensão quando houver uma descrição de apreensão
+                    // CORREÇÃO: Adicionando a chamada condicional para o Termo de Depósito
+                    if (temFielDepositario) {
+                        console.log("Adicionando Termo de Depósito");
+                        addTermoDeposito(doc, updatedData);
+                    } else {
+                        console.log("Pulando Termo de Depósito: nenhum autor marcado como fiel depositário.");
+                    }
+
                     if ((updatedData.apreensaoDescrição || updatedData.apreensoes) && 
                         (isDroga || updatedData.apreensoes)) {
                         console.log("Adicionando Termo de Apreensão");
@@ -232,13 +244,11 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     if (updatedData.drogaTipo || updatedData.drogaNomeComum) {
                         addTermoConstatacaoDroga(doc, updatedData);
                         
-                        // Adiciona Requisição de Exame em Drogas logo após o Termo de Constatação de Droga
                         if (updatedData.natureza === "Porte de drogas para consumo") {
                             addRequisicaoExameDrogas(doc, updatedData);
                         }
                     }
 
-                    // --- REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ---
                     if (pessoasComLaudo.length > 0) {
                         pessoasComLaudo.forEach(pessoa => {
                             console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
@@ -250,8 +260,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
 
                     addTermoEncerramentoRemessa(doc, updatedData);
 
-                    // --- Finalização: Adiciona Números de Página apenas se hidePagination for false (deixamos sempre oculto) ---
-                    // A paginação está desativada por padrão
+                    // A paginação está desativada por padrão (hidePagination: true)
                     const pageCount = doc.internal.pages.length - 1;
                     if (!updatedData.hidePagination) {
                         for (let i = 1; i <= pageCount; i++) {
@@ -266,20 +275,16 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         }
                     }
 
-                    // Opcionalmente, gera um download local
                     if (updatedData.downloadLocal) {
                         try {
                             const fileName = generateTCOFilename(updatedData);
-                            
                             doc.save(fileName);
                             console.log(`PDF salvo localmente: ${fileName}`);
                         } catch (downloadError) {
                             console.error("Erro ao salvar o PDF localmente:", downloadError);
-                            // Não falha a Promise principal se o download falhar
                         }
                     }
 
-                    // Generate blob and resolve the promise
                     const pdfBlob = doc.output('blob');
                     clearTimeout(timeout);
                     resolve(pdfBlob);
