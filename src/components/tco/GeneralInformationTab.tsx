@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -220,29 +219,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
             />
           </div>
 
-          {/* Data de Término do Registro */}
-          <div>
-            <Label htmlFor="dataTerminoRegistro">Data de Término do Registro</Label>
-            <Input 
-              id="dataTerminoRegistro" 
-              type="date" 
-              readOnly 
-              value={dataTerminoRegistro} 
-              className="bg-gray-100" 
-            />
-          </div>
-
-          {/* Hora de Término do Registro */}
-          <div>
-            <Label htmlFor="horaTerminoRegistro">Hora de Término do Registro</Label>
-            <Input 
-              id="horaTerminoRegistro" 
-              type="time" 
-              readOnly 
-              value={horaTerminoRegistro} 
-              className="bg-gray-100" 
-            />
-          </div>
+          {/* Campos de Data e Hora de Término removidos conforme solicitado */}
 
           {/* Local do Fato */}
           <div className="md:col-span-2">

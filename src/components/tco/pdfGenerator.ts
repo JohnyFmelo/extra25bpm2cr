@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -16,6 +15,7 @@ import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
+import { addTermoDeposito } from './PDF/PDFtermoDeposito.ts';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
 
@@ -194,6 +194,12 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     documentosAnexosList.push(`REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ${generoArtigo} ${generoTipo}`);
                 });
             }
+
+            // Verificar se há depositários para incluir o TERMO DE DEPÓSITO
+            const depositarios = (data.autores || []).filter(a => a.fielDepositario === 'Sim');
+            if (depositarios.length > 0) {
+                documentosAnexosList.push("TERMO DE DEPÓSITO");
+            }
             
             // Atualizar os dados com a lista de documentos anexos
             const updatedData = {
@@ -248,6 +254,13 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
                     }
 
+                    // --- TERMO DE DEPÓSITO (antes do Termo de Encerramento) ---
+                    if (depositarios.length > 0) {
+                        console.log("Adicionando Termo de Depósito");
+                        addTermoDeposito(doc, updatedData);
+                    }
+
+                    // --- TERMO DE ENCERRAMENTO E REMESSA (sempre por último) ---
                     addTermoEncerramentoRemessa(doc, updatedData);
 
                     // --- Finalização: Adiciona Números de Página apenas se hidePagination for false (deixamos sempre oculto) ---
