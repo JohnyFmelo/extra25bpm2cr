@@ -1,105 +1,90 @@
-
-import React, { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, FileText, Download, Users, MapPin, Calendar, AlertTriangle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import { Clock, Download, FileText, Users, MapPin, Calendar, AlertTriangle } from "lucide-react";
 import { GeneralInformationTab } from './tco/GeneralInformationTab';
-import { PessoasEnvolvidasTab } from './tco/PessoasEnvolvidasTab';
-import { HistoricoTab } from './tco/HistoricoTab';
-import { GuarnicaoTab } from './tco/GuarnicaoTab';
-import { DrugVerificationTab } from './tco/DrugVerificationTab';
-import { TCOTimer } from './tco/TCOTimer';
+import PessoasEnvolvidasTab from './tco/PessoasEnvolvidasTab';
+import HistoricoTab from './tco/HistoricoTab';
+import GuarnicaoTab from './tco/GuarnicaoTab';
+import DrugVerificationTab from './tco/DrugVerificationTab';
+import TCOTimer from './tco/TCOTimer';
 import { generateTCOPDF } from './tco/pdfGenerator';
 
-interface Pessoa {
+interface PersonalInfo {
   nome: string;
-  cpf: string;
-  rg: string;
+  sexo: string;
+  estadoCivil: string;
   profissao: string;
   endereco: string;
-  telefone: string;
-  relato: string;
+  dataNascimento: string;
+  naturalidade: string;
+  filiacaoMae: string;
+  filiacaoPai: string;
+  rg: string;
+  cpf: string;
+  celular: string;
+  email: string;
+  laudoPericial: string;
+  relato?: string;
+  representacao?: string;
+  fielDepositario?: string;
+  objetoDepositado?: string;
 }
 
 interface ComponenteGuarnicao {
   nome: string;
   posto: string;
   rg: string;
+  apoio?: boolean;
 }
 
-interface TCOData {
-  tcoNumber: string;
-  natureza: string;
-  customNatureza: string;
-  tipificacao: string;
-  dataFato: string;
-  horaFato: string;
-  localFato: string;
-  municipio: string;
-  flagranteDelito: string;
-  juizadoEspecialData: string;
-  juizadoEspecialHora: string;
-  observacoes: string;
-  autores: Pessoa[];
-  vitimas: Pessoa[];
-  testemunhas: Pessoa[];
-  historico: string;
-  apreensoes: string;
-  componentesGuarnicao: ComponenteGuarnicao[];
-  localEncerramento: string;
-  documentosAnexos: string;
-  videoLinks: string[];
-  condutorNome: string;
-  condutorPosto: string;
-  condutorRg: string;
-  horaInicioRegistro: string;
-  drogas: {
-    substancia: string;
-    quantidade: string;
-    peso: string;
-    acondicionamento: string;
-    origemApreensao: string;
-    localApreensao: string;
-    responsavelApreensao: string;
-    destinoSubstancia: string;
-    observacoes: string;
-  };
+interface TCOFormProps {
+  selectedTco?: any;
 }
 
-export const TCOForm: React.FC = () => {
+const TCOForm: React.FC<TCOFormProps> = ({ selectedTco }) => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("geral");
 
   // Estados para as informações gerais
+  const [tcoNumber, setTcoNumber] = useState("");
   const [natureza, setNatureza] = useState("");
-  const [tipificacao, setTipificacao] = useState("");
-  const [isCustomNatureza, setIsCustomNatureza] = useState(false);
   const [customNatureza, setCustomNatureza] = useState("");
+  const [tipificacao, setTipificacao] = useState("");
   const [dataFato, setDataFato] = useState("");
   const [horaFato, setHoraFato] = useState("");
   const [localFato, setLocalFato] = useState("");
   const [municipio, setMunicipio] = useState("");
-  const [observacoes, setObservacoes] = useState("");
   const [flagranteDelito, setFlagranteDelito] = useState("");
   const [juizadoEspecialData, setJuizadoEspecialData] = useState("");
   const [juizadoEspecialHora, setJuizadoEspecialHora] = useState("");
+  const [observacoes, setObservacoes] = useState("");
   const [condutorNome, setCondutorNome] = useState("");
   const [condutorPosto, setCondutorPosto] = useState("");
   const [condutorRg, setCondutorRg] = useState("");
   const [horaInicioRegistro, setHoraInicioRegistro] = useState("");
 
   // Estados para pessoas envolvidas
-  const [autores, setAutores] = useState<Pessoa[]>([{
-    nome: "", cpf: "", rg: "", profissao: "", endereco: "", telefone: "", relato: ""
+  const [autores, setAutores] = useState<PersonalInfo[]>([{
+    nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", 
+    dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "",
+    rg: "", cpf: "", celular: "", email: "", laudoPericial: "Não",
+    relato: "", representacao: "", fielDepositario: "Não", objetoDepositado: ""
   }]);
-  const [vitimas, setVitimas] = useState<Pessoa[]>([{
-    nome: "", cpf: "", rg: "", profissao: "", endereco: "", telefone: "", relato: ""
+  const [vitimas, setVitimas] = useState<PersonalInfo[]>([{
+    nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", 
+    dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "",
+    rg: "", cpf: "", celular: "", email: "", laudoPericial: "Não",
+    relato: "", representacao: "", fielDepositario: "Não", objetoDepositado: ""
   }]);
-  const [testemunhas, setTestemunhas] = useState<Pessoa[]>([{
-    nome: "", cpf: "", rg: "", profissao: "", endereco: "", telefone: "", relato: ""
+  const [testemunhas, setTestemunhas] = useState<PersonalInfo[]>([{
+    nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", 
+    dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "",
+    rg: "", cpf: "", celular: "", email: "", laudoPericial: "Não",
+    relato: "", representacao: "", fielDepositario: "Não", objetoDepositado: ""
   }]);
 
   // Estados para histórico e outras informações
@@ -110,26 +95,24 @@ export const TCOForm: React.FC = () => {
 
   // Estados para guarnição
   const [componentesGuarnicao, setComponentesGuarnicao] = useState<ComponenteGuarnicao[]>([{
-    nome: "", posto: "", rg: ""
+    nome: "", posto: "", rg: "", apoio: false
   }]);
   const [localEncerramento, setLocalEncerramento] = useState("");
 
   // Estados para drogas
-  const [drogas, setDrogas] = useState({
-    substancia: "",
-    quantidade: "",
-    peso: "",
-    acondicionamento: "",
-    origemApreensao: "",
-    localApreensao: "",
-    responsavelApreensao: "",
-    destinoSubstancia: "",
-    observacoes: ""
-  });
+  const [quantidade, setQuantidade] = useState("");
+  const [substancia, setSubstancia] = useState("");
+  const [cor, setCor] = useState("");
+  const [odor, setOdor] = useState("");
+  const [indicios, setIndicios] = useState("");
+  const [customMaterialDesc, setCustomMaterialDesc] = useState("");
+  const [lacreNumero, setLacreNumero] = useState("");
+
+  const isUnknownMaterial = substancia && cor && !["Verde", "Amarelada", "Branca"].includes(cor);
+
+  const [isCustomNatureza, setIsCustomNatureza] = useState(false);
 
   // Gerar número TCO automaticamente
-  const [tcoNumber, setTcoNumber] = useState("");
-
   useEffect(() => {
     const generateTCONumber = () => {
       const year = new Date().getFullYear();
@@ -152,9 +135,77 @@ export const TCOForm: React.FC = () => {
     }
   }, [horaInicioRegistro]);
 
+  // Timer states
+  const [startTime] = useState<Date>(new Date());
+  const [isRunning] = useState<boolean>(true);
+
+  // Handler functions for pessoas envolvidas
+  const handleVitimaChange = (index: number, field: string, value: string) => {
+    const newVitimas = [...vitimas];
+    newVitimas[index] = { ...newVitimas[index], [field]: value };
+    setVitimas(newVitimas);
+  };
+
+  const handleAddVitima = () => {
+    setVitimas([...vitimas, {
+      nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", 
+      dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "",
+      rg: "", cpf: "", celular: "", email: "", laudoPericial: "Não",
+      relato: "", representacao: "", fielDepositario: "Não", objetoDepositado: ""
+    }]);
+  };
+
+  const handleRemoveVitima = (index: number) => {
+    if (vitimas.length > 1) {
+      setVitimas(vitimas.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleTestemunhaChange = (index: number, field: string, value: string) => {
+    const newTestemunhas = [...testemunhas];
+    newTestemunhas[index] = { ...newTestemunhas[index], [field]: value };
+    setTestemunhas(newTestemunhas);
+  };
+
+  const handleAddTestemunha = () => {
+    setTestemunhas([...testemunhas, {
+      nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", 
+      dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "",
+      rg: "", cpf: "", celular: "", email: "", laudoPericial: "Não",
+      relato: "", representacao: "", fielDepositario: "Não", objetoDepositado: ""
+    }]);
+  };
+
+  const handleRemoveTestemunha = (index: number) => {
+    if (testemunhas.length > 1) {
+      setTestemunhas(testemunhas.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleAutorDetalhadoChange = (index: number, field: string, value: string) => {
+    const newAutores = [...autores];
+    newAutores[index] = { ...newAutores[index], [field]: value };
+    setAutores(newAutores);
+  };
+
+  const handleAddAutor = () => {
+    setAutores([...autores, {
+      nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", 
+      dataNascimento: "", naturalidade: "", filiacaoMae: "", filiacaoPai: "",
+      rg: "", cpf: "", celular: "", email: "", laudoPericial: "Não",
+      relato: "", representacao: "", fielDepositario: "Não", objetoDepositado: ""
+    }]);
+  };
+
+  const handleRemoveAutor = (index: number) => {
+    if (autores.length > 1) {
+      setAutores(autores.filter((_, i) => i !== index));
+    }
+  };
+
   const handleGeneratePDF = async () => {
     try {
-      const tcoData: TCOData = {
+      const tcoData = {
         tcoNumber,
         natureza,
         customNatureza,
@@ -180,7 +231,12 @@ export const TCOForm: React.FC = () => {
         condutorPosto,
         condutorRg,
         horaInicioRegistro,
-        drogas
+        drogaTipo: substancia,
+        drogaCor: cor,
+        drogaOdor: odor,
+        drogaQuantidade: quantidade,
+        lacreNumero,
+        downloadLocal: true
       };
 
       await generateTCOPDF(tcoData);
@@ -246,7 +302,7 @@ export const TCOForm: React.FC = () => {
               </div>
             </div>
             <div className="text-right">
-              <TCOTimer horaInicio={horaInicioRegistro} />
+              <TCOTimer startTime={startTime} isRunning={isRunning} />
             </div>
           </div>
         </CardHeader>
@@ -280,115 +336,99 @@ export const TCOForm: React.FC = () => {
 
             <div className="mt-6">
               <TabsContent value="geral">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Informações Gerais</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <GeneralInformationTab
-                      natureza={natureza}
-                      setNatureza={setNatureza}
-                      tipificacao={tipificacao}
-                      setTipificacao={setTipificacao}
-                      isCustomNatureza={isCustomNatureza}
-                      setIsCustomNatureza={setIsCustomNatureza}
-                      customNatureza={customNatureza}
-                      setCustomNatureza={setCustomNatureza}
-                      dataFato={dataFato}
-                      setDataFato={setDataFato}
-                      horaFato={horaFato}
-                      setHoraFato={setHoraFato}
-                      localFato={localFato}
-                      setLocalFato={setLocalFato}
-                      municipio={municipio}
-                      setMunicipio={setMunicipio}
-                      observacoes={observacoes}
-                      setObservacoes={setObservacoes}
-                      flagranteDelito={flagranteDelito}
-                      setFlagranteDelito={setFlagranteDelito}
-                      juizadoEspecialData={juizadoEspecialData}
-                      setJuizadoEspecialData={setJuizadoEspecialData}
-                      juizadoEspecialHora={juizadoEspecialHora}
-                      setJuizadoEspecialHora={setJuizadoEspecialHora}
-                      condutorNome={condutorNome}
-                      setCondutorNome={setCondutorNome}
-                      condutorPosto={condutorPosto}
-                      setCondutorPosto={setCondutorPosto}
-                      condutorRg={condutorRg}
-                      setCondutorRg={setCondutorRg}
-                      horaInicioRegistro={horaInicioRegistro}
-                      setHoraInicioRegistro={setHoraInicioRegistro}
-                    />
-                  </CardContent>
-                </Card>
+                <GeneralInformationTab
+                  natureza={natureza}
+                  setNatureza={setNatureza}
+                  tipificacao={tipificacao}
+                  setTipificacao={setTipificacao}
+                  isCustomNatureza={isCustomNatureza}
+                  setIsCustomNatureza={setIsCustomNatureza}
+                  customNatureza={customNatureza}
+                  setCustomNatureza={setCustomNatureza}
+                  dataFato={dataFato}
+                  setDataFato={setDataFato}
+                  horaFato={horaFato}
+                  setHoraFato={setHoraFato}
+                  localFato={localFato}
+                  setLocalFato={setLocalFato}
+                  municipio={municipio}
+                  setMunicipio={setMunicipio}
+                  observacoes={observacoes}
+                  setObservacoes={setObservacoes}
+                  flagranteDelito={flagranteDelito}
+                  setFlagranteDelito={setFlagranteDelito}
+                  juizadoEspecialData={juizadoEspecialData}
+                  setJuizadoEspecialData={setJuizadoEspecialData}
+                  juizadoEspecialHora={juizadoEspecialHora}
+                  setJuizadoEspecialHora={setJuizadoEspecialHora}
+                  condutorNome={condutorNome}
+                  setCondutorNome={setCondutorNome}
+                  condutorPosto={condutorPosto}
+                  setCondutorPosto={setCondutorPosto}
+                  condutorRg={condutorRg}
+                  setCondutorRg={setCondutorRg}
+                  horaInicioRegistro={horaInicioRegistro}
+                  setHoraInicioRegistro={setHoraInicioRegistro}
+                />
               </TabsContent>
 
               <TabsContent value="pessoas">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Pessoas Envolvidas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <PessoasEnvolvidasTab
-                      autores={autores}
-                      setAutores={setAutores}
-                      vitimas={vitimas}
-                      setVitimas={setVitimas}
-                      testemunhas={testemunhas}
-                      setTestemunhas={setTestemunhas}
-                    />
-                  </CardContent>
-                </Card>
+                <PessoasEnvolvidasTab
+                  vitimas={vitimas}
+                  handleVitimaChange={handleVitimaChange}
+                  handleAddVitima={handleAddVitima}
+                  handleRemoveVitima={handleRemoveVitima}
+                  testemunhas={testemunhas}
+                  handleTestemunhaChange={handleTestemunhaChange}
+                  handleAddTestemunha={handleAddTestemunha}
+                  handleRemoveTestemunha={handleRemoveTestemunha}
+                  autores={autores}
+                  handleAutorDetalhadoChange={handleAutorDetalhadoChange}
+                  handleAddAutor={handleAddAutor}
+                  handleRemoveAutor={handleRemoveAutor}
+                  natureza={natureza}
+                />
               </TabsContent>
 
               <TabsContent value="historico">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Histórico e Relatos</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <HistoricoTab
-                      historico={historico}
-                      setHistorico={setHistorico}
-                      apreensoes={apreensoes}
-                      setApreensoes={setApreensoes}
-                      documentosAnexos={documentosAnexos}
-                      setDocumentosAnexos={setDocumentosAnexos}
-                      videoLinks={videoLinks}
-                      setVideoLinks={setVideoLinks}
-                    />
-                  </CardContent>
-                </Card>
+                <HistoricoTab
+                  historico={historico}
+                  setHistorico={setHistorico}
+                  apreensoes={apreensoes}
+                  setApreensoes={setApreensoes}
+                  documentosAnexos={documentosAnexos}
+                  setDocumentosAnexos={setDocumentosAnexos}
+                  videoLinks={videoLinks}
+                  setVideoLinks={setVideoLinks}
+                />
               </TabsContent>
 
               <TabsContent value="guarnicao">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Guarnição</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <GuarnicaoTab
-                      componentesGuarnicao={componentesGuarnicao}
-                      setComponentesGuarnicao={setComponentesGuarnicao}
-                      localEncerramento={localEncerramento}
-                      setLocalEncerramento={setLocalEncerramento}
-                    />
-                  </CardContent>
-                </Card>
+                <GuarnicaoTab
+                  componentesGuarnicao={componentesGuarnicao}
+                  setComponentesGuarnicao={setComponentesGuarnicao}
+                  localEncerramento={localEncerramento}
+                  setLocalEncerramento={setLocalEncerramento}
+                />
               </TabsContent>
 
               <TabsContent value="drogas">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Verificação de Drogas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <DrugVerificationTab
-                      drogas={drogas}
-                      setDrogas={setDrogas}
-                    />
-                  </CardContent>
-                </Card>
+                <DrugVerificationTab
+                  quantidade={quantidade}
+                  setQuantidade={setQuantidade}
+                  substancia={substancia}
+                  setSubstancia={setSubstancia}
+                  cor={cor}
+                  setCor={setCor}
+                  odor={odor}
+                  setOdor={setOdor}
+                  indicios={indicios}
+                  customMaterialDesc={customMaterialDesc}
+                  setCustomMaterialDesc={setCustomMaterialDesc}
+                  isUnknownMaterial={isUnknownMaterial}
+                  lacreNumero={lacreNumero}
+                  setLacreNumero={setLacreNumero}
+                />
               </TabsContent>
             </div>
           </Tabs>
@@ -434,3 +474,5 @@ export const TCOForm: React.FC = () => {
     </div>
   );
 };
+
+export default TCOForm;
