@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -347,8 +346,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco }) => {
             dataInicioRegistro={dataInicioRegistro}
             horaInicioRegistro={horaInicioRegistro}
             setHoraInicioRegistro={setHoraInicioRegistro}
-            dataTerminoRegistro=""
-            horaTerminoRegistro=""
             localFato={localFato}
             setLocalFato={setLocalFato}
             endereco={endereco}
@@ -368,14 +365,19 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco }) => {
         
         <TabsContent value="pessoas">
           <PessoasEnvolvidasTab
-            autores={autores}
             vitimas={vitimas}
+            handleVitimaChange={updateVitima}
+            handleAddVitima={addVitima}
+            handleRemoveVitima={removeVitima}
             testemunhas={testemunhas}
-            videoLinks={videoLinks}
-            updateAutor={updateAutor}
-            updateVitima={updateVitima}
-            updateTestemunha={updateTestemunha}
-            updateVideoLink={updateVideoLink}
+            handleTestemunhaChange={updateTestemunha}
+            handleAddTestemunha={addTestemunha}
+            handleRemoveTestemunha={removeTestemunha}
+            autores={autores}
+            handleAutorDetalhadoChange={updateAutor}
+            handleAddAutor={addAutor}
+            handleRemoveAutor={removeAutor}
+            natureza={natureza}
           />
         </TabsContent>
         
@@ -410,13 +412,10 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco }) => {
         
         <TabsContent value="guarnicao">
           <GuarnicaoTab
-            componentes={componentesGuarnicao}
-            condutorNome={condutorNome}
-            setCondutorNome={setCondutorNome}
-            condutorPosto={condutorPosto}
-            setCondutorPosto={setCondutorPosto}
-            condutorRg={condutorRg}
-            setCondutorRg={setCondutorRg}
+            currentGuarnicaoList={componentesGuarnicao}
+            onAddPolicial={addGuarnicao}
+            onRemovePolicial={removeGuarnicao}
+            onToggleApoioPolicial={(index: number) => updateGuarnicao(index, 'apoio', !componentesGuarnicao[index].apoio)}
           />
         </TabsContent>
         
