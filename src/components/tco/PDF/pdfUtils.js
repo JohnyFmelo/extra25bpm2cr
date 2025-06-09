@@ -346,6 +346,7 @@ export const addFieldBoldLabel = (doc, currentY, label, value, data) => {
     return yPos;
 };
 
+
 /** Adiciona bloco de assinatura com linha, nome e cargo */
 export const addSignatureWithNameAndRole = (doc, currentY, name, role, data) => {
     const blockHeight = 25; // Altura estimada (linha + nome + cargo + espaçamentos)
@@ -391,10 +392,4 @@ export const addSignatureWithNameAndRole = (doc, currentY, name, role, data) => 
 
     yPos += 8; // Espaço final após o bloco de assinatura completo
     return yPos; // Retorna a posição Y final
-};
-
-// Helper function to add a simple line
-export const addLine = (doc, x1, y, x2) => {
-    doc.setLineWidth(0.3);
-    doc.line(x1, y, x2, y);
 };
