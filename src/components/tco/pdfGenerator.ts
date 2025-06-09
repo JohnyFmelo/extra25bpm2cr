@@ -1,5 +1,4 @@
---- START OF FILE pdfGenerator.ts ---
-```ts
+
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -316,6 +315,5 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
         }
     });
 };
-```
---- END OF FILE pdfGenerator.ts ---
-241,4s
+
+export const generateTCOPDF = generatePDF;
