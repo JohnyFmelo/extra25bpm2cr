@@ -28,11 +28,9 @@ import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
 import RankingChart from "@/components/RankingChart";
 import ManualUserRegistration from "@/components/ManualUserRegistration";
 import VersionDialog from "@/components/VersionDialog";
-
 interface IndexProps {
   initialActiveTab?: string;
 }
-
 const Index = ({
   initialActiveTab = "main"
 }: IndexProps) => {
@@ -400,5 +398,4 @@ const Index = ({
       <BottomMenuBar activeTab={activeTab} onTabChange={handleTabChange} isAdmin={user?.userType === 'admin'} />
     </div>;
 };
-
 export default Index;
