@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,6 @@ import GuarnicaoTab from "./tco/GuarnicaoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import GeneralInformationTab from "./tco/GeneralInformationTab";
 import { generatePDF } from "./tco/pdfGenerator";
-import { supabase } from "@/integrations/supabase/client";
 
 const naturezas = [
   "Ameaça",
@@ -38,7 +38,11 @@ const naturezas = [
   "Outros",
 ];
 
-const TCOForm: React.FC = () => {
+interface TCOFormProps {
+  selectedTco?: any;
+}
+
+const TCOForm: React.FC<TCOFormProps> = ({ selectedTco }) => {
   const [tcoNumber, setTcoNumber] = useState<string>("");
   const [natureza, setNatureza] = useState<string>("");
   const [tipificacao, setTipificacao] = useState<string>("");
@@ -48,17 +52,20 @@ const TCOForm: React.FC = () => {
   const [horaFato, setHoraFato] = useState<string>("");
   const [dataInicioRegistro, setDataInicioRegistro] = useState<string>(new Date().toISOString().split('T')[0]);
   const [horaInicioRegistro, setHoraInicioRegistro] = useState<string>("");
-  const [dataTerminoRegistro, setDataTerminoRegistro] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [horaTerminoRegistro, setHoraTerminoRegistro] = useState<string>("");
   const [localFato, setLocalFato] = useState<string>("");
   const [endereco, setEndereco] = useState<string>("");
   const [municipio, setMunicipio] = useState<string>("Várzea Grande");
   const [comunicante, setComunicante] = useState<string>("");
   const [guarnicao, setGuarnicao] = useState<string>("");
   const [operacao, setOperacao] = useState<string>("");
-  const [historico, setHistorico] = useState<string>("");
-  const [apreensaoDescrição, setApreensaoDescricao] = useState<string>("");
-  const [lacreNumero, setLacreNumero] = useState<string>("");
+  const [relatoPolicial, setRelatoPolicial] = useState<string>("");
+  const [relatoAutor, setRelatoAutor] = useState<string>("");
+  const [relatoVitima, setRelatoVitima] = useState<string>("");
+  const [relatoTestemunha, setRelatoTestemunha] = useState<string>("");
+  const [apreensoes, setApreensoes] = useState<string>("");
+  const [conclusaoPolicial, setConclusaoPolicial] = useState<string>("");
+  const [providencias, setProvidencias] = useState<string>("");
+  const [documentosAnexos, setDocumentosAnexos] = useState<string>("");
   const [juizadoEspecialData, setJuizadoEspecialData] = useState<string>("");
   const [juizadoEspecialHora, setJuizadoEspecialHora] = useState<string>("");
   const [autores, setAutores] = useState<any[]>([]);
@@ -67,7 +74,7 @@ const TCOForm: React.FC = () => {
   const [componentesGuarnicao, setComponentesGuarnicao] = useState<any[]>([]);
   const [downloadLocal, setDownloadLocal] = useState<boolean>(false);
   const [videoLinks, setVideoLinks] = useState<any[]>([]);
-  const [apreensoes, setApreensoes] = useState<any[]>([]);
+  const [apreensoesList, setApreensoesList] = useState<any[]>([]);
   const [drogaTipo, setDrogaTipo] = useState<string>("");
   const [drogaNomeComum, setDrogaNomeComum] = useState<string>("");
   const [condutorNome, setCondutorNome] = useState<string>("");
@@ -84,17 +91,20 @@ const TCOForm: React.FC = () => {
     setHoraFato("");
     setDataInicioRegistro(new Date().toISOString().split('T')[0]);
     setHoraInicioRegistro("");
-    setDataTerminoRegistro(new Date().toISOString().split('T')[0]);
-    setHoraTerminoRegistro("");
     setLocalFato("");
     setEndereco("");
     setMunicipio("Várzea Grande");
     setComunicante("");
     setGuarnicao("");
     setOperacao("");
-    setHistorico("");
-    setApreensaoDescricao("");
-    setLacreNumero("");
+    setRelatoPolicial("");
+    setRelatoAutor("");
+    setRelatoVitima("");
+    setRelatoTestemunha("");
+    setApreensoes("");
+    setConclusaoPolicial("");
+    setProvidencias("");
+    setDocumentosAnexos("");
     setJuizadoEspecialData("");
     setJuizadoEspecialHora("");
     setAutores([]);
@@ -103,7 +113,7 @@ const TCOForm: React.FC = () => {
     setComponentesGuarnicao([]);
     setDownloadLocal(false);
     setVideoLinks([]);
-    setApreensoes([]);
+    setApreensoesList([]);
     setDrogaTipo("");
     setDrogaNomeComum("");
     setCondutorNome("");
@@ -111,6 +121,7 @@ const TCOForm: React.FC = () => {
     setCondutorRg("");
   }, []);
 
+  // Helper functions for managing arrays
   const addAutor = () => {
     setAutores([...autores, { nome: "", rg: "", cpf: "", endereco: "", celular: "", filiacaoPai: "", filiacaoMae: "", dataNascimento: "", sexo: "", profissao: "", nacionalidade: "", naturalidade: "", estadoCivil: "", grauInstrucao: "", laudoPericial: "Não", fielDepositario: "Não", objetoDepositado: "" }]);
   };
@@ -124,6 +135,12 @@ const TCOForm: React.FC = () => {
   const removeAutor = (index: number) => {
     const newAutores = [...autores];
     newAutores.splice(index, 1);
+    setAutores(newAutores);
+  };
+
+  const setAutorRelato = (index: number, relato: string) => {
+    const newAutores = [...autores];
+    newAutores[index].relato = relato;
     setAutores(newAutores);
   };
 
@@ -143,6 +160,18 @@ const TCOForm: React.FC = () => {
     setVitimas(newVitimas);
   };
 
+  const setVitimaRelato = (index: number, relato: string) => {
+    const newVitimas = [...vitimas];
+    newVitimas[index].relato = relato;
+    setVitimas(newVitimas);
+  };
+
+  const setVitimaRepresentacao = (index: number, representacao: string) => {
+    const newVitimas = [...vitimas];
+    newVitimas[index].representacao = representacao;
+    setVitimas(newVitimas);
+  };
+
   const addTestemunha = () => {
     setTestemunhas([...testemunhas, { nome: "", rg: "", cpf: "", endereco: "", celular: "" }]);
   };
@@ -156,6 +185,12 @@ const TCOForm: React.FC = () => {
   const removeTestemunha = (index: number) => {
     const newTestemunhas = [...testemunhas];
     newTestemunhas.splice(index, 1);
+    setTestemunhas(newTestemunhas);
+  };
+
+  const setTestemunhaRelato = (index: number, relato: string) => {
+    const newTestemunhas = [...testemunhas];
+    newTestemunhas[index].relato = relato;
     setTestemunhas(newTestemunhas);
   };
 
@@ -192,19 +227,19 @@ const TCOForm: React.FC = () => {
   };
 
   const addApreensao = () => {
-    setApreensoes([...apreensoes, { item: "", quantidade: "", unidade: "" }]);
+    setApreensoesList([...apreensoesList, { item: "", quantidade: "", unidade: "" }]);
   };
 
   const updateApreensao = (index: number, field: string, value: any) => {
-    const newApreensoes = [...apreensoes];
+    const newApreensoes = [...apreensoesList];
     newApreensoes[index][field] = value;
-    setApreensoes(newApreensoes);
+    setApreensoesList(newApreensoes);
   };
 
   const removeApreensao = (index: number) => {
-    const newApreensoes = [...apreensoes];
+    const newApreensoes = [...apreensoesList];
     newApreensoes.splice(index, 1);
-    setApreensoes(newApreensoes);
+    setApreensoesList(newApreensoes);
   };
 
   const handleGeneratePDF = async () => {
@@ -221,17 +256,20 @@ const TCOForm: React.FC = () => {
       horaFato,
       dataInicioRegistro,
       horaInicioRegistro,
-      dataTerminoRegistro,
-      horaTerminoRegistro,
       localFato,
       endereco,
       municipio,
       comunicante,
       guarnicao,
       operacao,
-      historico,
-      apreensaoDescrição,
-      lacreNumero,
+      relatoPolicial,
+      relatoAutor,
+      relatoVitima,
+      relatoTestemunha,
+      apreensoes,
+      conclusaoPolicial,
+      providencias,
+      documentosAnexos,
       juizadoEspecialData,
       juizadoEspecialHora,
       autores,
@@ -240,7 +278,7 @@ const TCOForm: React.FC = () => {
       componentesGuarnicao,
       downloadLocal,
       videoLinks,
-      apreensoes,
+      apreensoes: apreensoesList,
       drogaTipo,
       drogaNomeComum,
       condutorNome,
@@ -264,61 +302,9 @@ const TCOForm: React.FC = () => {
   };
 
   const handleSaveTCO = async () => {
-    if (!natureza || !dataFato || !horaFato || !localFato || !endereco || !comunicante || !guarnicao) {
-      alert("Por favor, preencha todos os campos obrigatórios.");
-      return;
-    }
-
-    const data = {
-      tcoNumber,
-      natureza,
-      customNatureza,
-      dataFato,
-      horaFato,
-      dataInicioRegistro,
-      horaInicioRegistro,
-      dataTerminoRegistro,
-      horaTerminoRegistro,
-      localFato,
-      endereco,
-      municipio,
-      comunicante,
-      guarnicao,
-      operacao,
-      historico,
-      apreensaoDescrição,
-      lacreNumero,
-      juizadoEspecialData,
-      juizadoEspecialHora,
-      autores,
-      vitimas,
-      testemunhas,
-      componentesGuarnicao,
-      videoLinks,
-      apreensoes,
-      drogaTipo,
-      drogaNomeComum,
-      condutorNome,
-      condutorPosto,
-      condutorRg
-    };
-
-    try {
-      const { error } = await supabase
-        .from('tcos')
-        .insert([data]);
-
-      if (error) {
-        console.error("Erro ao salvar o TCO:", error);
-        alert("Erro ao salvar o TCO.");
-      } else {
-        alert("TCO salvo com sucesso!");
-        resetForm();
-      }
-    } catch (error) {
-      console.error("Erro ao salvar o TCO:", error);
-      alert("Erro ao salvar o TCO.");
-    }
+    // Note: Saving to database is disabled as 'tcos' table doesn't exist
+    // This would require creating the proper table structure first
+    alert("Funcionalidade de salvamento temporariamente desabilitada. Use apenas a geração de PDF.");
   };
 
   return (
@@ -346,6 +332,7 @@ const TCOForm: React.FC = () => {
           <TabsTrigger value="guarnicao">Guarnição</TabsTrigger>
           <TabsTrigger value="drogas">Verificação de Drogas</TabsTrigger>
         </TabsList>
+        
         <TabsContent value="geral">
           <GeneralInformationTab
             natureza={natureza}
@@ -360,8 +347,8 @@ const TCOForm: React.FC = () => {
             dataInicioRegistro={dataInicioRegistro}
             horaInicioRegistro={horaInicioRegistro}
             setHoraInicioRegistro={setHoraInicioRegistro}
-            dataTerminoRegistro={dataTerminoRegistro}
-            horaTerminoRegistro={horaTerminoRegistro}
+            dataTerminoRegistro=""
+            horaTerminoRegistro=""
             localFato={localFato}
             setLocalFato={setLocalFato}
             endereco={endereco}
@@ -378,46 +365,52 @@ const TCOForm: React.FC = () => {
             condutorRg={condutorRg}
           />
         </TabsContent>
+        
         <TabsContent value="pessoas">
           <PessoasEnvolvidasTab
             autores={autores}
-            addAutor={addAutor}
-            updateAutor={updateAutor}
-            removeAutor={removeAutor}
             vitimas={vitimas}
-            addVitima={addVitima}
-            updateVitima={updateVitima}
-            removeVitima={removeVitima}
             testemunhas={testemunhas}
-            addTestemunha={addTestemunha}
-            updateTestemunha={updateTestemunha}
-            removeTestemunha={removeTestemunha}
             videoLinks={videoLinks}
-            addVideoLink={addVideoLink}
+            updateAutor={updateAutor}
+            updateVitima={updateVitima}
+            updateTestemunha={updateTestemunha}
             updateVideoLink={updateVideoLink}
-            removeVideoLink={removeVideoLink}
           />
         </TabsContent>
+        
         <TabsContent value="historico">
           <HistoricoTab
-            historico={historico}
-            setHistorico={setHistorico}
-            apreensaoDescrição={apreensaoDescrição}
-            setApreensaoDescricao={setApreensaoDescricao}
-            lacreNumero={lacreNumero}
-            setLacreNumero={setLacreNumero}
-            juizadoEspecialData={juizadoEspecialData}
-            setJuizadoEspecialData={setJuizadoEspecialData}
-            juizadoEspecialHora={juizadoEspecialHora}
-            setJuizadoEspecialHora={setJuizadoEspecialHora}
+            relatoPolicial={relatoPolicial}
+            setRelatoPolicial={setRelatoPolicial}
+            relatoAutor={relatoAutor}
+            setRelatoAutor={setRelatoAutor}
+            relatoVitima={relatoVitima}
+            setRelatoVitima={setRelatoVitima}
+            relatoTestemunha={relatoTestemunha}
+            setRelatoTestemunha={setRelatoTestemunha}
+            apreensoes={apreensoes}
+            setApreensoes={setApreensoes}
+            conclusaoPolicial={conclusaoPolicial}
+            setConclusaoPolicial={setConclusaoPolicial}
+            natureza={natureza}
+            providencias={providencias}
+            setProvidencias={setProvidencias}
+            documentosAnexos={documentosAnexos}
+            setDocumentosAnexos={setDocumentosAnexos}
+            vitimas={vitimas}
+            setVitimaRelato={setVitimaRelato}
+            setVitimaRepresentacao={setVitimaRepresentacao}
+            testemunhas={testemunhas}
+            setTestemunhaRelato={setTestemunhaRelato}
+            autores={autores}
+            setAutorRelato={setAutorRelato}
           />
         </TabsContent>
+        
         <TabsContent value="guarnicao">
           <GuarnicaoTab
-            componentesGuarnicao={componentesGuarnicao}
-            addGuarnicao={addGuarnicao}
-            updateGuarnicao={updateGuarnicao}
-            removeGuarnicao={removeGuarnicao}
+            componentes={componentesGuarnicao}
             condutorNome={condutorNome}
             setCondutorNome={setCondutorNome}
             condutorPosto={condutorPosto}
@@ -426,16 +419,23 @@ const TCOForm: React.FC = () => {
             setCondutorRg={setCondutorRg}
           />
         </TabsContent>
+        
         <TabsContent value="drogas">
           <DrugVerificationTab
-            apreensoes={apreensoes}
-            addApreensao={addApreensao}
-            updateApreensao={updateApreensao}
-            removeApreensao={removeApreensao}
-            drogaTipo={drogaTipo}
-            setDrogaTipo={setDrogaTipo}
-            drogaNomeComum={drogaNomeComum}
-            setDrogaNomeComum={setDrogaNomeComum}
+            quantidade=""
+            setQuantidade={() => {}}
+            substancia=""
+            setSubstancia={() => {}}
+            cor=""
+            setCor={() => {}}
+            odor=""
+            setOdor={() => {}}
+            indicios=""
+            customMaterialDesc=""
+            setCustomMaterialDesc={() => {}}
+            isUnknownMaterial={false}
+            lacreNumero=""
+            setLacreNumero={() => {}}
           />
         </TabsContent>
       </Tabs>
@@ -447,6 +447,7 @@ const TCOForm: React.FC = () => {
         <Button onClick={handleSaveTCO}>Salvar TCO</Button>
         <Button onClick={handleGeneratePDF}>Gerar PDF</Button>
       </div>
+      
       <div className="mt-4">
         <Label htmlFor="downloadLocal" className="mr-2">Salvar PDF localmente?</Label>
         <input
