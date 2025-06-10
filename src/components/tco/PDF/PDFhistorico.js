@@ -1,3 +1,4 @@
+
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -29,6 +30,14 @@ const naturezaTipificacoes = {
     "Desobediência": "ART. 330 DO CÓDIGO PENAL",
     "Desacato": "ART. 331 DO CÓDIGO PENAL",
     "Exercício arbitrário das próprias razões": "ART. 345 DO CÓDIGO PENAL",
+};
+
+// Função para garantir que um valor seja uma string válida
+const ensureString = (value) => {
+    if (value === null || value === undefined || value === '') {
+        return 'Não informado';
+    }
+    return String(value);
 };
 
 // Função para calcular a tipificação completa baseada nas naturezas
@@ -117,15 +126,15 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     const { PAGE_WIDTH, MAX_LINE_WIDTH, PAGE_HEIGHT, MARGIN_TOP } = getPageConstants(doc);
     const isDrugCase = data.natureza === "Porte de drogas para consumo";
 
-    // Convert general information data to uppercase
+    // Convert general information data to uppercase with safety checks
     const upperCaseData = {
         ...data,
-        natureza: data.natureza ? data.natureza.toUpperCase() : '',
-        tipificacao: data.tipificacao ? data.tipificacao.toUpperCase() : '',
-        localFato: data.localFato ? data.localFato.toUpperCase() : '',
-        endereco: data.endereco ? data.endereco.toUpperCase() : '',
-        municipio: data.municipio ? data.municipio.toUpperCase() : '',
-        comunicante: data.comunicante ? data.comunicante.toUpperCase() : '',
+        natureza: ensureString(data.natureza).toUpperCase(),
+        tipificacao: ensureString(data.tipificacao).toUpperCase(),
+        localFato: ensureString(data.localFato).toUpperCase(),
+        endereco: ensureString(data.endereco).toUpperCase(),
+        municipio: ensureString(data.municipio).toUpperCase(),
+        comunicante: ensureString(data.comunicante).toUpperCase(),
     };
 
     // Calcular a tipificação completa corretamente
@@ -134,7 +143,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     // --- SEÇÃO 1: DADOS GERAIS ---
     yPos = addSectionTitle(doc, yPos, "DADOS GERAIS E IDENTIFICADORES DA OCORRÊNCIA", "1", 1, data);
     yPos = addField(doc, yPos, "NATUREZA DA OCORRÊNCIA", upperCaseData.natureza, data);
-    yPos = addField(doc, yPos, "TIPIFICAÇÃO LEGAL", tipificacaoCompleta.toUpperCase(), data);
+    yPos = addField(doc, yPos, "TIPIFICAÇÃO LEGAL", ensureString(tipificacaoCompleta).toUpperCase(), data);
     yPos = addField(doc, yPos, "DATA E HORA DO FATO", formatarDataHora(data.dataFato, data.horaFato), data);
     yPos = addField(doc, yPos, "DATA E HORA DO INÍCIO DO REGISTRO", formatarDataHora(data.dataInicioRegistro, data.horaInicioRegistro), data);
     yPos = addField(doc, yPos, "DATA E HORA DO TÉRMINO DO REGISTRO", formatarDataHora(data.dataTerminoRegistro, data.horaTerminoRegistro), data);
@@ -147,27 +156,27 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     let currentSectionNumber = 2.1;
 
     // Autores
-    const autoresValidos = data.autores ? data.autores.filter(a => a?.nome) : [];
+    const autoresValidos = data.autores ? data.autores.filter(a => a?.nome && a.nome.trim() !== '') : [];
     if (autoresValidos.length > 0) {
         autoresValidos.forEach((autor, index) => {
-            const autorTitle = `AUTOR ${autor.nome.toUpperCase()}`;
+            const autorTitle = `AUTOR ${ensureString(autor.nome).toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, autorTitle, currentSectionNumber.toFixed(1), 2, data);
             currentSectionNumber += 0.1;
 
             const upperAutor = {
                 ...autor,
-                nome: autor.nome ? autor.nome.toUpperCase() : 'Não Informado',
-                sexo: autor.sexo ? autor.sexo.toUpperCase() : 'Não Informado',
-                estadoCivil: autor.estadoCivil ? autor.estadoCivil.toUpperCase() : 'Não Informado',
-                profissao: autor.profissao ? autor.profissao.toUpperCase() : 'Não Informado',
-                endereco: autor.endereco ? autor.endereco.toUpperCase() : 'Não Informado',
-                naturalidade: autor.naturalidade ? autor.naturalidade.toUpperCase() : 'Não Informado',
-                filiacaoMae: autor.filiacaoMae ? autor.filiacaoMae.toUpperCase() : 'Não Informado',
-                filiacaoPai: autor.filiacaoPai ? autor.filiacaoPai.toUpperCase() : 'Não Informado',
-                rg: autor.rg ? autor.rg.toUpperCase() : 'Não Informado',
-                cpf: autor.cpf ? autor.cpf.toUpperCase() : 'Não Informado',
-                celular: autor.celular ? autor.celular.toUpperCase() : 'Não Informado',
-                email: autor.email ? autor.email.toUpperCase() : 'Não Informado',
+                nome: ensureString(autor.nome).toUpperCase(),
+                sexo: ensureString(autor.sexo).toUpperCase(),
+                estadoCivil: ensureString(autor.estadoCivil).toUpperCase(),
+                profissao: ensureString(autor.profissao).toUpperCase(),
+                endereco: ensureString(autor.endereco).toUpperCase(),
+                naturalidade: ensureString(autor.naturalidade).toUpperCase(),
+                filiacaoMae: ensureString(autor.filiacaoMae).toUpperCase(),
+                filiacaoPai: ensureString(autor.filiacaoPai).toUpperCase(),
+                rg: ensureString(autor.rg).toUpperCase(),
+                cpf: ensureString(autor.cpf).toUpperCase(),
+                celular: ensureString(autor.celular).toUpperCase(),
+                email: ensureString(autor.email).toUpperCase(),
             };
 
             yPos = addField(doc, yPos, "NOME", upperAutor.nome, data);
@@ -197,27 +206,27 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
     // Vítimas
     if (!isDrugCase) {
-        const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome) : [];
+        const vitimasValidas = data.vitimas ? data.vitimas.filter(v => v?.nome && v.nome.trim() !== '') : [];
         if (vitimasValidas.length > 0) {
             vitimasValidas.forEach((vitima, index) => {
-                const vitimaTitle = `VÍTIMA ${vitima.nome.toUpperCase()}`;
+                const vitimaTitle = `VÍTIMA ${ensureString(vitima.nome).toUpperCase()}`;
                 yPos = addSectionTitle(doc, yPos, vitimaTitle, currentSectionNumber.toFixed(1), 2, data);
                 currentSectionNumber += 0.1;
 
                 const upperVitima = {
                     ...vitima,
-                    nome: vitima.nome ? vitima.nome.toUpperCase() : 'Não Informado',
-                    sexo: vitima.sexo ? vitima.sexo.toUpperCase() : 'Não Informado',
-                    estadoCivil: vitima.estadoCivil ? vitima.estadoCivil.toUpperCase() : 'Não Informado',
-                    profissao: vitima.profissao ? vitima.profissao.toUpperCase() : 'Não Informado',
-                    endereco: vitima.endereco ? vitima.endereco.toUpperCase() : 'Não Informado',
-                    naturalidade: vitima.naturalidade ? vitima.naturalidade.toUpperCase() : 'Não Informado',
-                    filiacaoMae: vitima.filiacaoMae ? vitima.filiacaoMae.toUpperCase() : 'Não Informado',
-                    filiacaoPai: vitima.filiacaoPai ? vitima.filiacaoPai.toUpperCase() : 'Não Informado',
-                    rg: vitima.rg ? vitima.rg.toUpperCase() : 'Não Informado',
-                    cpf: vitima.cpf ? vitima.cpf.toUpperCase() : 'Não Informado',
-                    celular: vitima.celular ? vitima.celular.toUpperCase() : 'Não Informado',
-                    email: vitima.email ? vitima.email.toUpperCase() : 'Não Informado',
+                    nome: ensureString(vitima.nome).toUpperCase(),
+                    sexo: ensureString(vitima.sexo).toUpperCase(),
+                    estadoCivil: ensureString(vitima.estadoCivil).toUpperCase(),
+                    profissao: ensureString(vitima.profissao).toUpperCase(),
+                    endereco: ensureString(vitima.endereco).toUpperCase(),
+                    naturalidade: ensureString(vitima.naturalidade).toUpperCase(),
+                    filiacaoMae: ensureString(vitima.filiacaoMae).toUpperCase(),
+                    filiacaoPai: ensureString(vitima.filiacaoPai).toUpperCase(),
+                    rg: ensureString(vitima.rg).toUpperCase(),
+                    cpf: ensureString(vitima.cpf).toUpperCase(),
+                    celular: ensureString(vitima.celular).toUpperCase(),
+                    email: ensureString(vitima.email).toUpperCase(),
                 };
 
                 yPos = addField(doc, yPos, "NOME", upperVitima.nome, data);
@@ -247,27 +256,27 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     }
 
     // Testemunhas
-    const testemunhasValidas = data.testemunhas ? data.testemunhas.filter(t => t?.nome) : [];
+    const testemunhasValidas = data.testemunhas ? data.testemunhas.filter(t => t?.nome && t.nome.trim() !== '') : [];
     if (testemunhasValidas.length > 0) {
         testemunhasValidas.forEach((testemunha, index) => {
-            const testemunhaTitle = `TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
+            const testemunhaTitle = `TESTEMUNHA ${ensureString(testemunha.nome).toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, testemunhaTitle, currentSectionNumber.toFixed(1), 2, data);
             currentSectionNumber += 0.1;
 
             const upperTestemunha = {
                 ...testemunha,
-                nome: testemunha.nome ? testemunha.nome.toUpperCase() : 'Não Informado',
-                sexo: testemunha.sexo ? testemunha.sexo.toUpperCase() : 'Não Informado',
-                estadoCivil: testemunha.estadoCivil ? testemunha.estadoCivil.toUpperCase() : 'Não Informado',
-                profissao: testemunha.profissao ? testemunha.profissao.toUpperCase() : 'Não Informado',
-                endereco: testemunha.endereco ? testemunha.endereco.toUpperCase() : 'Não Informado',
-                naturalidade: testemunha.naturalidade ? testemunha.naturalidade.toUpperCase() : 'Não Informado',
-                filiacaoMae: testemunha.filiacaoMae ? testemunha.filiacaoMae.toUpperCase() : 'Não Informado',
-                filiacaoPai: testemunha.filiacaoPai ? testemunha.filiacaoPai.toUpperCase() : 'Não Informado',
-                rg: testemunha.rg ? testemunha.rg.toUpperCase() : 'Não Informado',
-                cpf: testemunha.cpf ? testemunha.cpf.toUpperCase() : 'Não Informado',
-                celular: testemunha.celular ? testemunha.celular.toUpperCase() : 'Não Informado',
-                email: testemunha.email ? testemunha.email.toUpperCase() : 'Não Informado',
+                nome: ensureString(testemunha.nome).toUpperCase(),
+                sexo: ensureString(testemunha.sexo).toUpperCase(),
+                estadoCivil: ensureString(testemunha.estadoCivil).toUpperCase(),
+                profissao: ensureString(testemunha.profissao).toUpperCase(),
+                endereco: ensureString(testemunha.endereco).toUpperCase(),
+                naturalidade: ensureString(testemunha.naturalidade).toUpperCase(),
+                filiacaoMae: ensureString(testemunha.filiacaoMae).toUpperCase(),
+                filiacaoPai: ensureString(testemunha.filiacaoPai).toUpperCase(),
+                rg: ensureString(testemunha.rg).toUpperCase(),
+                cpf: ensureString(testemunha.cpf).toUpperCase(),
+                celular: ensureString(testemunha.celular).toUpperCase(),
+                email: ensureString(testemunha.email).toUpperCase(),
             };
 
             yPos = addField(doc, yPos, "NOME", upperTestemunha.nome, data);
@@ -292,16 +301,15 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
 
     // --- SEÇÃO 3: HISTÓRICO ---
     const primeiroAutor = autoresValidos.length > 0 ? autoresValidos[0] : null;
-    const vitimasComRelato = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome) : []) : [];
+    const vitimasComRelato = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome && v.nome.trim() !== '') : []) : [];
     const testemunhasComRelato = data.testemunhas ? data.testemunhas.filter(t => t?.nome && t.nome.trim() !== "") : [];
-
 
     let historicoSectionNumber = 3.1;
 
     yPos = addSectionTitle(doc, yPos, "HISTÓRICO", "3", 1, data);
     yPos = addSectionTitle(doc, yPos, "RELATO DO POLICIAL MILITAR", historicoSectionNumber.toFixed(1), 2, data);
     historicoSectionNumber += 0.1;
-    yPos = addWrappedText(doc, yPos, data.relatoPolicial || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, ensureString(data.relatoPolicial), MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     let tituloRelatoAutor = "RELATO DO(A) AUTOR(A) DO FATO";
@@ -318,50 +326,50 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     
     yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, historicoSectionNumber.toFixed(1), 2, data);
     historicoSectionNumber += 0.1;
-    yPos = addWrappedText(doc, yPos, data.relatoAutor || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, ensureString(data.relatoAutor), MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     if (primeiroAutor) {
-        yPos = addSignatureWithNameAndRole(doc, yPos, primeiroAutor.nome, autorRole, data);
+        yPos = addSignatureWithNameAndRole(doc, yPos, ensureString(primeiroAutor.nome), autorRole, data);
     } else {
         yPos += 10;
     }
 
     if (!isDrugCase && vitimasComRelato.length > 0) {
         vitimasComRelato.forEach((vitima, index) => {
-            const tituloRelatoVitima = `RELATO DA VÍTIMA ${vitima.nome.toUpperCase()}`;
+            const tituloRelatoVitima = `RELATO DA VÍTIMA ${ensureString(vitima.nome).toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, tituloRelatoVitima, historicoSectionNumber.toFixed(1), 2, data);
             historicoSectionNumber += 0.1;
-            const relatoVitimaText = vitima.relato || "Relato não fornecido pela vítima.";
+            const relatoVitimaText = ensureString(vitima.relato || "Relato não fornecido pela vítima.");
             yPos = addWrappedText(doc, yPos, relatoVitimaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-            yPos = addSignatureWithNameAndRole(doc, yPos, vitima.nome, "VÍTIMA", data);
+            yPos = addSignatureWithNameAndRole(doc, yPos, ensureString(vitima.nome), "VÍTIMA", data);
         });
     }
 
     if (testemunhasComRelato.length > 0) {
         testemunhasComRelato.forEach((testemunha, index) => {
-            const tituloRelatoTestemunha = `RELATO DA TESTEMUNHA ${testemunha.nome.toUpperCase()}`;
+            const tituloRelatoTestemunha = `RELATO DA TESTEMUNHA ${ensureString(testemunha.nome).toUpperCase()}`;
             yPos = addSectionTitle(doc, yPos, tituloRelatoTestemunha, historicoSectionNumber.toFixed(1), 2, data);
             historicoSectionNumber += 0.1;
-            const relatoTestemunhaText = testemunha.relato || "A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.";
+            const relatoTestemunhaText = ensureString(testemunha.relato || "A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.");
             yPos = addWrappedText(doc, yPos, relatoTestemunhaText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-            yPos = addSignatureWithNameAndRole(doc, yPos, testemunha.nome, "TESTEMUNHA", data);
+            yPos = addSignatureWithNameAndRole(doc, yPos, ensureString(testemunha.nome), "TESTEMUNHA", data);
         });
     }
     
     yPos = addSectionTitle(doc, yPos, "CONCLUSÃO DO POLICIAL", historicoSectionNumber.toFixed(1), 2, data);
-    yPos = addWrappedText(doc, yPos, data.conclusaoPolicial || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, ensureString(data.conclusaoPolicial), MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     // --- SEÇÃO 4: PROVIDÊNCIAS ---
     yPos = addSectionTitle(doc, yPos, "PROVIDÊNCIAS", "4", 1, data);
-    yPos = addWrappedText(doc, yPos, data.providencias || "Não Informado", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos = addWrappedText(doc, yPos, ensureString(data.providencias), MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
     yPos = addSectionTitle(doc, yPos, "DOCUMENTOS ANEXOS", "4.1", 2, data);
-    yPos = addWrappedText(doc, yPos, data.documentosAnexos || "Nenhum.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
+    yPos = addWrappedText(doc, yPos, ensureString(data.documentosAnexos || "Nenhum."), MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
     yPos += 2;
 
     yPos = addSectionTitle(doc, yPos, "DESCRIÇÃO DOS OBJETOS/DOCUMENTOS APREENDIDOS", "4.2", 2, data);
-    yPos = addWrappedText(doc, yPos, data.apreensaoDescricao || data.apreensoes || "Nenhum.", MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
+    yPos = addWrappedText(doc, yPos, ensureString(data.apreensaoDescricao || data.apreensoes || "Nenhum."), MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
     yPos += 2;
 
     const hasPhotos = data.objetosApreendidos && data.objetosApreendidos.length > 0;
@@ -411,9 +419,9 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
                     const label = typeof videoLink === 'object' && videoLink.descricao
                         ? videoLink.descricao
                         : `Vídeo ${i + 1}`;
-                    const textWidth = doc.getTextWidth(label);
+                    const textWidth = doc.getTextWidth(ensureString(label));
                     const centerX = currentX + (qrSize / 2) - (textWidth / 2);
-                    doc.text(label, centerX, currentY + qrSize + 5);
+                    doc.text(ensureString(label), centerX, currentY + qrSize + 5);
                 } catch (error) {
                     console.error(`Erro ao gerar QR Code para vídeo ${i+1}:`, error);
                     doc.setFontSize(8);
@@ -446,19 +454,19 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             let spaceToReserve = currentOfficerContentHeight;
             
             if (index > 0) {
-                spaceToReserve += 10; // <<< ALTERAÇÃO AQUI: Espaçamento reduzido para metade
+                spaceToReserve += 10; // Espaçamento reduzido para metade
             }
             
             yPos = checkPageBreak(doc, yPos, spaceToReserve, data);
             
             if (index > 0) {
-                yPos += 10; // <<< ALTERAÇÃO AQUI: Espaçamento reduzido para metade
+                yPos += 10; // Espaçamento reduzido para metade
             }
             
-            let nomeDisplay = componente.nome ? componente.nome.toUpperCase() : "NOME Não Informado";
+            let nomeDisplay = ensureString(componente.nome).toUpperCase();
             yPos = addField(doc, yPos, "NOME COMPLETO", nomeDisplay, data);
-            yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", componente.posto ? componente.posto.toUpperCase() : "POSTO Não Informado", data);
-            yPos = addField(doc, yPos, "RG PMMT", componente.rg || "RG Não Informado", data);
+            yPos = addField(doc, yPos, "POSTO/GRADUAÇÃO", ensureString(componente.posto).toUpperCase(), data);
+            yPos = addField(doc, yPos, "RG PMMT", ensureString(componente.rg), data);
             
             yPos = checkPageBreak(doc, yPos, 7, data);
             
@@ -486,9 +494,9 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             
             componentesApoio.forEach((componente, index) => {
                 yPos = checkPageBreak(doc, yPos, 6, data);
-                const posto = componente.posto ? componente.posto.toUpperCase() : "POSTO Não Informado";
-                const nome = componente.nome ? componente.nome.toUpperCase() : "NOME Não Informado";
-                const rg = componente.rg || "RG Não Informado";
+                const posto = ensureString(componente.posto).toUpperCase();
+                const nome = ensureString(componente.nome).toUpperCase();
+                const rg = ensureString(componente.rg);
                 const textoApoio = `${posto} ${nome} - RG: ${rg}`;
                 doc.text(textoApoio, MARGIN_LEFT + 5, yPos);
                 yPos += 6;
