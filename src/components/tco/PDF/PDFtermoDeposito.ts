@@ -20,7 +20,8 @@ export const addTermoDeposito = (doc: jsPDF, data: any) => {
     // Find the FIRST author who is designated as a faithful depositary
     const depositario = data.autores?.find((a: any) =>
         a &&
-        typeof a.fielDepositario === 'string' && a.fielDepositario.trim().toLowerCase() === 'Sim' &&
+        typeof a.fielDepositario === 'string' &&
+        a.fielDepositario.trim().toLowerCase().startsWith('sim') &&
         typeof a.nome === 'string' && a.nome.trim() !== ''
     );
 
