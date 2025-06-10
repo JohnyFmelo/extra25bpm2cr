@@ -1,5 +1,6 @@
+
 import jsPDF from 'jspdf';
-import { getPageConstants, addNewPage, addStandardFooterContent, addLine } from './pdfUtils.js';
+import { getPageConstants, addNewPage, addStandardFooterContent } from './pdfUtils.js';
 
 const drawTableCell = (doc: jsPDF, text: string, x: number, y: number, width: number, height: number) => {
     doc.rect(x, y, width, height);
@@ -67,8 +68,9 @@ export const addTermoDeposito = (doc: jsPDF, data: any) => {
         y += 15;
         write(`RECEBI OS BENS DEPOSITADOS EM: ${dataHoje}`, y); y += 25;
         
-        // Fiel Depositario Signature
-        addLine(doc, MARGIN_LEFT + 40, y, PAGE_WIDTH - MARGIN_RIGHT - 40);
+        // Fiel Depositario Signature - using doc.line directly instead of addLine
+        doc.setLineWidth(0.3);
+        doc.line(MARGIN_LEFT + 40, y, PAGE_WIDTH - MARGIN_RIGHT - 40, y);
         doc.text(`${depositario.nome.toUpperCase()}`, PAGE_WIDTH / 2, y + 5, { align: 'center' });
         doc.text("Fiel Depositário", PAGE_WIDTH / 2, y + 10, { align: 'center' });
         y += 25;

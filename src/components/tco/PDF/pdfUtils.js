@@ -1,3 +1,4 @@
+
 // src/components/tco/PDF/pdfUtils.js
 
 // --- Constantes ---
@@ -132,6 +133,11 @@ export const formatarDataHora = (dataInput, horaInput) => {
     return `${dataFormatada} - ${horaMinuto}`;
 };
 
+/** Adiciona uma linha simples no documento */
+export const addLine = (doc, x1, y, x2) => {
+    doc.setLineWidth(0.3);
+    doc.line(x1, y, x2, y);
+};
 
 // --- Funções Auxiliares de Geração de PDF ---
 
