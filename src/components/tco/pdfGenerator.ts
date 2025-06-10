@@ -5,7 +5,7 @@ import {
     MARGIN_TOP, MARGIN_BOTTOM, MARGIN_RIGHT, getPageConstants,
     addNewPage,
     addStandardFooterContent
-} from './PDF/pdfUtils.js';
+} from './PDF/pdfUtils.js'; // Ensure MARGIN_TOP etc. are exported or correctly used locally
 
 // Importa geradores de conteúdo da subpasta PDF
 import { generateAutuacaoPage } from './PDF/PDFautuacao.js';
@@ -13,7 +13,7 @@ import { generateHistoricoContent } from './PDF/PDFhistorico.js';
 import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
 import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
-import { addTermoDeposito } from './PDF/PDFtermoDeposito.js';
+import { addTermoDeposito } from './PDF/PDFtermoDeposito.js'; // This is our target
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
@@ -23,301 +23,268 @@ import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.j
  * Remove acentos e caracteres especiais de uma string
  */
 const removeAccents = (str: string): string => {
+    if (typeof str !== 'string') return ''; // Guard clause
     return str
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
-        .replace(/[^a-zA-Z0-9_-]/g, '_') // Substitui caracteres especiais por underscore
-        .replace(/_+/g, '_') // Remove underscores consecutivos
-        .replace(/^_|_$/g, ''); // Remove underscores no início e fim
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
 };
 
 /**
  * Gera o nome do arquivo TCO no formato específico pedido
- * TCO_[número]_[data]_[natureza]_[RGPM condutor][RGPMs outros].[RGPMs apoio]
  */
 export const generateTCOFilename = (data: any): string => {
-    console.log("Gerando nome do arquivo TCO", data);
+    // console.log("Gerando nome do arquivo TCO, dados recebidos:", data ? "OK" : "NULL/UNDEFINED");
 
-    // Processar o número do TCO
-    const tcoNum = data.tcoNumber?.trim() || 'SEM_NUMERO';
+    const tcoNum = data?.tcoNumber?.trim() || 'SEM_NUMERO';
 
-    // Formatar data do evento (DD-MM-YYYY) - usando hífen em vez de ponto
-    const eventDate = data.dataFato ? data.dataFato.split('-') : [];
-    const formattedDate = eventDate.length === 3 ?
-        `${eventDate[2]}-${eventDate[1]}-${eventDate[0]}` :
+    const eventDateParts = data?.dataFato ? String(data.dataFato).split('-') : [];
+    const formattedDate = eventDateParts.length === 3 ?
+        `${eventDateParts[2]}-${eventDateParts[1]}-${eventDateParts[0]}` :
         new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
 
-    // Obter natureza e remover acentos/caracteres especiais
-    let natureza = data.natureza === "Outros" && data.customNatureza ?
+    let natureza = (data?.natureza === "Outros" && data?.customNatureza) ?
         data.customNatureza.trim() :
-        data.natureza || 'Sem_Natureza';
+        (data?.natureza || 'Sem_Natureza');
 
-    // Limpar a natureza para o nome do arquivo
     natureza = removeAccents(natureza);
-    console.log("Natureza formatada para o nome do arquivo:", natureza);
+    // console.log("Natureza formatada para o nome do arquivo:", natureza);
 
-    // Processar RGPMs dos componentes da guarnição
-    const componentes = Array.isArray(data.componentesGuarnicao) ? data.componentesGuarnicao : [];
-
-    // Separar em principais e apoio
+    const componentes = Array.isArray(data?.componentesGuarnicao) ? data.componentesGuarnicao : [];
     const principais = componentes.filter(c => c && c.rg && !c.apoio);
     const apoio = componentes.filter(c => c && c.rg && c.apoio);
 
-    // Garantir que há pelo menos um componente principal (condutor)
     if (principais.length === 0 && apoio.length > 0) {
-        principais.push({ ...apoio.shift(), apoio: false });
+        const firstApoio = apoio.shift();
+        if (firstApoio) principais.push({ ...firstApoio, apoio: false });
     }
 
-    // Extrair apenas os dígitos dos RGs
-    const rgsPrincipais = principais.map(p => p.rg.replace(/\D/g, ''));
-    const rgsApoio = apoio.map(p => p.rg.replace(/\D/g, ''));
+    const rgsPrincipais = principais.map(p => String(p.rg || '').replace(/\D/g, ''));
+    const rgsApoio = apoio.map(p => String(p.rg || '').replace(/\D/g, ''));
 
-    console.log("RGs Principais:", rgsPrincipais);
-    console.log("RGs Apoio:", rgsApoio);
-
-    // Construir a parte do código de barras do nome do arquivo
     let rgCode = rgsPrincipais.length > 0 ? rgsPrincipais.join('') : 'RG_INDISPONIVEL';
-
-    // Adicionar RGs de apoio com hífen separador, se existirem
     if (rgsApoio.length > 0) {
         rgCode += '-' + rgsApoio.join('');
     }
 
-    // Construir o nome do arquivo final
     const fileName = `TCO_${tcoNum}_${formattedDate}_${natureza}_${rgCode}.pdf`;
-    console.log("Nome do arquivo TCO gerado:", fileName);
+    // console.log("Nome do arquivo TCO gerado:", fileName);
     return fileName;
 };
 
 // --- Função Principal de Geração ---
 export const generatePDF = async (inputData: any): Promise<Blob> => {
     return new Promise((resolve, reject) => {
-        // Set timeout to prevent infinite processing
-        const timeout = setTimeout(() => {
+        const timeoutId = setTimeout(() => { // Store timeoutId
+            console.warn("[pdfGenerator] PDF generation timeout reached.");
             reject(new Error("Tempo limite excedido ao gerar PDF. Por favor, tente novamente."));
-        }, 60000); // 60 segundos de timeout
+        }, 90000); // Increased timeout to 90 seconds
 
         try {
             if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
-                clearTimeout(timeout);
+                clearTimeout(timeoutId);
                 reject(new Error("Dados inválidos para gerar o PDF."));
                 return;
             }
 
-            // Validar data e hora da audiência no juizado especial
             const juizadoData = inputData.juizadoEspecialData || inputData.dataAudiencia;
             const juizadoHora = inputData.juizadoEspecialHora || inputData.horaAudiencia;
 
             if (!juizadoData || !juizadoHora) {
-                clearTimeout(timeout);
+                clearTimeout(timeoutId);
                 reject(new Error("É necessário informar a data e hora de apresentação no Juizado Especial."));
                 return;
             }
 
-            // Cria a instância do jsPDF
             const doc = new jsPDF({
                 orientation: "portrait",
                 unit: "mm",
                 format: "a4",
             });
 
-            // Processar links de vídeo para garantir compatibilidade
             let processedVideoLinks = inputData.videoLinks;
             if (processedVideoLinks && Array.isArray(processedVideoLinks)) {
-                // Normaliza os links de vídeo para o formato esperado
                 processedVideoLinks = processedVideoLinks.map((link, index) => {
-                    if (typeof link === 'string') {
-                        return { url: link, descricao: `Vídeo ${index + 1}` };
-                    }
-                    return link;
+                    return (typeof link === 'string') ? { url: link, descricao: `Vídeo ${index + 1}` } : link;
                 });
             }
 
-            // Clona os dados para evitar mutações inesperadas
             const data = {
                 ...inputData,
-                // Garante que os dados do juizado estão disponíveis para o termo de compromisso
                 juizadoEspecialData: juizadoData,
                 juizadoEspecialHora: juizadoHora,
                 videoLinks: processedVideoLinks,
-                // Flag para desativar a paginação - sempre definida como true para ocultar paginação
-                hidePagination: true
+                hidePagination: true // Usually you want pagination for multi-page docs unless specifically off
             };
 
-            // Pega as constantes da página
-            const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
+            const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc); // Ensure these are used or remove if not.
             let yPosition;
 
-            // --- PÁGINA 1: AUTUAÇÃO ---
-            yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
+            yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data); // MARGIN_TOP must be defined/imported
+            yPosition = addNewPage(doc, data); // Start a new page for main content after autuacao
 
-            // --- RESTANTE DO TCO (PÁGINAS 2+) ---
-            yPosition = addNewPage(doc, data);
-
-            // --- Preparar a lista de documentos anexos ---
-            const isDroga = data.natureza === "Porte de drogas para consumo";
+            const isDroga = data.natureza === "Porte de drogas para consumo"; // Adjust if your logic is more complex
             const documentosAnexosList = [];
 
-            // Adicionar termo de compromisso para cada autor
-            if (data.autores && data.autores.length > 0) {
+            if (Array.isArray(data.autores) && data.autores.length > 0) {
                 data.autores.forEach((autor: any) => {
-                    if (autor.nome && autor.nome.trim()) {
-                        documentosAnexosList.push(`TERMO DE COMPROMISSO DE ${autor.nome.toUpperCase()}`);
+                    if (autor?.nome?.trim()) {
+                        documentosAnexosList.push(`TERMO DE COMPROMISSO DE ${autor.nome.trim().toUpperCase()}`);
                     }
                 });
             }
 
-            // Adicionar termo de manifestação para cada vítima se não for caso de droga
-            if (!isDroga && data.vitimas && data.vitimas.length > 0) {
+            if (!isDroga && Array.isArray(data.vitimas) && data.vitimas.length > 0) {
                 data.vitimas.forEach((vitima: any) => {
-                    if (vitima.nome && vitima.nome.trim()) {
-                        documentosAnexosList.push(`TERMO DE MANIFESTAÇÃO DA VÍTIMA ${vitima.nome.toUpperCase()}`);
+                    if (vitima?.nome?.trim() && vitima.nome.trim().toUpperCase() !== "O ESTADO") {
+                        documentosAnexosList.push(`TERMO DE MANIFESTAÇÃO DA VÍTIMA ${vitima.nome.trim().toUpperCase()}`);
                     }
                 });
             }
 
-            // Adicionar termo de depósito se algum autor for fiel depositário
             let temFielDepositario = false;
-            if (Array.isArray(data.autores)) {
+            if (Array.isArray(data.autores) && data.autores.length > 0) {
                 temFielDepositario = data.autores.some(
-                    (a: any) => a && typeof a.fielDepositario === 'string'
-                        && a.fielDepositario.trim().toLowerCase() === 'sim'
+                    (a: any) => a &&
+                                 typeof a.fielDepositario === 'string' && a.fielDepositario.trim().toLowerCase() === 'sim' &&
+                                 typeof a.nome === 'string' && a.nome.trim() !== '' && // Must have a name
+                                 typeof a.objetoDepositado === 'string' && a.objetoDepositado.trim() !== '' // Must have an object
                 );
             }
+            // Key log for Termo de Depósito check
+            console.log(`[pdfGenerator] Checagem para Termo de Depósito - temFielDepositario: ${temFielDepositario}`);
             if (temFielDepositario) {
                 documentosAnexosList.push("TERMO DE DEPÓSITO");
             }
 
-            // Adicionar termo de apreensão se houver descrição
+
             if ((data.apreensaoDescrição || data.apreensoes) && (isDroga || data.apreensoes)) {
                 const lacreTexto = data.lacreNumero ? ` LACRE Nº ${data.lacreNumero}` : '';
                 documentosAnexosList.push(`TERMO DE APREENSÃO${lacreTexto}`);
             }
 
-            // Adicionar documentos relacionados a drogas
-            if (data.drogaTipo || data.drogaNomeComum) {
-                const lacreTexto = data.lacreNumero ? ` LACRE Nº ${data.lacreNumero}` : '';
-                documentosAnexosList.push(`TERMO DE CONSTATAÇÃO PRELIMINAR DE DROGA${lacreTexto}`);
-
+            if (data.drogaTipo || data.drogaNomeComum) { // Ensure these fields exist on data
+                const lacreTextoDroga = data.lacreNumero ? ` LACRE Nº ${data.lacreNumero}` : '';
+                documentosAnexosList.push(`TERMO DE CONSTATAÇÃO PRELIMINAR DE DROGA${lacreTextoDroga}`);
                 if (isDroga) {
                     documentosAnexosList.push("REQUISIÇÃO DE EXAME EM DROGAS DE ABUSO");
                 }
             }
 
-            // Adicionar requisição de exame de lesão corporal se necessário
             const pessoasComLaudo = [
-                ...(data.autores || []).filter((a: any) => a.laudoPericial === "Sim").map((a: any) => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
-                ...(data.vitimas || []).filter((v: any) => v.laudoPericial === "Sim").map((v: any) => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-            ].filter((p: any) => p.nome && p.nome.trim());
+                ...(data.autores || []).filter((a: any) => a?.laudoPericial === "Sim"),
+                ...(data.vitimas || []).filter((v: any) => v?.laudoPericial === "Sim")
+            ]
+            .filter((p: any) => p?.nome?.trim()) // Filter out those without names before mapping
+            .map((p: any) => ({
+                nome: p.nome,
+                sexo: p.sexo,
+                tipo: (data.autores || []).includes(p) ? "Autor" : "Vítima" // Determine type more reliably
+            }));
+
 
             if (pessoasComLaudo.length > 0) {
                 pessoasComLaudo.forEach((pessoa: any) => {
                     const generoArtigo = pessoa.sexo?.toLowerCase() === 'feminino' ? 'DA' : 'DO';
                     const generoTipo = pessoa.tipo === 'Autor' ?
                         (pessoa.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR') :
-                        (pessoa.sexo?.toLowerCase() === 'feminino' ? 'VÍTIMA' : 'VÍTIMA');
+                        (pessoa.sexo?.toLowerCase() === 'feminino' ? 'VÍTIMA' : 'VÍTIMA'); // Assuming vítima is default otherwise
                     documentosAnexosList.push(`REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ${generoArtigo} ${generoTipo}`);
                 });
             }
 
-            // Atualizar os dados com a lista de documentos anexos
             const updatedData = {
                 ...data,
                 documentosAnexos: documentosAnexosList.join('\n')
             };
+            console.log("[pdfGenerator] Lista de Documentos Anexos:", documentosAnexosList);
 
-            // --- SEÇÕES 1-5: Histórico, Envolvidos, etc. ---
+
             generateHistoricoContent(doc, yPosition, updatedData)
                 .then(() => {
-                    // --- ADIÇÃO DOS TERMOS ---
-                    if (updatedData.autores && updatedData.autores.length > 0) {
+                    console.log("[pdfGenerator] Historico content gerado. Adicionando termos sequenciais...");
+                    if (Array.isArray(updatedData.autores) && updatedData.autores.length > 0) {
                         addTermoCompromisso(doc, updatedData);
-                    } else {
-                        console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
                     }
 
-                    if ((updatedData.natureza !== "Porte de drogas para consumo") && (updatedData.vitimas && updatedData.vitimas.length > 0)) {
-                        console.log("Adicionando Termo de Manifestação da Vítima");
+                    if (!isDroga && Array.isArray(updatedData.vitimas) && updatedData.vitimas.some((v:any) => v?.nome?.trim() && v.nome.trim().toUpperCase() !== "O ESTADO" )) {
+                        // console.log("[pdfGenerator] Adicionando Termo de Manifestação da Vítima.");
                         addTermoManifestacao(doc, updatedData);
+                    }
+
+                    // Termo de Depósito call
+                    if (temFielDepositario) {
+                        console.log("[pdfGenerator] CHAMANDO addTermoDeposito.");
+                        // It's crucial that addTermoDeposito internally handles finding the correct depositario(s)
+                        // and gracefully does nothing if none are found meeting its stricter internal criteria.
+                        addTermoDeposito(doc, updatedData); // Pass the whole data, let addTermoDeposito filter.
+                        console.log("[pdfGenerator] addTermoDeposito FOI CHAMADO.");
                     } else {
-                        console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível ou sem vítimas.");
+                         console.log("[pdfGenerator] PULANDO addTermoDeposito porque temFielDepositario é: ", temFielDepositario);
                     }
 
-                    try {
-                        // Adicionando a chamada condicional para o Termo de Depósito
-                        if (temFielDepositario) {
-                            console.log("Adicionando Termo de Depósito");
-                            addTermoDeposito(doc, updatedData);
-                        } else {
-                            console.log("Pulando Termo de Depósito: nenhum autor marcado como fiel depositário.");
-                        }
-                    } catch (error) {
-                        console.error("Erro ao gerar termo de depósito:", error);
-                    }
-
-                    if ((updatedData.apreensaoDescrição || updatedData.apreensoes) &&
-                        (isDroga || updatedData.apreensoes)) {
-                        console.log("Adicionando Termo de Apreensão");
+                    if ((updatedData.apreensaoDescrição || updatedData.apreensoes) && (isDroga || updatedData.apreensoes)) {
+                        // console.log("[pdfGenerator] Adicionando Termo de Apreensão.");
                         addTermoApreensao(doc, updatedData);
-                    } else {
-                        console.log("Pulando Termo de Apreensão: sem descrição de apreensão.");
                     }
 
                     if (updatedData.drogaTipo || updatedData.drogaNomeComum) {
                         addTermoConstatacaoDroga(doc, updatedData);
-
-                        if (updatedData.natureza === "Porte de drogas para consumo") {
+                        if (isDroga) { // Re-check specific condition if needed
                             addRequisicaoExameDrogas(doc, updatedData);
                         }
                     }
 
                     if (pessoasComLaudo.length > 0) {
                         pessoasComLaudo.forEach((pessoa: any) => {
-                            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome} (${pessoa.tipo}, Sexo: ${pessoa.sexo || 'Não especificado'})`);
+                            // console.log(`[pdfGenerator] Gerando Req. Exame Lesão para: ${pessoa.nome}`);
                             addRequisicaoExameLesao(doc, { ...updatedData, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
                         });
-                    } else {
-                        console.log("Nenhum autor ou vítima com laudoPericial: 'Sim'. Pulando Requisição de Exame de Lesão.");
                     }
 
                     addTermoEncerramentoRemessa(doc, updatedData);
 
-                    // A paginação está desativada por padrão (hidePagination: true)
-                    const pageCount = doc.internal.pages.length - 1;
+                    // Pagination logic (only if hidePagination is false)
                     if (!updatedData.hidePagination) {
+                        const pageCount = (doc.internal.getNumberOfPages ? doc.internal.getNumberOfPages() : doc.internal.pages.length -1) ; // jsPDF new vs old
                         for (let i = 1; i <= pageCount; i++) {
                             doc.setPage(i);
                             doc.setFont("helvetica", "normal");
                             doc.setFontSize(8);
                             doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
-
-                            if (i > 1) {
+                            if (i > 1) { // Footer content on pages after the first
                                 addStandardFooterContent(doc);
                             }
                         }
                     }
 
+
                     if (updatedData.downloadLocal) {
                         try {
                             const fileName = generateTCOFilename(updatedData);
                             doc.save(fileName);
-                            console.log(`PDF salvo localmente: ${fileName}`);
+                            // console.log(`PDF salvo localmente: ${fileName}`);
                         } catch (downloadError) {
                             console.error("Erro ao salvar o PDF localmente:", downloadError);
                         }
                     }
 
                     const pdfBlob = doc.output('blob');
-                    clearTimeout(timeout);
+                    clearTimeout(timeoutId);
                     resolve(pdfBlob);
+
                 })
                 .catch(histError => {
-                    clearTimeout(timeout);
-                    reject(new Error(`Erro ao gerar histórico do PDF: ${histError.message}`));
+                    clearTimeout(timeoutId);
+                    console.error("[pdfGenerator] Erro DENTRO DO .then() após generateHistoricoContent:", histError, histError.stack);
+                    reject(new Error(`Erro ao gerar seções do PDF: ${histError.message || histError}`));
                 });
         } catch (error) {
-            clearTimeout(timeout);
-            reject(new Error(`Erro na geração do PDF: ${error.message}`));
+            clearTimeout(timeoutId);
+            console.error("[pdfGenerator] Erro GERAL NA FUNÇÃO generatePDF:", error, error.stack);
+            reject(new Error(`Erro crítico na geração do PDF: ${error.message || error}`));
         }
     });
 };
