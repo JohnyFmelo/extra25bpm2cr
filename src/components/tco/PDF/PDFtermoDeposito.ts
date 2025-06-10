@@ -10,7 +10,11 @@ const drawTableCell = (doc: jsPDF, text: string, x: number, y: number, width: nu
 export const addTermoDeposito = (doc: jsPDF, data: any) => {
     const { PAGE_WIDTH, MARGIN_LEFT, MARGIN_RIGHT } = getPageConstants(doc);
 
-    const depositarios = data.autores.filter((a: any) => a.fielDepositario === 'Sim');
+    // Filter authors who are designated as faithful depositary, with better validation
+    const depositarios = data.autores?.filter((a: any) => {
+        return a && a.fielDepositario === 'Sim' && a.nome && a.nome.trim() !== '';
+    }) || [];
+    
     if (depositarios.length === 0) return;
 
     depositarios.forEach((depositario: any) => {
@@ -37,29 +41,38 @@ export const addTermoDeposito = (doc: jsPDF, data: any) => {
         const line = (yPos: number) => doc.line(MARGIN_LEFT, yPos, PAGE_WIDTH - MARGIN_RIGHT, yPos);
         const write = (txt: string, yPos: number, xPos = MARGIN_LEFT + 2) => doc.text(txt, xPos, yPos);
 
-        write(`NOME OU RAZÃO SOCIAL: ${depositario.nome.toUpperCase()}`, y + 5); y += cellHeight; line(y);
-        write(`CPF/CNPJ: ${depositario.cpf || 'Não informado'}`, y + 5); y += cellHeight; line(y);
-        write(`FILIAÇÃO PAI: ${depositario.filiacaoPai.toUpperCase() || 'NÃO INFORMADO'}`, y + 5); y += cellHeight; line(y);
-        write(`FILIAÇÃO MÃE: ${depositario.filiacaoMae.toUpperCase() || 'NÃO INFORMADO'}`, y + 5); y += cellHeight; line(y);
+        // Ensure all values have fallbacks
+        const nomeDepositario = depositario.nome ? depositario.nome.toUpperCase() : 'NÃO INFORMADO';
+        const cpfDepositario = depositario.cpf || 'Não informado';
+        const filiacaoPaiDepositario = depositario.filiacaoPai ? depositario.filiacaoPai.toUpperCase() : 'NÃO INFORMADO';
+        const filiacaoMaeDepositario = depositario.filiacaoMae ? depositario.filiacaoMae.toUpperCase() : 'NÃO INFORMADO';
+        const enderecoDepositario = depositario.endereco ? depositario.endereco.toUpperCase() : 'NÃO INFORMADO';
+        const celularDepositario = depositario.celular || 'Não informado';
+        const objetoDepositadoText = depositario.objetoDepositado ? depositario.objetoDepositado.toUpperCase() : 'NÃO INFORMADO';
+
+        write(`NOME OU RAZÃO SOCIAL: ${nomeDepositario}`, y + 5); y += cellHeight; line(y);
+        write(`CPF/CNPJ: ${cpfDepositario}`, y + 5); y += cellHeight; line(y);
+        write(`FILIAÇÃO PAI: ${filiacaoPaiDepositario}`, y + 5); y += cellHeight; line(y);
+        write(`FILIAÇÃO MÃE: ${filiacaoMaeDepositario}`, y + 5); y += cellHeight; line(y);
         
-        const Bairro = (depositario.endereco.split(',').pop() || '').trim().toUpperCase() || 'NÃO INFORMADO';
-        write(`ENDEREÇO: ${depositario.endereco.toUpperCase() || 'NÃO INFORMADO'}`, y + 5); 
+        const Bairro = (enderecoDepositario.split(',').pop() || '').trim() || 'NÃO INFORMADO';
+        write(`ENDEREÇO: ${enderecoDepositario}`, y + 5); 
         write(`BAIRRO: ${Bairro}`, MARGIN_LEFT + 120, y + 5); 
         y += cellHeight; line(y);
 
         write(`MUNICÍPIO: Várzea Grande`, y + 5);
         write(`UF: MT`, MARGIN_LEFT + 60, y + 5);
         write(`CEP: [Não informado]`, MARGIN_LEFT + 90, y + 5);
-        write(`TEL: ${depositario.celular || 'Não informado'}`, MARGIN_LEFT + 140, y + 5);
+        write(`TEL: ${celularDepositario}`, MARGIN_LEFT + 140, y + 5);
         y += cellHeight; line(y);
 
-        write(`LOCAL DO DEPÓSITO: ${depositario.endereco.toUpperCase()}`, y + 5);
+        write(`LOCAL DO DEPÓSITO: ${enderecoDepositario}`, y + 5);
         write(`DATA: ${dataHoje}`, MARGIN_LEFT + 120, y + 5);
         write(`HORA: ${horaAtual}`, MARGIN_LEFT + 160, y + 5);
         y += cellHeight; line(y);
 
-        const descLines = doc.splitTextToSize(depositario.objetoDepositado.toUpperCase(), PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT - 35);
-        write(`DESCRIÇÃO DO BEM: ${descLines[0]}`, y + 5);
+        const descLines = doc.splitTextToSize(objetoDepositadoText, PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT - 35);
+        write(`DESCRIÇÃO DO BEM: ${descLines[0] || 'NÃO INFORMADO'}`, y + 5);
         if(descLines.length > 1) {
             doc.text(descLines.slice(1), MARGIN_LEFT + 35, y + 10);
         }
@@ -68,15 +81,15 @@ export const addTermoDeposito = (doc: jsPDF, data: any) => {
         y += 15;
         write(`RECEBI OS BENS DEPOSITADOS EM: ${dataHoje}`, y); y += 25;
         
-        // Fiel Depositario Signature - using doc.line directly instead of addLine
+        // Fiel Depositario Signature - using doc.line directly
         doc.setLineWidth(0.3);
         doc.line(MARGIN_LEFT + 40, y, PAGE_WIDTH - MARGIN_RIGHT - 40, y);
-        doc.text(`${depositario.nome.toUpperCase()}`, PAGE_WIDTH / 2, y + 5, { align: 'center' });
+        doc.text(nomeDepositario, PAGE_WIDTH / 2, y + 5, { align: 'center' });
         doc.text("Fiel Depositário", PAGE_WIDTH / 2, y + 10, { align: 'center' });
         y += 25;
 
         // Testemunha
-        const testemunha = data.testemunhas?.find((t: any) => t.nome && t.nome.trim() !== "");
+        const testemunha = data.testemunhas?.find((t: any) => t && t.nome && t.nome.trim() !== "");
         doc.setFont('helvetica', 'bold');
         write(`TESTEMUNHA`, y); y += 7;
         doc.setFont('helvetica', 'normal');
@@ -85,14 +98,18 @@ export const addTermoDeposito = (doc: jsPDF, data: any) => {
         write(`ASSINATURA: _________________________________________`, y); y += 15;
 
         // Condutor
-        const condutor = data.componentesGuarnicao?.find((c: any) => c.nome && c.posto && !c.apoio) || data.componentesGuarnicao[0];
+        const condutor = data.componentesGuarnicao?.find((c: any) => c && c.nome && c.posto && !c.apoio) || data.componentesGuarnicao?.[0];
         doc.setFont('helvetica', 'bold');
         write(`CONDUTOR DA OCORRÊNCIA`, y); y += 7;
         doc.setFont('helvetica', 'normal');
         if (condutor) {
-            write(`NOME COMPLETO: ${condutor.nome.toUpperCase()}`, y); y += 7;
-            write(`POSTO/GRADUAÇÃO: ${condutor.posto.toUpperCase()}`, y); y += 7;
-            write(`RG PMMT: ${condutor.rg}`, y); y += 7;
+            const nomeCondutor = condutor.nome ? condutor.nome.toUpperCase() : 'NÃO INFORMADO';
+            const postoCondutor = condutor.posto ? condutor.posto.toUpperCase() : 'NÃO INFORMADO';
+            const rgCondutor = condutor.rg || 'NÃO INFORMADO';
+            
+            write(`NOME COMPLETO: ${nomeCondutor}`, y); y += 7;
+            write(`POSTO/GRADUAÇÃO: ${postoCondutor}`, y); y += 7;
+            write(`RG PMMT: ${rgCondutor}`, y); y += 7;
         }
         write(`ASSINATURA: _________________________________________`, y);
         
