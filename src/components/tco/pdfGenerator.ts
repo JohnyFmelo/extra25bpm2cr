@@ -180,7 +180,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             let temFielDepositario = false;
             if (Array.isArray(data.autores)) {
                 temFielDepositario = data.autores.some(
-                    (a: any) => typeof a.fielDepositario === 'string'
+                    (a: any) => a && typeof a.fielDepositario === 'string'
                         && a.fielDepositario.trim().toLowerCase() === 'sim'
                 );
             }
@@ -243,12 +243,16 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível ou sem vítimas.");
                     }
 
-                    // Adicionando a chamada condicional para o Termo de Depósito
-                    if (temFielDepositario) {
-                        console.log("Adicionando Termo de Depósito");
-                        addTermoDeposito(doc, updatedData);
-                    } else {
-                        console.log("Pulando Termo de Depósito: nenhum autor marcado como fiel depositário.");
+                    try {
+                        // Adicionando a chamada condicional para o Termo de Depósito
+                        if (temFielDepositario) {
+                            console.log("Adicionando Termo de Depósito");
+                            addTermoDeposito(doc, updatedData);
+                        } else {
+                            console.log("Pulando Termo de Depósito: nenhum autor marcado como fiel depositário.");
+                        }
+                    } catch (error) {
+                        console.error("Erro ao gerar termo de depósito:", error);
                     }
 
                     if ((updatedData.apreensaoDescrição || updatedData.apreensoes) &&
