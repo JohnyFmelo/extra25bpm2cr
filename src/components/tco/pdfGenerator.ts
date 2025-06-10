@@ -13,7 +13,7 @@ import { generateHistoricoContent } from './PDF/PDFhistorico.js';
 import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
 import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
-import { addTermoDeposito } from './PDF/addTermoDeposito.js';
+import { addTermoDeposito } from './PDF/PDFtermoDeposito.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
@@ -156,11 +156,24 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
 
             // --- Preparar a lista de documentos anexos ---
             const isDroga = data.natureza === "Porte de drogas para consumo";
-            const documentosAnexosList = ["TERMO DE COMPROMISSO"];
+            const documentosAnexosList = [];
 
-            // Adicionar termo de manifestação se não for caso de droga e tiver vítimas
+            // Adicionar termo de compromisso para cada autor
+            if (data.autores && data.autores.length > 0) {
+                data.autores.forEach((autor: any) => {
+                    if (autor.nome && autor.nome.trim()) {
+                        documentosAnexosList.push(`TERMO DE COMPROMISSO DE ${autor.nome.toUpperCase()}`);
+                    }
+                });
+            }
+
+            // Adicionar termo de manifestação para cada vítima se não for caso de droga
             if (!isDroga && data.vitimas && data.vitimas.length > 0) {
-                documentosAnexosList.push("TERMO DE MANIFESTAÇÃO");
+                data.vitimas.forEach((vitima: any) => {
+                    if (vitima.nome && vitima.nome.trim()) {
+                        documentosAnexosList.push(`TERMO DE MANIFESTAÇÃO DA VÍTIMA ${vitima.nome.toUpperCase()}`);
+                    }
+                });
             }
 
             // Adicionar termo de depósito se algum autor for fiel depositário
