@@ -1,4 +1,3 @@
-
 // src/components/tco/PDF/pdfUtils.js
 
 // --- Constantes ---
@@ -209,12 +208,31 @@ export const addWrappedText = (doc, currentY, text, x, fontSize, fontStyle = "no
     const effectiveMaxWidth = maxWidth || defaultMaxWidth;
     let yPos = currentY;
 
-    const textToRender = String(text ?? "Não informado.");
-    doc.setFont("helvetica", fontStyle);
-    doc.setFontSize(fontSize);
+    // Garante que o texto seja uma string válida
+    let textToRender;
+    if (text === null || text === undefined || text === '') {
+        textToRender = "Não informado.";
+    } else {
+        textToRender = String(text);
+    }
+
+    // Garante que x seja um número válido
+    const validX = typeof x === 'number' && !isNaN(x) ? x : MARGIN_LEFT;
+    
+    // Garante que fontSize seja um número válido
+    const validFontSize = typeof fontSize === 'number' && !isNaN(fontSize) && fontSize > 0 ? fontSize : 12;
+    
+    // Garante que fontStyle seja uma string válida
+    const validFontStyle = typeof fontStyle === 'string' && fontStyle ? fontStyle : "normal";
+    
+    // Garante que align seja uma string válida
+    const validAlign = typeof align === 'string' && ['left', 'center', 'right', 'justify'].includes(align) ? align : 'left';
+
+    doc.setFont("helvetica", validFontStyle);
+    doc.setFontSize(validFontSize);
 
     const lines = doc.splitTextToSize(textToRender, effectiveMaxWidth);
-    const lineHeight = fontSize * 0.3528 * 1.2; // Ajuste de espaçamento entre linhas (fator 1.2)
+    const lineHeight = validFontSize * 0.3528 * 1.2; // Ajuste de espaçamento entre linhas (fator 1.2)
 
     let currentLineIndex = 0;
     while (currentLineIndex < lines.length) {
@@ -241,14 +259,33 @@ export const addWrappedText = (doc, currentY, text, x, fontSize, fontStyle = "no
               linesThatFit = Math.max(0, Math.floor(newSpaceLeft / lineHeight));
          }
 
-
         const linesToRenderNow = lines.slice(currentLineIndex, currentLineIndex + linesThatFit);
 
         if (linesToRenderNow.length > 0) {
-            doc.setFont("helvetica", fontStyle);
-            doc.setFontSize(fontSize);
-            // Passa yPos para cada text() call, que é a posição inicial para ESTE bloco de linhas
-            doc.text(linesToRenderNow, x, yPos, { align: align, maxWidth: effectiveMaxWidth });
+            doc.setFont("helvetica", validFontStyle);
+            doc.setFontSize(validFontSize);
+            
+            // Garante que yPos seja um número válido
+            const validYPos = typeof yPos === 'number' && !isNaN(yPos) ? yPos : MARGIN_TOP + HEADER_AREA_HEIGHT;
+            
+            // Passa argumentos válidos para doc.text
+            try {
+                doc.text(linesToRenderNow, validX, validYPos, { 
+                    align: validAlign, 
+                    maxWidth: effectiveMaxWidth 
+                });
+            } catch (error) {
+                console.error("Erro ao adicionar texto:", error, {
+                    lines: linesToRenderNow,
+                    x: validX,
+                    y: validYPos,
+                    align: validAlign,
+                    maxWidth: effectiveMaxWidth
+                });
+                // Fallback: tenta adicionar sem opções
+                doc.text(String(linesToRenderNow[0] || ""), validX, validYPos);
+            }
+            
             yPos += linesToRenderNow.length * lineHeight; // Atualiza yPos para depois das linhas adicionadas
             currentLineIndex += linesToRenderNow.length; // Avança o índice das linhas gerais do texto
         } else if (currentLineIndex < lines.length) {
