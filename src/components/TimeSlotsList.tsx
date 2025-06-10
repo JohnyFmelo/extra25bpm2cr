@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
 import supabase from "@/lib/supabaseClient";
-
 interface TimeSlot {
   id?: string;
   date: string;
@@ -25,14 +24,12 @@ interface TimeSlot {
   description?: string;
   allowedMilitaryTypes?: string[];
 }
-
 interface GroupedTimeSlots {
   [key: string]: {
     slots: TimeSlot[];
     dailyCost: number;
   };
 }
-
 const TimeSlotLimitControl = ({
   slotLimit,
   onUpdateLimit,
@@ -107,29 +104,62 @@ const TimeSlotLimitControl = ({
         </div>}
     </div>;
 };
-
 const getMilitaryRankWeight = (rank: string): number => {
   const rankWeights: {
     [key: string]: number;
   } = {
-    "Cel": 12, "Cel PM": 12, "Ten Cel": 11, "Ten Cel PM": 11, "Maj": 10, "Maj PM": 10,
-    "Cap": 9, "Cap PM": 9, "1° Ten": 8, "1° Ten PM": 8, "2° Ten": 7, "2° Ten PM": 7,
-    "Sub Ten": 6, "Sub Ten PM": 6, "1° Sgt": 5, "1° Sgt PM": 5, "2° Sgt": 4, "2° Sgt PM": 4,
-    "3° Sgt": 3, "3° Sgt PM": 3, "Cb": 2, "Cb PM": 2, "Sd": 1, "Sd PM": 1, "Estágio": 0
+    "Cel": 12,
+    "Cel PM": 12,
+    "Ten Cel": 11,
+    "Ten Cel PM": 11,
+    "Maj": 10,
+    "Maj PM": 10,
+    "Cap": 9,
+    "Cap PM": 9,
+    "1° Ten": 8,
+    "1° Ten PM": 8,
+    "2° Ten": 7,
+    "2° Ten PM": 7,
+    "Sub Ten": 6,
+    "Sub Ten PM": 6,
+    "1° Sgt": 5,
+    "1° Sgt PM": 5,
+    "2° Sgt": 4,
+    "2° Sgt PM": 4,
+    "3° Sgt": 3,
+    "3° Sgt PM": 3,
+    "Cb": 2,
+    "Cb PM": 2,
+    "Sd": 1,
+    "Sd PM": 1,
+    "Estágio": 0
   };
   return rankWeights[rank] || 0;
 };
-
-const getRankCategory = (rank: string): { category: string; hourlyRate: number; } => {
+const getRankCategory = (rank: string): {
+  category: string;
+  hourlyRate: number;
+} => {
   const cbSdRanks = ["Sd", "Sd PM", "Cb", "Cb PM"];
   const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM"];
   const oficiaisRanks = ["2° Ten", "2° Ten PM", "1° Ten", "1° Ten PM", "Cap", "Cap PM", "Maj", "Maj PM", "Ten Cel", "Ten Cel PM", "Cel", "Cel PM"];
-  if (cbSdRanks.includes(rank)) return { category: "Cb/Sd", hourlyRate: 41.13 };
-  if (stSgtRanks.includes(rank)) return { category: "St/Sgt", hourlyRate: 56.28 };
-  if (oficiaisRanks.includes(rank)) return { category: "Oficiais", hourlyRate: 87.02 };
-  return { category: "Outros", hourlyRate: 0 };
+  if (cbSdRanks.includes(rank)) return {
+    category: "Cb/Sd",
+    hourlyRate: 41.13
+  };
+  if (stSgtRanks.includes(rank)) return {
+    category: "St/Sgt",
+    hourlyRate: 56.28
+  };
+  if (oficiaisRanks.includes(rank)) return {
+    category: "Oficiais",
+    hourlyRate: 87.02
+  };
+  return {
+    category: "Outros",
+    hourlyRate: 0
+  };
 };
-
 const getVolunteerRank = (volunteerFullName: string): string => {
   const parts = volunteerFullName.split(" ");
   if (parts.length >= 2 && (parts[1] === "Sgt" || parts[1] === "Ten")) {
@@ -137,25 +167,27 @@ const getVolunteerRank = (volunteerFullName: string): string => {
   }
   return parts[0];
 };
-
 const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value).replace("R$", "R$ ");
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value).replace("R$", "R$ ");
 };
-
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [slotLimit, setSlotLimit] = useState<number>(0);
-  const [volunteerHours, setVolunteerHours] = useState<{ [key: string]: string; }>({});
-  const { toast } = useToast();
-
+  const [volunteerHours, setVolunteerHours] = useState<{
+    [key: string]: string;
+  }>({});
+  const {
+    toast
+  } = useToast();
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
   const isAdmin = userData?.userType === 'admin';
-
   const userService = userData?.service;
-
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);
@@ -171,7 +203,6 @@ const TimeSlotsList = () => {
     const totalHours = diffHours + diffMinutes / 60;
     return `${totalHours}`;
   };
-
   const fetchVolunteerHours = async () => {
     if (!isAdmin) return;
     try {
@@ -208,7 +239,6 @@ const TimeSlotsList = () => {
       console.error('Error in fetchVolunteerHours:', error);
     }
   };
-
   useEffect(() => {
     const fetchSlotLimit = async () => {
       try {
@@ -229,11 +259,10 @@ const TimeSlotsList = () => {
         const data = docSnap.data();
         let slotDateStr: string;
         if (data.date && typeof data.date.toDate === 'function') {
-            slotDateStr = format(data.date.toDate(), 'yyyy-MM-dd');
+          slotDateStr = format(data.date.toDate(), 'yyyy-MM-dd');
         } else {
-            slotDateStr = data.date as string;
+          slotDateStr = data.date as string;
         }
-
         return {
           id: docSnap.id,
           date: slotDateStr,
@@ -243,7 +272,7 @@ const TimeSlotsList = () => {
           slots_used: data.slots_used || 0,
           total_slots: data.total_slots || data.slots || 0,
           description: data.description || "",
-          allowedMilitaryTypes: data.allowedMilitaryTypes || [],
+          allowedMilitaryTypes: data.allowedMilitaryTypes || []
         };
       });
       setTimeSlots(formattedSlots);
@@ -262,7 +291,6 @@ const TimeSlotsList = () => {
     }
     return () => unsubscribe();
   }, [toast, isAdmin]);
-
   const handleVolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
       toast({
@@ -318,7 +346,6 @@ const TimeSlotsList = () => {
       });
     }
   };
-
   const handleUnvolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
       toast({
@@ -355,7 +382,6 @@ const TimeSlotsList = () => {
       });
     }
   };
-
   const handleUpdateSlotLimit = async (limit: number) => {
     if (isNaN(limit) || limit < 0) {
       toast({
@@ -383,27 +409,28 @@ const TimeSlotsList = () => {
       });
     }
   };
-
   const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
     return slots.reduce((groups: GroupedTimeSlots, slot) => {
       const date = slot.date;
       if (!groups[date]) {
-        groups[date] = { slots: [], dailyCost: 0 };
+        groups[date] = {
+          slots: [],
+          dailyCost: 0
+        };
       }
       groups[date].slots.push(slot);
       return groups;
     }, {});
   };
-
   const isVolunteered = (timeSlot: TimeSlot) => timeSlot.volunteers?.includes(volunteerName);
   const isSlotFull = (timeSlot: TimeSlot) => timeSlot.slots_used === timeSlot.total_slots;
-
   const formatDateHeader = (date: string) => {
-    const dayOfWeek = format(parseISO(date), "eee", { locale: ptBR });
+    const dayOfWeek = format(parseISO(date), "eee", {
+      locale: ptBR
+    });
     const truncatedDay = dayOfWeek.substring(0, 3);
     return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}-${format(parseISO(date), "dd/MM/yy")}`;
   };
-
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
     const userDataString = localStorage.getItem('user');
     const userData = userDataString ? JSON.parse(userDataString) : null;
@@ -424,13 +451,11 @@ const TimeSlotsList = () => {
     const isVolunteeredForDate = slotsForDate.some(s => s.volunteers?.includes(volunteerName));
     return !isVolunteeredForDate;
   };
-
   const canVolunteerForSlot = (slot: TimeSlot) => {
     if (isAdmin) return true;
     const userSlotCount = timeSlots.reduce((count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
     return userSlotCount < slotLimit;
   };
-
   const sortVolunteers = (volunteers: string[]) => {
     if (!volunteers) return [];
     return volunteers.sort((a, b) => {
@@ -439,27 +464,32 @@ const TimeSlotsList = () => {
       return getMilitaryRankWeight(rankB) - getMilitaryRankWeight(rankA);
     });
   };
-
   const [calculatedGroupedTimeSlots, setCalculatedGroupedTimeSlots] = useState<GroupedTimeSlots>({});
-  const [totalCostSummary, setTotalCostSummary] = useState<{ "Cb/Sd": number; "St/Sgt": number; "Oficiais": number; "Total Geral": number; }>({ "Cb/Sd": 0, "St/Sgt": 0, "Oficiais": 0, "Total Geral": 0 });
-
+  const [totalCostSummary, setTotalCostSummary] = useState<{
+    "Cb/Sd": number;
+    "St/Sgt": number;
+    "Oficiais": number;
+    "Total Geral": number;
+  }>({
+    "Cb/Sd": 0,
+    "St/Sgt": 0,
+    "Oficiais": 0,
+    "Total Geral": 0
+  });
   useEffect(() => {
     const slotsToProcess = timeSlots.filter(slot => {
-      if (
-        isAdmin ||
-        !slot.allowedMilitaryTypes ||
-        slot.allowedMilitaryTypes.length === 0 ||
-        !userService
-      ) {
+      if (isAdmin || !slot.allowedMilitaryTypes || slot.allowedMilitaryTypes.length === 0 || !userService) {
         return true;
       }
       return slot.allowedMilitaryTypes.includes(userService);
     });
-
     const grouped = groupTimeSlotsByDate(slotsToProcess);
-
-    const newTotalCostSummary = { "Cb/Sd": 0, "St/Sgt": 0, "Oficiais": 0, "Total Geral": 0 };
-
+    const newTotalCostSummary = {
+      "Cb/Sd": 0,
+      "St/Sgt": 0,
+      "Oficiais": 0,
+      "Total Geral": 0
+    };
     Object.keys(grouped).forEach(date => {
       let dailyCost = 0;
       grouped[date].slots.forEach(slot => {
@@ -477,15 +507,14 @@ const TimeSlotsList = () => {
       });
       grouped[date].dailyCost = dailyCost;
     });
-
     setCalculatedGroupedTimeSlots(grouped);
     setTotalCostSummary(newTotalCostSummary);
   }, [timeSlots, isAdmin, userService]);
-
   const userSlotCount = timeSlots.reduce((count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
-
-  const [volunteerToRemove, setVolunteerToRemove] = useState<{ name: string; timeSlot: TimeSlot; } | null>(null);
-
+  const [volunteerToRemove, setVolunteerToRemove] = useState<{
+    name: string;
+    timeSlot: TimeSlot;
+  } | null>(null);
   const handleRemoveVolunteer = async (timeSlot: TimeSlot, volunteerNameToRemove: string) => {
     try {
       const updatedSlot = {
@@ -514,12 +543,10 @@ const TimeSlotsList = () => {
       });
     }
   };
-  
   const today = new Date();
   const tomorrow = addDays(today, 1);
   let weeklyCost = 0;
   let weeklyCostDates: string[] = [];
-
   if (calculatedGroupedTimeSlots) {
     Object.entries(calculatedGroupedTimeSlots).filter(([date]) => {
       const slotDate = parseISO(date);
@@ -532,20 +559,21 @@ const TimeSlotsList = () => {
       weeklyCost += groupedData.dailyCost;
     });
   }
-
   const formatWeeklyDateRange = () => {
     if (weeklyCostDates.length === 0) return "";
     const sortedDates = weeklyCostDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-    const startDate = format(parseISO(sortedDates[0]), "eee", { locale: ptBR }).substring(0, 3).toUpperCase();
-    const endDate = format(parseISO(sortedDates[sortedDates.length - 1]), "eee", { locale: ptBR }).substring(0, 3).toUpperCase();
+    const startDate = format(parseISO(sortedDates[0]), "eee", {
+      locale: ptBR
+    }).substring(0, 3).toUpperCase();
+    const endDate = format(parseISO(sortedDates[sortedDates.length - 1]), "eee", {
+      locale: ptBR
+    }).substring(0, 3).toUpperCase();
     return `${startDate}-${endDate}`;
   };
   const weeklyDateRangeText = formatWeeklyDateRange();
-
   if (isLoading) {
     return <div className="p-4">Carregando horários...</div>;
   }
-
   const getVolunteerHours = (volunteerNameParam: string) => {
     if (volunteerHours[volunteerNameParam]) {
       return volunteerHours[volunteerNameParam];
@@ -565,19 +593,14 @@ const TimeSlotsList = () => {
     if (!allowedMilitaryTypes || allowedMilitaryTypes.length === 0) {
       return <span className="text-xs text-gray-400 italic">Sem restrição de categoria</span>;
     }
-    return (
-      <span className="text-xs text-blue-700 bg-blue-50 rounded px-2 py-1">
+    return <span className="text-xs text-blue-700 bg-blue-0 rounded px-2 py-1">
         PM's: {allowedMilitaryTypes.join(", ")}
-      </span>
-    );
+      </span>;
   };
-
-  return (
-    <div className="space-y-6 p-4 py-0 my-0 px-0">
+  return <div className="space-y-6 p-4 py-0 my-0 px-0">
       <TimeSlotLimitControl slotLimit={slotLimit} onUpdateLimit={handleUpdateSlotLimit} userSlotCount={userSlotCount} isAdmin={isAdmin} />
 
-      {isAdmin && totalCostSummary["Total Geral"] > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
+      {isAdmin && totalCostSummary["Total Geral"] > 0 && <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
           <h2 className="font-semibold text-gray-900 mb-4">Resumo de Custos Totais</h2>
           <div className="space-y-2">
             <p><strong>Cb/Sd:</strong> {formatCurrency(totalCostSummary["Cb/Sd"])}</p>
@@ -586,20 +609,18 @@ const TimeSlotsList = () => {
             <p className="font-semibold text-green-500"><strong>Total Geral:</strong> {formatCurrency(totalCostSummary["Total Geral"])}</p>
             {weeklyCost > 0 && <p className="font-semibold text-blue-500"><strong>Custo da Semana ({weeklyDateRangeText}):</strong> {formatCurrency(weeklyCost)}</p>}
           </div>
-        </div>
-      )}
+        </div>}
 
       {Object.entries(calculatedGroupedTimeSlots).sort().map(([date, groupedData]) => {
-        const { slots, dailyCost } = groupedData;
-        if (slots.length === 0) return null;
-
-        const isDatePast = isPast(parseISO(date));
-        const isCollapsed = false;
-
-        const sortedSlots = [...slots].sort((a, b) => a.start_time.localeCompare(b.start_time));
-        
-        return (
-          <div key={date} className="bg-white rounded-lg shadow-sm">
+      const {
+        slots,
+        dailyCost
+      } = groupedData;
+      if (slots.length === 0) return null;
+      const isDatePast = isPast(parseISO(date));
+      const isCollapsed = false;
+      const sortedSlots = [...slots].sort((a, b) => a.start_time.localeCompare(b.start_time));
+      return <div key={date} className="bg-white rounded-lg shadow-sm">
             <div className="p-4 md:p-5 px-[5px]">
               <div className="flex flex-col items-center">
                 <div className="flex items-center justify-between w-full mb-2">
@@ -614,16 +635,12 @@ const TimeSlotsList = () => {
                 </div>
               </div>
 
-              {!isCollapsed && (
-                <div className="space-y-3 mt-4">
-                  {sortedSlots.map((slot, idx) => (
-                    <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
+              {!isCollapsed && <div className="space-y-3 mt-4">
+                  {sortedSlots.map((slot, idx) => <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
                       {/* Descrição das allowedMilitaryTypes só para admin */}
-                      {isAdmin && (
-                        <div className="mb-1">
+                      {isAdmin && <div className="mb-1">
                           {renderAllowedMilitaryTypes(slot.allowedMilitaryTypes)}
-                        </div>
-                      )}
+                        </div>}
 
                       <div className="flex flex-col space-y-3">
                         <div className="flex justify-between items-center">
@@ -645,48 +662,34 @@ const TimeSlotsList = () => {
                         </div>
                       </div>
                       
-                      {slot.volunteers && slot.volunteers.length > 0 && (
-                        <div className="pt-3 border-t border-gray-200">
+                      {slot.volunteers && slot.volunteers.length > 0 && <div className="pt-3 border-t border-gray-200">
                           <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
                           <div className="space-y-1">
-                            {sortVolunteers(slot.volunteers).map((volunteer, index) => (
-                              <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
+                            {sortVolunteers(slot.volunteers).map((volunteer, index) => <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
                                 <div className="flex items-center">
                                   <span>{volunteer}</span>
-                                  {isAdmin && getVolunteerHours(volunteer) && (
-                                    <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                                  {isAdmin && getVolunteerHours(volunteer) && <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
                                       {getVolunteerHours(volunteer)}h
-                                    </span>
-                                  )}
+                                    </span>}
                                 </div>
-                                {isAdmin && (
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({ name: volunteer, timeSlot: slot })}>
+                                {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({
+                      name: volunteer,
+                      timeSlot: slot
+                    })}>
                                     <X className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            ))}
+                                  </Button>}
+                              </div>)}
                           </div>
-                        </div>
-                      )}
+                        </div>}
                       
                       <div className="pt-2">
-                        {shouldShowVolunteerButton(slot) && (
-                          isVolunteered(slot) ? (
-                            <Button onClick={() => handleUnvolunteer(slot)} variant="destructive" size="sm" className="w-full shadow-sm hover:shadow">Desmarcar</Button>
-                          ) : !isSlotFull(slot) && canVolunteerForSlot(slot) && (
-                            <Button onClick={() => handleVolunteer(slot)} className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow w-full" size="sm">Voluntário</Button>
-                          )
-                        )}
+                        {shouldShowVolunteerButton(slot) && (isVolunteered(slot) ? <Button onClick={() => handleUnvolunteer(slot)} variant="destructive" size="sm" className="w-full shadow-sm hover:shadow">Desmarcar</Button> : !isSlotFull(slot) && canVolunteerForSlot(slot) && <Button onClick={() => handleVolunteer(slot)} className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow w-full" size="sm">Voluntário</Button>)}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    </div>)}
+                </div>}
             </div>
-          </div>
-        );
-      })}
+          </div>;
+    })}
 
       <AlertDialog open={!!volunteerToRemove} onOpenChange={() => setVolunteerToRemove(null)}>
         <AlertDialogContent>
@@ -699,18 +702,16 @@ const TimeSlotsList = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={() => {
-              if (volunteerToRemove) {
-                handleRemoveVolunteer(volunteerToRemove.timeSlot, volunteerToRemove.name);
-                setVolunteerToRemove(null);
-              }
-            }}>
+            if (volunteerToRemove) {
+              handleRemoveVolunteer(volunteerToRemove.timeSlot, volunteerToRemove.name);
+              setVolunteerToRemove(null);
+            }
+          }}>
               Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
+    </div>;
 };
-
 export default TimeSlotsList;
