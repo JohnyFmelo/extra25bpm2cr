@@ -14,7 +14,7 @@ interface DrugItem {
   substancia: string;
   cor: string;
   odor: string;
-  nomeComum: string;
+  indicios: string;
   customMaterialDesc: string;
 }
 
@@ -37,8 +37,6 @@ interface DrugVerificationTabProps {
   // New props for multiple drugs
   multipleDrugs?: DrugItem[];
   setMultipleDrugs?: (drugs: DrugItem[]) => void;
-  drogaNomeComum?: string;
-  setDrogaNomeComum?: (value: string) => void;
 }
 
 const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
@@ -51,15 +49,14 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   odor,
   setOdor,
   indicios,
+  setIndicios,
   customMaterialDesc,
   setCustomMaterialDesc,
   isUnknownMaterial,
   lacreNumero,
   setLacreNumero,
   multipleDrugs = [],
-  setMultipleDrugs,
-  drogaNomeComum = "",
-  setDrogaNomeComum
+  setMultipleDrugs
 }) => {
   
   // Create initial drug from current props
@@ -69,7 +66,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
     substancia,
     cor,
     odor,
-    nomeComum: drogaNomeComum,
+    indicios,
     customMaterialDesc
   };
 
@@ -83,7 +80,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
       substancia: "",
       cor: "",
       odor: "",
-      nomeComum: "",
+      indicios: "",
       customMaterialDesc: ""
     };
     
@@ -126,8 +123,8 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
         case 'odor':
           setOdor(value);
           break;
-        case 'nomeComum':
-          if (setDrogaNomeComum) setDrogaNomeComum(value);
+        case 'indicios':
+          if (setIndicios) setIndicios(value);
           break;
         case 'customMaterialDesc':
           setCustomMaterialDesc(value);
@@ -221,12 +218,12 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
               </div>
 
               <div>
-                <Label htmlFor={`nomeComum-${drug.id}`}>Nome Comum</Label>
-                <Input
-                  id={`nomeComum-${drug.id}`}
-                  placeholder="Ex: maconha, cocaína, etc."
-                  value={drug.nomeComum}
-                  onChange={e => updateDrug(drug.id, 'nomeComum', e.target.value)}
+                <Label htmlFor={`indicios-${drug.id}`}>Indícios</Label>
+                <Input 
+                  id={`indicios-${drug.id}`} 
+                  placeholder="Descreva os indícios encontrados"
+                  value={drug.indicios} 
+                  onChange={e => updateDrug(drug.id, 'indicios', e.target.value)}
                 />
               </div>
 
@@ -256,11 +253,6 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
               <Plus className="h-4 w-4" />
               Adicionar Outro Tipo de Droga
             </Button>
-          </div>
-
-          <div>
-            <Label htmlFor="indicios">Indícios</Label>
-            <Input id="indicios" value={indicios} readOnly className="bg-gray-100" />
           </div>
 
           <div>

@@ -44,12 +44,12 @@ export const addTermoConstatacaoDroga = (doc, data) => {
             const tipo = drug.substancia || "substância";
             const cor = drug.cor || "característica";
             const odor = drug.odor || "característico";
-            const nomeComum = drug.nomeComum || "entorpecente";
+            const indicios = drug.indicios ? `, COM INDÍCIOS DE ${drug.indicios.toUpperCase()}` : "";
 
             yPos = checkPageBreak(doc, yPos, 15, data);
             doc.setFont("helvetica", "normal"); doc.setFontSize(12);
             doc.text("-", MARGIN_LEFT, yPos);
-            const itemText = `${qtdeText} ${porcaoText} DE MATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}, E CARACTERÍSTICAS SEMELHANTES AO ENTORPECENTE CONHECIDO COMO ${nomeComum.toUpperCase()}${index === multipleDrugs.length - 1 ? `, SOB LACRE N° ${lacreNumero}.` : ';'}`;
+            const itemText = `${qtdeText} ${porcaoText} DE MATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}${indicios}${index === multipleDrugs.length - 1 ? `, SOB LACRE N° ${lacreNumero}.` : ';'}`;
             yPos = addWrappedText(doc, yPos, itemText, MARGIN_LEFT + 4, 12, "normal", MAX_LINE_WIDTH - 4, 'justify', data);
             yPos += 3;
         });
@@ -63,12 +63,12 @@ export const addTermoConstatacaoDroga = (doc, data) => {
         const tipo = data.drogaTipo || "substância";
         const cor = data.drogaCor || "característica";
         const odor = data.drogaOdor || "característico";
-        const nomeComum = data.drogaNomeComum || "entorpecente";
+        const indicios = data.indicios ? `, COM INDÍCIOS DE ${data.indicios.toUpperCase()}` : "";
 
         yPos = checkPageBreak(doc, yPos, 15, data);
         doc.setFont("helvetica", "normal"); doc.setFontSize(12);
         doc.text("-", MARGIN_LEFT, yPos);
-        const itemText = `${qtdeText} ${porcaoText} DE MATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}, E CARACTERÍSTICAS SEMELHANTES AO ENTORPECENTE CONHECIDO COMO ${nomeComum.toUpperCase()}, SOB LACRE N° ${lacreNumero}.`;
+        const itemText = `${qtdeText} ${porcaoText} DE MATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}${indicios}, SOB LACRE N° ${lacreNumero}.`;
         yPos = addWrappedText(doc, yPos, itemText, MARGIN_LEFT + 4, 12, "normal", MAX_LINE_WIDTH - 4, 'justify', data);
         yPos += 5;
     }
