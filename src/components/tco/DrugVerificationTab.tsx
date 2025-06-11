@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -18,27 +18,57 @@ interface DrugItem {
 }
 
 interface DrugVerificationTabProps {
+  quantidade: string;
+  setQuantidade: (value: string) => void;
+  substancia: string;
+  setSubstancia: (value: string) => void;
+  cor: string;
+  setCor: (value: string) => void;
+  odor: string;
+  setOdor: (value: string) => void;
+  indicios: string;
+  setIndicios?: (value: string) => void;
+  customMaterialDesc: string;
+  setCustomMaterialDesc: (value: string) => void;
   isUnknownMaterial: boolean;
   lacreNumero: string;
   setLacreNumero: (value: string) => void;
 }
 
 const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
+  quantidade,
+  setQuantidade,
+  substancia,
+  setSubstancia,
+  cor,
+  setCor,
+  odor,
+  setOdor,
+  indicios,
+  setIndicios,
+  customMaterialDesc,
+  setCustomMaterialDesc,
   isUnknownMaterial,
   lacreNumero,
   setLacreNumero,
 }) => {
+  
+  // Estado interno para gerenciar múltiplas drogas.
+  // As props são usadas APENAS para inicializar a primeira droga.
   const [internalDrugs, setInternalDrugs] = useState<DrugItem[]>([
     {
-      id: "drug-1",
-      quantidade: "",
-      substancia: "",
-      cor: "",
-      odor: "",
-      indicios: "",
-      customMaterialDesc: ""
+      id: `drug-${Date.now()}`, // ID único para a primeira droga também
+      quantidade,
+      substancia,
+      cor,
+      odor,
+      indicios,
+      customMaterialDesc
     }
   ]);
+
+  // REMOVIDO: O useEffect estava causando inconsistência, pois sincronizava
+  // as props apenas com o primeiro item da lista.
 
   const addNewDrug = () => {
     const newDrug: DrugItem = {
@@ -50,21 +80,44 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
       indicios: "",
       customMaterialDesc: ""
     };
+    
     setInternalDrugs(prev => [...prev, newDrug]);
   };
 
   const removeDrug = (drugId: string) => {
+    // Não permitir a remoção da última droga, para manter sempre ao menos uma.
     if (internalDrugs.length <= 1) return;
+    
     setInternalDrugs(prev => prev.filter(drug => drug.id !== drugId));
   };
 
   const updateDrug = (drugId: string, field: keyof DrugItem, value: string) => {
-    setInternalDrugs(prev =>
-      prev.map(drug =>
+    setInternalDrugs(prev => 
+      prev.map(drug => 
         drug.id === drugId ? { ...drug, [field]: value } : drug
       )
     );
+    
+    // REMOVIDO: A lógica de atualização das props foi removida.
+    // O componente agora gerencia seu estado de forma interna e consistente.
+    // Isso garante que todos os campos de todas as drogas funcionem da mesma maneira.
+    // NOTA: Para comunicar as alterações de volta ao pai, seria ideal
+    // ter uma prop como onDrugsChange={(allDrugs) => ...}
   };
+
+  // Efeito para sincronizar as alterações da primeira droga de volta para o pai,
+  // mantendo a compatibilidade com a estrutura de props original.
+  useEffect(() => {
+    const firstDrug = internalDrugs[0];
+    if (firstDrug) {
+      if (firstDrug.quantidade !== quantidade) setQuantidade(firstDrug.quantidade);
+      if (firstDrug.substancia !== substancia) setSubstancia(firstDrug.substancia);
+      if (firstDrug.cor !== cor) setCor(firstDrug.cor);
+      if (firstDrug.odor !== odor) setOdor(firstDrug.odor);
+      if (setIndicios && firstDrug.indicios !== indicios) setIndicios(firstDrug.indicios);
+      if (firstDrug.customMaterialDesc !== customMaterialDesc) setCustomMaterialDesc(firstDrug.customMaterialDesc);
+    }
+  }, [internalDrugs]); // Dispara sempre que a lista de drogas mudar.
 
   return (
     <Card>
@@ -102,8 +155,8 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
 
               <div>
                 <Label htmlFor={`substancia-${drug.id}`}>Substância *</Label>
-                <Select
-                  value={drug.substancia}
+                <Select 
+                  value={drug.substancia} 
                   onValueChange={(value) => updateDrug(drug.id, 'substancia', value)}
                 >
                   <SelectTrigger>
@@ -118,8 +171,8 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
 
               <div>
                 <Label htmlFor={`cor-${drug.id}`}>Cor *</Label>
-                <Select
-                  value={drug.cor}
+                <Select 
+                  value={drug.cor} 
                   onValueChange={(value) => updateDrug(drug.id, 'cor', value)}
                 >
                   <SelectTrigger>
@@ -135,8 +188,8 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
 
               <div>
                 <Label htmlFor={`odor-${drug.id}`}>Odor *</Label>
-                <Select
-                  value={drug.odor}
+                <Select 
+                  value={drug.odor} 
                   onValueChange={(value) => updateDrug(drug.id, 'odor', value)}
                 >
                   <SelectTrigger>
@@ -152,10 +205,10 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
 
               <div>
                 <Label htmlFor={`indicios-${drug.id}`}>Indícios</Label>
-                <Input
-                  id={`indicios-${drug.id}`}
+                <Input 
+                  id={`indicios-${drug.id}`} 
                   placeholder="Descreva os indícios encontrados"
-                  value={drug.indicios}
+                  value={drug.indicios} 
                   onChange={e => updateDrug(drug.id, 'indicios', e.target.value)}
                 />
               </div>
