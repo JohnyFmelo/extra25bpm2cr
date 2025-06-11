@@ -26,8 +26,8 @@ interface DrugVerificationTabProps {
   setCor: (value: string) => void;
   odor: string;
   setOdor: (value: string) => void;
-  indicios: string;
-  setIndicios?: (value: string) => void;
+  indicios: string; // Indícios para a Droga 1, vindo do pai
+  setIndicios?: (value: string) => void; // Para atualizar indícios da Droga 1 no pai
   customMaterialDesc: string;
   setCustomMaterialDesc: (value: string) => void;
   isUnknownMaterial: boolean; // Usado APENAS para a Droga 1
@@ -44,15 +44,15 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   setCor,
   odor,
   setOdor,
-  indicios,
-  setIndicios,
+  indicios, // Renomeado para clareza: indiciosPropForFirstDrug
+  setIndicios, // Renomeado para clareza: setIndiciosForFirstDrug
   customMaterialDesc,
   setCustomMaterialDesc,
   isUnknownMaterial,
   lacreNumero,
   setLacreNumero,
 }) => {
-  
+
   const [internalDrugs, setInternalDrugs] = useState<DrugItem[]>(() => [
     {
       id: "drug-1",
@@ -60,86 +60,145 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
       substancia,
       cor,
       odor,
-      indicios,
-      customMaterialDesc
-    }
+      indicios, // Inicializa com a prop indicios do pai
+      customMaterialDesc,
+    },
   ]);
 
-  // Efeito para sincronizar as props do PAI para o estado INTERNO, mas APENAS para a Droga 1.
-  // Isso impede que a edição na Droga 2 seja perdida.
+  // Função auxiliar para gerar a descrição de indícios
+  const generateIndiciosDescription = (substanciaVal: string, corVal: string, odorVal: string): string => {
+    if (substanciaVal && corVal && odorVal) {
+      return `Material ${substanciaVal.toLowerCase()} de cor ${corVal.toLowerCase()}, com odor ${odorVal.toLowerCase()}.`;
+    }
+    if (substanciaVal && corVal) {
+      return `Material ${substanciaVal.toLowerCase()} de cor ${corVal.toLowerCase()}.`;
+    }
+    // Adicione mais combinações ou retorne um valor padrão se necessário
+    return "";
+  };
+
+  // Efeito para sincronizar as props da Droga 1 (PAI -> FILHO)
   useEffect(() => {
     setInternalDrugs(currentDrugs => {
       const firstDrug = currentDrugs[0];
-      if (!firstDrug) return currentDrugs;
+      if (!firstDrug) return currentDrugs; // Segurança, mas deve sempre existir
 
-      // Cria uma cópia atualizada da primeira droga com base nas props
+      // Se as props relevantes da Droga 1 mudaram, atualize-a.
+      // E recalcule seus indicios se não for uma mudança direta na prop 'indicios'.
+      let updatedIndiciosForFirstDrug = indicios; // Começa com a prop do pai
+
+      // Verifica se houve uma mudança em substancia, cor ou odor da Droga 1 (vindas das props)
+      // E se essas mudanças são diferentes do que já está na Droga 1
+      // para evitar recalcular indicios desnecessariamente se apenas a prop `indicios` mudou.
+      if (
+        (firstDrug.substancia !== substancia ||
+         firstDrug.cor !== cor ||
+         firstDrug.odor !== odor) &&
+        // Se a prop 'indicios' não é a causa da mudança, ou se ela está vazia e pode ser gerada
+        (indicios === firstDrug.indicios || indicios === "" || firstDrug.indicios === generateIndiciosDescription(firstDrug.substancia, firstDrug.cor, firstDrug.odor))
+      ) {
+         // Não sobrescreve se `indicios` da prop do pai já tem um valor customizado
+         // A menos que `generateIndiciosDescription` produza o mesmo valor de `indicios` da prop,
+         // ou se a prop `indicios` esteja vazia, permitindo a geração.
+         // Esta condição é para evitar que uma mudança em `substancia` (prop)
+         // sobrescreva uma `indicios` (prop) que foi editada manualmente no pai.
+         const generatedIndicios = generateIndiciosDescription(substancia, cor, odor);
+         if(indicios === "" || indicios === generateIndiciosDescription(firstDrug.substancia, firstDrug.cor, firstDrug.odor) || firstDrug.indicios === "") {
+            updatedIndiciosForFirstDrug = generatedIndicios;
+         }
+      }
+
+
       const updatedFirstDrug = {
         ...firstDrug,
         quantidade,
         substancia,
         cor,
         odor,
-        indicios,
+        indicios: updatedIndiciosForFirstDrug,
         customMaterialDesc,
       };
 
-      // Recria a lista, substituindo apenas a primeira droga
-      return [updatedFirstDrug, ...currentDrugs.slice(1)];
+      // Se a droga atualizada for diferente da que está no estado, atualize.
+      if (JSON.stringify(updatedFirstDrug) !== JSON.stringify(firstDrug)) {
+        return [updatedFirstDrug, ...currentDrugs.slice(1)];
+      }
+      return currentDrugs;
     });
   }, [quantidade, substancia, cor, odor, indicios, customMaterialDesc]);
 
+
   const addNewDrug = () => {
+    const newDrugId = `drug-${Date.now()}`;
     const newDrug: DrugItem = {
-      id: `drug-${Date.now()}`,
+      id: newDrugId,
       quantidade: "",
       substancia: "",
       cor: "",
       odor: "",
-      indicios: "",
+      indicios: "", // Inicia vazio, será preenchido se substancia/cor/odor forem definidos
       customMaterialDesc: ""
     };
-    
     setInternalDrugs(prev => [...prev, newDrug]);
   };
 
   const removeDrug = (drugId: string) => {
     if (internalDrugs.length <= 1) return;
-    
     setInternalDrugs(prev => prev.filter(drug => drug.id !== drugId));
   };
 
   const updateDrug = (drugId: string, field: keyof DrugItem, value: string) => {
-    setInternalDrugs(prev => 
-      prev.map(drug => 
-        drug.id === drugId ? { ...drug, [field]: value } : drug
-      )
+    setInternalDrugs(prev =>
+      prev.map(drug => {
+        if (drug.id === drugId) {
+          const updatedDrug = { ...drug, [field]: value };
+
+          // SE o campo alterado NÃO FOR 'indicios' DIRETAMENTE,
+          // E FOR um dos campos que compõem os indícios (substancia, cor, odor),
+          // ENTÃO recalcula os indicios para ESTA droga.
+          if (field !== 'indicios' && ['substancia', 'cor', 'odor'].includes(field)) {
+            updatedDrug.indicios = generateIndiciosDescription(
+              updatedDrug.substancia,
+              updatedDrug.cor,
+              updatedDrug.odor
+            );
+          }
+          // Se o campo alterado for 'indicios', o valor 'value' (manual) já foi atribuído acima.
+
+          // Sincroniza com o PAI APENAS para a Droga 1
+          if (drugId === "drug-1" && setIndicios) {
+            switch (field) {
+              case 'quantidade': setQuantidade(value); break;
+              case 'substancia':
+                setSubstancia(value);
+                setIndicios(updatedDrug.indicios); // Atualiza indicios no pai com o valor gerado/manual
+                break;
+              case 'cor':
+                setCor(value);
+                setIndicios(updatedDrug.indicios); // Atualiza indicios no pai
+                break;
+              case 'odor':
+                setOdor(value);
+                setIndicios(updatedDrug.indicios); // Atualiza indicios no pai
+                break;
+              case 'indicios': // Se indicios foi editado manualmente
+                setIndicios(value); // Atualiza indicios no pai com o valor manual
+                break;
+              case 'customMaterialDesc': setCustomMaterialDesc(value); break;
+            }
+          }
+          return updatedDrug;
+        }
+        return drug;
+      })
     );
-    
-    // Se for a primeira droga, notifica o componente pai para acionar a automação
-    if (drugId === "drug-1") {
-      switch (field) {
-        case 'quantidade': setQuantidade(value); break;
-        case 'substancia': setSubstancia(value); break;
-        case 'cor': setCor(value); break;
-        case 'odor': setOdor(value); break;
-        case 'indicios': if (setIndicios) setIndicios(value); break;
-        case 'customMaterialDesc': setCustomMaterialDesc(value); break;
-      }
-    }
   };
-  
-  // **CORREÇÃO LÓGICA**: Função auxiliar para verificar se uma droga específica é desconhecida.
-  // Isso isola a lógica de exibição para cada item da lista.
+
   const shouldShowDescriptionFor = (drug: DrugItem, index: number): boolean => {
-    // Para a primeira droga, usamos a prop `isUnknownMaterial` que vem do pai.
     if (index === 0) {
       return isUnknownMaterial && drug.substancia !== "" && drug.cor !== "";
     }
-    // Para as outras drogas, replicamos uma lógica local.
-    // Assumimos que "desconhecido" é qualquer coisa com substância e cor que não seja uma combinação conhecida.
-    // Exemplo de lógica (pode ser ajustado): uma droga é "conhecida" se for Vegetal e Verde.
     const isKnownCombination = drug.substancia === 'Vegetal' && drug.cor === 'Verde';
-    // Mostra o campo se a combinação não for conhecida e os campos estiverem preenchidos.
     return drug.substancia !== "" && drug.cor !== "" && !isKnownCombination;
   };
 
@@ -167,9 +226,6 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                 )}
               </div>
 
-              {/* ... Inputs e Selects para quantidade, substancia, cor, odor, indicios ... */}
-              {/* O código deles permanece o mesmo, então foi omitido por brevidade */}
-              
                <div>
                 <Label htmlFor={`quantidade-${drug.id}`}>Porção (quantidade) *</Label>
                 <Input
@@ -182,9 +238,9 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
 
               <div>
                 <Label htmlFor={`substancia-${drug.id}`}>Substância *</Label>
-                <Select 
-                  value={drug.substancia} 
-                  onValueChange={(value) => updateDrug(drug.id, 'substancia', value)}
+                <Select
+                  value={drug.substancia}
+                  onValueChange={(val) => updateDrug(drug.id, 'substancia', val)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo de substância" />
@@ -192,15 +248,16 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                   <SelectContent>
                     <SelectItem value="Vegetal">Vegetal</SelectItem>
                     <SelectItem value="Artificial">Artificial</SelectItem>
+                    {/* Adicione mais opções se necessário */}
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <Label htmlFor={`cor-${drug.id}`}>Cor *</Label>
-                <Select 
-                  value={drug.cor} 
-                  onValueChange={(value) => updateDrug(drug.id, 'cor', value)}
+                <Select
+                  value={drug.cor}
+                  onValueChange={(val) => updateDrug(drug.id, 'cor', val)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a cor da substância" />
@@ -209,15 +266,16 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                     <SelectItem value="Verde">Verde</SelectItem>
                     <SelectItem value="Amarelada">Amarelada</SelectItem>
                     <SelectItem value="Branca">Branca</SelectItem>
+                     {/* Adicione mais opções se necessário */}
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <Label htmlFor={`odor-${drug.id}`}>Odor *</Label>
-                <Select 
-                  value={drug.odor} 
-                  onValueChange={(value) => updateDrug(drug.id, 'odor', value)}
+                <Select
+                  value={drug.odor}
+                  onValueChange={(val) => updateDrug(drug.id, 'odor', val)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o odor da substância" />
@@ -226,21 +284,21 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                     <SelectItem value="Característico">Característico</SelectItem>
                     <SelectItem value="Forte">Forte</SelectItem>
                     <SelectItem value="Suave">Suave</SelectItem>
+                    {/* Adicione mais opções se necessário */}
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <Label htmlFor={`indicios-${drug.id}`}>Indícios</Label>
-                <Input 
-                  id={`indicios-${drug.id}`} 
-                  placeholder="Descreva os indícios encontrados"
-                  value={drug.indicios} 
+                <Input
+                  id={`indicios-${drug.id}`}
+                  placeholder="Descreva os indícios encontrados" // ou "Gerado automaticamente"
+                  value={drug.indicios} // Sempre reflete o estado interno de 'indicios' da droga
                   onChange={e => updateDrug(drug.id, 'indicios', e.target.value)}
                 />
               </div>
 
-              {/* **LÓGICA CORRIGIDA**: A exibição do campo agora depende da função auxiliar */}
               {shouldShowDescriptionFor(drug, index) && (
                 <div>
                   <Label htmlFor={`customMaterialDesc-${drug.id}`}>Descrição do Material *</Label>
