@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
@@ -49,11 +48,11 @@ const numberToText = (num) => {
 };
 
 const DEFAULT_FONT_NAME = "helvetica";
-const DEFAULT_FONT_SIZE = 9; // Reduced font size for better fit
+const DEFAULT_FONT_SIZE = 9;
 const CELL_PADDING_X = 2;
-const CELL_PADDING_Y = 3; // Reduced padding for better fit
-const LINE_HEIGHT_FACTOR = 1.05; // Slightly reduced line height
-const MIN_ROW_HEIGHT = 6; // Reduced minimum row height
+const CELL_PADDING_Y = 3;
+const LINE_HEIGHT_FACTOR = 1.05;
+const MIN_ROW_HEIGHT = 6;
 
 function getCellContentMetrics(doc, label, value, cellWidth, fontSize, valueFontStyle = "normal", isLabelBold = true) {
     const availableWidth = cellWidth - CELL_PADDING_X * 2;
@@ -129,7 +128,7 @@ function renderCellText(doc, x, y, cellWidth, cellRowHeight, metrics, fontSize, 
 
     if (cellVerticalAlign === 'middle') {
         textBlockStartY = y + CELL_PADDING_Y + (usableCellHeight - totalCalculatedTextHeight) / 2 - 0.5;
-    } else { // 'top'
+    } else {
         textBlockStartY = y + CELL_PADDING_Y;
     }
     textBlockStartY = Math.max(y + CELL_PADDING_Y, textBlockStartY);
@@ -179,10 +178,9 @@ export function addTermoApreensao(doc, data) {
     const isDroga = data.natureza && data.natureza.toLowerCase() === "porte de drogas para consumo";
     const lacreNumero = isDroga ? (data.lacreNumero || "00000000") : "";
 
-    // Flexão de gênero para autor do fato
     const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR';
 
-    const TABLE_CONTENT_FONT_SIZE = DEFAULT_FONT_SIZE; // Use consistent font size
+    const TABLE_CONTENT_FONT_SIZE = DEFAULT_FONT_SIZE;
 
     const colWidth = MAX_LINE_WIDTH / 3;
     const xCol1 = MARGIN_LEFT;
@@ -190,15 +188,13 @@ export function addTermoApreensao(doc, data) {
     const xCol3 = MARGIN_LEFT + 2 * colWidth;
     const lastColWidth = MAX_LINE_WIDTH - (2 * colWidth);
 
-    // Title with reduced vertical spacing - set the title based on whether it's a drug case
     const titulo = isDroga ? `TERMO DE APREENSÃO LACRE Nº ${lacreNumero}` : "TERMO DE APREENSÃO";
     doc.setFont(DEFAULT_FONT_NAME, "bold");
     doc.setFontSize(12);
     currentY = checkPageBreak(doc, currentY, 15, data);
-    // Force setting the font again right before text rendering to ensure it's applied
     doc.setFont(DEFAULT_FONT_NAME, "bold");
     doc.text(titulo.toUpperCase(), PAGE_WIDTH / 2, currentY, { align: "center" });
-    currentY += 6; // Reduced spacing after title
+    currentY += 6;
 
     const cellOptionsBase = { fontSize: TABLE_CONTENT_FONT_SIZE, cellVerticalAlign: 'middle' };
 
@@ -266,27 +262,14 @@ export function addTermoApreensao(doc, data) {
     doc.rect(xCol3, rowY, lastColWidth, r7H); renderCellText(doc, xCol3, rowY, lastColWidth, r7H, m73, TABLE_CONTENT_FONT_SIZE, "normal", true, "left", cellOptionsBase.cellVerticalAlign);
     currentY = rowY + r7H;
 
-    // Seção de apreensões com tamanho otimizado
     rowY = currentY;
     let textoApreensaoOriginal = (data.apreensoes || "Nenhum objeto/documento descrito para apreensão.").toUpperCase();
-    
-    // Texto específico para casos de droga
-    if (isDroga) {
-        const quantidadeStr = String(data.drogaQuantidade || "01 (UMA)");
-        const quantidadeNumMatch = quantidadeStr.match(/\d+/);
-        const quantidadeNum = parseInt(quantidadeNumMatch ? quantidadeNumMatch[0] : "1", 10);
-        const quantidadeText = numberToText(quantidadeNum);
-        const plural = quantidadeNum > 1 ? "PORÇÕES" : "PORÇÃO";
-        textoApreensaoOriginal = data.drogaIsUnknown
-            ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${data.drogaCustomDesc || ""}, CONFORME FOTO EM ANEXO.`
-            : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${data.drogaNomeComum.toUpperCase()}, ${data.drogaCustomDesc || ""}, CONFORME FOTO EM ANEXO.`;
-    }
     
     const apreensaoTextX = MARGIN_LEFT + CELL_PADDING_X;
     const apreensaoMaxWidth = MAX_LINE_WIDTH - CELL_PADDING_X * 2;
     let totalCalculatedTextHeightForDesc = 0;
 
-    const combinedText = `FICA APREENDIDO O DESCRITO ABAIXO:\n- ${textoApreensaoOriginal}`;
+    const combinedText = `FICA APREENDIDO O DESCRITO ABAIXO:\n${textoApreensaoOriginal}`;
     doc.setFont(DEFAULT_FONT_NAME, "normal");
     doc.setFontSize(DEFAULT_FONT_SIZE);
     const combinedLines = doc.splitTextToSize(combinedText, apreensaoMaxWidth);
@@ -300,7 +283,6 @@ export function addTermoApreensao(doc, data) {
     doc.text(combinedLines, apreensaoTextX, textBlockStartYForDesc, { align: 'left', lineHeightFactor: LINE_HEIGHT_FACTOR });
     currentY = rowY + r9H;
 
-    // Texto legal com fonte menor
     rowY = currentY;
     const textoLegal = "O PRESENTE TERMO DE APREENSÃO FOI LAVRADO COM BASE NO ART. 6º, II, DO CÓDIGO DE PROCESSO PENAL, E ART. 92 DA LEI 9.999/1995.".toUpperCase();
     const m10_1 = getCellContentMetrics(doc, null, textoLegal, MAX_LINE_WIDTH, DEFAULT_FONT_SIZE);
@@ -309,8 +291,7 @@ export function addTermoApreensao(doc, data) {
     doc.rect(MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H); renderCellText(doc, MARGIN_LEFT, rowY, MAX_LINE_WIDTH, r10H, m10_1, DEFAULT_FONT_SIZE, "normal", false, "left", cellOptionsBase.cellVerticalAlign);
     currentY = rowY + r10H;
 
-    // Seção de assinaturas com espaçamento vertical reduzido
-    currentY += 5; // Reduzido de 7 para 5
+    currentY += 5;
     doc.setFont(DEFAULT_FONT_NAME, "normal");
     doc.setFontSize(10);
     const autorLabel = autor?.sexo?.toLowerCase() === 'feminino' ? "AUTORA DOS FATOS" : "AUTOR DOS FATOS";
