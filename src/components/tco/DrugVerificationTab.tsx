@@ -30,7 +30,7 @@ interface DrugVerificationTabProps {
   setIndicios?: (value: string) => void;
   customMaterialDesc: string;
   setCustomMaterialDesc: (value: string) => void;
-  isUnknownMaterial: boolean;
+  isUnknownMaterial: boolean; // Usado APENAS para a Droga 1
   lacreNumero: string;
   setLacreNumero: (value: string) => void;
 }
@@ -53,8 +53,6 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   setLacreNumero,
 }) => {
   
-  // O estado interno é a ÚNICA fonte de verdade para a UI.
-  // As props são usadas apenas para a inicialização da primeira droga.
   const [internalDrugs, setInternalDrugs] = useState<DrugItem[]>(() => [
     {
       id: "drug-1",
@@ -67,21 +65,28 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
     }
   ]);
 
-  // Este useEffect é 'cirúrgico'. Ele só atualiza o campo 'indicios' na
-  // primeira droga quando a prop 'indicios' (gerada pelo pai) muda.
-  // Ele NÃO mexe em mais nada, preservando as edições do usuário nas outras drogas.
+  // Efeito para sincronizar as props do PAI para o estado INTERNO, mas APENAS para a Droga 1.
+  // Isso impede que a edição na Droga 2 seja perdida.
   useEffect(() => {
     setInternalDrugs(currentDrugs => {
-      // Se o valor de 'indicios' vindo do pai for diferente do que temos internamente
-      if (currentDrugs.length > 0 && currentDrugs[0].indicios !== indicios) {
-        const newDrugs = [...currentDrugs];
-        newDrugs[0] = { ...newDrugs[0], indicios: indicios };
-        return newDrugs;
-      }
-      // Caso contrário, não faz nada para evitar loops de renderização
-      return currentDrugs;
+      const firstDrug = currentDrugs[0];
+      if (!firstDrug) return currentDrugs;
+
+      // Cria uma cópia atualizada da primeira droga com base nas props
+      const updatedFirstDrug = {
+        ...firstDrug,
+        quantidade,
+        substancia,
+        cor,
+        odor,
+        indicios,
+        customMaterialDesc,
+      };
+
+      // Recria a lista, substituindo apenas a primeira droga
+      return [updatedFirstDrug, ...currentDrugs.slice(1)];
     });
-  }, [indicios]); // Depende APENAS da prop que é controlada externamente.
+  }, [quantidade, substancia, cor, odor, indicios, customMaterialDesc]);
 
   const addNewDrug = () => {
     const newDrug: DrugItem = {
@@ -104,36 +109,38 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   };
 
   const updateDrug = (drugId: string, field: keyof DrugItem, value: string) => {
-    // 1. Atualiza o estado interno. Isso faz a UI funcionar para TODAS as drogas.
     setInternalDrugs(prev => 
       prev.map(drug => 
         drug.id === drugId ? { ...drug, [field]: value } : drug
       )
     );
     
-    // 2. Se for a primeira droga, notifica o componente pai para acionar a automação.
+    // Se for a primeira droga, notifica o componente pai para acionar a automação
     if (drugId === "drug-1") {
       switch (field) {
-        case 'quantidade':
-          setQuantidade(value);
-          break;
-        case 'substancia':
-          setSubstancia(value);
-          break;
-        case 'cor':
-          setCor(value);
-          break;
-        case 'odor':
-          setOdor(value);
-          break;
-        case 'indicios':
-          if (setIndicios) setIndicios(value);
-          break;
-        case 'customMaterialDesc':
-          setCustomMaterialDesc(value);
-          break;
+        case 'quantidade': setQuantidade(value); break;
+        case 'substancia': setSubstancia(value); break;
+        case 'cor': setCor(value); break;
+        case 'odor': setOdor(value); break;
+        case 'indicios': if (setIndicios) setIndicios(value); break;
+        case 'customMaterialDesc': setCustomMaterialDesc(value); break;
       }
     }
+  };
+  
+  // **CORREÇÃO LÓGICA**: Função auxiliar para verificar se uma droga específica é desconhecida.
+  // Isso isola a lógica de exibição para cada item da lista.
+  const shouldShowDescriptionFor = (drug: DrugItem, index: number): boolean => {
+    // Para a primeira droga, usamos a prop `isUnknownMaterial` que vem do pai.
+    if (index === 0) {
+      return isUnknownMaterial && drug.substancia !== "" && drug.cor !== "";
+    }
+    // Para as outras drogas, replicamos uma lógica local.
+    // Assumimos que "desconhecido" é qualquer coisa com substância e cor que não seja uma combinação conhecida.
+    // Exemplo de lógica (pode ser ajustado): uma droga é "conhecida" se for Vegetal e Verde.
+    const isKnownCombination = drug.substancia === 'Vegetal' && drug.cor === 'Verde';
+    // Mostra o campo se a combinação não for conhecida e os campos estiverem preenchidos.
+    return drug.substancia !== "" && drug.cor !== "" && !isKnownCombination;
   };
 
   return (
@@ -160,7 +167,10 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                 )}
               </div>
 
-              <div>
+              {/* ... Inputs e Selects para quantidade, substancia, cor, odor, indicios ... */}
+              {/* O código deles permanece o mesmo, então foi omitido por brevidade */}
+              
+               <div>
                 <Label htmlFor={`quantidade-${drug.id}`}>Porção (quantidade) *</Label>
                 <Input
                   id={`quantidade-${drug.id}`}
@@ -230,7 +240,8 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                 />
               </div>
 
-              {isUnknownMaterial && drug.substancia !== "" && drug.cor !== "" && (
+              {/* **LÓGICA CORRIGIDA**: A exibição do campo agora depende da função auxiliar */}
+              {shouldShowDescriptionFor(drug, index) && (
                 <div>
                   <Label htmlFor={`customMaterialDesc-${drug.id}`}>Descrição do Material *</Label>
                   <Textarea
