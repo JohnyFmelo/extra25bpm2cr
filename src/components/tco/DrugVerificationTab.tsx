@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -18,17 +18,15 @@ interface DrugItem {
 }
 
 interface DrugVerificationTabProps {
-  onDrugsChange: (drugs: DrugItem[]) => void;
+  isUnknownMaterial: boolean;
   lacreNumero: string;
   setLacreNumero: (value: string) => void;
-  isUnknownMaterial: boolean;
 }
 
 const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
-  onDrugsChange,
+  isUnknownMaterial,
   lacreNumero,
   setLacreNumero,
-  isUnknownMaterial,
 }) => {
   const [internalDrugs, setInternalDrugs] = useState<DrugItem[]>([
     {
@@ -38,14 +36,9 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
       cor: "",
       odor: "",
       indicios: "",
-      customMaterialDesc: "",
-    },
+      customMaterialDesc: ""
+    }
   ]);
-
-  // Notify parent whenever internalDrugs changes
-  useEffect(() => {
-    onDrugsChange(internalDrugs);
-  }, [internalDrugs, onDrugsChange]);
 
   const addNewDrug = () => {
     const newDrug: DrugItem = {
@@ -55,19 +48,19 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
       cor: "",
       odor: "",
       indicios: "",
-      customMaterialDesc: "",
+      customMaterialDesc: ""
     };
-    setInternalDrugs((prev) => [...prev, newDrug]);
+    setInternalDrugs(prev => [...prev, newDrug]);
   };
 
   const removeDrug = (drugId: string) => {
-    if (internalDrugs.length <= 1) return; // Don't allow removing the last drug
-    setInternalDrugs((prev) => prev.filter((drug) => drug.id !== drugId));
+    if (internalDrugs.length <= 1) return;
+    setInternalDrugs(prev => prev.filter(drug => drug.id !== drugId));
   };
 
   const updateDrug = (drugId: string, field: keyof DrugItem, value: string) => {
-    setInternalDrugs((prev) =>
-      prev.map((drug) =>
+    setInternalDrugs(prev =>
+      prev.map(drug =>
         drug.id === drugId ? { ...drug, [field]: value } : drug
       )
     );
@@ -103,7 +96,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                   id={`quantidade-${drug.id}`}
                   placeholder="Informe a quantidade (ex: 1 porção)"
                   value={drug.quantidade}
-                  onChange={(e) => updateDrug(drug.id, "quantidade", e.target.value)}
+                  onChange={e => updateDrug(drug.id, 'quantidade', e.target.value)}
                 />
               </div>
 
@@ -111,7 +104,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                 <Label htmlFor={`substancia-${drug.id}`}>Substância *</Label>
                 <Select
                   value={drug.substancia}
-                  onValueChange={(value) => updateDrug(drug.id, "substancia", value)}
+                  onValueChange={(value) => updateDrug(drug.id, 'substancia', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo de substância" />
@@ -127,7 +120,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                 <Label htmlFor={`cor-${drug.id}`}>Cor *</Label>
                 <Select
                   value={drug.cor}
-                  onValueChange={(value) => updateDrug(drug.id, "cor", value)}
+                  onValueChange={(value) => updateDrug(drug.id, 'cor', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a cor da substância" />
@@ -144,7 +137,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                 <Label htmlFor={`odor-${drug.id}`}>Odor *</Label>
                 <Select
                   value={drug.odor}
-                  onValueChange={(value) => updateDrug(drug.id, "odor", value)}
+                  onValueChange={(value) => updateDrug(drug.id, 'odor', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o odor da substância" />
@@ -163,22 +156,18 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                   id={`indicios-${drug.id}`}
                   placeholder="Descreva os indícios encontrados"
                   value={drug.indicios}
-                  onChange={(e) => updateDrug(drug.id, "indicios", e.target.value)}
+                  onChange={e => updateDrug(drug.id, 'indicios', e.target.value)}
                 />
               </div>
 
               {isUnknownMaterial && drug.substancia !== "" && drug.cor !== "" && (
                 <div>
-                  <Label htmlFor={`customMaterialDesc-${drug.id}`}>
-                    Descrição do Material *
-                  </Label>
+                  <Label htmlFor={`customMaterialDesc-${drug.id}`}>Descrição do Material *</Label>
                   <Textarea
                     id={`customMaterialDesc-${drug.id}`}
                     placeholder="Descreva o tipo de material encontrado"
                     value={drug.customMaterialDesc}
-                    onChange={(e) =>
-                      updateDrug(drug.id, "customMaterialDesc", e.target.value)
-                    }
+                    onChange={e => updateDrug(drug.id, 'customMaterialDesc', e.target.value)}
                     className="min-h-[100px]"
                   />
                 </div>
@@ -204,7 +193,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
               id="lacreNumero"
               placeholder="Informe o número do lacre (ex: 00000000)"
               value={lacreNumero}
-              onChange={(e) => setLacreNumero(e.target.value)}
+              onChange={e => setLacreNumero(e.target.value)}
               maxLength={8}
             />
           </div>
