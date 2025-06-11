@@ -1,11 +1,10 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react"; // Added useMemo
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button"; // Button not used in the snippet for apreensoes/docs
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { X } from "lucide-react";
+// import { X } from "lucide-react"; // X not used in the snippet for apreensoes/docs
 
-// Assuming DrugItem interface is defined in a shared types file or passed appropriately
 interface DrugItem {
   id: string;
   quantidade: string;
@@ -19,19 +18,19 @@ interface DrugItem {
 interface HistoricoTabProps {
   relatoPolicial: string;
   setRelatoPolicial: (value: string) => void;
-  relatoAutor: string;
-  setRelatoAutor: (value: string) => void;
-  relatoVitima: string;
-  setRelatoVitima: (value: string) => void;
-  relatoTestemunha: string;
-  setRelatoTestemunha: (value: string) => void;
-  apreensoes: string; // This is a prop, representing the current state from the parent
-  setApreensoes: (value: string) => void; // Callback to update parent's state
+  // relatoAutor: string; // Assuming individual author relato is handled
+  // setRelatoAutor: (value: string) => void;
+  // relatoVitima: string; // Assuming individual victim relato is handled
+  // setRelatoVitima: (value: string) => void;
+  // relatoTestemunha: string; // Assuming individual witness relato is handled
+  // setRelatoTestemunha: (value: string) => void;
+  apreensoes: string;
+  setApreensoes: (value: string) => void;
   conclusaoPolicial: string;
   setConclusaoPolicial: (value: string) => void;
-  drugSeizure?: boolean;
-  representacao?: string;
-  setRepresentacao?: (value: string) => void;
+  // drugSeizure?: boolean; // Derived from natureza
+  // representacao?: string; // Assuming individual victim representacao
+  // setRepresentacao?: (value: string) => void;
   natureza: string;
   videoLinks?: string[];
   setVideoLinks?: (value: string[]) => void;
@@ -39,8 +38,8 @@ interface HistoricoTabProps {
   autorSexo?: string;
   providencias: string;
   setProvidencias: (value: string) => void;
-  documentosAnexos: string; // Prop for current state from parent
-  setDocumentosAnexos: (value: string) => void; // Callback to update parent's state
+  documentosAnexos: string;
+  setDocumentosAnexos: (value: string) => void;
   lacreNumero?: string;
   vitimas?: {
     nome: string;
@@ -114,19 +113,10 @@ const getDrugDisplayNameForApreensao = (substancia: string, cor: string): string
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
   relatoPolicial,
   setRelatoPolicial,
-  // relatoAutor, // This prop seems unused if individual author relatos are handled
-  // setRelatoAutor, // This prop seems unused
-  // relatoVitima, // This prop seems unused
-  // setRelatoVitima, // This prop seems unused
-  // relatoTestemunha, // This prop seems unused
-  // setRelatoTestemunha, // This prop seems unused
-  apreensoes, // Prop from parent
-  setApreensoes, // Setter for parent
+  apreensoes,
+  setApreensoes,
   conclusaoPolicial,
   setConclusaoPolicial,
-  // drugSeizure = false, // This prop seems unused, isDrugCase is derived from natureza
-  // representacao = "", // This prop seems unused if individual victim representacao is handled
-  // setRepresentacao, // This prop seems unused
   natureza,
   videoLinks = [],
   setVideoLinks,
@@ -134,8 +124,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   autorSexo = "masculino",
   providencias,
   setProvidencias,
-  documentosAnexos, // Prop from parent
-  setDocumentosAnexos, // Setter for parent
+  documentosAnexos,
+  setDocumentosAnexos,
   lacreNumero = "",
   vitimas = [],
   setVitimaRelato,
@@ -147,8 +137,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   allDrugsDetails = [],
 }) => {
   const isDrugCase = natureza === "Porte de drogas para consumo";
-  // const fileInputRef = useRef<HTMLInputElement>(null); // Not used in provided snippet section for apreensoes/documentos
-  // const [selectedFiles, setSelectedFiles] = useState<{ file: File; id: string; }[]>([]); // Not used
   const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
   
   const validVitimas = vitimas.filter(vitima => vitima.nome && vitima.nome.trim() !== "" && vitima.nome !== "O ESTADO");
@@ -186,13 +174,12 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     }
   }, [isDrugCase, autorSexo, providencias, setProvidencias]);
   
-  // Effect to generate apreensoes text for drug cases
-  useEffect(() => {
-    if (isDrugCase) {
-      let newApreensoesText = "";
+  // Calculate apreensoes text for drug cases directly using useMemo
+  const apreensoesTextForDrugCase = useMemo(() => {
+    if (isDrugCase) { // Only calculate if it's a drug case
       if (allDrugsDetails && allDrugsDetails.length > 0) {
         const apreensoesItems = allDrugsDetails
-          .filter(drug => drug.quantidade && drug.substancia && drug.cor) // Ensure essential fields are present
+          .filter(drug => drug.quantidade && drug.substancia && drug.cor)
           .map(drug => {
             let drugDescriptionPart;
             if (drug.customMaterialDesc && drug.customMaterialDesc.trim() !== "") {
@@ -204,16 +191,42 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
             const quantidadeText = drug.quantidade ? drug.quantidade.toUpperCase() : "QUANTIDADE NÃO INFORMADA";
             return `- ${quantidadeText} DE ${drugDescriptionPart}, CONFORME FOTO EM ANEXO.`;
           });
-        newApreensoesText = apreensoesItems.join("\n");
+        return apreensoesItems.join("\n");
       }
-      // Only call setApreensoes if the calculated value is different from the current prop value
-      if (newApreensoesText !== apreensoes) {
-        setApreensoes(newApreensoesText);
+      return ""; // Return empty string if drug case but no drugs
+    }
+    return apreensoes; // For non-drug cases, return the prop value (managed by user input)
+  }, [isDrugCase, allDrugsDetails, apreensoes]); // Dependency: apreensoes is for non-drug case fallback
+
+  // Effect to inform the parent about the auto-generated apreensoes text for drug cases
+  useEffect(() => {
+    if (isDrugCase) {
+      // Calculate the text based on current allDrugsDetails, similar to useMemo but for the effect
+      let calculatedText = "";
+      if (allDrugsDetails && allDrugsDetails.length > 0) {
+         const apreensoesItems = allDrugsDetails
+          .filter(drug => drug.quantidade && drug.substancia && drug.cor)
+          .map(drug => {
+            let drugDescriptionPart;
+            if (drug.customMaterialDesc && drug.customMaterialDesc.trim() !== "") {
+              drugDescriptionPart = drug.customMaterialDesc.toUpperCase();
+            } else {
+              const knownName = getDrugDisplayNameForApreensao(drug.substancia, drug.cor);
+              drugDescriptionPart = `SUBSTÂNCIA ANÁLOGA A ${knownName}`;
+            }
+            const quantidadeText = drug.quantidade ? drug.quantidade.toUpperCase() : "QUANTIDADE NÃO INFORMADA";
+            return `- ${quantidadeText} DE ${drugDescriptionPart}, CONFORME FOTO EM ANEXO.`;
+          });
+        calculatedText = apreensoesItems.join("\n");
+      }
+
+      if (calculatedText !== apreensoes) { // Compare with the current prop value from parent
+        setApreensoes(calculatedText);
       }
     }
-    // If not a drug case, apreensoes is manually controlled by the user via the Textarea's onChange.
-    // This effect should not interfere then. The readOnly prop on Textarea handles editability.
-  }, [isDrugCase, allDrugsDetails, apreensoes, setApreensoes]); // Added apreensoes to dependency array
+    // For non-drug cases, setApreensoes is called directly by the Textarea's onChange
+  }, [isDrugCase, allDrugsDetails, apreensoes, setApreensoes]);
+
 
   // Effect to update documentosAnexos
   useEffect(() => {
@@ -228,7 +241,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       newAnexosArray.push("TERMO DE DEPÓSITO");
     }
 
-    // Crucial check: use the `apreensoes` prop (which reflects the true current state)
+    // Use the current value of 'apreensoes' prop, which should be up-to-date
+    // due to the effect above (for drug cases) or user input (for non-drug cases).
     if (apreensoes && apreensoes.trim() !== "") {
       newAnexosArray.push("TERMO DE APREENSÃO");
     }
@@ -244,22 +258,22 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     }
     
     const newAnexosText = newAnexosArray.join("\n");
-    // Only call setDocumentosAnexos if the calculated value is different
     if (newAnexosText !== documentosAnexos) {
       setDocumentosAnexos(newAnexosText);
     }
   }, [
     isDrugCase, 
-    apreensoes, // This is key: when apreensoes prop changes, this effect re-runs
+    apreensoes, // This is now the single source of truth for apreensoes text in this effect
     solicitarCorpoDelito, 
     autorSexo, 
     lacreNumero, 
     autores, 
-    documentosAnexos, // Added to dependency array
+    documentosAnexos, 
     setDocumentosAnexos
   ]);
 
   useEffect(() => {
+    // This effect seems fine, no changes needed based on the video
     if (conclusaoPolicial) {
       let updatedConclusion = conclusaoPolicial;
       const generoSuffix = autorSexo?.toLowerCase() === "feminino" ? "A" : "O";
@@ -270,7 +284,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
             /LIBERADO SEM LESÕES CORPORAIS APARENTES|liberado sem lesões corporais aparentes/gi, 
             `LIBERAD${generoSuffix} COM LESÕES CORPORAIS APARENTES CONFORME AUTO DE RESISTENCIA`
           );
-          // Only set if different to avoid potential loops if conclusaoPolicial is in deps
            if (updatedConclusion !== conclusaoPolicial) {
              setConclusaoPolicial(updatedConclusion);
            }
@@ -287,7 +300,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       setVideoLinks(urls.split("\n").filter(url => url.trim() !== ""));
     }
   };
-
 
   return <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
@@ -372,10 +384,10 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea 
             id="apreensoes" 
             placeholder={isDrugCase ? "Gerado automaticamente com base nas drogas informadas" : "Descreva os objetos ou documentos apreendidos, se houver"} 
-            value={apreensoes}  // Value comes from parent's state
+            value={isDrugCase ? apreensoesTextForDrugCase : apreensoes} // Display derived or prop value
             onChange={e => {
-              if (!isDrugCase) { // Only allow direct edit if not a drug case
-                setApreensoes(e.target.value);
+              if (!isDrugCase) { 
+                setApreensoes(e.target.value); // Allow direct edit only if not a drug case
               }
             }}
             className="min-h-[100px]"
@@ -399,8 +411,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea 
             id="documentosAnexos" 
             placeholder="Documentos anexos ao TCO" 
-            value={documentosAnexos} // Value comes from parent's state
-            readOnly // This field is always read-only as it's auto-generated
+            value={documentosAnexos} 
+            readOnly 
             className="min-h-[100px]" 
           />
           <p className="text-xs text-muted-foreground mt-1">
