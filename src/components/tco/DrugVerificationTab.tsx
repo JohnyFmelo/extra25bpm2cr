@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -19,64 +18,34 @@ interface DrugItem {
 }
 
 interface DrugVerificationTabProps {
-  quantidade: string;
-  setQuantidade: (value: string) => void;
-  substancia: string;
-  setSubstancia: (value: string) => void;
-  cor: string;
-  setCor: (value: string) => void;
-  odor: string;
-  setOdor: (value: string) => void;
-  indicios: string;
-  setIndicios?: (value: string) => void;
-  customMaterialDesc: string;
-  setCustomMaterialDesc: (value: string) => void;
-  isUnknownMaterial: boolean;
+  onDrugsChange: (drugs: DrugItem[]) => void;
   lacreNumero: string;
   setLacreNumero: (value: string) => void;
+  isUnknownMaterial: boolean;
 }
 
 const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
-  quantidade,
-  setQuantidade,
-  substancia,
-  setSubstancia,
-  cor,
-  setCor,
-  odor,
-  setOdor,
-  indicios,
-  setIndicios,
-  customMaterialDesc,
-  setCustomMaterialDesc,
-  isUnknownMaterial,
+  onDrugsChange,
   lacreNumero,
   setLacreNumero,
+  isUnknownMaterial,
 }) => {
-  
-  // Estado interno para gerenciar múltiplas drogas
   const [internalDrugs, setInternalDrugs] = useState<DrugItem[]>([
     {
       id: "drug-1",
-      quantidade,
-      substancia,
-      cor,
-      odor,
-      indicios,
-      customMaterialDesc
-    }
+      quantidade: "",
+      substancia: "",
+      cor: "",
+      odor: "",
+      indicios: "",
+      customMaterialDesc: "",
+    },
   ]);
 
-  // Sincronizar estado interno com props do primeiro item
+  // Notify parent whenever internalDrugs changes
   useEffect(() => {
-    setInternalDrugs(prev => 
-      prev.map((drug, index) => 
-        index === 0 
-          ? { ...drug, quantidade, substancia, cor, odor, indicios, customMaterialDesc }
-          : drug
-      )
-    );
-  }, [quantidade, substancia, cor, odor, indicios, customMaterialDesc]);
+    onDrugsChange(internalDrugs);
+  }, [internalDrugs, onDrugsChange]);
 
   const addNewDrug = () => {
     const newDrug: DrugItem = {
@@ -86,49 +55,22 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
       cor: "",
       odor: "",
       indicios: "",
-      customMaterialDesc: ""
+      customMaterialDesc: "",
     };
-    
-    setInternalDrugs(prev => [...prev, newDrug]);
+    setInternalDrugs((prev) => [...prev, newDrug]);
   };
 
   const removeDrug = (drugId: string) => {
     if (internalDrugs.length <= 1) return; // Don't allow removing the last drug
-    
-    setInternalDrugs(prev => prev.filter(drug => drug.id !== drugId));
+    setInternalDrugs((prev) => prev.filter((drug) => drug.id !== drugId));
   };
 
   const updateDrug = (drugId: string, field: keyof DrugItem, value: string) => {
-    setInternalDrugs(prev => 
-      prev.map(drug => 
+    setInternalDrugs((prev) =>
+      prev.map((drug) =>
         drug.id === drugId ? { ...drug, [field]: value } : drug
       )
     );
-    
-    // Update main props only for the first drug to maintain compatibility
-    const isFirstDrug = internalDrugs[0]?.id === drugId;
-    if (isFirstDrug) {
-      switch (field) {
-        case 'quantidade':
-          setQuantidade(value);
-          break;
-        case 'substancia':
-          setSubstancia(value);
-          break;
-        case 'cor':
-          setCor(value);
-          break;
-        case 'odor':
-          setOdor(value);
-          break;
-        case 'indicios':
-          if (setIndicios) setIndicios(value);
-          break;
-        case 'customMaterialDesc':
-          setCustomMaterialDesc(value);
-          break;
-      }
-    }
   };
 
   return (
@@ -161,15 +103,15 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
                   id={`quantidade-${drug.id}`}
                   placeholder="Informe a quantidade (ex: 1 porção)"
                   value={drug.quantidade}
-                  onChange={e => updateDrug(drug.id, 'quantidade', e.target.value)}
+                  onChange={(e) => updateDrug(drug.id, "quantidade", e.target.value)}
                 />
               </div>
 
               <div>
                 <Label htmlFor={`substancia-${drug.id}`}>Substância *</Label>
-                <Select 
-                  value={drug.substancia} 
-                  onValueChange={(value) => updateDrug(drug.id, 'substancia', value)}
+                <Select
+                  value={drug.substancia}
+                  onValueChange={(value) => updateDrug(drug.id, "substancia", value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo de substância" />
@@ -183,9 +125,9 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
 
               <div>
                 <Label htmlFor={`cor-${drug.id}`}>Cor *</Label>
-                <Select 
-                  value={drug.cor} 
-                  onValueChange={(value) => updateDrug(drug.id, 'cor', value)}
+                <Select
+                  value={drug.cor}
+                  onValueChange={(value) => updateDrug(drug.id, "cor", value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a cor da substância" />
@@ -200,9 +142,9 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
 
               <div>
                 <Label htmlFor={`odor-${drug.id}`}>Odor *</Label>
-                <Select 
-                  value={drug.odor} 
-                  onValueChange={(value) => updateDrug(drug.id, 'odor', value)}
+                <Select
+                  value={drug.odor}
+                  onValueChange={(value) => updateDrug(drug.id, "odor", value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o odor da substância" />
@@ -217,23 +159,26 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
 
               <div>
                 <Label htmlFor={`indicios-${drug.id}`}>Indícios</Label>
-                <Input 
-                  id={`indicios-${drug.id}`} 
+                <Input
+                  id={`indicios-${drug.id}`}
                   placeholder="Descreva os indícios encontrados"
-                  value={drug.indicios} 
-                  onChange={e => updateDrug(drug.id, 'indicios', e.target.value)}
+                  value={drug.indicios}
+                  onChange={(e) => updateDrug(drug.id, "indicios", e.target.value)}
                 />
               </div>
 
-              {/* O campo de descrição só aparece se isUnknownMaterial for true E ambos substancia e cor estiverem selecionados */}
               {isUnknownMaterial && drug.substancia !== "" && drug.cor !== "" && (
                 <div>
-                  <Label htmlFor={`customMaterialDesc-${drug.id}`}>Descrição do Material *</Label>
+                  <Label htmlFor={`customMaterialDesc-${drug.id}`}>
+                    Descrição do Material *
+                  </Label>
                   <Textarea
                     id={`customMaterialDesc-${drug.id}`}
                     placeholder="Descreva o tipo de material encontrado"
                     value={drug.customMaterialDesc}
-                    onChange={e => updateDrug(drug.id, 'customMaterialDesc', e.target.value)}
+                    onChange={(e) =>
+                      updateDrug(drug.id, "customMaterialDesc", e.target.value)
+                    }
                     className="min-h-[100px]"
                   />
                 </div>
@@ -259,7 +204,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
               id="lacreNumero"
               placeholder="Informe o número do lacre (ex: 00000000)"
               value={lacreNumero}
-              onChange={e => setLacreNumero(e.target.value)}
+              onChange={(e) => setLacreNumero(e.target.value)}
               maxLength={8}
             />
           </div>
