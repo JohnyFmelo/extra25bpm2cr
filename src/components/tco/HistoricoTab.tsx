@@ -229,13 +229,17 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
 
   useEffect(() => {
     if (isDrugCase && internalDrugs && internalDrugs.length > 0) {
-      // Automatically set apreensoes with drug indicios, each prefixed with a dash and separated by newlines
-      const drugDescriptions = internalDrugs
-        .map(drug => `- ${drug.indicios}`)
-        .join("\n");
-      setApreensoes(drugDescriptions);
+      // Debug: Log internalDrugs to verify contents
+      console.log("internalDrugs in HistoricoTab:", internalDrugs);
+      // Only update apreensoes if it's empty or not user-modified
+      if (!apreensoes || apreensoes === "Não informado.") {
+        const drugDescriptions = internalDrugs
+          .map(drug => `- ${drug.indicios}`)
+          .join("\n");
+        setApreensoes(drugDescriptions);
+      }
     }
-  }, [isDrugCase, internalDrugs, setApreensoes]);
+  }, [isDrugCase, internalDrugs, apreensoes, setApreensoes]);
 
   useEffect(() => {
     if (conclusaoPolicial) {
