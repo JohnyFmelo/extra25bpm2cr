@@ -53,11 +53,9 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   setLacreNumero,
 }) => {
   
-  // Estado interno para gerenciar múltiplas drogas.
-  // As props são usadas APENAS para inicializar a primeira droga.
   const [internalDrugs, setInternalDrugs] = useState<DrugItem[]>([
     {
-      id: `drug-${Date.now()}`, // ID único para a primeira droga também
+      id: "drug-1", // Usamos um ID fixo para o primeiro para facilitar a identificação
       quantidade,
       substancia,
       cor,
@@ -67,8 +65,16 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
     }
   ]);
 
-  // REMOVIDO: O useEffect estava causando inconsistência, pois sincronizava
-  // as props apenas com o primeiro item da lista.
+  // Sincroniza o estado interno se as props do pai mudarem (por exemplo, a geração automática de 'indicios')
+  useEffect(() => {
+    setInternalDrugs(prev => 
+      prev.map((drug, index) => 
+        index === 0 
+          ? { ...drug, quantidade, substancia, cor, odor, indicios, customMaterialDesc }
+          : drug
+      )
+    );
+  }, [quantidade, substancia, cor, odor, indicios, customMaterialDesc]);
 
   const addNewDrug = () => {
     const newDrug: DrugItem = {
@@ -85,39 +91,47 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   };
 
   const removeDrug = (drugId: string) => {
-    // Não permitir a remoção da última droga, para manter sempre ao menos uma.
     if (internalDrugs.length <= 1) return;
     
     setInternalDrugs(prev => prev.filter(drug => drug.id !== drugId));
   };
 
   const updateDrug = (drugId: string, field: keyof DrugItem, value: string) => {
+    // Passo 1: Atualiza o estado interno para que a UI seja sempre consistente.
+    // Isso garante que os campos de todas as drogas (1, 2, 3...) funcionem corretamente.
     setInternalDrugs(prev => 
       prev.map(drug => 
         drug.id === drugId ? { ...drug, [field]: value } : drug
       )
     );
     
-    // REMOVIDO: A lógica de atualização das props foi removida.
-    // O componente agora gerencia seu estado de forma interna e consistente.
-    // Isso garante que todos os campos de todas as drogas funcionem da mesma maneira.
-    // NOTA: Para comunicar as alterações de volta ao pai, seria ideal
-    // ter uma prop como onDrugsChange={(allDrugs) => ...}
-  };
-
-  // Efeito para sincronizar as alterações da primeira droga de volta para o pai,
-  // mantendo a compatibilidade com a estrutura de props original.
-  useEffect(() => {
-    const firstDrug = internalDrugs[0];
-    if (firstDrug) {
-      if (firstDrug.quantidade !== quantidade) setQuantidade(firstDrug.quantidade);
-      if (firstDrug.substancia !== substancia) setSubstancia(firstDrug.substancia);
-      if (firstDrug.cor !== cor) setCor(firstDrug.cor);
-      if (firstDrug.odor !== odor) setOdor(firstDrug.odor);
-      if (setIndicios && firstDrug.indicios !== indicios) setIndicios(firstDrug.indicios);
-      if (firstDrug.customMaterialDesc !== customMaterialDesc) setCustomMaterialDesc(firstDrug.customMaterialDesc);
+    // Passo 2: RESTAURADO - Se a droga sendo alterada for a primeira,
+    // atualize também o estado do componente pai imediatamente.
+    // Isso é o que reativa a "identificação automática de indícios".
+    const isFirstDrug = internalDrugs[0]?.id === drugId;
+    if (isFirstDrug) {
+      switch (field) {
+        case 'quantidade':
+          setQuantidade(value);
+          break;
+        case 'substancia':
+          setSubstancia(value);
+          break;
+        case 'cor':
+          setCor(value);
+          break;
+        case 'odor':
+          setOdor(value);
+          break;
+        case 'indicios':
+          if (setIndicios) setIndicios(value);
+          break;
+        case 'customMaterialDesc':
+          setCustomMaterialDesc(value);
+          break;
+      }
     }
-  }, [internalDrugs]); // Dispara sempre que a lista de drogas mudar.
+  };
 
   return (
     <Card>
