@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -291,184 +292,186 @@ const UsersList = () => {
               </p>
             </div>
           ) : (
-            <div className="block md:hidden">
-              <div className="grid grid-cols-1 gap-4">
-                {filteredUsers.map(user => {
-                  const versionStatus = getVersionStatus(user.currentVersion);
-                  return (
-                    <Card key={user.id} className="p-2 border rounded-lg shadow-sm">
-                      <CardContent className="p-2 flex flex-col items-start space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Avatar>
-                            <AvatarFallback>{getInitials(formatUserName(user))}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{formatUserName(user)}</p>
-                            {user.registration && (
-                              <p className="text-sm text-muted-foreground">Matrícula: {user.registration}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span>{user.email}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge
-                            variant={user.blocked ? "destructive" : "default"}
-                            className="flex items-center space-x-1"
-                          >
-                            {user.blocked ? <AlertCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
-                            <span>{user.blocked ? "Bloqueado" : "Ativo"}</span>
-                          </Badge>
-                          {user.userType && (
-                            <Badge variant="outline" className="flex items-center space-x-1">
-                              <Shield className="h-3 w-3" />
-                              <span>{user.userType}</span>
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge
-                            variant={versionStatus.variant}
-                            className="text-xs flex items-center space-x-1"
-                          >
-                            {versionStatus.status === "outdated" && <AlertTriangle className="h-3 w-3" />}
-                            <span>{versionStatus.text}</span>
-                          </Badge>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleToggleBlock(user)}
-                              className="flex items-center gap-2"
-                            >
-                              <Ban className="h-4 w-4" />
-                              {user.blocked ? "Desbloquear" : "Bloquear"}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="flex items-center gap-2 text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="hidden md:block">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="font-semibold">Usuário</TableHead>
-                      <TableHead className="font-semibold">Contato</TableHead>
-                      <TableHead className="font-semibold">Status</TableHead>
-                      <TableHead className="font-semibold">Versão</TableHead>
-                      <TableHead className="font-semibold text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map(user => {
-                      const versionStatus = getVersionStatus(user.currentVersion);
-                      return (
-                        <TableRow key={user.id} className="hover:bg-muted/50">
-                          <TableCell>
-                            <button
-                              onClick={() => handleUserClick(user)}
-                              className="flex items-center space-x-3 text-left w-full hover:bg-muted/30 rounded-md p-2 -m-2 transition-colors"
-                            >
-                              <Avatar>
-                                <AvatarFallback>{getInitials(formatUserName(user))}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-medium text-primary hover:underline">
-                                  {formatUserName(user)}
-                                </p>
-                                {user.registration && (
-                                  <p className="text-sm text-muted-foreground text-stone-500">
-                                    Matrícula: {user.registration}
-                                  </p>
-                                )}
-                              </div>
-                            </button>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Mail className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">{user.email}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Badge
-                                variant={user.blocked ? "destructive" : "default"}
-                                className="flex items-center space-x-1"
-                              >
-                                {user.blocked ? <AlertCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
-                                <span>{user.blocked ? "Bloqueado" : "Ativo"}</span>
-                              </Badge>
-                              {user.userType && (
-                                <Badge variant="outline" className="flex items-center space-x-1">
-                                  <Shield className="h-3 w-3" />
-                                  <span>{user.userType}</span>
-                                </Badge>
+            <>
+              <div className="block md:hidden">
+                <div className="grid grid-cols-1 gap-4">
+                  {filteredUsers.map(user => {
+                    const versionStatus = getVersionStatus(user.currentVersion);
+                    return (
+                      <Card key={user.id} className="p-2 border rounded-lg shadow-sm">
+                        <CardContent className="p-2 flex flex-col items-start space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Avatar>
+                              <AvatarFallback>{getInitials(formatUserName(user))}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{formatUserName(user)}</p>
+                              {user.registration && (
+                                <p className="text-sm text-muted-foreground">Matrícula: {user.registration}</p>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Badge
-                                variant={versionStatus.variant}
-                                className="text-xs flex items-center space-x-1"
-                              >
-                                {versionStatus.status === "outdated" && <AlertTriangle className="h-3 w-3" />}
-                                <span>{versionStatus.text}</span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            <span>{user.email}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge
+                              variant={user.blocked ? "destructive" : "default"}
+                              className="flex items-center space-x-1"
+                            >
+                              {user.blocked ? <AlertCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
+                              <span>{user.blocked ? "Bloqueado" : "Ativo"}</span>
+                            </Badge>
+                            {user.userType && (
+                              <Badge variant="outline" className="flex items-center space-x-1">
+                                <Shield className="h-3 w-3" />
+                                <span>{user.userType}</span>
                               </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleToggleBlock(user)}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Ban className="h-4 w-4" />
-                                  {user.blocked ? "Desbloquear" : "Bloquear"}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteUser(user.id)}
-                                  className="flex items-center gap-2 text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Excluir
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge
+                              variant={versionStatus.variant}
+                              className="text-xs flex items-center space-x-1"
+                            >
+                              {versionStatus.status === "outdated" && <AlertTriangle className="h-3 w-3" />}
+                              <span>{versionStatus.text}</span>
+                            </Badge>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleToggleBlock(user)}
+                                className="flex items-center gap-2"
+                              >
+                                <Ban className="h-4 w-4" />
+                                {user.blocked ? "Desbloquear" : "Bloquear"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="flex items-center gap-2 text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+              <div className="hidden md:block">
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="font-semibold">Usuário</TableHead>
+                        <TableHead className="font-semibold">Contato</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold">Versão</TableHead>
+                        <TableHead className="font-semibold text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredUsers.map(user => {
+                        const versionStatus = getVersionStatus(user.currentVersion);
+                        return (
+                          <TableRow key={user.id} className="hover:bg-muted/50">
+                            <TableCell>
+                              <button
+                                onClick={() => handleUserClick(user)}
+                                className="flex items-center space-x-3 text-left w-full hover:bg-muted/30 rounded-md p-2 -m-2 transition-colors"
+                              >
+                                <Avatar>
+                                  <AvatarFallback>{getInitials(formatUserName(user))}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium text-primary hover:underline">
+                                    {formatUserName(user)}
+                                  </p>
+                                  {user.registration && (
+                                    <p className="text-sm text-muted-foreground text-stone-500">
+                                      Matrícula: {user.registration}
+                                    </p>
+                                  )}
+                                </div>
+                              </button>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                <Mail className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{user.email}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                <Badge
+                                  variant={user.blocked ? "destructive" : "default"}
+                                  className="flex items-center space-x-1"
+                                >
+                                  {user.blocked ? <AlertCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
+                                  <span>{user.blocked ? "Bloqueado" : "Ativo"}</span>
+                                </Badge>
+                                {user.userType && (
+                                  <Badge variant="outline" className="flex items-center space-x-1">
+                                    <Shield className="h-3 w-3" />
+                                    <span>{user.userType}</span>
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                <Badge
+                                  variant={versionStatus.variant}
+                                  className="text-xs flex items-center space-x-1"
+                                >
+                                  {versionStatus.status === "outdated" && <AlertTriangle className="h-3 w-3" />}
+                                  <span>{versionStatus.text}</span>
+                                </Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleToggleBlock(user)}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <Ban className="h-4 w-4" />
+                                    {user.blocked ? "Desbloquear" : "Bloquear"}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteUser(user.id)}
+                                    className="flex items-center gap-2 text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </>
           )}
 
           <UserDetailsDialog
