@@ -53,9 +53,11 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   setLacreNumero,
 }) => {
   
-  const [internalDrugs, setInternalDrugs] = useState<DrugItem[]>([
+  // O estado interno é a ÚNICA fonte de verdade para a UI.
+  // As props são usadas apenas para a inicialização da primeira droga.
+  const [internalDrugs, setInternalDrugs] = useState<DrugItem[]>(() => [
     {
-      id: "drug-1", // Usamos um ID fixo para o primeiro para facilitar a identificação
+      id: "drug-1",
       quantidade,
       substancia,
       cor,
@@ -65,16 +67,21 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
     }
   ]);
 
-  // Sincroniza o estado interno se as props do pai mudarem (por exemplo, a geração automática de 'indicios')
+  // Este useEffect é 'cirúrgico'. Ele só atualiza o campo 'indicios' na
+  // primeira droga quando a prop 'indicios' (gerada pelo pai) muda.
+  // Ele NÃO mexe em mais nada, preservando as edições do usuário nas outras drogas.
   useEffect(() => {
-    setInternalDrugs(prev => 
-      prev.map((drug, index) => 
-        index === 0 
-          ? { ...drug, quantidade, substancia, cor, odor, indicios, customMaterialDesc }
-          : drug
-      )
-    );
-  }, [quantidade, substancia, cor, odor, indicios, customMaterialDesc]);
+    setInternalDrugs(currentDrugs => {
+      // Se o valor de 'indicios' vindo do pai for diferente do que temos internamente
+      if (currentDrugs.length > 0 && currentDrugs[0].indicios !== indicios) {
+        const newDrugs = [...currentDrugs];
+        newDrugs[0] = { ...newDrugs[0], indicios: indicios };
+        return newDrugs;
+      }
+      // Caso contrário, não faz nada para evitar loops de renderização
+      return currentDrugs;
+    });
+  }, [indicios]); // Depende APENAS da prop que é controlada externamente.
 
   const addNewDrug = () => {
     const newDrug: DrugItem = {
@@ -97,19 +104,15 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   };
 
   const updateDrug = (drugId: string, field: keyof DrugItem, value: string) => {
-    // Passo 1: Atualiza o estado interno para que a UI seja sempre consistente.
-    // Isso garante que os campos de todas as drogas (1, 2, 3...) funcionem corretamente.
+    // 1. Atualiza o estado interno. Isso faz a UI funcionar para TODAS as drogas.
     setInternalDrugs(prev => 
       prev.map(drug => 
         drug.id === drugId ? { ...drug, [field]: value } : drug
       )
     );
     
-    // Passo 2: RESTAURADO - Se a droga sendo alterada for a primeira,
-    // atualize também o estado do componente pai imediatamente.
-    // Isso é o que reativa a "identificação automática de indícios".
-    const isFirstDrug = internalDrugs[0]?.id === drugId;
-    if (isFirstDrug) {
+    // 2. Se for a primeira droga, notifica o componente pai para acionar a automação.
+    if (drugId === "drug-1") {
       switch (field) {
         case 'quantidade':
           setQuantidade(value);
