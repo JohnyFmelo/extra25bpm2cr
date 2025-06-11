@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -34,9 +34,6 @@ interface DrugVerificationTabProps {
   isUnknownMaterial: boolean;
   lacreNumero: string;
   setLacreNumero: (value: string) => void;
-  // New props for multiple drugs
-  multipleDrugs?: DrugItem[];
-  setMultipleDrugs?: (drugs: DrugItem[]) => void;
 }
 
 const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
@@ -55,23 +52,31 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   isUnknownMaterial,
   lacreNumero,
   setLacreNumero,
-  multipleDrugs = [],
-  setMultipleDrugs
 }) => {
   
-  // Create initial drug from current props
-  const initialDrug: DrugItem = {
-    id: "drug-1",
-    quantidade,
-    substancia,
-    cor,
-    odor,
-    indicios,
-    customMaterialDesc
-  };
+  // Estado interno para gerenciar múltiplas drogas
+  const [internalDrugs, setInternalDrugs] = useState<DrugItem[]>([
+    {
+      id: "drug-1",
+      quantidade,
+      substancia,
+      cor,
+      odor,
+      indicios,
+      customMaterialDesc
+    }
+  ]);
 
-  // Use multipleDrugs if available, otherwise use initial drug
-  const drugs = multipleDrugs.length > 0 ? multipleDrugs : [initialDrug];
+  // Sincronizar estado interno com props do primeiro item
+  useEffect(() => {
+    setInternalDrugs(prev => 
+      prev.map((drug, index) => 
+        index === 0 
+          ? { ...drug, quantidade, substancia, cor, odor, indicios, customMaterialDesc }
+          : drug
+      )
+    );
+  }, [quantidade, substancia, cor, odor, indicios, customMaterialDesc]);
 
   const addNewDrug = () => {
     const newDrug: DrugItem = {
@@ -84,32 +89,25 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
       customMaterialDesc: ""
     };
     
-    const updatedDrugs = [...drugs, newDrug];
-    if (setMultipleDrugs) {
-      setMultipleDrugs(updatedDrugs);
-    }
+    setInternalDrugs(prev => [...prev, newDrug]);
   };
 
   const removeDrug = (drugId: string) => {
-    if (drugs.length <= 1) return; // Don't allow removing the last drug
+    if (internalDrugs.length <= 1) return; // Don't allow removing the last drug
     
-    const updatedDrugs = drugs.filter(drug => drug.id !== drugId);
-    if (setMultipleDrugs) {
-      setMultipleDrugs(updatedDrugs);
-    }
+    setInternalDrugs(prev => prev.filter(drug => drug.id !== drugId));
   };
 
   const updateDrug = (drugId: string, field: keyof DrugItem, value: string) => {
-    const updatedDrugs = drugs.map(drug => 
-      drug.id === drugId ? { ...drug, [field]: value } : drug
+    setInternalDrugs(prev => 
+      prev.map(drug => 
+        drug.id === drugId ? { ...drug, [field]: value } : drug
+      )
     );
     
-    if (setMultipleDrugs) {
-      setMultipleDrugs(updatedDrugs);
-    }
-    
-    // Update main props for the first drug to maintain compatibility
-    if (drugId === drugs[0].id) {
+    // Update main props only for the first drug to maintain compatibility
+    const isFirstDrug = internalDrugs[0]?.id === drugId;
+    if (isFirstDrug) {
       switch (field) {
         case 'quantidade':
           setQuantidade(value);
@@ -140,11 +138,11 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-6 my-0 px-0 mx-0 py-0">
-          {drugs.map((drug, index) => (
+          {internalDrugs.map((drug, index) => (
             <div key={drug.id} className="border rounded-lg p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold">Droga {index + 1}</h4>
-                {drugs.length > 1 && (
+                {internalDrugs.length > 1 && (
                   <Button
                     type="button"
                     variant="outline"
