@@ -1,9 +1,22 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { X } from "lucide-react";
+
+// Assuming DrugItem is imported from DrugVerificationTab or a shared types file
+// For demonstration, defining it here if not imported.
+// import { DrugItem } from './DrugVerificationTab'; // Or from '@/types';
+interface DrugItem {
+  id: string;
+  quantidade: string;
+  substancia: string;
+  cor: string;
+  odor: string;
+  indicios: string;
+  customMaterialDesc: string;
+}
 
 interface HistoricoTabProps {
   relatoPolicial: string;
@@ -18,7 +31,7 @@ interface HistoricoTabProps {
   setApreensoes: (value: string) => void;
   conclusaoPolicial: string;
   setConclusaoPolicial: (value: string) => void;
-  drugSeizure?: boolean;
+  drugSeizure?: boolean; // This prop seems related but distinct from isDrugCase by natureza
   representacao?: string;
   setRepresentacao?: (value: string) => void;
   natureza: string;
@@ -31,7 +44,6 @@ interface HistoricoTabProps {
   documentosAnexos: string;
   setDocumentosAnexos: (value: string) => void;
   lacreNumero?: string;
-  // Add new props for handling multiple victims
   vitimas?: {
     nome: string;
     sexo: string;
@@ -52,7 +64,6 @@ interface HistoricoTabProps {
   }[];
   setVitimaRelato?: (index: number, relato: string) => void;
   setVitimaRepresentacao?: (index: number, representacao: string) => void;
-  // Add new props for handling multiple witnesses
   testemunhas?: {
     nome: string;
     sexo: string;
@@ -71,7 +82,6 @@ interface HistoricoTabProps {
     relato?: string;
   }[];
   setTestemunhaRelato?: (index: number, relato: string) => void;
-  // Add new props for handling multiple authors
   autores?: {
     nome: string;
     sexo: string;
@@ -92,22 +102,23 @@ interface HistoricoTabProps {
     objetoDepositado?: string;
   }[];
   setAutorRelato?: (index: number, relato: string) => void;
+  drugs?: DrugItem[]; // New prop for the list of drugs
 }
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
   relatoPolicial,
   setRelatoPolicial,
-  relatoAutor,
-  setRelatoAutor,
-  relatoVitima,
-  setRelatoVitima,
-  relatoTestemunha,
-  setRelatoTestemunha,
+  relatoAutor, // This prop seems unused if individual author relatos are handled via `autores` array
+  setRelatoAutor, // Same as above
+  relatoVitima, // This prop seems unused if individual victim relatos are handled via `vitimas` array
+  setRelatoVitima, // Same as above
+  relatoTestemunha, // This prop seems unused if individual witness relatos are handled via `testemunhas` array
+  setRelatoTestemunha, // Same as above
   apreensoes,
   setApreensoes,
   conclusaoPolicial,
   setConclusaoPolicial,
-  drugSeizure = false,
+  // drugSeizure = false, // Prop `drugSeizure` exists but `isDrugCase` is locally derived from `natureza` for more specific logic
   representacao = "",
   setRepresentacao,
   natureza,
@@ -126,9 +137,9 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   testemunhas = [],
   setTestemunhaRelato,
   autores = [],
-  setAutorRelato
+  setAutorRelato,
+  drugs: drugsProp = [], // New prop, aliased to drugsProp to avoid confusion with any local 'drugs' variable
 }) => {
-  // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<{
@@ -137,62 +148,72 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   }[]>([]);
   const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
   
-  // Get valid victims (those with names)
   const validVitimas = vitimas.filter(vitima => vitima.nome && vitima.nome.trim() !== "" && vitima.nome !== "O ESTADO");
-
-  // Get valid witnesses (those with names)
   const validTestemunhas = testemunhas.filter(testemunha => 
     testemunha.nome && 
     testemunha.nome.trim() !== "" && 
     testemunha.nome !== "Não informado."
   );
-
-  // Get valid authors (those with names)
   const validAutores = autores.filter(autor => 
     autor.nome && 
     autor.nome.trim() !== "" && 
     autor.nome !== "Não informado."
   );
 
-  console.log("Autores array completo:", autores);
-  console.log("Valid autores encontrados:", validAutores);
-  console.log("Número de autores válidos:", validAutores.length);
+  const getDrugDisplayName = useCallback((drug: DrugItem): string => {
+    if (drug.substancia === 'Vegetal' && drug.cor === 'Verde') return "MACONHA";
+    if (drug.substancia === 'Artificial' && drug.cor === 'Branca') return "COCAÍNA";
+    if (drug.substancia === 'Artificial' && drug.cor === 'Amarelada') return "PASTA BASE"; // Or CRACK, adjust as needed
 
-  // Helper function to handle victim testimony changes
+    if (drug.customMaterialDesc && drug.customMaterialDesc.trim() !== "") {
+      // If customMaterialDesc is specific like "erva esverdeada", use it.
+      // The format is "SUBSTÂNCIA ANÁLOGA A [NAME]", so customMaterialDesc can be the NAME.
+      return drug.customMaterialDesc.toUpperCase();
+    }
+    // Fallback for less specific custom descriptions or unmapped combinations
+    return `SUBSTÂNCIA ${drug.substancia || 'N/I'} DE COR ${drug.cor || 'N/I'}`.toUpperCase();
+  }, []);
+
+  useEffect(() => {
+    if (isDrugCase) {
+      const validDrugsToList = (drugsProp || []).filter(
+        drug => drug.quantidade && ((drug.substancia && drug.cor) || drug.customMaterialDesc)
+      );
+
+      if (validDrugsToList.length > 0) {
+        const drugDescriptions = validDrugsToList.map(drug => {
+          const drugName = getDrugDisplayName(drug);
+          const quantidade = drug.quantidade; // Already checked for existence
+          return `- ${quantidade.toUpperCase()} DE SUBSTÂNCIA ANÁLOGA A ${drugName}, CONFORME FOTO EM ANEXO.`;
+        });
+        setApreensoes(drugDescriptions.join("\n"));
+      } else {
+        // If it's a drug case but no valid drugs are listed, apreensoes should be empty or a placeholder.
+        // Setting to empty ensures "TERMO DE APREENSÃO" is not added based on a placeholder.
+        setApreensoes(""); 
+      }
+    }
+    // If not a drug case, `apreensoes` is manually managed by its own `onChange` or initial prop value.
+    // This effect does not set `apreensoes` for non-drug cases to preserve manual input.
+  }, [isDrugCase, drugsProp, setApreensoes, getDrugDisplayName]);
+
+
   const handleVitimaRelatoChange = (index: number, value: string) => {
-    if (setVitimaRelato) {
-      setVitimaRelato(index, value);
-    }
+    if (setVitimaRelato) setVitimaRelato(index, value);
   };
-
-  // Helper function to handle victim representation changes
   const handleVitimaRepresentacaoChange = (index: number, value: string) => {
-    if (setVitimaRepresentacao) {
-      setVitimaRepresentacao(index, value);
-    }
+    if (setVitimaRepresentacao) setVitimaRepresentacao(index, value);
   };
-
-  // Helper function to handle witness testimony changes
   const handleTestemunhaRelatoChange = (index: number, value: string) => {
-    console.log(`Alterando relato da testemunha ${index}:`, value);
-    if (setTestemunhaRelato) {
-      setTestemunhaRelato(index, value);
-    }
+    if (setTestemunhaRelato) setTestemunhaRelato(index, value);
   };
-
-  // Helper function to handle author testimony changes
   const handleAutorRelatoChange = (index: number, value: string) => {
-    console.log(`Alterando relato do autor ${index}:`, value);
-    if (setAutorRelato) {
-      setAutorRelato(index, value);
-    }
+    if (setAutorRelato) setAutorRelato(index, value);
   };
 
-  // Set default providencias text based on the case type
   useEffect(() => {
     if (!providencias || providencias === "Não informado.") {
       const generoAutor = autorSexo?.toLowerCase() === "feminino" ? "AUTORA" : "AUTOR";
-      
       if (isDrugCase) {
         setProvidencias(`${generoAutor} DO FATO CONDUZIDO ATÉ O CISC DO PARQUE DO LAGO PARA A CONFECÇÃO DESTE TCO.`);
       } else {
@@ -201,21 +222,15 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     }
   }, [isDrugCase, autorSexo, providencias, setProvidencias]);
   
-  // Update documentos anexos based on conditions
   useEffect(() => {
     let anexos = ["TERMO DE COMPROMISSO"];
-    
-    // Add terms based on conditions
-    if (!isDrugCase) {
-      anexos.push("TERMO DE MANIFESTAÇÃO");
-    }
+    if (!isDrugCase) anexos.push("TERMO DE MANIFESTAÇÃO");
     
     const hasFielDepositario = autores.some(a => a.fielDepositario === "Sim");
-    if (hasFielDepositario) {
-      anexos.push("TERMO DE DEPÓSITO");
-    }
+    if (hasFielDepositario) anexos.push("TERMO DE DEPÓSITO");
 
-    if (apreensoes && apreensoes.trim() !== "") {
+    // Check apreensoes state, which is now populated by drug list if isDrugCase
+    if (apreensoes && apreensoes.trim() !== "" && apreensoes !== "Nenhuma substância entorpecente informada para apreensão.") {
       anexos.push("TERMO DE APREENSÃO");
     }
     
@@ -232,15 +247,11 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     setDocumentosAnexos(anexos.join("\n"));
   }, [isDrugCase, apreensoes, solicitarCorpoDelito, autorSexo, setDocumentosAnexos, lacreNumero, autores]);
 
-  // Update the conclusion text based on solicitarCorpoDelito
   useEffect(() => {
     if (conclusaoPolicial) {
       let updatedConclusion = conclusaoPolicial;
       const generoSuffix = autorSexo?.toLowerCase() === "feminino" ? "A" : "O";
-      
-      // Replace the text based on conditional logic
       if (solicitarCorpoDelito === "Sim") {
-        // Check if we need to replace the text about "sem lesões corporais"
         if (updatedConclusion.includes("LIBERADO SEM LESÕES CORPORAIS APARENTES") || 
             updatedConclusion.includes("liberado sem lesões corporais aparentes")) {
           updatedConclusion = updatedConclusion.replace(
@@ -255,45 +266,26 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
 
   useEffect(() => {
     return () => {
-      selectedFiles.forEach(({
-        file
-      }) => {
-        URL.revokeObjectURL(URL.createObjectURL(file));
-      });
+      selectedFiles.forEach(({ file }) => URL.revokeObjectURL(URL.createObjectURL(file)));
     };
   }, [selectedFiles]);
 
   const handleFileUploadClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+    if (fileInputRef.current) fileInputRef.current.click();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       const validFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-      if (validFiles.length === 0) {
-        console.warn("Nenhum arquivo de imagem válido selecionado.");
-        return;
-      }
-      const newFiles = validFiles.map(file => ({
-        file,
-        id: `${file.name}-${Date.now()}-${Math.random()}`
-      }));
+      if (validFiles.length === 0) return;
+      const newFiles = validFiles.map(file => ({ file, id: `${file.name}-${Date.now()}-${Math.random()}` }));
       setSelectedFiles(prev => [...prev, ...newFiles]);
-      const fileNames = newFiles.map(({
-        file
-      }) => file.name).join(', ');
-      console.log(`Selected files: ${fileNames}`);
     }
   };
 
   const handleRemoveFile = (id: string) => {
-    setSelectedFiles(prev => {
-      const newFiles = prev.filter(fileObj => fileObj.id !== id);
-      return newFiles;
-    });
+    setSelectedFiles(prev => prev.filter(fileObj => fileObj.id !== id));
   };
 
   const handleVideoUrlsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -319,12 +311,9 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea id="relatoPolicial" placeholder="Descreva o relato policial" value={relatoPolicial} onChange={e => setRelatoPolicial(e.target.value)} className="min-h-[150px]" />
         </div>
         
-        {/* Show individual author testimony fields when we have valid authors with names */}
         {validAutores.length > 0 && (
           <div>
-            {validAutores.map((autor, index) => {
-              console.log(`Renderizando campo para autor ${index}:`, autor.nome);
-              return (
+            {validAutores.map((autor, index) => (
                 <div key={`autor-relato-${index}`} className="mb-6">
                   <Label htmlFor={`relatoAutor-${index}`}>RELATO DO AUTOR {autor.nome}</Label>
                   <Textarea 
@@ -335,12 +324,10 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
                     className="min-h-[150px]" 
                   />
                 </div>
-              );
-            })}
+              ))}
           </div>
         )}
         
-        {/* Show victim fields if we have valid victims (regardless of case type) */}
         {validVitimas.length > 0 && 
           validVitimas.map((vitima, index) => (
             <div key={`vitima-relato-${index}`} className="space-y-4">
@@ -375,12 +362,9 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           ))
         }
         
-        {/* Show individual witness testimony fields when we have valid witnesses with names */}
         {validTestemunhas.length > 0 && (
           <div>
-            {validTestemunhas.map((testemunha, index) => {
-              console.log(`Renderizando campo para testemunha ${index}:`, testemunha.nome);
-              return (
+            {validTestemunhas.map((testemunha, index) => (
                 <div key={`testemunha-relato-${index}`} className="mb-6">
                   <Label htmlFor={`relatoTestemunha-${index}`}>RELATO DA TESTEMUNHA {testemunha.nome}</Label>
                   <Textarea 
@@ -391,16 +375,22 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
                     className="min-h-[150px]" 
                   />
                 </div>
-              );
-            })}
+              ))}
           </div>
         )}
         
         <div>
           <Label htmlFor="apreensoes">OBJETOS/DOCUMENTOS APREENDIDOS</Label>
-          <Textarea id="apreensoes" placeholder="Descreva os objetos ou documentos apreendidos, se houver" value={apreensoes} onChange={e => setApreensoes(e.target.value)} className="min-h-[100px]" />
+          <Textarea 
+            id="apreensoes" 
+            placeholder={isDrugCase ? "Lista de drogas gerada automaticamente..." : "Descreva os objetos ou documentos apreendidos, se houver"} 
+            value={apreensoes} 
+            onChange={e => setApreensoes(e.target.value)} 
+            className="min-h-[100px]" 
+            readOnly={isDrugCase} // Make read-only if it's a drug case, as it's auto-populated
+          />
           <p className="text-xs text-muted-foreground mt-1">
-            {!isDrugCase ? "Se houver apreensões, o Termo de Apreensão será gerado automaticamente no PDF." : "Para casos de drogas, o texto será adaptado automaticamente baseado nos tipos de drogas adicionados. Use um lacre único para todas as drogas."}
+            {!isDrugCase ? "Se houver apreensões, o Termo de Apreensão será gerado automaticamente no PDF." : "Para casos de drogas, o texto é gerado automaticamente baseado nos tipos de drogas adicionados. Use um lacre único para todas as drogas."}
           </p>
         </div>
         
