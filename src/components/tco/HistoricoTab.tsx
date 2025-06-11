@@ -6,7 +6,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { X } from "lucide-react";
 
 // Assuming DrugItem interface is defined in a shared types file or passed appropriately
-// For simplicity, defining it here if not already available globally
 interface DrugItem {
   id: string;
   quantidade: string;
@@ -26,8 +25,8 @@ interface HistoricoTabProps {
   setRelatoVitima: (value: string) => void;
   relatoTestemunha: string;
   setRelatoTestemunha: (value: string) => void;
-  apreensoes: string;
-  setApreensoes: (value: string) => void;
+  apreensoes: string; // This is a prop, representing the current state from the parent
+  setApreensoes: (value: string) => void; // Callback to update parent's state
   conclusaoPolicial: string;
   setConclusaoPolicial: (value: string) => void;
   drugSeizure?: boolean;
@@ -40,8 +39,8 @@ interface HistoricoTabProps {
   autorSexo?: string;
   providencias: string;
   setProvidencias: (value: string) => void;
-  documentosAnexos: string;
-  setDocumentosAnexos: (value: string) => void;
+  documentosAnexos: string; // Prop for current state from parent
+  setDocumentosAnexos: (value: string) => void; // Callback to update parent's state
   lacreNumero?: string;
   vitimas?: {
     nome: string;
@@ -101,34 +100,33 @@ interface HistoricoTabProps {
     objetoDepositado?: string;
   }[];
   setAutorRelato?: (index: number, relato: string) => void;
-  allDrugsDetails?: DrugItem[]; // New prop for all drug details
+  allDrugsDetails?: DrugItem[];
 }
 
-// Helper function to get the display name of a drug for apreensao text
 const getDrugDisplayNameForApreensao = (substancia: string, cor: string): string => {
   if (substancia === "Vegetal" && cor === "Verde") return "MACONHA";
   if (substancia === "Artificial" && cor === "Branca") return "COCAÍNA";
-  if (substancia === "Artificial" && cor === "Amarelada") return "PASTA BASE"; // Or CRACK
-  return "NÃO IDENTIFICADA"; // Default for unknown combinations
+  if (substancia === "Artificial" && cor === "Amarelada") return "PASTA BASE";
+  return "NÃO IDENTIFICADA";
 };
 
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
   relatoPolicial,
   setRelatoPolicial,
-  relatoAutor,
-  setRelatoAutor,
-  relatoVitima,
-  setRelatoVitima,
-  relatoTestemunha,
-  setRelatoTestemunha,
-  apreensoes,
-  setApreensoes,
+  // relatoAutor, // This prop seems unused if individual author relatos are handled
+  // setRelatoAutor, // This prop seems unused
+  // relatoVitima, // This prop seems unused
+  // setRelatoVitima, // This prop seems unused
+  // relatoTestemunha, // This prop seems unused
+  // setRelatoTestemunha, // This prop seems unused
+  apreensoes, // Prop from parent
+  setApreensoes, // Setter for parent
   conclusaoPolicial,
   setConclusaoPolicial,
-  drugSeizure = false,
-  representacao = "",
-  setRepresentacao,
+  // drugSeizure = false, // This prop seems unused, isDrugCase is derived from natureza
+  // representacao = "", // This prop seems unused if individual victim representacao is handled
+  // setRepresentacao, // This prop seems unused
   natureza,
   videoLinks = [],
   setVideoLinks,
@@ -136,8 +134,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   autorSexo = "masculino",
   providencias,
   setProvidencias,
-  documentosAnexos,
-  setDocumentosAnexos,
+  documentosAnexos, // Prop from parent
+  setDocumentosAnexos, // Setter for parent
   lacreNumero = "",
   vitimas = [],
   setVitimaRelato,
@@ -146,26 +144,19 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   setTestemunhaRelato,
   autores = [],
   setAutorRelato,
-  allDrugsDetails = [], // Default to empty array
+  allDrugsDetails = [],
 }) => {
   const isDrugCase = natureza === "Porte de drogas para consumo";
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFiles, setSelectedFiles] = useState<{
-    file: File;
-    id: string;
-  }[]>([]);
+  // const fileInputRef = useRef<HTMLInputElement>(null); // Not used in provided snippet section for apreensoes/documentos
+  // const [selectedFiles, setSelectedFiles] = useState<{ file: File; id: string; }[]>([]); // Not used
   const [videoUrls, setVideoUrls] = useState<string>(videoLinks.join("\n"));
   
   const validVitimas = vitimas.filter(vitima => vitima.nome && vitima.nome.trim() !== "" && vitima.nome !== "O ESTADO");
   const validTestemunhas = testemunhas.filter(testemunha => 
-    testemunha.nome && 
-    testemunha.nome.trim() !== "" && 
-    testemunha.nome !== "Não informado."
+    testemunha.nome && testemunha.nome.trim() !== "" && testemunha.nome !== "Não informado."
   );
   const validAutores = autores.filter(autor => 
-    autor.nome && 
-    autor.nome.trim() !== "" && 
-    autor.nome !== "Não informado."
+    autor.nome && autor.nome.trim() !== "" && autor.nome !== "Não informado."
   );
 
   const handleVitimaRelatoChange = (index: number, value: string) => {
@@ -198,6 +189,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   // Effect to generate apreensoes text for drug cases
   useEffect(() => {
     if (isDrugCase) {
+      let newApreensoesText = "";
       if (allDrugsDetails && allDrugsDetails.length > 0) {
         const apreensoesItems = allDrugsDetails
           .filter(drug => drug.quantidade && drug.substancia && drug.cor) // Ensure essential fields are present
@@ -212,37 +204,60 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
             const quantidadeText = drug.quantidade ? drug.quantidade.toUpperCase() : "QUANTIDADE NÃO INFORMADA";
             return `- ${quantidadeText} DE ${drugDescriptionPart}, CONFORME FOTO EM ANEXO.`;
           });
-        setApreensoes(apreensoesItems.join("\n"));
-      } else {
-        setApreensoes(""); // Clear if drug case but no drugs listed
+        newApreensoesText = apreensoesItems.join("\n");
+      }
+      // Only call setApreensoes if the calculated value is different from the current prop value
+      if (newApreensoesText !== apreensoes) {
+        setApreensoes(newApreensoesText);
       }
     }
-    // For non-drug cases, apreensoes is manually entered by the user, so no changes here.
-  }, [isDrugCase, allDrugsDetails, setApreensoes]);
+    // If not a drug case, apreensoes is manually controlled by the user via the Textarea's onChange.
+    // This effect should not interfere then. The readOnly prop on Textarea handles editability.
+  }, [isDrugCase, allDrugsDetails, apreensoes, setApreensoes]); // Added apreensoes to dependency array
 
+  // Effect to update documentosAnexos
   useEffect(() => {
-    let anexos = ["TERMO DE COMPROMISSO"];
+    let newAnexosArray = ["TERMO DE COMPROMISSO"];
+    
     if (!isDrugCase) {
-      anexos.push("TERMO DE MANIFESTAÇÃO");
+      newAnexosArray.push("TERMO DE MANIFESTAÇÃO");
     }
+    
     const hasFielDepositario = autores.some(a => a.fielDepositario === "Sim");
     if (hasFielDepositario) {
-      anexos.push("TERMO DE DEPÓSITO");
+      newAnexosArray.push("TERMO DE DEPÓSITO");
     }
-    // Check the generated apreensoes text for drug cases or manually entered for others
+
+    // Crucial check: use the `apreensoes` prop (which reflects the true current state)
     if (apreensoes && apreensoes.trim() !== "") {
-      anexos.push("TERMO DE APREENSÃO");
+      newAnexosArray.push("TERMO DE APREENSÃO");
     }
+    
     if (isDrugCase) {
-      anexos.push(`TERMO DE CONSTATAÇÃO PRELIMINAR DE DROGA${lacreNumero ? ` LACRE Nº ${lacreNumero}` : ''}`);
-      anexos.push("REQUISIÇÃO DE EXAME EM DROGAS DE ABUSO");
+      newAnexosArray.push(`TERMO DE CONSTATAÇÃO PRELIMINAR DE DROGA${lacreNumero ? ` LACRE Nº ${lacreNumero}` : ''}`);
+      newAnexosArray.push("REQUISIÇÃO DE EXAME EM DROGAS DE ABUSO");
     }
+    
     if (solicitarCorpoDelito === "Sim") {
       const generoSuffix = autorSexo?.toLowerCase() === "feminino" ? "A" : "O";
-      anexos.push(`REQUISIÇÃO DE EXAME DE LESÃO CORPORAL D${generoSuffix} ${autorSexo?.toLowerCase() === "feminino" ? "AUTORA" : "AUTOR"}`);
+      newAnexosArray.push(`REQUISIÇÃO DE EXAME DE LESÃO CORPORAL D${generoSuffix} ${autorSexo?.toLowerCase() === "feminino" ? "AUTORA" : "AUTOR"}`);
     }
-    setDocumentosAnexos(anexos.join("\n"));
-  }, [isDrugCase, apreensoes, solicitarCorpoDelito, autorSexo, setDocumentosAnexos, lacreNumero, autores]);
+    
+    const newAnexosText = newAnexosArray.join("\n");
+    // Only call setDocumentosAnexos if the calculated value is different
+    if (newAnexosText !== documentosAnexos) {
+      setDocumentosAnexos(newAnexosText);
+    }
+  }, [
+    isDrugCase, 
+    apreensoes, // This is key: when apreensoes prop changes, this effect re-runs
+    solicitarCorpoDelito, 
+    autorSexo, 
+    lacreNumero, 
+    autores, 
+    documentosAnexos, // Added to dependency array
+    setDocumentosAnexos
+  ]);
 
   useEffect(() => {
     if (conclusaoPolicial) {
@@ -255,37 +270,15 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
             /LIBERADO SEM LESÕES CORPORAIS APARENTES|liberado sem lesões corporais aparentes/gi, 
             `LIBERAD${generoSuffix} COM LESÕES CORPORAIS APARENTES CONFORME AUTO DE RESISTENCIA`
           );
-          setConclusaoPolicial(updatedConclusion);
+          // Only set if different to avoid potential loops if conclusaoPolicial is in deps
+           if (updatedConclusion !== conclusaoPolicial) {
+             setConclusaoPolicial(updatedConclusion);
+           }
         }
       }
     }
   }, [solicitarCorpoDelito, conclusaoPolicial, autorSexo, setConclusaoPolicial]);
 
-  useEffect(() => {
-    return () => {
-      selectedFiles.forEach(({ file }) => {
-        URL.revokeObjectURL(URL.createObjectURL(file));
-      });
-    };
-  }, [selectedFiles]);
-
-  const handleFileUploadClick = () => {
-    if (fileInputRef.current) fileInputRef.current.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const validFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-      if (validFiles.length === 0) return;
-      const newFiles = validFiles.map(file => ({ file, id: `${file.name}-${Date.now()}-${Math.random()}` }));
-      setSelectedFiles(prev => [...prev, ...newFiles]);
-    }
-  };
-
-  const handleRemoveFile = (id: string) => {
-    setSelectedFiles(prev => prev.filter(fileObj => fileObj.id !== id));
-  };
 
   const handleVideoUrlsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const urls = e.target.value;
@@ -295,10 +288,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     }
   };
 
-  const truncateFileName = (name: string, maxLength: number = 15): string => {
-    if (name.length <= maxLength) return name;
-    return name.slice(0, maxLength - 3) + "...";
-  };
 
   return <div className="border rounded-lg shadow-sm bg-white">
       <div className="p-6">
@@ -383,10 +372,14 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Textarea 
             id="apreensoes" 
             placeholder={isDrugCase ? "Gerado automaticamente com base nas drogas informadas" : "Descreva os objetos ou documentos apreendidos, se houver"} 
-            value={apreensoes} 
-            onChange={e => setApreensoes(e.target.value)} 
+            value={apreensoes}  // Value comes from parent's state
+            onChange={e => {
+              if (!isDrugCase) { // Only allow direct edit if not a drug case
+                setApreensoes(e.target.value);
+              }
+            }}
             className="min-h-[100px]"
-            readOnly={isDrugCase} // Read-only if it's a drug case and auto-generated
+            readOnly={isDrugCase} 
           />
           <p className="text-xs text-muted-foreground mt-1">
             {isDrugCase 
@@ -403,7 +396,13 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
         
         <div>
           <Label htmlFor="documentosAnexos">DOCUMENTOS ANEXOS</Label>
-          <Textarea id="documentosAnexos" placeholder="Documentos anexos ao TCO" value={documentosAnexos} onChange={e => setDocumentosAnexos(e.target.value)} className="min-h-[100px]" readOnly />
+          <Textarea 
+            id="documentosAnexos" 
+            placeholder="Documentos anexos ao TCO" 
+            value={documentosAnexos} // Value comes from parent's state
+            readOnly // This field is always read-only as it's auto-generated
+            className="min-h-[100px]" 
+          />
           <p className="text-xs text-muted-foreground mt-1">
             Lista de documentos gerada automaticamente com base nas informações do TCO.
           </p>
