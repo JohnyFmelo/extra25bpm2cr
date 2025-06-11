@@ -28,6 +28,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   lacreNumero,
   setLacreNumero,
 }) => {
+
   const [internalDrugs, setInternalDrugs] = useState<DrugItem[]>([
     {
       id: "drug-1",
