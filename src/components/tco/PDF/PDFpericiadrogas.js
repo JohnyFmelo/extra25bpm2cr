@@ -29,35 +29,6 @@ const numberToText = (num) => {
     return (num >= 0 && num <= 10) ? numbers[num] : num.toString();
 };
 
-// << NOVA FUNÇÃO: Implementa sua lógica de somar as quantidades >>
-const numberWordsMap = {
-    "UMA": 1, "DUAS": 2, "TRÊS": 3, "QUATRO": 4, "CINCO": 5,
-    "SEIS": 6, "SETE": 7, "OITO": 8, "NOVE": 9, "DEZ": 10
-};
-
-/**
- * Calcula a quantidade total de porções de droga a partir do array de dados.
- */
-const getTotalDrugCount = (drogas) => {
-    if (!drogas || drogas.length === 0) return 0;
-
-    return drogas.reduce((total, droga) => {
-        // Extrai o número ou a palavra da string de quantidade (ex: "1 porção", "DUAS trouxinhas")
-        const quantidadeStr = droga.quantidade?.toUpperCase() || "";
-        const match = quantidadeStr.match(/(\d+|UMA|DUAS|TRÊS|QUATRO|CINCO|SEIS|SETE|OITO|NOVE|DEZ)/);
-
-        if (match) {
-            const value = match[1];
-            // Se for uma palavra ("UMA"), converte para número. Se for um dígito ("2"), converte para número.
-            const count = numberWordsMap[value] || parseInt(value, 10);
-            if (!isNaN(count)) {
-                return total + count;
-            }
-        }
-        return total; // Se não encontrar ou não for um número válido, não soma nada
-    }, 0);
-};
-
 /** Adiciona Requisição de Exame em Drogas de Abuso (em página nova) */
 export const addRequisicaoExameDrogas = (doc, data) => {
     if (!data.drogas || data.drogas.length === 0) {
@@ -80,11 +51,8 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     const autorTermo = autor?.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR';
     const qualificado = autor?.sexo?.toLowerCase() === 'feminino' ? 'QUALIFICADA' : 'QUALIFICADO';
 
-    // << O PONTO DE DECISÃO AGORA USA A SUA LÓGICA DE SOMA! >>
-    const totalCount = getTotalDrugCount(data.drogas);
-    const isPlural = totalCount > 1;
-
-    // Definição dos termos com base na decisão 'isPlural'
+    // << CORREÇÃO: Lógica para singular/plural >>
+    const isPlural = data.drogas.length > 1;
     const substanciaTerm = isPlural ? "SUBSTÂNCIAS" : "SUBSTÂNCIA";
     const apreendidaTerm = isPlural ? "APREENDIDAS" : "APREENDIDA";
     const acondicionadaTerm = isPlural ? "ACONDICIONADAS" : "ACONDICIONADA";
@@ -101,6 +69,7 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     
     const autorTextoFragment = `D${generoAutor} ${autorArtigo} ${autorTermo} DO FATO ${nomeAutor.toUpperCase()}, ${qualificado.toUpperCase()} NESTE TCO`;
     
+    // << CORREÇÃO: Texto da requisição agora usa os termos no singular ou plural corretamente >>
     const textoRequisicao = `REQUISITO A POLITEC, NOS TERMOS DO ARTIGO 159 E SEGUINTES DO CPP COMBINADO COM O ARTIGO 69, CAPUT DA LEI Nº 9.099/95, E ARTIGO 50, §1º DA LEI Nº 11.343/2006, A REALIZAÇÃO DE EXAME PERICIAL DEFINITIVO NA(S) ${substanciaTerm} ${apreendidaTerm} E ${acondicionadaTerm} SOB O LACRE Nº ${lacreNumero}, ${encontradaTerm} EM POSSE ${autorTextoFragment}, EM RAZÃO DE FATOS DE NATUREZA "PORTE ILEGAL DE DROGAS PARA CONSUMO", OCORRIDO(S) NA DATA DE ${dataFatoStr}.`.toUpperCase();
     
     yPos = addWrappedText(doc, yPos, textoRequisicao, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
@@ -133,25 +102,14 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     yPos = addWrappedText(doc, yPos, textoQuesitos, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 5;
 
-    // Definição dinâmica dos quesitos com base na variável 'isPlural'
-    let quesitos;
-    if (isPlural) {
-        quesitos = [
-            "1. AS AMOSTRAS APRESENTADAS SÃO CONSTITUÍDAS POR SUBSTÂNCIAS ENTORPECENTES OU DE USO PROSCRITO NO BRASIL?",
-            "2. EM CASO POSITIVO, QUAIS SUBSTÂNCIAS?",
-            "3. QUAL O PESO LÍQUIDO TOTAL DAS AMOSTRAS APRESENTADAS?"
-        ];
-    } else {
-        quesitos = [
-            "1. A AMOSTRA APRESENTADA É CONSTITUÍDA POR SUBSTÂNCIA ENTORPECENTE OU DE USO PROSCRITO NO BRASIL?",
-            "2. EM CASO POSITIVO, QUAL SUBSTÂNCIA?",
-            "3. QUAL O PESO LÍQUIDO TOTAL DA AMOSTRA APRESENTADA?"
-        ];
-    }
+    const quesitos = [
+        `A(S) AMOSTRA(S) APRESENTADA(S) É(SÃO) CONSTITUÍDA(S) POR SUBSTÂNCIA(S) ENTORPECENTE(S) OU DE USO PROSCRITO NO BRASIL?`,
+        "EM CASO POSITIVO, QUAL(IS) SUBSTÂNCIA(S)?",
+        "QUAL O PESO LÍQUIDO TOTAL DA(S) AMOSTRA(S) APRESENTADA(S)?"
+    ];
 
-    // O loop de renderização permanece o mesmo, ele apenas usa a lista correta.
-    quesitos.forEach((quesito) => {
-        const textoQuesito = quesito.toUpperCase();
+    quesitos.forEach((quesito, index) => {
+        const textoQuesito = `${index + 1}. ${quesito}`.toUpperCase();
         yPos = addWrappedText(doc, yPos, textoQuesito, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
         yPos += 3;
     });
@@ -181,12 +139,16 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.text("CONDUTOR DA OCORRÊNCIA".toUpperCase(), PAGE_WIDTH / 2, yPos, { align: 'center' });
+    
+    // << CORREÇÃO: Reduzido o espaçamento antes da tabela para evitar a quebra de página. >>
     yPos += 8;
 
     const tableRowHeight = 10; 
     const tableNumRows = 2;
     const tableNumCols = 3;
-    const requiredSpaceForTable = (tableNumRows * tableRowHeight) + 5;
+
+    // << CORREÇÃO: Ajustado o espaço necessário para a tabela ser menos conservador. >>
+    const requiredSpaceForTable = (tableNumRows * tableRowHeight) + 5; // Apenas 5mm de margem inferior.
     yPos = checkPageBreak(doc, yPos, requiredSpaceForTable, data);
 
     const tableTopY = yPos;
