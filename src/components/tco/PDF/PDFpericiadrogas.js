@@ -45,17 +45,13 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     const nomeAutor = autor?.nome || "[NOME NÃO INFORMADO]";
     const dataFatoStr = formatarDataSimples(data.dataFato);
 
-    // Flexão de gênero para autor/autora
     const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'A' : 'O';
     const autorArtigo = autor?.sexo?.toLowerCase() === 'feminino' ? 'A' : 'O';
     const autorTermo = autor?.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR';
     const qualificado = autor?.sexo?.toLowerCase() === 'feminino' ? 'QUALIFICADA' : 'QUALIFICADO';
 
-    // << O CORAÇÃO DA LÓGICA: A DECISÃO DE SINGULAR/PLURAL ACONTECE AQUI >>
-    // Ele simplesmente conta os itens na lista de dados. É o método mais seguro e direto.
     const isPlural = data.drogas.length > 1;
     
-    // Com base na decisão acima, define as palavras corretas
     const substanciaTerm = isPlural ? "SUBSTÂNCIAS" : "SUBSTÂNCIA";
     const apreendidaTerm = isPlural ? "APREENDIDAS" : "APREENDIDA";
     const acondicionadaTerm = isPlural ? "ACONDICIONADAS" : "ACONDICIONADA";
@@ -72,7 +68,6 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     
     const autorTextoFragment = `D${generoAutor} ${autorArtigo} ${autorTermo} DO FATO ${nomeAutor.toUpperCase()}, ${qualificado.toUpperCase()} NESTE TCO`;
     
-    // O texto da requisição usa as palavras corretas (singular ou plural)
     const textoRequisicao = `REQUISITO A POLITEC, NOS TERMOS DO ARTIGO 159 E SEGUINTES DO CPP COMBINADO COM O ARTIGO 69, CAPUT DA LEI Nº 9.099/95, E ARTIGO 50, §1º DA LEI Nº 11.343/2006, A REALIZAÇÃO DE EXAME PERICIAL DEFINITIVO NA(S) ${substanciaTerm} ${apreendidaTerm} E ${acondicionadaTerm} SOB O LACRE Nº ${lacreNumero}, ${encontradaTerm} EM POSSE ${autorTextoFragment}, EM RAZÃO DE FATOS DE NATUREZA "PORTE ILEGAL DE DROGAS PARA CONSUMO", OCORRIDO(S) NA DATA DE ${dataFatoStr}.`.toUpperCase();
     
     yPos = addWrappedText(doc, yPos, textoRequisicao, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
@@ -97,7 +92,13 @@ export const addRequisicaoExameDrogas = (doc, data) => {
         yPos = addWrappedText(doc, yPos, textoApenso, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
         yPos += 2;
     });
-    const textoLacre = `TODO O MATERIAL ENCONTRA-SE DEVIDAMENTE ACONDICIONADO SOB O LACRE Nº ${lacreNumero}.`.toUpperCase();
+
+    // << CORREÇÃO: Lógica dinâmica para o texto do lacre. >>
+    const textoLacre = (isPlural
+        ? `TODO O MATERIAL ENCONTRA-SE DEVIDAMENTE ACONDICIONADO SOB O LACRE Nº ${lacreNumero}.`
+        : `O MATERIAL ENCONTRA-SE DEVIDAMENTE ACONDICIONADO SOB O LACRE Nº ${lacreNumero}.`
+    ).toUpperCase();
+
     yPos = addWrappedText(doc, yPos, textoLacre, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 8;
 
@@ -105,7 +106,6 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     yPos = addWrappedText(doc, yPos, textoQuesitos, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 5;
     
-    // Definição dinâmica dos quesitos com base na variável 'isPlural'
     let quesitos;
     if (isPlural) {
         quesitos = [
