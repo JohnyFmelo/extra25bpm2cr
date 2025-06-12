@@ -1,4 +1,4 @@
- import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -292,12 +292,8 @@ const TCOForm: React.FC<TCOFormProps> = ({
     }
   }, [substancia, cor]);
 
-  // ##################################################################
-  // ## CORREÇÃO APLICADA AQUI ##
-  // ## Removido 'apreensoes' do array de dependências para evitar ##
-  // ## o loop de feedback que impedia a edição do campo.         ##
-  // ##################################################################
   useEffect(() => {
+    // isPrimaryDrugCase é definido fora do useEffect para clareza
     if (isPrimaryDrugCase) {
       if (indicios) {
         const indicioFinal = isUnknownMaterial && customMaterialDesc ? customMaterialDesc : indicios;
@@ -306,7 +302,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
           const quantidadeText = quantidadeNum <= 10 ? numberToText(quantidadeNum) : quantidadeNum.toString();
           const plural = quantidadeNum > 1 ? "PORÇÕES" : "PORÇÃO";
           const descriptiveText = isUnknownMaterial ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${customMaterialDesc || "[DESCRIÇÃO]"}, CONFORME FOTO EM ANEXO.` : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`;
-          
+          // Só atualiza apreensoes se estiver vazia ou com placeholder de droga
           if (!apreensoes || apreensoes.startsWith("[DESCRIÇÃO]") || apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("MATERIAL DESCONHECIDO")) {
             setApreensoes(descriptiveText);
           }
@@ -316,8 +312,9 @@ const TCOForm: React.FC<TCOFormProps> = ({
         ...initialPersonData,
         nome: ""
       }]);
-      setRepresentacao("");
+      setRepresentacao(""); // Limpa representação para "O ESTADO"
     } else {
+      // Se não é caso de droga como primeira natureza, limpa apreensões relacionadas a drogas e reseta vítima se for "O ESTADO"
       if (apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("MATERIAL DESCONHECIDO")) {
         setApreensoes("");
       }
@@ -327,6 +324,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
             ...initialPersonData
           }];
         }
+        // Mantém vítimas se já houver outras ou se a única não for placeholder
         if (prevVitimas.length === 0 || (prevVitimas.length === 1 && !prevVitimas[0].nome && !prevVitimas[0].cpf)) {
           return [{
             ...initialPersonData
@@ -335,15 +333,17 @@ const TCOForm: React.FC<TCOFormProps> = ({
         return prevVitimas;
       });
     }
-  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, isPrimaryDrugCase]); // 'apreensoes' REMOVIDO DAQUI
+  }, [natureza, indicios, isUnknownMaterial, customMaterialDesc, quantidade, apreensoes, isPrimaryDrugCase]); // Adicionado isPrimaryDrugCase
 
   useEffect(() => {
     const primeiraNatureza = natureza.split(' + ')[0];
+    // displayNaturezaReal reflete a natureza completa, a menos que a primeira seja "Outros"
     const displayNaturezaReal = primeiraNatureza === "Outros" ? customNatureza.trim() : natureza;
 
     let tipificacaoAtual = "";
     let penaAtual = "";
 
+    // Tipificação e pena são baseadas na primeira natureza
     if (primeiraNatureza === "Outros") {
       tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
       penaAtual = penaDescricao || "";
@@ -441,6 +441,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
           tipificacaoAtual = "[TIPIFICAÇÃO NÃO MAPEADA]";
           penaAtual = "";
       }
+      // Atualiza tipificação e pena apenas se não for "Outros" onde o usuário pode definir
       if (primeiraNatureza !== "Outros") {
         setTipificacao(tipificacaoAtual);
         setPenaDescricao(penaAtual);
@@ -453,13 +454,14 @@ const TCOForm: React.FC<TCOFormProps> = ({
     const testemunhaTexto = testemunhasValidas.length > 1 ? "TESTEMUNHAS" : testemunhasValidas.length === 1 ? "TESTEMUNHA" : "";
     const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
     setConclusaoPolicial(conclusaoBase);
-  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
+  }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]); // Removido isPrimaryDrugCase pois não é usado aqui
 
   useEffect(() => {
     if (isRelatoPolicialManuallyEdited) return;
     let updatedRelato = relatoPolicialTemplate;
     const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
     const gupm = formatarGuarnicao(componentesGuarnicao);
+    // displayNaturezaReal para o relato policial usa a natureza completa
     const displayNaturezaRealParaRelato = (natureza.split(' + ')[0] === "Outros" ? customNatureza : natureza) || "[NATUREZA PENDENTE]";
     const operacaoText = operacao ? `, DURANTE A ${operacao.toUpperCase()},` : "";
     updatedRelato = updatedRelato
@@ -480,6 +482,10 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
     if (!isRelatoPolicialManuallyEdited || relatoPolicial === relatoPolicialTemplate) {
       setRelatoPolicial(updatedRelato.toUpperCase());
+    } else {
+      // Se editado manualmente, preserva a edição, mas tenta atualizar partes não editadas
+      // (lógica complexa, por ora mantemos simples: se editado, não sobrescreve automaticamente)
+      // setRelatoPolicial(updatedRelato); // Comentado para evitar sobrescrever edições manuais com template
     }
   }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited, relatoPolicial]);
 
@@ -901,6 +907,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       return;
     }
 
+    // Use isPrimaryDrugCase for validation
     if (isPrimaryDrugCase && (!quantidade.trim() || !substancia || !cor || (isUnknownMaterial && !customMaterialDesc.trim()) || !lacreNumero.trim())) {
       toast({
         title: "Dados da Droga Incompletos",
@@ -950,11 +957,11 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
       const tcoDataParaPDF: any = {
         tcoNumber: tcoNumber.trim(),
-        natureza: displayNaturezaRealSubmit,
-        originalNatureza: natureza,
+        natureza: displayNaturezaRealSubmit, // Natureza completa ou customizada
+        originalNatureza: natureza, // O valor exato do estado `natureza`
         customNatureza: customNatureza.trim(),
-        tipificacao: tipificacao.trim(),
-        penaDescricao: penaDescricao.trim(),
+        tipificacao: tipificacao.trim(), // Tipificação é baseada na primeira natureza
+        penaDescricao: penaDescricao.trim(), // Pena é baseada na primeira natureza
         dataFato,
         horaFato,
         dataInicioRegistro,
@@ -1047,7 +1054,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       console.log("Metadados para salvar no DB:", tcoMetadata);
       let attempt = 0;
       let metadataSuccess = false;
-      let lastError: any = null;
+      let lastError: any = null; // Tipado como 'any' para aceitar Error ou string
       while (attempt < 3 && !metadataSuccess) {
         try {
           attempt++;
@@ -1150,6 +1157,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
           />
         </div>
 
+        {/* A primeira natureza define se mostra a aba de drogas */}
         {isPrimaryDrugCase && (
           <div className="mb-8">
             <DrugVerificationTab
@@ -1220,7 +1228,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
             handleAutorDetalhadoChange={handleAutorDetalhadoChange}
             handleAddAutor={handleAddAutor}
             handleRemoveAutor={handleRemoveAutor}
-            natureza={natureza}
+            natureza={natureza} // Passa a natureza completa
           />
         </div>
 
@@ -1249,10 +1257,10 @@ const TCOForm: React.FC<TCOFormProps> = ({
             setApreensoes={setApreensoes}
             conclusaoPolicial={conclusaoPolicial}
             setConclusaoPolicial={setConclusaoPolicial}
-            drugSeizure={isPrimaryDrugCase}
+            drugSeizure={isPrimaryDrugCase} // Condicionado pela primeira natureza ser droga
             representacao={representacao}
             setRepresentacao={setRepresentacao}
-            natureza={natureza}
+            natureza={natureza} // Passa a natureza completa
             videoLinks={videoLinks}
             setVideoLinks={setVideoLinks}
             solicitarCorpoDelito={autores.length > 0 ? autores[0].laudoPericial : "Não"}
