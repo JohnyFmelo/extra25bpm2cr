@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,6 @@ interface GeneralInformationTabProps {
   setDataFato: (value: string) => void;
   horaFato: string;
   setHoraFato: (value: string) => void;
-  // << NOTA: As props abaixo permanecem, pois são usadas nos bastidores, mas os campos serão ocultos >>
   dataInicioRegistro: string;
   horaInicioRegistro: string;
   setHoraInicioRegistro: (value: string) => void;
@@ -93,19 +93,31 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   condutorRg
 }) => {
   
+  // Registrar horário de início automaticamente quando o componente é montado
+  useEffect(() => {
+    if (!horaInicioRegistro) {
+      const agora = new Date();
+      const horaAtual = agora.toTimeString().slice(0, 5); // HH:MM
+      setHoraInicioRegistro(horaAtual);
+    }
+  }, [horaInicioRegistro, setHoraInicioRegistro]);
+  
   // Função para calcular a tipificação baseada nas naturezas selecionadas
   const getTipificacaoCompleta = () => {
     if (!natureza) return "";
     
+    // Se for natureza personalizada, usar a tipificação editável
     if (isCustomNatureza) {
       return tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
     }
     
+    // Para naturezas múltiplas, dividir e mapear
     const naturezas = natureza.split(" + ");
     const tipificacoes = naturezas.map(nat => {
       return naturezaTipificacoes[nat.trim()] || "[TIPIFICAÇÃO NÃO MAPEADA]";
     });
     
+    // Formato da tipificação: usar vírgulas e "E" apenas antes do último item
     if (tipificacoes.length === 1) {
       return tipificacoes[0];
     } else if (tipificacoes.length === 2) {
@@ -129,6 +141,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
       <CardContent className="px-[5px]">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           
+          {/* Natureza da Ocorrência */}
           <div className="md:col-span-2">
             <Label htmlFor="naturezaDisplay">Natureza da Ocorrência</Label>
             <Input 
@@ -140,6 +153,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
             />
           </div>
 
+          {/* Tipificação Legal */}
           <div className="md:col-span-2">
             <Label htmlFor="tipificacao">Tipificação Legal</Label>
             {isCustomNatureza ? (
@@ -160,6 +174,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
             )}
           </div>
 
+          {/* Data do Fato */}
           <div>
             <Label htmlFor="dataFato">Data do Fato *</Label>
             <Input 
@@ -170,6 +185,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
             />
           </div>
 
+          {/* Hora do Fato */}
           <div>
             <Label htmlFor="horaFato">Hora do Fato *</Label>
             <Input 
@@ -180,29 +196,55 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
             />
           </div>
 
-          {/* << CORREÇÃO: Os quatro campos abaixo foram removidos da interface >> */}
-          {/*
+          {/* Data de Início do Registro */}
           <div>
             <Label htmlFor="dataInicioRegistro">Data de Início do Registro</Label>
-            <Input id="dataInicioRegistro" type="date" readOnly value={dataInicioRegistro} className="bg-gray-100" />
+            <Input 
+              id="dataInicioRegistro" 
+              type="date" 
+              readOnly 
+              value={dataInicioRegistro} 
+              className="bg-gray-100" 
+            />
           </div>
 
+          {/* Hora de Início do Registro */}
           <div>
             <Label htmlFor="horaInicioRegistro">Hora de Início do Registro</Label>
-            <Input id="horaInicioRegistro" type="time" readOnly value={horaInicioRegistro} className="bg-gray-100" />
+            <Input 
+              id="horaInicioRegistro" 
+              type="time" 
+              readOnly 
+              value={horaInicioRegistro} 
+              className="bg-gray-100" 
+            />
           </div>
 
+          {/* Data de Término do Registro */}
           <div>
             <Label htmlFor="dataTerminoRegistro">Data de Término do Registro</Label>
-            <Input id="dataTerminoRegistro" type="date" readOnly value={dataTerminoRegistro} className="bg-gray-100" />
+            <Input 
+              id="dataTerminoRegistro" 
+              type="date" 
+              readOnly 
+              value={dataTerminoRegistro} 
+              className="bg-gray-100" 
+            />
           </div>
 
+          {/* Hora de Término do Registro */}
           <div>
             <Label htmlFor="horaTerminoRegistro">Hora de Término do Registro</Label>
-            <Input id="horaTerminoRegistro" type="time" readOnly value={horaTerminoRegistro} className="bg-gray-100" />
+            <Input 
+              id="horaTerminoRegistro" 
+              type="time" 
+              readOnly 
+              value={horaTerminoRegistro} 
+              className="bg-gray-100" 
+            />
           </div>
-          */}
 
+          {/* Local do Fato */}
           <div className="md:col-span-2">
             <Label htmlFor="localFato">Local do Fato *</Label>
             <Input 
@@ -213,6 +255,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
             />
           </div>
 
+          {/* Endereço */}
           <div className="md:col-span-2">
             <Label htmlFor="endereco">Endereço Completo *</Label>
             <Input 
@@ -223,6 +266,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
             />
           </div>
 
+          {/* Município */}
           <div>
             <Label htmlFor="municipio">Município</Label>
             <Input 
@@ -233,6 +277,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
             />
           </div>
 
+          {/* Comunicante */}
           <div>
             <Label htmlFor="comunicante">Comunicante *</Label>
             <Select value={comunicante} onValueChange={setComunicante}>
@@ -250,6 +295,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
             </Select>
           </div>
 
+          {/* Guarnição */}
           <div className="md:col-span-2">
             <Label htmlFor="guarnicao">Guarnição *</Label>
             <Input 
@@ -260,6 +306,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
             />
           </div>
 
+          {/* Operação */}
           <div className="md:col-span-2">
             <Label htmlFor="operacao">Operação (Opcional)</Label>
             <Input 
@@ -270,6 +317,7 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
             />
           </div>
 
+          {/* Dados do Condutor */}
           {condutorNome && (
             <>
               <div className="md:col-span-2">
