@@ -14,7 +14,6 @@ interface GeneralInformationTabProps {
   setDataFato: (value: string) => void;
   horaFato: string;
   setHoraFato: (value: string) => void;
-  // << NOTA: As props abaixo permanecem, pois são usadas nos bastidores, mas os campos serão ocultos >>
   dataInicioRegistro: string;
   horaInicioRegistro: string;
   setHoraInicioRegistro: (value: string) => void;
@@ -31,6 +30,7 @@ interface GeneralInformationTabProps {
   setGuarnicao: (value: string) => void;
   operacao: string;
   setOperacao: (value: string) => void;
+  // << NOTA: As props do condutor permanecem, mas os campos serão ocultos >>
   condutorNome: string;
   condutorPosto: string;
   condutorRg: string;
@@ -93,7 +93,6 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   condutorRg
 }) => {
   
-  // Função para calcular a tipificação baseada nas naturezas selecionadas
   const getTipificacaoCompleta = () => {
     if (!natureza) return "";
     
@@ -180,27 +179,8 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
             />
           </div>
 
-          {/* << CORREÇÃO: Os quatro campos abaixo foram removidos da interface >> */}
           {/*
-          <div>
-            <Label htmlFor="dataInicioRegistro">Data de Início do Registro</Label>
-            <Input id="dataInicioRegistro" type="date" readOnly value={dataInicioRegistro} className="bg-gray-100" />
-          </div>
-
-          <div>
-            <Label htmlFor="horaInicioRegistro">Hora de Início do Registro</Label>
-            <Input id="horaInicioRegistro" type="time" readOnly value={horaInicioRegistro} className="bg-gray-100" />
-          </div>
-
-          <div>
-            <Label htmlFor="dataTerminoRegistro">Data de Término do Registro</Label>
-            <Input id="dataTerminoRegistro" type="date" readOnly value={dataTerminoRegistro} className="bg-gray-100" />
-          </div>
-
-          <div>
-            <Label htmlFor="horaTerminoRegistro">Hora de Término do Registro</Label>
-            <Input id="horaTerminoRegistro" type="time" readOnly value={horaTerminoRegistro} className="bg-gray-100" />
-          </div>
+          // Campos de Início e Término do Registro ocultos
           */}
 
           <div className="md:col-span-2">
@@ -269,7 +249,9 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
               onChange={(e) => setOperacao(e.target.value)} 
             />
           </div>
-
+          
+          {/* << CORREÇÃO: Os dados do condutor da viatura foram ocultados da interface. >> */}
+          {/*
           {condutorNome && (
             <>
               <div className="md:col-span-2">
@@ -307,6 +289,8 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
               </div>
             </>
           )}
+          */}
+
         </div>
       </CardContent>
     </Card>
