@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -229,11 +230,12 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
 
   useEffect(() => {
     if (isDrugCase && internalDrugs && internalDrugs.length > 0) {
-      // Debug: Log internalDrugs to verify contents
       console.log("internalDrugs in HistoricoTab:", internalDrugs);
       // Only update apreensoes if it's empty or not user-modified
       if (!apreensoes || apreensoes === "Não informado.") {
+        // Include all drugs in the description, not just the first one
         const drugDescriptions = internalDrugs
+          .filter(drug => drug.indicios && drug.indicios.trim() !== "") // Only include drugs with indicios
           .map(drug => `- ${drug.indicios}`)
           .join("\n");
         setApreensoes(drugDescriptions);
