@@ -10,7 +10,8 @@ const formatarDataPorExtenso = (date) => {
         "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"
     ];
     try {
-        const d = new Date(date);
+        // Assegura que a data seja interpretada corretamente como UTC para evitar problemas de fuso horário
+        const d = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
         if (isNaN(d.getTime())) {
             throw new Error("Data inválida");
         }
@@ -27,7 +28,7 @@ const formatarDataPorExtenso = (date) => {
 /** Adiciona Requisição de Exame de Lesão Corporal (em página nova) */
 export const addRequisicaoExameLesao = (doc, data) => {
     const periciado = data.periciadoNome;
-    const sexo = data.sexo; // "MASCULINO", "FEMININO" ou undefined
+    const sexo = data.sexo?.toUpperCase(); // Garante que o sexo esteja em maiúsculo para a comparação
 
     if (!periciado || !periciado.trim()) {
         console.warn("Nenhum periciadoNome válido fornecido. Pulando Requisição de Exame de Lesão.");
@@ -44,7 +45,7 @@ export const addRequisicaoExameLesao = (doc, data) => {
     const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
     const condutor = data.componentesGuarnicao?.[0];
     const naturezaLesao = data.lesaoNatureza || data.natureza || "A APURAR";
-    const dataOcorrencia = formatarDataSimples(data.dataFato); // Data do fato continua vindo de data.dataFato
+    const dataOcorrencia = formatarDataSimples(data.dataFato);
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
@@ -55,7 +56,6 @@ export const addRequisicaoExameLesao = (doc, data) => {
     yPos = addWrappedText(doc, yPos, textoRequisicao, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 8;
 
-    // Lista de quesitos, excluindo o item 11 para homens
     const quesitos = [
         `1. Houve ofensa à integridade corporal ou à saúde ${quesitoPronome}?`,
         "2. Em caso afirmativo, qual o instrumento ou meio que a produziu?",
@@ -79,7 +79,6 @@ export const addRequisicaoExameLesao = (doc, data) => {
     });
     yPos += 8;
 
-    // MODIFICAÇÃO AQUI: Usa SEMPRE a data atual para a data de emissão do documento
     const dataRegistro = new Date();
     const dataAtualFormatada = formatarDataPorExtenso(dataRegistro);
     const cidadeReq = (data.municipio || "VÁRZEA GRANDE").toUpperCase();
@@ -90,7 +89,7 @@ export const addRequisicaoExameLesao = (doc, data) => {
     yPos += 15;
 
     yPos = addSignatureWithNameAndRole(doc, yPos, periciado.toUpperCase(), periciadoLabel, data);
-    const nomeCondutor = `${condutor?.nome || "-"} ${condutor?.posto || ""}`.trim();
+    const nomeCondutor = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
     yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutor, "CONDUTOR DA OCORRÊNCIA / REQUISITANTE", data);
 
     return yPos;
