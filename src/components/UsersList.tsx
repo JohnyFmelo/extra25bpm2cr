@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -12,7 +11,6 @@ import { Ban, Trash2, Loader2, UserCircle, Search, Users, Filter, Mail, Shield, 
 import UserDetailsDialog from "./UserDetailsDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
 interface User {
   id: string;
   email: string;
@@ -24,7 +22,6 @@ interface User {
   blocked?: boolean;
   currentVersion?: string;
 }
-
 const UsersList = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -34,17 +31,16 @@ const UsersList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "blocked">("all");
   const [currentSystemVersion, setCurrentSystemVersion] = useState("1.0.0");
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     fetchUsers();
     fetchSystemVersion();
   }, []);
-
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm, filterStatus]);
-
   const fetchSystemVersion = async () => {
     try {
       const versionDoc = await getDoc(doc(db, "system", "version"));
@@ -55,39 +51,32 @@ const UsersList = () => {
       console.error("Error fetching system version:", error);
     }
   };
-
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
       const querySnapshot = await getDocs(collection(db, "users"));
       const usersData = querySnapshot.docs.map(userDoc => ({
         id: userDoc.id,
-        ...userDoc.data(),
-      } as User));
+        ...userDoc.data()
+      }) as User);
       setUsers(usersData);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({
         variant: "destructive",
         title: "Erro ao carregar usuários",
-        description: "Não foi possível carregar a lista de usuários.",
+        description: "Não foi possível carregar a lista de usuários."
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const filterUsers = () => {
     let filtered = users;
 
     // Filtro por texto
     if (searchTerm) {
-      filtered = filtered.filter(user =>
-        user.warName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.rank && user.rank.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (user.service && user.service.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      filtered = filtered.filter(user => user.warName.toLowerCase().includes(searchTerm.toLowerCase()) || user.email.toLowerCase().includes(searchTerm.toLowerCase()) || user.rank && user.rank.toLowerCase().includes(searchTerm.toLowerCase()) || user.service && user.service.toLowerCase().includes(searchTerm.toLowerCase()));
     }
 
     // Filtro por status
@@ -98,13 +87,12 @@ const UsersList = () => {
     }
     setFilteredUsers(filtered);
   };
-
   const handleDeleteUser = async (userId: string) => {
     try {
       await deleteDoc(doc(db, "users", userId));
       toast({
         title: "Usuário excluído",
-        description: "Usuário foi removido com sucesso.",
+        description: "Usuário foi removido com sucesso."
       });
       fetchUsers();
     } catch (error) {
@@ -112,16 +100,17 @@ const UsersList = () => {
       toast({
         variant: "destructive",
         title: "Erro ao excluir",
-        description: "Não foi possível excluir o usuário.",
+        description: "Não foi possível excluir o usuário."
       });
     }
   };
-
   const handleToggleBlock = async (user: User) => {
     try {
       const userRef = doc(db, "users", user.id);
       const newBlockedStatus = !user.blocked;
-      await updateDoc(userRef, { blocked: newBlockedStatus });
+      await updateDoc(userRef, {
+        blocked: newBlockedStatus
+      });
 
       // Se o usuário está sendo bloqueado, verificar se é o usuário logado
       if (newBlockedStatus) {
@@ -134,7 +123,7 @@ const UsersList = () => {
       }
       toast({
         title: "Status atualizado",
-        description: `Usuário foi ${user.blocked ? "desbloqueado" : "bloqueado"} com sucesso.`,
+        description: `Usuário foi ${user.blocked ? "desbloqueado" : "bloqueado"} com sucesso.`
       });
       fetchUsers();
     } catch (error) {
@@ -142,56 +131,61 @@ const UsersList = () => {
       toast({
         variant: "destructive",
         title: "Erro ao atualizar",
-        description: "Não foi possível alterar o status do usuário.",
+        description: "Não foi possível alterar o status do usuário."
       });
     }
   };
-
   const handleUserClick = (user: User) => {
     setSelectedUser(user);
     setIsDialogOpen(true);
   };
-
   const formatUserName = (user: User) => {
     const serviceBadge = user.service ? ` (${user.service})` : '';
     return `${user.rank || ''} ${user.warName}${serviceBadge}`.trim();
   };
-
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
-
   const getStatusStats = () => {
     const active = users.filter(user => !user.blocked).length;
     const blocked = users.filter(user => user.blocked).length;
-    return { active, blocked, total: users.length };
+    return {
+      active,
+      blocked,
+      total: users.length
+    };
   };
-
   const getVersionStatus = (userVersion?: string) => {
     if (!userVersion) {
-      return { status: "outdated", text: "Desatualizado", variant: "destructive" as const };
+      return {
+        status: "outdated",
+        text: "Desatualizado",
+        variant: "destructive" as const
+      };
     }
     if (userVersion === currentSystemVersion) {
-      return { status: "updated", text: userVersion, variant: "default" as const };
+      return {
+        status: "updated",
+        text: userVersion,
+        variant: "default" as const
+      };
     }
-    return { status: "outdated", text: userVersion, variant: "secondary" as const };
+    return {
+      status: "outdated",
+      text: userVersion,
+      variant: "secondary" as const
+    };
   };
-
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
+    return <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Carregando usuários...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   const stats = getStatusStats();
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* Cards de Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -233,7 +227,7 @@ const UsersList = () => {
 
       {/* Card Principal */}
       <Card className="w-full">
-        <CardHeader className="space-y-4 px-[5px]">
+        <CardHeader className="space-y-4 px-[5px] my-0">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <CardTitle className="text-2xl font-bold flex items-center gap-2">
               <Users className="h-6 w-6" />
@@ -245,44 +239,26 @@ const UsersList = () => {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, email, posto ou força..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+              <Input placeholder="Buscar por nome, email, posto ou força..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
             
             <div className="flex gap-2">
-              <Button
-                variant={filterStatus === "all" ? "default" : "outline"}
-                onClick={() => setFilterStatus("all")}
-                size="sm"
-              >
+              <Button variant={filterStatus === "all" ? "default" : "outline"} onClick={() => setFilterStatus("all")} size="sm">
                 <Filter className="h-4 w-4 mr-2" />
                 Todos
               </Button>
-              <Button
-                variant={filterStatus === "active" ? "default" : "outline"}
-                onClick={() => setFilterStatus("active")}
-                size="sm"
-              >
+              <Button variant={filterStatus === "active" ? "default" : "outline"} onClick={() => setFilterStatus("active")} size="sm">
                 Ativos
               </Button>
-              <Button
-                variant={filterStatus === "blocked" ? "default" : "outline"}
-                onClick={() => setFilterStatus("blocked")}
-                size="sm"
-              >
+              <Button variant={filterStatus === "blocked" ? "default" : "outline"} onClick={() => setFilterStatus("blocked")} size="sm">
                 Bloqueados
               </Button>
             </div>
           </div>
         </CardHeader>
         
-        <CardContent className="px-[2px]">
-          {filteredUsers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
+        <CardContent className="px-[2px] py-0">
+          {filteredUsers.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
               <UserCircle className="w-16 h-16 text-muted-foreground mb-4" />
               <p className="text-lg font-medium">
                 {searchTerm || filterStatus !== "all" ? "Nenhum usuário encontrado" : "Nenhum usuário cadastrado"}
@@ -290,15 +266,12 @@ const UsersList = () => {
               <p className="text-sm text-muted-foreground mt-2">
                 {searchTerm || filterStatus !== "all" ? "Tente ajustar os filtros de busca." : "Os usuários cadastrados aparecerão aqui."}
               </p>
-            </div>
-          ) : (
-            <>
+            </div> : <>
               <div className="block md:hidden">
                 <div className="grid grid-cols-1 gap-4">
                   {filteredUsers.map(user => {
-                    const versionStatus = getVersionStatus(user.currentVersion);
-                    return (
-                      <Card key={user.id} className="p-2 border rounded-lg shadow-sm">
+                const versionStatus = getVersionStatus(user.currentVersion);
+                return <Card key={user.id} className="p-2 border rounded-lg shadow-sm">
                         <CardContent className="p-2 flex flex-col items-start space-y-2">
                           <div className="flex items-center space-x-2">
                             <Avatar>
@@ -306,9 +279,7 @@ const UsersList = () => {
                             </Avatar>
                             <div>
                               <p className="font-medium">{formatUserName(user)}</p>
-                              {user.registration && (
-                                <p className="text-sm text-muted-foreground">Matrícula: {user.registration}</p>
-                              )}
+                              {user.registration && <p className="text-sm text-muted-foreground">Matrícula: {user.registration}</p>}
                             </div>
                           </div>
                           <div className="flex items-center space-x-2 text-sm">
@@ -316,25 +287,17 @@ const UsersList = () => {
                             <span>{user.email}</span>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <Badge
-                              variant={user.blocked ? "destructive" : "default"}
-                              className="flex items-center space-x-1"
-                            >
+                            <Badge variant={user.blocked ? "destructive" : "default"} className="flex items-center space-x-1">
                               {user.blocked ? <AlertCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
                               <span>{user.blocked ? "Bloqueado" : "Ativo"}</span>
                             </Badge>
-                            {user.userType && (
-                              <Badge variant="outline" className="flex items-center space-x-1">
+                            {user.userType && <Badge variant="outline" className="flex items-center space-x-1">
                                 <Shield className="h-3 w-3" />
                                 <span>{user.userType}</span>
-                              </Badge>
-                            )}
+                              </Badge>}
                           </div>
                           <div className="flex items-center space-x-2">
-                            <Badge
-                              variant={versionStatus.variant}
-                              className="text-xs flex items-center space-x-1"
-                            >
+                            <Badge variant={versionStatus.variant} className="text-xs flex items-center space-x-1">
                               {versionStatus.status === "outdated" && <AlertTriangle className="h-3 w-3" />}
                               <span>{versionStatus.text}</span>
                             </Badge>
@@ -346,62 +309,47 @@ const UsersList = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => handleToggleBlock(user)}
-                                className="flex items-center gap-2"
-                              >
+                              <DropdownMenuItem onClick={() => handleToggleBlock(user)} className="flex items-center gap-2">
                                 <Ban className="h-4 w-4" />
                                 {user.blocked ? "Desbloquear" : "Bloquear"}
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteUser(user.id)}
-                                className="flex items-center gap-2 text-destructive"
-                              >
+                              <DropdownMenuItem onClick={() => handleDeleteUser(user.id)} className="flex items-center gap-2 text-destructive">
                                 <Trash2 className="h-4 w-4" />
                                 Excluir
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </CardContent>
-                      </Card>
-                    );
-                  })}
+                      </Card>;
+              })}
                 </div>
               </div>
               <div className="hidden md:block">
-                <div className="rounded-md border">
+                <div className="rounded-md border py-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="font-semibold">Usuário</TableHead>
-                        <TableHead className="font-semibold">Contato</TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="font-semibold">Versão</TableHead>
-                        <TableHead className="font-semibold text-right">Ações</TableHead>
+                        
+                        
+                        
+                        
+                        
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredUsers.map(user => {
-                        const versionStatus = getVersionStatus(user.currentVersion);
-                        return (
-                          <TableRow key={user.id} className="hover:bg-muted/50">
+                    const versionStatus = getVersionStatus(user.currentVersion);
+                    return <TableRow key={user.id} className="hover:bg-muted/50">
                             <TableCell>
-                              <button
-                                onClick={() => handleUserClick(user)}
-                                className="flex items-center space-x-3 text-left w-full hover:bg-muted/30 rounded-md p-2 -m-2 transition-colors"
-                              >
-                                <Avatar>
-                                  <AvatarFallback>{getInitials(formatUserName(user))}</AvatarFallback>
-                                </Avatar>
+                              <button onClick={() => handleUserClick(user)} className="flex items-center space-x-3 text-left w-full hover:bg-muted/30 rounded-md p-2 -m-2 transition-colors">
+                                
                                 <div>
                                   <p className="font-medium text-primary hover:underline">
                                     {formatUserName(user)}
                                   </p>
-                                  {user.registration && (
-                                    <p className="text-sm text-muted-foreground text-stone-500">
+                                  {user.registration && <p className="text-sm text-muted-foreground text-stone-500">
                                       Matrícula: {user.registration}
-                                    </p>
-                                  )}
+                                    </p>}
                                 </div>
                               </button>
                             </TableCell>
@@ -413,27 +361,19 @@ const UsersList = () => {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center space-x-2">
-                                <Badge
-                                  variant={user.blocked ? "destructive" : "default"}
-                                  className="flex items-center space-x-1"
-                                >
+                                <Badge variant={user.blocked ? "destructive" : "default"} className="flex items-center space-x-1">
                                   {user.blocked ? <AlertCircle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
                                   <span>{user.blocked ? "Bloqueado" : "Ativo"}</span>
                                 </Badge>
-                                {user.userType && (
-                                  <Badge variant="outline" className="flex items-center space-x-1">
+                                {user.userType && <Badge variant="outline" className="flex items-center space-x-1">
                                     <Shield className="h-3 w-3" />
                                     <span>{user.userType}</span>
-                                  </Badge>
-                                )}
+                                  </Badge>}
                               </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center space-x-2">
-                                <Badge
-                                  variant={versionStatus.variant}
-                                  className="text-xs flex items-center space-x-1"
-                                >
+                                <Badge variant={versionStatus.variant} className="text-xs flex items-center space-x-1">
                                   {versionStatus.status === "outdated" && <AlertTriangle className="h-3 w-3" />}
                                   <span>{versionStatus.text}</span>
                                 </Badge>
@@ -447,43 +387,28 @@ const UsersList = () => {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => handleToggleBlock(user)}
-                                    className="flex items-center gap-2"
-                                  >
+                                  <DropdownMenuItem onClick={() => handleToggleBlock(user)} className="flex items-center gap-2">
                                     <Ban className="h-4 w-4" />
                                     {user.blocked ? "Desbloquear" : "Bloquear"}
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleDeleteUser(user.id)}
-                                    className="flex items-center gap-2 text-destructive"
-                                  >
+                                  <DropdownMenuItem onClick={() => handleDeleteUser(user.id)} className="flex items-center gap-2 text-destructive">
                                     <Trash2 className="h-4 w-4" />
                                     Excluir
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                          </TableRow>;
+                  })}
                     </TableBody>
                   </Table>
                 </div>
               </div>
-            </>
-          )}
+            </>}
 
-          <UserDetailsDialog
-            open={isDialogOpen}
-            onOpenChange={setIsDialogOpen}
-            userData={selectedUser}
-            onUserUpdated={fetchUsers}
-          />
+          <UserDetailsDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} userData={selectedUser} onUserUpdated={fetchUsers} />
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default UsersList;
