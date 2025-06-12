@@ -353,7 +353,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
   // << CORREÇÃO: O useEffect que atualizava os indícios foi removido daqui, pois sua lógica foi movida para handleNovaDrogaChange. >>
   // useEffect(() => { ... }, [substancia, cor]); // REMOVIDO
 
-  // << CORREÇÃO: Este useEffect agora constrói o texto de "Apreensões" a partir do array 'drogas'. >>
+  // << CORREÇÃO: useEffect refatorado para gerar o texto de apreensões a partir do array 'drogas' >>
   useEffect(() => {
     if (isPrimaryDrugCase) {
       // Gera a descrição para cada droga no array
@@ -363,21 +363,25 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
         const quantidadeNum = parseInt(droga.quantidade.match(/\d+/)?.[0] || "1", 10);
         const quantidadeText = numberToText(quantidadeNum);
-        const plural = quantidadeNum > 1 ? "PORÇÕES" : "PORÇÃO";
+        
+        // << CORREÇÃO: Lógica ajustada para singular/plural de "PORÇÃO PEQUENA" >>
+        const porcaoTexto = quantidadeNum > 1 ? "PORÇÕES PEQUENAS" : "PORÇÃO PEQUENA";
 
         return droga.isUnknownMaterial 
-          ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`
-          : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`;
-      }).filter(Boolean).join('\n\n'); // Junta as descrições com uma quebra de linha dupla para separação
+          ? `${quantidadeText.toUpperCase()} ${porcaoTexto} DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`
+          : `${quantidadeText.toUpperCase()} ${porcaoTexto} DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`;
+      
+      // << CORREÇÃO: Alterado de '\n\n' para '\n' para remover a linha em branco >>
+      }).filter(Boolean).join('\n'); 
       
       setApreensoes(descricoesDrogas);
       
-      // Lógica original para limpar vítimas em caso de droga é mantida
+      // Lógica original para limpar vítimas em caso de droga
       setVitimas([{ ...initialPersonData, nome: "" }]);
       setRepresentacao("");
 
     } else {
-      // Se não for caso de droga, e o texto de apreensões contém drogas, limpa-o.
+      // Se não for caso de droga, limpa as descrições de drogas do campo de apreensões
       if (apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("MATERIAL DESCONHECIDO")) {
         setApreensoes("");
       }
@@ -396,7 +400,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
         return prevVitimas;
       });
     }
-  }, [natureza, drogas, isPrimaryDrugCase]); // A dependência agora é no array 'drogas' e na natureza.
+  }, [natureza, drogas, isPrimaryDrugCase]);
 
   useEffect(() => {
     const primeiraNatureza = natureza.split(' + ')[0];
