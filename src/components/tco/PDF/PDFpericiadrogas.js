@@ -24,7 +24,6 @@ const formatarDataSimples = (dataStr) => {
     }
 };
 
-// << CORREÇÃO: Helper para converter número em texto por extenso. >>
 const numberToText = (num) => {
     const numbers = ["ZERO", "UMA", "DUAS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"];
     return (num >= 0 && num <= 10) ? numbers[num] : num.toString();
@@ -32,7 +31,6 @@ const numberToText = (num) => {
 
 /** Adiciona Requisição de Exame em Drogas de Abuso (em página nova) */
 export const addRequisicaoExameDrogas = (doc, data) => {
-    // << CORREÇÃO: Verifica se o array 'drogas' existe. Se não, não gera a requisição. >>
     if (!data.drogas || data.drogas.length === 0) {
         console.log("Pulando Requisição de Exame em Drogas: Nenhuma droga informada.");
         return;
@@ -53,27 +51,31 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     const autorTermo = autor?.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR';
     const qualificado = autor?.sexo?.toLowerCase() === 'feminino' ? 'QUALIFICADA' : 'QUALIFICADO';
 
+    // << CORREÇÃO 1: Pluralização dinâmica >>
+    const isPlural = data.drogas.length > 1;
+    const substanciaTerm = isPlural ? "SUBSTÂNCIAS" : "SUBSTÂNCIA";
+    const conjugations = {
+        apreendida: isPlural ? "APREENDIDAS" : "APREENDIDA",
+        acondicionada: isPlural ? "ACONDICIONADAS" : "ACONDICIONADA",
+        encontrada: isPlural ? "ENCONTRADAS" : "ENCONTRADA",
+    };
+
     // Título
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
-    doc.text("REQUISIÇÃO DE EXAME PERICIAL EM DROGAS".toUpperCase(), PAGE_WIDTH / 2, yPos, { align: "center" });
+    doc.text("REQUISIÇÃO DE EXAME PERICIAL EM DROGAS", PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 10;
 
-    // Conteúdo principal
+    // Conteúdo principal com pluralização correta
     doc.setFont("helvetica", "normal"); doc.setFontSize(12);
-    
     const autorTextoFragment = `D${generoAutor} ${autorArtigo} ${autorTermo} DO FATO ${nomeAutor.toUpperCase()}, ${qualificado.toUpperCase()} NESTE TCO`;
-    
-    // << CORREÇÃO: O texto agora refere-se a "substância(s)" de forma genérica, pois a descrição virá no apenso. >>
-    const textoRequisicao = `REQUISITO A POLITEC, NOS TERMOS DO ARTIGO 159 E SEGUINTES DO CPP COMBINADO COM O ARTIGO 69, CAPUT DA LEI Nº 9.099/95, E ARTIGO 50, §1º DA LEI Nº 11.343/2006, A REALIZAÇÃO DE EXAME PERICIAL DEFINITIVO NA(S) SUBSTÂNCIA(S) APREENDIDA(S) E ACONDICIONADA(S) SOB O LACRE Nº ${lacreNumero}, ENCONTRADA(S) EM POSSE ${autorTextoFragment}, EM RAZÃO DE FATOS DE NATUREZA "PORTE ILEGAL DE DROGAS PARA CONSUMO", OCORRIDO(S) NA DATA DE ${dataFatoStr}.`.toUpperCase();
-    
+    const textoRequisicao = `REQUISITO A POLITEC, NOS TERMOS DO ARTIGO 159 E SEGUINTES DO CPP COMBINADO COM O ARTIGO 69, CAPUT DA LEI Nº 9.099/95, E ARTIGO 50, §1º DA LEI Nº 11.343/2006, A REALIZAÇÃO DE EXAME PERICIAL DEFINITIVO NA(S) ${substanciaTerm} ${conjugations.apreendida} E ${conjugations.acondicionada} SOB O LACRE Nº ${lacreNumero}, ${conjugations.encontrada} EM POSSE ${autorTextoFragment}, EM RAZÃO DE FATOS DE NATUREZA "PORTE ILEGAL DE DROGAS PARA CONSUMO", OCORRIDO(S) NA DATA DE ${dataFatoStr}.`;
     yPos = addWrappedText(doc, yPos, textoRequisicao, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 8;
 
-    // << CORREÇÃO: Seção "APENSO" agora itera sobre o array 'data.drogas' para listar todas as substâncias. >>
+    // Seção "APENSO" iterando sobre as drogas
     yPos = addWrappedText(doc, yPos, "APENSO:", MARGIN_LEFT, 12, "bold", MAX_LINE_WIDTH, 'left', data);
     yPos += 2;
-
     data.drogas.forEach((droga) => {
         const quantidadeNum = parseInt(droga.quantidade.match(/\d+/)?.[0] || "1", 10);
         const quantidadeTexto = numberToText(quantidadeNum);
@@ -85,46 +87,48 @@ export const addRequisicaoExameDrogas = (doc, data) => {
         } else if (droga.indicios) {
             nomeDroga = droga.indicios;
         }
-
-        const textoApenso = `- ${quantidadeTexto} ${porcaoText} DE SUBSTÂNCIA ANÁLOGA A ${nomeDroga.toUpperCase()}.`.toUpperCase();
+        const textoApenso = `- ${quantidadeTexto.toUpperCase()} ${porcaoText} DE SUBSTÂNCIA ANÁLOGA A ${nomeDroga.toUpperCase()}.`;
         yPos = addWrappedText(doc, yPos, textoApenso, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
         yPos += 2;
     });
-    const textoLacre = `TODO O MATERIAL ENCONTRA-SE DEVIDAMENTE ACONDICIONADO SOB O LACRE Nº ${lacreNumero}.`.toUpperCase();
+    const textoLacre = `TODO O MATERIAL ENCONTRA-SE DEVIDAMENTE ACONDICIONADO SOB O LACRE Nº ${lacreNumero}.`;
     yPos = addWrappedText(doc, yPos, textoLacre, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 8;
 
     // Adiciona os quesitos
-    const textoQuesitos = `PARA TANTO, SOLICITO DE VOSSA SENHORIA, QUE SEJA CONFECCIONADO O RESPECTIVO LAUDO PERICIAL DEFINITIVO, DEVENDO OS PERITOS RESPONDEREM AOS QUESITOS, CONFORME ABAIXO:`.toUpperCase();
+    const textoQuesitos = `PARA TANTO, SOLICITO DE VOSSA SENHORIA, QUE SEJA CONFECCIONADO O RESPECTIVO LAUDO PERICIAL DEFINITIVO, DEVENDO OS PERITOS RESPONDEREM AOS QUESITOS, CONFORME ABAIXO:`;
     yPos = addWrappedText(doc, yPos, textoQuesitos, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 5;
-
     const quesitos = [
-        "A AMOSTRA APRESENTADA É CONSTITUÍDA POR SUBSTÂNCIA(S) ENTORPECENTE(S) OU DE USO PROSCRITO NO BRASIL?",
-        "EM CASO POSITIVO, QUAL(IS) SUBSTÂNCIA(S)?",
-        "QUAL O PESO LÍQUIDO TOTAL DA(S) AMOSTRA(S) APRESENTADA(S)?"
+        `QUAL A NATUREZA E CARACTERÍSTICAS DA(S) ${substanciaTerm} ENVIADA(S) A EXAME?`,
+        `PODE(M) A(S) MESMA(S) CAUSAR DEPENDÊNCIA FÍSICA/PSÍQUICA?`,
+        `QUAL O PESO LÍQUIDO TOTAL DA(S) AMOSTRA(S) APRESENTADA(S)?`
     ];
-
     quesitos.forEach((quesito, index) => {
-        const textoQuesito = `${index + 1}. ${quesito}`.toUpperCase();
+        const textoQuesito = `${index + 1}. ${quesito}`;
         yPos = addWrappedText(doc, yPos, textoQuesito, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
         yPos += 3;
     });
-    
     yPos += 8;
 
     // Adiciona a localidade e data
     const cidadeTermo = (data.municipio || "VÁRZEA GRANDE").toUpperCase();
     const dataAtualFormatada = getCustomDataAtualExtenso();
     const dataLocal = `${cidadeTermo}-MT, ${dataAtualFormatada}.`;
-    
-    yPos = checkPageBreak(doc, yPos, 10, data);
-    doc.text(dataLocal, PAGE_WIDTH - MARGIN_RIGHT, yPos, { align: 'right' });
+    yPos = addWrappedText(doc, yPos, dataLocal, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'right', data);
     yPos += 15;
 
-    // Adiciona a assinatura
+    // << CORREÇÃO 2: Lógica para manter assinatura e tabela juntas no final da página >>
+    // Calcula a altura necessária para o bloco de assinatura e tabela.
+    const assinaturaHeight = 20; // Espaço estimado para a assinatura
+    const tabelaHeight = 20; // 2 linhas de 10mm cada
+    const totalBlockHeight = assinaturaHeight + tabelaHeight + 10; // Adiciona uma margem de segurança
+
+    // Verifica se o bloco inteiro cabe na página atual. Se não, cria uma nova.
+    yPos = checkPageBreak(doc, yPos, totalBlockHeight, data);
+
+    // Agora, desenha o bloco de assinatura e tabela na posição correta.
     const nomeCondutorCompleto = (`${condutor?.posto || ""} ${condutor?.nome || ""}`.trim()).toUpperCase();
-    yPos = checkPageBreak(doc, yPos, 20, data);
     const linhaAssinaturaWidth = 100;
     doc.setLineWidth(0.3);
     doc.line((PAGE_WIDTH - linhaAssinaturaWidth) / 2, yPos, (PAGE_WIDTH + linhaAssinaturaWidth) / 2, yPos);
@@ -134,42 +138,26 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     doc.setFontSize(10);
     doc.text(nomeCondutorCompleto, PAGE_WIDTH / 2, yPos, { align: 'center' });
     yPos += 4;
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text("CONDUTOR DA OCORRÊNCIA".toUpperCase(), PAGE_WIDTH / 2, yPos, { align: 'center' });
+    doc.text("CONDUTOR DA OCORRÊNCIA", PAGE_WIDTH / 2, yPos, { align: 'center' });
     yPos += 10;
 
-    // Adiciona a tabela abaixo da assinatura
-    const tableRowHeight = 10; 
-    const tableHeaderFontSize = 10;
-    const tableNumRows = 2;
-    const tableNumCols = 3;
-
-    yPos = checkPageBreak(doc, yPos, (tableNumRows * tableRowHeight) + 15, data);
-
+    // Desenha a tabela
     const tableTopY = yPos;
     const tableContentWidth = MAX_LINE_WIDTH;
-    const colWidth = tableContentWidth / tableNumCols;
+    const colWidth = tableContentWidth / 3;
     const tableHeaders = ["DATA", "POLITEC", "ASSINATURA"];
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(tableHeaderFontSize);
+    doc.setFontSize(10);
     doc.setLineWidth(0.3); 
 
-    for (let j = 0; j < tableNumCols; j++) {
+    for (let j = 0; j < 3; j++) {
         const cellX = MARGIN_LEFT + j * colWidth;
-        doc.rect(cellX, tableTopY, colWidth, tableRowHeight);
-        doc.text(tableHeaders[j].toUpperCase(), cellX + colWidth / 2, tableTopY + tableRowHeight / 2, { align: 'center', baseline: 'middle' });
+        doc.rect(cellX, tableTopY, colWidth, 10);
+        doc.text(tableHeaders[j], cellX + colWidth / 2, tableTopY + 5, { align: 'center', baseline: 'middle' });
+        doc.rect(cellX, tableTopY + 10, colWidth, 10); // Linha vazia abaixo
     }
-
-    const secondRowY = tableTopY + tableRowHeight;
-    for (let j = 0; j < tableNumCols; j++) {
-        const cellX = MARGIN_LEFT + j * colWidth;
-        doc.rect(cellX, secondRowY, colWidth, tableRowHeight);
-    }
-    
-    yPos = secondRowY + tableRowHeight + 10;
+    yPos = tableTopY + 20 + 10;
 
     doc.setFont("helvetica", "normal"); 
     doc.setFontSize(12);
