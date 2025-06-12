@@ -10,13 +10,13 @@ import GeneralInformationTab from "./tco/GeneralInformationTab";
 import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
 import GuarnicaoTab from "./tco/GuarnicaoTab";
 import HistoricoTab from "./tco/HistoricoTab";
-import DrugVerificationTab from "./tco/DrugVerificationTab"; // << CORREÇÃO: Este componente será adaptado
+import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF, generateTCOFilename } from "./tco/pdfGenerator";
 import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
 
-// << CORREÇÃO: Interface para a estrutura de uma única droga >>
+// << CORREÇÃO: Interface para a estrutura de uma única droga. Essencial para o novo modelo de dados. >>
 interface Droga {
-  id: string; // Para key e remoção
+  id: string; // ID único para usar como 'key' no React e facilitar a remoção
   quantidade: string;
   substancia: string;
   cor: string;
@@ -30,9 +30,8 @@ interface ComponenteGuarnicao {
   rg: string;
   nome: string;
   posto: string;
-  apoio?: boolean;
+  apoio?: boolean; // Campo para indicar se o policial é de apoio
 }
-
 interface Pessoa {
   nome: string;
   sexo: string;
@@ -48,15 +47,13 @@ interface Pessoa {
   celular: string;
   email: string;
   laudoPericial: string;
-  relato?: string;
-  representacao?: string;
+  relato?: string; // Added for victim testimony
+  representacao?: string; // Added for victim representation
 }
-
 interface TCOFormProps {
   selectedTco?: any;
   onClear?: () => void;
 }
-
 const initialPersonData: Pessoa = {
   nome: "",
   sexo: "",
@@ -74,7 +71,7 @@ const initialPersonData: Pessoa = {
   laudoPericial: "Não"
 };
 
-// << CORREÇÃO: Estado inicial para o formulário de uma nova droga >>
+// << CORREÇÃO: Estado inicial para o formulário de uma nova droga. Usado para limpar os campos após adicionar. >>
 const initialNovaDrogaState: Omit<Droga, 'id'> = {
   quantidade: "",
   substancia: "",
@@ -85,8 +82,6 @@ const initialNovaDrogaState: Omit<Droga, 'id'> = {
   customMaterialDesc: "",
 };
 
-
-// ... (O restante das suas funções helper como formatCPF, formatPhone, etc., permanecem iguais)
 const formatRepresentacao = (representacao: string): string => {
   if (representacao === "representar") return "representar";
   if (representacao === "decidir_posteriormente") return "decidir_posteriormente";
@@ -176,11 +171,15 @@ const calculateAge = (birthDate: Date, referenceDate: Date) => {
   };
 };
 
-const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
-  const { toast } = useToast();
+const TCOForm: React.FC<TCOFormProps> = ({
+  selectedTco,
+  onClear
+}) => {
+  const {
+    toast
+  } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // ... (outros estados do formulário)
   const [hasMinorAuthor, setHasMinorAuthor] = useState<{
     isMinor: boolean;
     details?: {
@@ -219,8 +218,13 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const [apreensoes, setApreensoes] = useState("");
   const [lacreNumero, setLacreNumero] = useState("");
   const [componentesGuarnicao, setComponentesGuarnicao] = useState<ComponenteGuarnicao[]>([]);
-  
-  // << CORREÇÃO: Substituição dos estados individuais de droga por um array e um objeto para o formulário >>
+
+  // << CORREÇÃO: Os estados individuais de droga foram removidos. >>
+  // const [quantidade, setQuantidade] = useState(""); // REMOVIDO
+  // const [substancia, setSubstancia] = useState(""); // REMOVIDO
+  // ... e os outros.
+
+  // << CORREÇÃO: Substituídos por um estado de array para a lista de drogas e um estado para o formulário de nova droga. >>
   const [drogas, setDrogas] = useState<Droga[]>([]);
   const [novaDroga, setNovaDroga] = useState<Omit<Droga, 'id'>>(initialNovaDrogaState);
 
@@ -249,15 +253,14 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
   const [conclusaoPolicial, setConclusaoPolicial] = useState("");
   const [isRelatoPolicialManuallyEdited, setIsRelatoPolicialManuallyEdited] = useState(false);
 
-  // Helper para determinar se é um caso de droga
   const isPrimaryDrugCase = natureza.split(' + ')[0] === "Porte de drogas para consumo";
-
-  // << CORREÇÃO: Novas funções para manipular a lista de drogas >>
-  const handleNovaDrogaChange = (field: keyof Omit<Droga, 'id'>, value: string | boolean) => {
+  
+  // << CORREÇÃO: Novas funções para manipular a lista de drogas. >>
+  const handleNovaDrogaChange = useCallback((field: keyof Omit<Droga, 'id'>, value: string | boolean) => {
     setNovaDroga(prev => {
         const updatedDroga = { ...prev, [field]: value };
 
-        // Lógica de indícios movida para cá, para atualizar o formulário em tempo real
+        // A lógica de autocompletar os "indícios" agora vive aqui, reagindo à mudança no formulário.
         const { substancia, cor } = updatedDroga;
         let indicios = "";
         let isUnknownMaterial = false;
@@ -273,31 +276,32 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
             if (substancia === "Vegetal" && cor === "Verde") indicios = "Maconha";
             else if (substancia === "Artificial" && cor === "Amarelada") indicios = "Pasta-Base";
             else if (substancia === "Artificial" && cor === "Branca") indicios = "Cocaína";
+            else indicios = "";
         }
         
         return { ...updatedDroga, indicios, isUnknownMaterial };
     });
-  };
+  }, []);
 
-  const handleAdicionarDroga = () => {
+  const handleAdicionarDroga = useCallback(() => {
     if (!novaDroga.quantidade.trim() || !novaDroga.substancia) {
-      toast({ title: "Erro", description: "Preencha pelo menos a quantidade e a substância.", className: "bg-red-600 text-white border-red-700" });
+      toast({ title: "Erro", description: "Preencha pelo menos a quantidade e a substância da droga.", className: "bg-red-600 text-white border-red-700" });
       return;
     }
     const drogaParaAdicionar: Droga = {
-      id: new Date().toISOString() + Math.random(), // ID único
+      id: new Date().toISOString() + Math.random(), // ID único para a lista
       ...novaDroga
     };
     setDrogas(prev => [...prev, drogaParaAdicionar]);
-    setNovaDroga(initialNovaDrogaState); // Limpa o formulário
-    toast({ title: "Sucesso", description: "Droga adicionada à lista.", className: "bg-green-600 text-white border-green-700" });
-  };
+    setNovaDroga(initialNovaDrogaState); // Limpa o formulário para a próxima droga
+    toast({ title: "Sucesso", description: `"${drogaParaAdicionar.indicios}" adicionado(a) à lista.`, className: "bg-green-600 text-white border-green-700" });
+  }, [novaDroga, toast]);
 
-  const handleRemoverDroga = (id: string) => {
+  const handleRemoverDroga = useCallback((id: string) => {
     setDrogas(prev => prev.filter(d => d.id !== id));
-  };
-  
-  // ... (funções de manipulação de Vítima, Testemunha, Autor)
+    toast({ title: "Removido", description: "Item removido da lista de drogas.", className: "bg-blue-600 text-white border-blue-700" });
+  }, []);
+
   const handleVitimaRelatoChange = (index: number, relato: string) => {
     const newVitimas = [...vitimas];
     if (newVitimas[index]) {
@@ -339,18 +343,20 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     }
   };
 
-
   useEffect(() => {
     if (tcoNumber && !isTimerRunning) {
       setStartTime(new Date());
       setIsTimerRunning(true);
     }
   }, [tcoNumber, isTimerRunning]);
-
   
-  // << CORREÇÃO: useEffect refatorado para gerar o texto de apreensões a partir do array 'drogas' >>
+  // << CORREÇÃO: O useEffect que atualizava os indícios foi removido daqui, pois sua lógica foi movida para handleNovaDrogaChange. >>
+  // useEffect(() => { ... }, [substancia, cor]); // REMOVIDO
+
+  // << CORREÇÃO: Este useEffect agora constrói o texto de "Apreensões" a partir do array 'drogas'. >>
   useEffect(() => {
     if (isPrimaryDrugCase) {
+      // Gera a descrição para cada droga no array
       const descricoesDrogas = drogas.map(droga => {
         const indicioFinal = droga.isUnknownMaterial && droga.customMaterialDesc ? droga.customMaterialDesc : droga.indicios;
         if (!indicioFinal) return "";
@@ -360,24 +366,26 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         const plural = quantidadeNum > 1 ? "PORÇÕES" : "PORÇÃO";
 
         return droga.isUnknownMaterial 
-          ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${indicioFinal}, CONFORME FOTO EM ANEXO.`
+          ? `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`
           : `${quantidadeText} ${plural} PEQUENA DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`;
-      }).filter(Boolean).join('\n'); // Junta as descrições com uma quebra de linha
+      }).filter(Boolean).join('\n\n'); // Junta as descrições com uma quebra de linha dupla para separação
       
-      // Aqui você pode decidir se quer sobrescrever ou adicionar ao campo `apreensoes`.
-      // Para este caso, vamos sobrescrever, pois a intenção é que este campo reflita as drogas.
       setApreensoes(descricoesDrogas);
       
-      // Lógica original para limpar vítimas em caso de droga
+      // Lógica original para limpar vítimas em caso de droga é mantida
       setVitimas([{ ...initialPersonData, nome: "" }]);
       setRepresentacao("");
 
     } else {
-      // Se não for caso de droga, limpa as descrições de drogas do campo de apreensões
+      // Se não for caso de droga, e o texto de apreensões contém drogas, limpa-o.
       if (apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("MATERIAL DESCONHECIDO")) {
         setApreensoes("");
       }
-      // Lógica original para restaurar vítimas
+      // Reseta as drogas se a natureza mudar
+      if (drogas.length > 0) {
+        setDrogas([]);
+      }
+      // Lógica original para restaurar vítimas é mantida
        setVitimas(prevVitimas => {
         if (prevVitimas.length === 1 && prevVitimas[0].nome === "") {
           return [{ ...initialPersonData }];
@@ -388,10 +396,8 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         return prevVitimas;
       });
     }
-  }, [isPrimaryDrugCase, drogas]); // Agora depende de 'drogas' e 'isPrimaryDrugCase'
-  
-  
-  // ... (O restante dos seus useEffects permanecem majoritariamente iguais)
+  }, [natureza, drogas, isPrimaryDrugCase]); // A dependência agora é no array 'drogas' e na natureza.
+
   useEffect(() => {
     const primeiraNatureza = natureza.split(' + ')[0];
     const displayNaturezaReal = primeiraNatureza === "Outros" ? customNatureza.trim() : natureza;
@@ -509,11 +515,387 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
     setConclusaoPolicial(conclusaoBase);
   }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
-  
-  // ...
+
+  useEffect(() => {
+    if (isRelatoPolicialManuallyEdited) return;
+    let updatedRelato = relatoPolicialTemplate;
+    const bairro = endereco ? endereco.split(',').pop()?.trim() || "[BAIRRO PENDENTE]" : "[BAIRRO PENDENTE]";
+    const gupm = formatarGuarnicao(componentesGuarnicao);
+    const displayNaturezaRealParaRelato = (natureza.split(' + ')[0] === "Outros" ? customNatureza : natureza) || "[NATUREZA PENDENTE]";
+    const operacaoText = operacao ? `, DURANTE A ${operacao.toUpperCase()},` : "";
+    updatedRelato = updatedRelato
+      .replace("[HORÁRIO]", horaFato || "[HORÁRIO PENDENTE]")
+      .replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : "[DATA PENDENTE]")
+      .replace("[GUARNIÇÃO]", guarnicao || "[GUARNIÇÃO PENDENTE]")
+      .replace("[OPERACAO_TEXT]", operacaoText)
+      .replace("[GUPM]", gupm)
+      .replace("[BAIRRO]", bairro)
+      .replace("[MEIO DE ACIONAMENTO]", comunicante || "[ACIONAMENTO PENDENTE]")
+      .replace("[NATUREZA]", displayNaturezaRealParaRelato.toUpperCase())
+      .replace("[LOCAL]", localFato || "[LOCAL PENDENTE]")
+      .replace("[VERSÃO INICIAL]", "[VERSÃO INICIAL]")
+      .replace("[O QUE A PM DEPAROU]", "[O QUE A PM DEPAROU]")
+      .replace("[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]", "[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]")
+      .replace("[DILIGÊNCIAS E APREENSÕES REALIZADAS]", "[DILIGÊNCIAS E APREENSÕES REALIZADAS]")
+      .replace("[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]", "[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]");
+
+    if (!isRelatoPolicialManuallyEdited || relatoPolicial === relatoPolicialTemplate) {
+      setRelatoPolicial(updatedRelato.toUpperCase());
+    }
+  }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited, relatoPolicial]);
+
+
+  useEffect(() => {
+    const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
+    if (!relatoAutor.includes('[INSIRA DECLARAÇÃO]') || relatoAutor.startsWith("O AUTOR") || relatoAutor.startsWith("A AUTORA") || relatoAutor.startsWith("OS AUTORES") || relatoAutor.startsWith("AS AUTORAS")) {
+      setRelatoAutor(novoRelatoAutor);
+    }
+  }, [autores, relatoAutor]);
+
+  useEffect(() => {
+    const currentFirstAutorName = autores.length > 0 ? autores[0].nome : "";
+    if (currentFirstAutorName !== autor) {
+      setAutor(currentFirstAutorName);
+    }
+  }, [autores, autor]);
+
+  useEffect(() => {
+    const updatedAutores = autores.map(autorPessoa => {
+      if (autorPessoa.nome.trim() !== "" && !autorPessoa.relato) {
+        const sexo = autorPessoa.sexo.toLowerCase();
+        const pronome = sexo === "feminino" ? "A AUTORA" : "O AUTOR";
+        return {
+          ...autorPessoa,
+          relato: `${pronome} DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.`
+        };
+      }
+      return autorPessoa;
+    });
+    const hasChanges = updatedAutores.some((autorPessoa, index) => autorPessoa.relato !== autores[index].relato);
+    if (hasChanges) {
+      setAutores(updatedAutores);
+    }
+  }, [autores]);
+
+  useEffect(() => {
+    const autoresComRelato = autores.filter(a => a.nome.trim() !== "" && a.relato);
+    if (autoresComRelato.length > 0) {
+      const relatosConsolidados = autoresComRelato.map(a => a.relato).join('\n\n');
+      setRelatoAutor(relatosConsolidados);
+    } else {
+      const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
+      setRelatoAutor(novoRelatoAutor);
+    }
+  }, [autores]);
+
+  const handleAddPolicialToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
+    const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
+    if (!alreadyExists) {
+      setComponentesGuarnicao(prevList => {
+        const newList = prevList.length === 0 || prevList.length === 1 && !prevList[0].rg && !prevList[0].nome && !prevList[0].posto ? [{
+          ...novoPolicial,
+          apoio: false
+        }] : [...prevList, {
+          ...novoPolicial,
+          apoio: false
+        }];
+        return newList;
+      });
+      toast({
+        title: "Adicionado",
+        description: `Policial ${novoPolicial.nome} adicionado à guarnição.`,
+        className: "bg-green-600 text-white border-green-700",
+        duration: 5000
+      });
+    } else {
+      toast({
+        title: "Duplicado",
+        description: "Este policial já está na guarnição.",
+        className: "bg-yellow-600 text-white border-yellow-700",
+        duration: 5000
+      });
+    }
+  }, [componentesGuarnicao, toast]);
+
+  const handleRemovePolicialFromList = useCallback((index: number) => {
+    setComponentesGuarnicao(prevList => prevList.filter((_, i) => i !== index));
+  }, []);
+
+  const handleToggleApoioPolicial = useCallback((index: number) => {
+    setComponentesGuarnicao(prevList => {
+      const updatedList = [...prevList];
+      updatedList[index] = {
+        ...updatedList[index],
+        apoio: !updatedList[index].apoio
+      };
+      return updatedList;
+    });
+    toast({
+      title: "Status Alterado",
+      description: `Policial ${componentesGuarnicao[index].nome} agora é ${componentesGuarnicao[index].apoio ? 'da guarnição principal' : 'de apoio'}.`,
+      className: "bg-blue-600 text-white border-blue-700",
+      duration: 5000
+    });
+  }, [componentesGuarnicao, toast]);
+
+  const handleAddVitima = () => {
+    const hasOnlyPlaceholder = vitimas.length === 1 && !vitimas[0].nome && !vitimas[0].cpf || vitimas.length === 1 && vitimas[0].nome === "O ESTADO";
+    if (hasOnlyPlaceholder) {
+      setVitimas([{
+        ...initialPersonData
+      }]);
+    } else {
+      setVitimas(prevVitimas => [...prevVitimas, {
+        ...initialPersonData
+      }]);
+    }
+  };
+  const handleRemoveVitima = (index: number) => {
+    const newVitimas = vitimas.filter((_, i) => i !== index);
+    if (newVitimas.length === 0) {
+      setVitimas([{
+        ...initialPersonData
+      }]);
+    } else {
+      setVitimas(newVitimas);
+    }
+  };
+  const handleAddTestemunha = () => {
+    const hasOnlyPlaceholder = testemunhas.length === 1 && !testemunhas[0].nome && !testemunhas[0].cpf;
+    if (hasOnlyPlaceholder) {
+      setTestemunhas([{
+        ...initialPersonData
+      }]);
+    } else {
+      setTestemunhas(prev => [...prev, {
+        ...initialPersonData
+      }]);
+    }
+  };
+  const handleRemoveTestemunha = (index: number) => {
+    const newTestemunhas = testemunhas.filter((_, i) => i !== index);
+    if (newTestemunhas.length === 0) {
+      setTestemunhas([{
+        ...initialPersonData
+      }]);
+    } else {
+      setTestemunhas(newTestemunhas);
+    }
+  };
+  const handleAddAutor = () => {
+    const hasOnlyPlaceholder = autores.length === 1 && !autores[0].nome && !autores[0].cpf;
+    if (hasOnlyPlaceholder) {
+      setAutores([{
+        ...initialPersonData
+      }]);
+    } else {
+      setAutores(prev => [...prev, {
+        ...initialPersonData
+      }]);
+    }
+  };
+  const handleRemoveAutor = (index: number) => {
+    const newAutores = autores.filter((_, i) => i !== index);
+    if (newAutores.length === 0) {
+      setAutores([{
+        ...initialPersonData
+      }]);
+    } else {
+      setAutores(newAutores);
+    }
+    if (index === 0) {
+      setAutor(newAutores.length > 0 ? newAutores[0].nome : "");
+    }
+    const today = new Date();
+    const minorAuthor = newAutores.find((autorPessoa) => {
+      if (autorPessoa.dataNascimento) {
+        const birthDate = new Date(autorPessoa.dataNascimento + 'T00:00:00Z');
+        if (!isNaN(birthDate.getTime())) {
+          const age = calculateAge(birthDate, today);
+          return age.years < 18;
+        }
+      }
+      return false;
+    });
+    setHasMinorAuthor({
+      isMinor: !!minorAuthor
+    });
+  };
+
+  const handleVitimaChange = (index: number, field: string, value: string) => {
+    const newVitimas = [...vitimas];
+    let processedValue = value;
+    if (field === 'cpf') {
+      processedValue = formatCPF(value);
+    } else if (field === 'celular') {
+      processedValue = formatPhone(value);
+    }
+    if (newVitimas[index].nome === "O ESTADO" && field === 'nome' && value.trim() !== "O ESTADO") {
+      newVitimas[index] = {
+        ...initialPersonData,
+        [field]: processedValue
+      };
+    } else {
+      newVitimas[index] = {
+        ...newVitimas[index],
+        [field]: processedValue
+      };
+    }
+    setVitimas(newVitimas);
+  };
+
+  const handleTestemunhaChange = (index: number, field: string, value: string) => {
+    const newTestemunhas = [...testemunhas];
+    let processedValue = value;
+    if (field === 'cpf') {
+      processedValue = formatCPF(value);
+    } else if (field === 'celular') {
+      processedValue = formatPhone(value);
+    }
+    newTestemunhas[index] = {
+      ...newTestemunhas[index],
+      [field]: processedValue
+    };
+    setTestemunhas(newTestemunhas);
+  };
+
+  const handleAutorDetalhadoChange = (index: number, field: string, value: string) => {
+    const newAutores = [...autores];
+    let processedValue = value;
+    if (field === 'cpf') {
+      processedValue = formatCPF(value);
+    } else if (field === 'celular') {
+      processedValue = formatPhone(value);
+    } else if (field === 'dataNascimento') {
+      processedValue = value;
+      const birthDate = new Date(value + 'T00:00:00Z');
+      if (value && !isNaN(birthDate.getTime())) {
+        const today = new Date();
+        const age = calculateAge(birthDate, today);
+        if (age.years < 18) {
+          setHasMinorAuthor({
+            isMinor: true,
+            details: {
+              years: age.years,
+              months: age.months,
+              days: age.days,
+              index
+            }
+          });
+          toast({
+            title: "Autor Menor de Idade",
+            description: `O autor ${autores[index].nome || 'sem nome'} possui ${age.years} anos, ${age.months} meses e ${age.days} dias. TCO não pode ser registrado para menores de 18 anos.`,
+            className: "bg-red-600 text-white border-red-700",
+            duration: 10000
+          });
+        } else {
+          setHasMinorAuthor(prev => prev.details?.index === index ? {
+            isMinor: false
+          } : prev);
+        }
+      } else {
+        setHasMinorAuthor(prev => prev.details?.index === index ? {
+          isMinor: false
+        } : prev);
+      }
+    }
+    newAutores[index] = {
+      ...newAutores[index],
+      [field]: processedValue
+    };
+    setAutores(newAutores);
+    if (index === 0 && field === 'nome') {
+      setAutor(processedValue);
+    }
+  };
+
+  const handleRelatoPolicialChange = (value: string) => {
+    setRelatoPolicial(value);
+    if (value !== relatoPolicialTemplate && !value.includes("[HORÁRIO]")) {
+      setIsRelatoPolicialManuallyEdited(true);
+    }
+  };
+
+  const handleAddVideoLink = () => {
+    if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
+      if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
+        toast({
+          title: "Link Inválido",
+          description: "Por favor, insira um link válido começando com http:// ou https://.",
+          className: "bg-yellow-600 text-white border-yellow-700",
+          duration: 7000
+        });
+        return;
+      }
+      setVideoLinks(prev => [...prev, newVideoLink.trim()]);
+      setNewVideoLink("");
+      toast({
+        title: "Link Adicionado",
+        description: "Link de vídeo adicionado com sucesso.",
+        className: "bg-green-600 text-white border-green-700",
+        duration: 5000
+      });
+    } else if (!newVideoLink.trim()) {
+      toast({
+        title: "Link Vazio",
+        description: "Por favor, insira um link.",
+        className: "bg-yellow-600 text-white border-yellow-700",
+        duration: 5000
+      });
+    } else {
+      toast({
+        title: "Link Duplicado",
+        description: "Este link já foi adicionado.",
+        className: "bg-yellow-600 text-white border-yellow-700",
+        duration: 5000
+      });
+    }
+  };
+  const handleRemoveVideoLink = (index: number) => {
+    setVideoLinks(prev => prev.filter((_, i) => i !== index));
+    toast({
+      title: "Link Removido",
+      description: "Link de vídeo removido com sucesso.",
+      className: "bg-green-600 text-white border-green-700",
+      duration: 5000
+    });
+  };
+  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const newFiles = Array.from(event.target.files);
+      const uniqueNewFiles = newFiles.filter(file => !imageFiles.some(existingFile => existingFile.name === file.name && existingFile.size === file.size));
+      if (uniqueNewFiles.length > 0) {
+        setImageFiles(prevFiles => [...prevFiles, ...uniqueNewFiles]);
+        toast({
+          title: `${uniqueNewFiles.length} Imagem(ns) Adicionada(s)`,
+          description: "Imagens selecionadas para anexo.",
+          className: "bg-green-600 text-white border-green-700",
+          duration: 5000
+        });
+      } else if (newFiles.length > 0) {
+        toast({
+          title: "Imagens Duplicadas",
+          description: "Algumas ou todas as imagens selecionadas já foram adicionadas.",
+          className: "bg-yellow-600 text-white border-yellow-700",
+          duration: 5000
+        });
+      }
+      if (imageInputRef.current) {
+        imageInputRef.current.value = "";
+      }
+    }
+  };
+  const handleRemoveImageFile = (index: number) => {
+    setImageFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
+    toast({
+      title: "Imagem Removida",
+      description: "Imagem removida da lista de anexos.",
+      className: "bg-green-600 text-white border-green-700",
+      duration: 5000
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    // ... (validações iniciais: menor de idade, campos obrigatórios, etc.)
     e.preventDefault();
 
     if (hasMinorAuthor.isMinor) {
@@ -540,7 +922,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       });
       return;
     }
-    if (natureza === "Selecione...") { // Assuming "Selecione..." is a placeholder value
+    if (natureza === "Selecione...") {
       toast({
         title: "Campo Obrigatório",
         description: "Selecione a Natureza da Ocorrência.",
@@ -579,11 +961,11 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       return;
     }
 
-    // << CORREÇÃO: Validação alterada para checar o array de drogas >>
+    // << CORREÇÃO: A validação agora checa se o array de drogas não está vazio e se o lacre foi preenchido. >>
     if (isPrimaryDrugCase && (drogas.length === 0 || !lacreNumero.trim())) {
       toast({
         title: "Dados da Droga Incompletos",
-        description: "Para Porte de Drogas, adicione pelo menos um tipo de droga e preencha o número do lacre.",
+        description: "Para Porte de Drogas, adicione pelo menos um tipo de droga à lista e preencha o Número do Lacre.",
         className: "bg-red-600 text-white border-red-700",
         duration: 7000
       });
@@ -591,12 +973,11 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     }
 
     setIsSubmitting(true);
-    // ...
+    setIsTimerRunning(false);
 
     try {
-      // ... (código de preparação de dados para o PDF)
-       const displayNaturezaRealSubmit = primeiraNaturezaSubmit === "Outros" ? customNatureza.trim() : natureza;
-
+      const displayNaturezaRealSubmit = primeiraNaturezaSubmit === "Outros" ? customNatureza.trim() : natureza;
+      
       const vitimasFiltradas = vitimas.filter(v => v.nome?.trim() || v.cpf?.trim());
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim() || t.cpf?.trim());
       const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
@@ -627,8 +1008,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
       
       const relatoAutorConsolidado = autoresValidos.filter(a => a.relato && a.relato.trim() !== "").map(a => a.relato).join('\n\n') || relatoAutor;
 
-
-      // << CORREÇÃO: Passando o array 'drogas' para o PDF >>
+      // << CORREÇÃO: O objeto enviado para o PDF agora contém o array 'drogas' em vez de campos individuais. >>
       const tcoDataParaPDF: any = {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaRealSubmit,
@@ -658,7 +1038,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         apreensoes: apreensoes.trim(),
         conclusaoPolicial: conclusaoPolicial.trim(),
         lacreNumero: isPrimaryDrugCase ? lacreNumero.trim() : undefined,
-        drogas: isPrimaryDrugCase ? drogas : undefined, // << NOVO CAMPO COM ARRAY DE DROGAS
+        drogas: isPrimaryDrugCase ? drogas : undefined, // << CAMPO NOVO COM O ARRAY DE DROGAS >>
         startTime: startTime?.toISOString(),
         endTime: completionNow.toISOString(),
         userRegistration: userRegistration,
@@ -673,8 +1053,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
         documentosAnexos: documentosAnexos,
       };
       Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
-      
-      // ... (restante da função handleSubmit, upload, etc.)
+
       console.log("Dados para gerar PDF:", tcoDataParaPDF);
       const pdfGenerationPromise = generatePDF(tcoDataParaPDF);
       const timeoutPromise = new Promise<Blob>((_, reject) => {
@@ -777,14 +1156,22 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
     }
   };
 
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === 'Enter') {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'BUTTON' && (target as HTMLButtonElement).type === 'submit') return;
+      if (target.tagName === 'INPUT' || target.tagName === 'SELECT') {
+        e.preventDefault();
+      }
+    }
+  };
+
   const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Conduzir veículo sem CNH gerando perigo de dano", "Entregar veículo automotor a pessoa não habilitada", "Trafegar em velocidade incompatível com segurança", "Omissão de socorro", "Rixa", "Invasão de domicílio", "Fraude em comércio", "Ato obsceno", "Falsa identidade", "Resistência", "Desobediência", "Desacato", "Exercício arbitrário das próprias razões", "Outros"];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
 
-
   return (
     <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
-      <form onSubmit={handleSubmit} noValidate>
-        {/* ... (renderização do formulário) ... */}
+      <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
         {hasMinorAuthor.isMinor && hasMinorAuthor.details && (
           <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
             <p className="font-semibold">Atenção: Autor Menor de Idade Detectado</p>
@@ -819,7 +1206,7 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
 
         {isPrimaryDrugCase && (
           <div className="mb-8">
-            {/* << CORREÇÃO: Passando as props corretas para a DrugVerificationTab >> */}
+            {/* << CORREÇÃO: As props do DrugVerificationTab foram completamente alteradas para refletir o novo modelo de dados. >> */}
             <DrugVerificationTab
               novaDroga={novaDroga}
               onNovaDrogaChange={handleNovaDrogaChange}
@@ -832,7 +1219,6 @@ const TCOForm: React.FC<TCOFormProps> = ({ selectedTco, onClear }) => {
           </div>
         )}
 
-        {/* ... (restante do JSX do formulário) ... */}
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Gerais da Ocorrência</h2>
           <GeneralInformationTab
