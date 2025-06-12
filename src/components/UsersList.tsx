@@ -355,7 +355,7 @@ const UsersList = () => {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center space-x-2">
-                                <Mail className="h-4 w-4 text-muted-foreground bg-blue-600" />
+                                <Mail className="h-4 w-4 text-muted-foreground" />
                                 <span className="text-sm">{user.email}</span>
                               </div>
                             </TableCell>
