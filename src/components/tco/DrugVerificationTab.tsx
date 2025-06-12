@@ -64,7 +64,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
               <Label htmlFor="nova-quantidade">Porção (quantidade) *</Label>
               <Input
                 id="nova-quantidade"
-                placeholder="Ex: 1 porção, 2 trouxinhas"
+                placeholder="Ex: 1 porção"
                 value={novaDroga.quantidade}
                 onChange={e => onNovaDrogaChange('quantidade', e.target.value)}
               />
