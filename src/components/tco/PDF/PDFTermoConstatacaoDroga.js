@@ -1,11 +1,23 @@
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
-    addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak, formatarDataSimples
+    addNewPage, addWrappedText, addSignatureWithNameAndRole, checkPageBreak
 } from './pdfUtils.js';
+
+// << CORREÇÃO: Função para converter número em texto por extenso, necessária para a descrição. >>
+const numberToText = (num) => {
+    const numbers = ["ZERO", "UMA", "DUAS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"];
+    return (num >= 0 && num <= 10) ? numbers[num] : num.toString();
+};
+
 
 /** Adiciona Termo de Constatação Preliminar de Droga (em página nova) */
 export const addTermoConstatacaoDroga = (doc, data) => {
+    // << CORREÇÃO: Verifica se o array 'drogas' existe e tem itens. Se não, não gera o termo. >>
+    if (!data.drogas || data.drogas.length === 0) {
+        console.log("Pulando Termo de Constatação: Nenhuma droga informada.");
+        return; // Retorna sem fazer nada
+    }
+
     let yPos = addNewPage(doc, data);
     const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
     const condutor = data.componentesGuarnicao?.[0];
@@ -25,53 +37,54 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     yPos = addWrappedText(doc, yPos, textoIntro, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 5;
 
-    // Handle multiple drugs or single drug
-    const multipleDrugs = data.multipleDrugs;
-    const lacreNumero = data.lacreNumero || "00000000";
+    // << CORREÇÃO: Lógica refatorada para iterar SEMPRE sobre o array 'data.drogas'. >>
+    // A lógica antiga (single drug case) foi removida.
+    const lacreNumero = data.lacreNumero || "NÃO INFORMADO";
     
-    if (multipleDrugs && multipleDrugs.length > 0) {
-        // Multiple drugs case
-        multipleDrugs.forEach((drug, index) => {
-            if (!drug.quantidade || !drug.substancia || !drug.cor || !drug.odor) {
-                return; // Skip incomplete drugs
-            }
-            
-            const qtdeNum = parseInt(drug.quantidade) || 1;
-            const numberWords = ["ZERO", "UMA", "DUAS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"];
-            const qtdeText = qtdeNum <= 10 ? numberWords[qtdeNum] : qtdeNum.toString();
-            const porcaoText = qtdeNum === 1 ? "PORÇÃO" : "PORÇÕES";
-            
-            const tipo = drug.substancia || "substância";
-            const cor = drug.cor || "característica";
-            const odor = drug.odor || "característico";
-            const indicios = drug.indicios ? `, COM INDÍCIOS DE ${drug.indicios.toUpperCase()}` : "";
-
-            yPos = checkPageBreak(doc, yPos, 15, data);
-            doc.setFont("helvetica", "normal"); doc.setFontSize(12);
-            doc.text("-", MARGIN_LEFT, yPos);
-            const itemText = `${qtdeText} ${porcaoText} DE MATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}${indicios}${index === multipleDrugs.length - 1 ? `, SOB LACRE N° ${lacreNumero}.` : ';'}`;
-            yPos = addWrappedText(doc, yPos, itemText, MARGIN_LEFT + 4, 12, "normal", MAX_LINE_WIDTH - 4, 'justify', data);
-            yPos += 3;
-        });
-    } else {
-        // Single drug case (original logic)
-        const qtdeNum = parseInt(data.drogaQuantidade) || 1;
-        const numberWords = ["ZERO", "UMA", "DUAS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"];
-        const qtdeText = qtdeNum <= 10 ? numberWords[qtdeNum] : qtdeNum.toString();
-        const porcaoText = qtdeNum === 1 ? "PORÇÃO" : "PORÇÕES";
+    data.drogas.forEach((droga, index) => {
+        // Pula drogas que não tenham informações essenciais
+        if (!droga.quantidade || !droga.substancia || !droga.cor) {
+            console.warn(`Pulando droga no índice ${index} por falta de dados.`);
+            return;
+        }
         
-        const tipo = data.drogaTipo || "substância";
-        const cor = data.drogaCor || "característica";
-        const odor = data.drogaOdor || "característico";
-        const indicios = data.indicios ? `, COM INDÍCIOS DE ${data.indicios.toUpperCase()}` : "";
+        const quantidadeNum = parseInt(droga.quantidade.match(/\d+/)?.[0] || "1", 10);
+        const quantidadeTexto = numberToText(quantidadeNum);
+        const plural = quantidadeNum > 1 ? "PORÇÕES" : "PORÇÃO";
 
+        // << CORREÇÃO: Obtendo os valores corretos do objeto 'droga' do loop >>
+        const tipo = droga.substancia || "NÃO ESPECIFICADO";
+        const cor = droga.cor || "NÃO ESPECIFICADA";
+        const odor = droga.odor || "NÃO ESPECIFICADO";
+        
+        let indiciosTexto = "";
+        if(droga.isUnknownMaterial && droga.customMaterialDesc) {
+            // Se for material desconhecido, usa a descrição customizada
+            indiciosTexto = `, COM CARACTERÍSTICAS SEMELHANTES A "${droga.customMaterialDesc.toUpperCase()}"`;
+        } else if (droga.indicios) {
+            // Se for um tipo padrão (Maconha, Cocaína, etc.), usa os indícios
+            indiciosTexto = `, E CARACTERÍSTICAS SEMELHANTES AO ENTORPECENTE ${droga.indicios.toUpperCase()}`;
+        }
+        
         yPos = checkPageBreak(doc, yPos, 15, data);
         doc.setFont("helvetica", "normal"); doc.setFontSize(12);
         doc.text("-", MARGIN_LEFT, yPos);
-        const itemText = `${qtdeText} ${porcaoText} DE MATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}${indicios}, SOB LACRE N° ${lacreNumero}.`;
+        
+        // << CORREÇÃO: Montagem do texto no formato correto >>
+        let itemText = `${quantidadeTexto} ${plural} DE MATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}${indiciosTexto}`;
+        
+        // Adiciona o número do lacre apenas no último item da lista
+        if (index === data.drogas.length - 1) {
+            itemText += `, TUDO ACONDICIONADO SOB O LACRE Nº ${lacreNumero}.`;
+        } else {
+            itemText += ';'; // Ponto e vírgula para separar os itens
+        }
+
         yPos = addWrappedText(doc, yPos, itemText, MARGIN_LEFT + 4, 12, "normal", MAX_LINE_WIDTH - 4, 'justify', data);
-        yPos += 5;
-    }
+        yPos += 3;
+    });
+
+    yPos += 5; // Espaço extra após a lista de drogas
 
     const textoConclusao = "O PRESENTE TERMO TEM POR OBJETIVO APENAS A CONSTATAÇÃO PRELIMINAR DA NATUREZA DA SUBSTÂNCIA PARA FINS DE LAVRATURA DO TERMO CIRCUNSTANCIADO, NOS TERMOS DA LEGISLAÇÃO VIGENTE (NOTADAMENTE ART. 50, §1º DA LEI 11.343/2006), NÃO SUPRINDO O EXAME PERICIAL DEFINITIVO. PARA A VERIFICAÇÃO PRELIMINAR, FOI REALIZADA ANÁLISE VISUAL E OLFATIVA DO MATERIAL.";
     yPos = addWrappedText(doc, yPos, textoConclusao, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
@@ -90,10 +103,10 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     const dateText = `${cidadeTermo.toUpperCase()}-MT, ${dataAtualFormatada}.`;
     yPos = checkPageBreak(doc, yPos, 10, data);
     doc.text(dateText, PAGE_WIDTH - MARGIN_RIGHT, yPos, { align: 'right' });
-    yPos += 15;
+    yPos += 20; // Aumentar espaço para assinaturas
 
     yPos = addSignatureWithNameAndRole(doc, yPos, autor?.nome, `${generoAutor} DOS FATOS`, data);
-    const nomeCondutor = `${condutor?.nome || ""} ${condutor?.posto || ""}`.trim();
+    const nomeCondutor = `${condutor?.posto || ""} ${condutor?.nome || ""}`.trim();
     yPos = addSignatureWithNameAndRole(doc, yPos, nomeCondutor, "CONDUTOR DA OCORRÊNCIA", data);
 
     return yPos;
