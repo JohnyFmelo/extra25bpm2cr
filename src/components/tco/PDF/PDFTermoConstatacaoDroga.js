@@ -25,53 +25,24 @@ export const addTermoConstatacaoDroga = (doc, data) => {
     yPos = addWrappedText(doc, yPos, textoIntro, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 5;
 
-    // Handle multiple drugs or single drug
-    const multipleDrugs = data.multipleDrugs;
-    const lacreNumero = data.lacreNumero || "00000000";
+    // Handle quantity and singular/plural
+    const qtdeNum = parseInt(data.drogaQuantidade) || 1;
+    const numberWords = ["ZERO", "UMA", "DUAS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"];
+    const qtdeText = qtdeNum <= 10 ? numberWords[qtdeNum] : qtdeNum.toString();
+    const porcaoText = qtdeNum === 1 ? "PORÇÃO" : "PORÇÕES";
     
-    if (multipleDrugs && multipleDrugs.length > 0) {
-        // Multiple drugs case
-        multipleDrugs.forEach((drug, index) => {
-            if (!drug.quantidade || !drug.substancia || !drug.cor || !drug.odor) {
-                return; // Skip incomplete drugs
-            }
-            
-            const qtdeNum = parseInt(drug.quantidade) || 1;
-            const numberWords = ["ZERO", "UMA", "DUAS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"];
-            const qtdeText = qtdeNum <= 10 ? numberWords[qtdeNum] : qtdeNum.toString();
-            const porcaoText = qtdeNum === 1 ? "PORÇÃO" : "PORÇÕES";
-            
-            const tipo = drug.substancia || "substância";
-            const cor = drug.cor || "característica";
-            const odor = drug.odor || "característico";
-            const indicios = drug.indicios ? `, COM INDÍCIOS DE ${drug.indicios.toUpperCase()}` : "";
+    const tipo = data.drogaTipo || "substância";
+    const cor = data.drogaCor || "característica";
+    const odor = data.drogaOdor || "característico";
+    const nomeComum = data.drogaNomeComum || "entorpecente";
+    const lacreNumero = data.lacreNumero || "00000000";
 
-            yPos = checkPageBreak(doc, yPos, 15, data);
-            doc.setFont("helvetica", "normal"); doc.setFontSize(12);
-            doc.text("-", MARGIN_LEFT, yPos);
-            const itemText = `${qtdeText} ${porcaoText} DE MATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}${indicios}${index === multipleDrugs.length - 1 ? `, SOB LACRE N° ${lacreNumero}.` : ';'}`;
-            yPos = addWrappedText(doc, yPos, itemText, MARGIN_LEFT + 4, 12, "normal", MAX_LINE_WIDTH - 4, 'justify', data);
-            yPos += 3;
-        });
-    } else {
-        // Single drug case (original logic)
-        const qtdeNum = parseInt(data.drogaQuantidade) || 1;
-        const numberWords = ["ZERO", "UMA", "DUAS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"];
-        const qtdeText = qtdeNum <= 10 ? numberWords[qtdeNum] : qtdeNum.toString();
-        const porcaoText = qtdeNum === 1 ? "PORÇÃO" : "PORÇÕES";
-        
-        const tipo = data.drogaTipo || "substância";
-        const cor = data.drogaCor || "característica";
-        const odor = data.drogaOdor || "característico";
-        const indicios = data.indicios ? `, COM INDÍCIOS DE ${data.indicios.toUpperCase()}` : "";
-
-        yPos = checkPageBreak(doc, yPos, 15, data);
-        doc.setFont("helvetica", "normal"); doc.setFontSize(12);
-        doc.text("-", MARGIN_LEFT, yPos);
-        const itemText = `${qtdeText} ${porcaoText} DE MATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}${indicios}, SOB LACRE N° ${lacreNumero}.`;
-        yPos = addWrappedText(doc, yPos, itemText, MARGIN_LEFT + 4, 12, "normal", MAX_LINE_WIDTH - 4, 'justify', data);
-        yPos += 5;
-    }
+    yPos = checkPageBreak(doc, yPos, 15, data);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(12);
+    doc.text("-", MARGIN_LEFT, yPos);
+    const itemText = `${qtdeText} ${porcaoText} DE MATERIAL ${tipo.toUpperCase()}, DE COR ${cor.toUpperCase()}, COM ODOR ${odor.toUpperCase()}, E CARACTERÍSTICAS SEMELHANTES AO ENTORPECENTE CONHECIDO COMO ${nomeComum.toUpperCase()}, SOB LACRE N° ${lacreNumero}.`;
+    yPos = addWrappedText(doc, yPos, itemText, MARGIN_LEFT + 4, 12, "normal", MAX_LINE_WIDTH - 4, 'justify', data);
+    yPos += 5;
 
     const textoConclusao = "O PRESENTE TERMO TEM POR OBJETIVO APENAS A CONSTATAÇÃO PRELIMINAR DA NATUREZA DA SUBSTÂNCIA PARA FINS DE LAVRATURA DO TERMO CIRCUNSTANCIADO, NOS TERMOS DA LEGISLAÇÃO VIGENTE (NOTADAMENTE ART. 50, §1º DA LEI 11.343/2006), NÃO SUPRINDO O EXAME PERICIAL DEFINITIVO. PARA A VERIFICAÇÃO PRELIMINAR, FOI REALIZADA ANÁLISE VISUAL E OLFATIVA DO MATERIAL.";
     yPos = addWrappedText(doc, yPos, textoConclusao, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
