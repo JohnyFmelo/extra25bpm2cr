@@ -233,11 +233,23 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       console.log("internalDrugs in HistoricoTab:", internalDrugs);
       // Only update apreensoes if it's empty or not user-modified
       if (!apreensoes || apreensoes === "Não informado.") {
-        // Include all drugs in the description, not just the first one
+        // Include all drugs in the description with complete information
         const drugDescriptions = internalDrugs
-          .filter(drug => drug.indicios && drug.indicios.trim() !== "") // Only include drugs with indicios
-          .map(drug => `- ${drug.indicios}`)
+          .filter(drug => drug.quantidade && drug.substancia) // Include drugs with basic info
+          .map(drug => {
+            // Build complete description for each drug
+            const qtde = drug.quantidade || "UMA";
+            const substanciaText = drug.substancia || "SUBSTÂNCIA";
+            const corText = drug.cor ? `, DE COR ${drug.cor.toUpperCase()}` : "";
+            const odorText = drug.odor ? `, COM ODOR ${drug.odor.toUpperCase()}` : "";
+            const indiciosText = drug.indicios ? `, ${drug.indicios.toUpperCase()}` : "";
+            
+            return `${qtde.toUpperCase()} PORÇÃO DE ${substanciaText.toUpperCase()}${corText}${odorText}${indiciosText}`;
+          })
+          .map(description => `- ${description}`)
           .join("\n");
+        
+        console.log("Generated drug descriptions:", drugDescriptions);
         setApreensoes(drugDescriptions);
       }
     }
