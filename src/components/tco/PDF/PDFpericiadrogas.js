@@ -1,10 +1,9 @@
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
-    addNewPage, addWrappedText, checkPageBreak, formatarDataSimples
+    addNewPage, addWrappedText, checkPageBreak
 } from './pdfUtils.js';
 
-// Helper function for date formatting as per user request: "DD DE MMMM DE AAAA"
+// Helper function to format date as "DD DE MMMM DE AAAA"
 const getCustomDataAtualExtenso = () => {
     const hoje = new Date();
     const dia = hoje.getDate();
@@ -14,18 +13,39 @@ const getCustomDataAtualExtenso = () => {
     return `${dia} DE ${mes} DE ${ano}`;
 };
 
+// Helper function to format date as "DD/MM/YYYY"
+const formatarDataSimples = (dataStr) => {
+    if (!dataStr) return new Date().toLocaleDateString('pt-BR');
+    try {
+        const [year, month, day] = dataStr.split('-');
+        return `${day}/${month}/${year}`;
+    } catch (e) {
+        return new Date().toLocaleDateString('pt-BR');
+    }
+};
+
+// << CORREÇÃO: Helper para converter número em texto por extenso. >>
+const numberToText = (num) => {
+    const numbers = ["ZERO", "UMA", "DUAS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"];
+    return (num >= 0 && num <= 10) ? numbers[num] : num.toString();
+};
+
 /** Adiciona Requisição de Exame em Drogas de Abuso (em página nova) */
 export const addRequisicaoExameDrogas = (doc, data) => {
+    // << CORREÇÃO: Verifica se o array 'drogas' existe. Se não, não gera a requisição. >>
+    if (!data.drogas || data.drogas.length === 0) {
+        console.log("Pulando Requisição de Exame em Drogas: Nenhuma droga informada.");
+        return;
+    }
+
     let yPos = addNewPage(doc, data);
     const { PAGE_WIDTH, MAX_LINE_WIDTH } = getPageConstants(doc);
     const condutor = data.componentesGuarnicao?.[0];
     const autor = data.autores?.[0];
 
-    // Use raw values here; .toUpperCase() will be applied to the final strings
-    const lacreNumero = data.lacreNumero || "00000000";
-    const drogaNomeComum = data.drogaNomeComum || "ENTORPECENTE";
+    const lacreNumero = data.lacreNumero || "NÃO INFORMADO";
     const nomeAutor = autor?.nome || "[NOME NÃO INFORMADO]";
-    const dataFatoStr = formatarDataSimples(data.dataFato) || "20/02/2025"; // Format like DD/MM/YYYY
+    const dataFatoStr = formatarDataSimples(data.dataFato);
 
     // Flexão de gênero para autor/autora
     const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'A' : 'O';
@@ -36,40 +56,53 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     // Título
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
-    doc.text("REQUISIÇÃO DE EXAME EM DROGAS DE ABUSO".toUpperCase(), PAGE_WIDTH / 2, yPos, { align: "center" });
+    doc.text("REQUISIÇÃO DE EXAME PERICIAL EM DROGAS".toUpperCase(), PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 10;
 
     // Conteúdo principal
     doc.setFont("helvetica", "normal"); doc.setFontSize(12);
     
-    const autorTextoFragment = `D${generoAutor} ${autorArtigo} ${autorTermo} DO FATO ${nomeAutor}, ${qualificado} NESTE TCO`;
+    const autorTextoFragment = `D${generoAutor} ${autorArtigo} ${autorTermo} DO FATO ${nomeAutor.toUpperCase()}, ${qualificado.toUpperCase()} NESTE TCO`;
     
-    const textoRequisicao = `REQUISITO A POLITEC, NOS TERMOS DO ARTIGO 159 E SEGUINTES DO CPP COMBINADO COM O ARTIGO 69, CAPUT DA LEI N° 9.99/95, COMBINADO COM O ARTIGO 48, §2 E ARTIGO 50, §1° DA LEI N° 11,343/2006, SOLICITO A REALIZAÇÃO DE EXAME QUÍMICO NA SUBSTÂNCIA ANÁLOGA A ENTORPECENTE APENSADO SOB LACRE N° ${lacreNumero}, ENCONTRADO EM POSSE ${autorTextoFragment}, DE NATUREZA PORTE ILEGAL DE DROGAS, OCORRIDO NA DATA DE ${dataFatoStr}.`.toUpperCase();
+    // << CORREÇÃO: O texto agora refere-se a "substância(s)" de forma genérica, pois a descrição virá no apenso. >>
+    const textoRequisicao = `REQUISITO A POLITEC, NOS TERMOS DO ARTIGO 159 E SEGUINTES DO CPP COMBINADO COM O ARTIGO 69, CAPUT DA LEI Nº 9.099/95, E ARTIGO 50, §1º DA LEI Nº 11.343/2006, A REALIZAÇÃO DE EXAME PERICIAL DEFINITIVO NA(S) SUBSTÂNCIA(S) APREENDIDA(S) E ACONDICIONADA(S) SOB O LACRE Nº ${lacreNumero}, ENCONTRADA(S) EM POSSE ${autorTextoFragment}, EM RAZÃO DE FATOS DE NATUREZA "PORTE ILEGAL DE DROGAS PARA CONSUMO", OCORRIDO(S) NA DATA DE ${dataFatoStr}.`.toUpperCase();
     
     yPos = addWrappedText(doc, yPos, textoRequisicao, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-    yPos += 5;
+    yPos += 8;
 
-    // Handle quantity and singular/plural
-    const qtdeNum = parseInt(data.drogaQuantidade) || 1;
-    const numberWords = ["ZERO", "UMA", "DUAS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"];
-    const qtdeText = qtdeNum <= 10 ? numberWords[qtdeNum] : qtdeNum.toString();
-    const porcaoText = qtdeNum === 1 ? "PORÇÃO" : "PORÇÕES";
+    // << CORREÇÃO: Seção "APENSO" agora itera sobre o array 'data.drogas' para listar todas as substâncias. >>
+    yPos = addWrappedText(doc, yPos, "APENSO:", MARGIN_LEFT, 12, "bold", MAX_LINE_WIDTH, 'left', data);
+    yPos += 2;
 
-    // Adiciona a descrição do material apreendido incluindo o número do lacre
-    const textoApenso = `APENSO: ${qtdeText} ${porcaoText} DE SUBSTÂNCIA ANÁLOGA A ${drogaNomeComum} SOB LACRE N° ${lacreNumero}.`.toUpperCase();
-    yPos = addWrappedText(doc, yPos, textoApenso, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-    yPos += 5;
+    data.drogas.forEach((droga) => {
+        const quantidadeNum = parseInt(droga.quantidade.match(/\d+/)?.[0] || "1", 10);
+        const quantidadeTexto = numberToText(quantidadeNum);
+        const porcaoText = quantidadeNum === 1 ? "PORÇÃO" : "PORÇÕES";
+        
+        let nomeDroga = "ENTORPECENTE";
+        if (droga.isUnknownMaterial && droga.customMaterialDesc) {
+            nomeDroga = droga.customMaterialDesc;
+        } else if (droga.indicios) {
+            nomeDroga = droga.indicios;
+        }
+
+        const textoApenso = `- ${quantidadeTexto} ${porcaoText} DE SUBSTÂNCIA ANÁLOGA A ${nomeDroga.toUpperCase()}.`.toUpperCase();
+        yPos = addWrappedText(doc, yPos, textoApenso, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+        yPos += 2;
+    });
+    const textoLacre = `TODO O MATERIAL ENCONTRA-SE DEVIDAMENTE ACONDICIONADO SOB O LACRE Nº ${lacreNumero}.`.toUpperCase();
+    yPos = addWrappedText(doc, yPos, textoLacre, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+    yPos += 8;
 
     // Adiciona os quesitos
     const textoQuesitos = `PARA TANTO, SOLICITO DE VOSSA SENHORIA, QUE SEJA CONFECCIONADO O RESPECTIVO LAUDO PERICIAL DEFINITIVO, DEVENDO OS PERITOS RESPONDEREM AOS QUESITOS, CONFORME ABAIXO:`.toUpperCase();
     yPos = addWrappedText(doc, yPos, textoQuesitos, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 5;
 
-    // Lista de quesitos numerados
     const quesitos = [
-        "QUAL A NATUREZA E CARACTERÍSTICAS DAS SUBSTÂNCIAS ENVIADAS A EXAME?",
-        "PODEM AS MESMAS CAUSAR DEPENDÊNCIA FÍSICA/PSÍQUICAS?",
-        "QUAL O PESO DAS SUBSTÂNCIAS ENVIADAS A EXAME?"
+        "A AMOSTRA APRESENTADA É CONSTITUÍDA POR SUBSTÂNCIA(S) ENTORPECENTE(S) OU DE USO PROSCRITO NO BRASIL?",
+        "EM CASO POSITIVO, QUAL(IS) SUBSTÂNCIA(S)?",
+        "QUAL O PESO LÍQUIDO TOTAL DA(S) AMOSTRA(S) APRESENTADA(S)?"
     ];
 
     quesitos.forEach((quesito, index) => {
@@ -78,7 +111,7 @@ export const addRequisicaoExameDrogas = (doc, data) => {
         yPos += 3;
     });
     
-    yPos += 5;
+    yPos += 8;
 
     // Adiciona a localidade e data
     const cidadeTermo = (data.municipio || "VÁRZEA GRANDE").toUpperCase();
@@ -90,7 +123,7 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     yPos += 15;
 
     // Adiciona a assinatura
-    const nomeCondutorCompleto = (`${condutor?.nome || ""} ${condutor?.posto || ""}`.trim()).toUpperCase();
+    const nomeCondutorCompleto = (`${condutor?.posto || ""} ${condutor?.nome || ""}`.trim()).toUpperCase();
     yPos = checkPageBreak(doc, yPos, 20, data);
     const linhaAssinaturaWidth = 100;
     doc.setLineWidth(0.3);
@@ -113,7 +146,6 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     const tableNumRows = 2;
     const tableNumCols = 3;
 
-    // Check for page break before drawing table
     yPos = checkPageBreak(doc, yPos, (tableNumRows * tableRowHeight) + 15, data);
 
     const tableTopY = yPos;
@@ -125,24 +157,20 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     doc.setFontSize(tableHeaderFontSize);
     doc.setLineWidth(0.3); 
 
-    // Desenhar a primeira linha (cabeçalhos)
     for (let j = 0; j < tableNumCols; j++) {
         const cellX = MARGIN_LEFT + j * colWidth;
         doc.rect(cellX, tableTopY, colWidth, tableRowHeight);
         doc.text(tableHeaders[j].toUpperCase(), cellX + colWidth / 2, tableTopY + tableRowHeight / 2, { align: 'center', baseline: 'middle' });
     }
 
-    // Desenhar a segunda linha (vazia)
     const secondRowY = tableTopY + tableRowHeight;
     for (let j = 0; j < tableNumCols; j++) {
         const cellX = MARGIN_LEFT + j * colWidth;
         doc.rect(cellX, secondRowY, colWidth, tableRowHeight);
     }
     
-    // Atualiza yPos para depois da tabela
     yPos = secondRowY + tableRowHeight + 10;
 
-    // Reset font to document defaults
     doc.setFont("helvetica", "normal"); 
     doc.setFontSize(12);
 
