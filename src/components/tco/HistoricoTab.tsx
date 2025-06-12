@@ -398,7 +398,14 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
         
         <div>
           <Label htmlFor="apreensoes">OBJETOS/DOCUMENTOS APREENDIDOS</Label>
-          <Textarea id="apreensoes" placeholder="Descreva os objetos ou documentos apreendidos, se houver" value={apreensoes} onChange={e => setApreensoes(e.target.value)} className="min-h-[100px]" />
+          <Textarea 
+            id="apreensoes" 
+            placeholder="Descreva os objetos ou documentos apreendidos, se houver" 
+            value={apreensoes} 
+            onChange={e => setApreensoes(e.target.value)} 
+            className="min-h-[100px]" 
+            readOnly={false}
+          />
           <p className="text-xs text-muted-foreground mt-1">
             {!isDrugCase ? "Se houver apreensões, o Termo de Apreensão será gerado automaticamente no PDF." : "Para casos de drogas, o Termo de Apreensão será gerado automaticamente."}
           </p>
