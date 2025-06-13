@@ -22,7 +22,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     doc.line(MARGIN_LEFT, yPos, PAGE_WIDTH - MARGIN_RIGHT, yPos); yPos += 4; // Linha
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     const year = new Date().getFullYear(); // Pega o ano atual dinamicamente
-    doc.text(`TERMO CIRCUNSTANCIADO DE OCORRÊNCIA Nº ${data.tcoNumber || "Não informado."}/2ºCR/${year}`, PAGE_WIDTH / 2, yPos, { align: "center" });
+    doc.text(`TERMO CIRCUNSTANCIADO DE OCORRÊNCIA Nº ${data.tcoNumber || "Não informado."}/25ºBPM/2ºCR/${year}`, PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 12; // Espaço após o título TCO
 
     // --- Informações Principais (Natureza, Autor, Vítima) ---
@@ -80,7 +80,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     // --- Texto da Autuação ---
     const dataAtualExtenso = getDataAtualExtenso();
     const cidadeAutuacao = data.municipio || "VÁRZEA GRANDE";
-    const localAutuacao = data.localEncerramento || "NO CISC DO PARQUE DO LAGO";
+    const localAutuacao = data.localEncerramento || "NO CISC DO PARQUE DO LADGO";
     const autuacaoText = `${dataAtualExtenso}, NESTA CIDADE DE ${cidadeAutuacao.toUpperCase()}, ESTADO DE MATO GROSSO, ${localAutuacao.toUpperCase()}, AUTUO AS PEÇAS QUE ADIANTE SE SEGUEM, DO QUE PARA CONSTAR, LAVREI E ASSINO ESTE TERMO.`;
     yPos = addWrappedText(doc, yPos, autuacaoText, MARGIN_LEFT, 12, "normal", null, 'justify', data);
     yPos += 20; // Espaço antes da assinatura
