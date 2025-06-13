@@ -1,5 +1,3 @@
-// src/components/TCOProductivityRanking.tsx
-
 import React, { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Trophy, Award, Star } from "lucide-react";
@@ -8,7 +6,7 @@ import {
   BUCKET_NAME,
   TcoData, // Reutilizando a interface TcoData
   extractRGPMsFromFilename,
-} from "./TCOmeus"; // CORREÇÃO: Caminho de importação atualizado para um nome de arquivo válido.
+} from "./TCOmeus (3)"; // Importando do arquivo TCOmeus
 
 interface RankedOfficer {
   rgpm: string;
@@ -156,7 +154,7 @@ const TCOProductivityRanking: React.FC = () => {
   }
 
   return (
-    <Card className="bg-gradient-to-r from-blue-800 to-blue-900 text-white shadow-lg">
+    <Card className="bg-gradient-to-r from-gray-800 to-gray-900 text-white shadow-lg">
       <CardHeader className="pb-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Trophy className="h-5 w-5 text-yellow-300" />

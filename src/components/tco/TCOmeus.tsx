@@ -1,5 +1,4 @@
-// src/components/TCOmeus.tsx
-
+// TCOmeus (7).tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -283,7 +282,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       const { success, error } = await deleteTCO({ id: tcoToDelete.id, pdfPath: tcoToDelete.pdfPath });
       if (error || !success) {
         // A lógica de fallback do original foi mantida no helper, mas um erro aqui pode ser lançado
-        throw new Error(String(error) || "A exclusão falhou por um motivo desconhecido.");
+        throw new Error(error || "A exclusão falhou por um motivo desconhecido.");
       }
       
       setTcoList(prevList => prevList.filter(item => item.id !== tcoToDelete.id));
@@ -558,7 +557,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           {currentGupmToDisplay?.conductor && <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
               <p className="font-semibold text-gray-700 text-base mb-0.5">Condutor:</p>
               <p className="text-gray-600">
-                {`${currentGupmToDisplay.conductor.graduacao} ${currentGupmToДисциплины} (RGPM: ${currentGupmToDisplay.conductor.rgpm})`}
+                {`${currentGupmToDisplay.conductor.graduacao} ${currentGupmToDisplay.conductor.nome} (RGPM: ${currentGupmToDisplay.conductor.rgpm})`}
               </p>
             </div>}
           {currentGupmToDisplay && currentGupmToDisplay.mainTeam.length > 0 && <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
