@@ -171,8 +171,9 @@ const Index = ({
           </TabsList>
 
           <TabsContent value="main" className="flex-grow">
-            <div className="space-y-8">
-              {hasNotifications && <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
+            <div className="space-y-6">
+              {hasNotifications && (
+                <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
                   <CardContent className="p-6">
                     <div className="flex items-center mb-2">
                       <CalendarDays className="h-5 w-5 text-amber-500 mr-2" />
@@ -180,11 +181,21 @@ const Index = ({
                     </div>
                     <NotificationsList showOnlyUnread={true} />
                   </CardContent>
-                </Card>}
-              <TCOProductivityRanking />
-              <MonthlyHoursSummary />
-              <MonthlyExtraCalendar />
-              <UpcomingShifts />
+                </Card>
+              )}
+
+              {/* Grid layout for better organization */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                  <TCOProductivityRanking />
+                  <MonthlyHoursSummary />
+                </div>
+                <div className="space-y-6">
+                  <MonthlyExtraCalendar />
+                  <UpcomingShifts />
+                </div>
+              </div>
+
               <ActiveTrips trips={activeTrips} onTravelClick={() => handleTabChange("travel")} />
             </div>
           </TabsContent>
