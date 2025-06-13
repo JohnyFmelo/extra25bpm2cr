@@ -2,11 +2,11 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Trophy, Award, Star } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { 
+import {
   BUCKET_NAME,
   TcoData, // Reutilizando a interface TcoData
   extractRGPMsFromFilename,
-} from "./TCOmeus (3)"; // Importando do arquivo TCOmeus
+} from "./TCOmeus (4)"; // CORREÇÃO: O caminho da importação foi atualizado para corresponder ao nome do arquivo fornecido.
 
 interface RankedOfficer {
   rgpm: string;
@@ -41,7 +41,7 @@ const TCOProductivityRanking: React.FC = () => {
         const allFilePromises = (folders || [])
             .filter(folder => folder.name && folder.name !== '.emptyFolderPlaceholder')
             .map(folder => supabase.storage.from(BUCKET_NAME).list(`tcos/${folder.name}/`));
-        
+
         const allFileResults = await Promise.all(allFilePromises);
 
         const allTcos: Partial<TcoData>[] = [];
@@ -84,7 +84,7 @@ const TCOProductivityRanking: React.FC = () => {
         if (officersError) {
           console.error("Erro ao buscar detalhes dos policiais:", officersError);
         }
-        
+
         const officersMap = new Map(officersData?.map(o => [o.rgpm, o]));
 
         // 4. Montar e classificar o ranking
@@ -101,18 +101,18 @@ const TCOProductivityRanking: React.FC = () => {
           })
           .sort((a, b) => b.count - a.count)
           .map((officer, index) => ({ ...officer, rank: index + 1 }));
-        
+
         setRanking(rankedList);
-        
+
         // 5. Encontrar as estatísticas do usuário logado (usando user.registration para RGPM)
         if (user.registration) {
           const userStats = rankedList.find(o => o.rgpm === user.registration);
-          setCurrentUserStats(userStats || { 
-              rgpm: user.registration, 
-              count: 0, 
-              rank: 0, 
-              nome: user.warName || user.nome || "Você", 
-              graduacao: user.rank || "" 
+          setCurrentUserStats(userStats || {
+              rgpm: user.registration,
+              count: 0,
+              rank: 0,
+              nome: user.warName || user.nome || "Você",
+              graduacao: user.rank || ""
           });
         }
 
@@ -134,7 +134,7 @@ const TCOProductivityRanking: React.FC = () => {
     if (rank === 3) return <Star className="h-5 w-5 text-orange-400" />;
     return <span className="font-bold text-sm w-5 text-center text-gray-400">{rank}</span>;
   };
-  
+
   if (isLoading) {
     return (
       <Card className="bg-gradient-to-r from-gray-800 to-gray-900 text-white shadow-lg">
@@ -162,7 +162,7 @@ const TCOProductivityRanking: React.FC = () => {
         </h3>
         <p className="text-sm text-white/70">TCOs registrados pela guarnição principal.</p>
       </CardHeader>
-      
+
       <CardContent className="pt-0 space-y-4">
         {/* Top 3 Ranking */}
         <div className="space-y-2">
