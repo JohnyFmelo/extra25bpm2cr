@@ -221,11 +221,11 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="CIOSP">CIOSP</SelectItem>
-                <SelectItem value="190">190</SelectItem>
+                <SelectItem value="Adjunto">Adjunto</SelectItem>
+                <SelectItem value="Oficial de Área">Oficial de Área</SelectItem>
                 <SelectItem value="Patrulhamento">Patrulhamento</SelectItem>
-                <SelectItem value="Denúncia Anônima">Denúncia Anônima</SelectItem>
                 <SelectItem value="Populares">Populares</SelectItem>
-                <SelectItem value="Outros">Outros</SelectItem>
+                <SelectItem value="Guarda do 25º BPM">Guarda do 25º BPM</SelectItem>
               </SelectContent>
             </Select>
           </div>
