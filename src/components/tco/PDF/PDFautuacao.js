@@ -22,7 +22,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     doc.line(MARGIN_LEFT, yPos, PAGE_WIDTH - MARGIN_RIGHT, yPos); yPos += 4; // Linha
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     const year = new Date().getFullYear(); // Pega o ano atual dinamicamente
-    doc.text(`TERMO CIRCUNSTANCIADO DE OCORRÊNCIA Nº ${data.tcoNumber || "Não informado."}/2ºCR/${year}`, PAGE_WIDTH / 2, yPos, { align: "center" });
+    doc.text(`TERMO CIRCUNSTANCIADO DE OCORRÊNCIA Nº ${data.tcoNumber || "Não informado."}/25ºBPM/2ºCR/${year}`, PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 12; // Espaço após o título TCO
 
     // --- Informações Principais (Natureza, Autor, Vítima) ---

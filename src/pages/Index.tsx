@@ -28,7 +28,6 @@ import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
 import RankingChart from "@/components/RankingChart";
 import ManualUserRegistration from "@/components/ManualUserRegistration";
 import VersionDialog from "@/components/VersionDialog";
-
 interface IndexProps {
   initialActiveTab?: string;
 }
@@ -355,7 +354,7 @@ const Index = ({
                   <TabsContent value="list" className="flex-grow">
                     <Card className="shadow-md px-0 my-0 py-0">
                       <CardContent className="p-6 px-0 mx-[5px] my-[3px] py-0">
-                        <TCOmeus />
+                        <TCOmeus user={user} toast={toast} setSelectedTco={setSelectedTco} selectedTco={selectedTco} />
                       </CardContent>
                     </Card>
                   </TabsContent>
