@@ -1,31 +1,28 @@
-
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { fetchUserHours } from "@/services/hoursService";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Clock, MapPin } from "lucide-react";
+import { WorkedDaysCalendar } from "@/components/hours/WorkedDaysCalendar";
+import { Card, CardContent } from "@/components/ui/card";
+import { CalendarDays } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
 const monthNames = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
-
 const MonthlyExtraCalendar = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [workedDays, setWorkedDays] = useState<any[]>([]);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem("user") || "{}");
     const currentMonth = new Date().getMonth();
     const currentMonthName = monthNames[currentMonth];
-
     const fetchExtraData = async () => {
       if (!userData?.registration) {
         setLoading(false);
         return;
       }
-
       try {
         const result = await fetchUserHours(currentMonthName, userData.registration);
         if (result && result.length > 0) {
@@ -38,13 +35,10 @@ const MonthlyExtraCalendar = () => {
         setLoading(false);
       }
     };
-
     fetchExtraData();
   }, []);
-
   const parseWorkDays = (workDaysStr: string | undefined, location: 'bpm' | 'saiop' | 'sinfra') => {
     if (!workDaysStr) return [];
-    
     return workDaysStr.split('|').map(day => {
       const [dayNumber, hoursWithH] = day.trim().split('/');
       if (!hoursWithH) {
@@ -61,115 +55,50 @@ const MonthlyExtraCalendar = () => {
       };
     }).filter(day => day.day);
   };
-
   const parseWorkedDays = (data: any) => {
     if (!data) return;
-
     const bpmDays = parseWorkDays(data["Horas 25° BPM"], 'bpm');
     const saiopDays = parseWorkDays(data["Saiop"], 'saiop');
     const sinfraDays = parseWorkDays(data["Sinfra"], 'sinfra');
-
     const allWorkedDays = [...bpmDays, ...saiopDays, ...sinfraDays];
-    
-    // Sort by day number
-    allWorkedDays.sort((a, b) => parseInt(a.day) - parseInt(b.day));
-    
     setWorkedDays(allWorkedDays);
   };
 
-  const getLocationColor = (location: string) => {
-    switch (location) {
-      case 'bpm':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'saiop':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'sinfra':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  // Get the current month in the format needed for the calendar
+  const getCurrentMonthYear = () => {
+    const now = new Date();
+    return `${now.getMonth() + 1}/${now.getFullYear()}`;
   };
-
-  const getLocationName = (location: string) => {
-    switch (location) {
-      case 'bpm':
-        return '25° BPM';
-      case 'saiop':
-        return 'SAIOP';
-      case 'sinfra':
-        return 'SINFRA';
-      default:
-        return location;
-    }
-  };
-
   const totalHours = data && data["Total Geral"] ? parseFloat(data["Total Geral"].replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
-
   if (loading) {
-    return (
-      <Card className="shadow-sm border border-gray-100">
-        <CardContent className="p-4">
-          <div className="animate-pulse space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="h-5 w-5 rounded bg-gray-200"></div>
+    return <Card className="shadow-sm border border-gray-100 overflow-hidden">
+        <CardContent className="p-0">
+          <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 animate-pulse">
+            <div className="flex items-center mb-4">
+              <div className="h-5 w-5 rounded-full bg-gray-200 mr-2"></div>
               <div className="h-6 bg-gray-200 rounded w-1/3"></div>
             </div>
-            <div className="grid grid-cols-4 gap-2">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded"></div>
-              ))}
-            </div>
+            <div className="h-24 bg-gray-200/80 rounded"></div>
           </div>
         </CardContent>
-      </Card>
-    );
+      </Card>;
   }
-
   if (!data || workedDays.length === 0) {
     return null;
   }
-
-  return (
-    <Card className="shadow-sm border border-gray-100">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <CalendarDays className="h-5 w-5 text-primary" />
-          Dias Trabalhados - {format(new Date(), 'MMMM yyyy', { locale: ptBR })}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
-          {workedDays.map((day, index) => (
-            <div
-              key={index}
-              className={`p-3 rounded-lg border-2 ${getLocationColor(day.location)} transition-all hover:shadow-md`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-lg font-bold">
-                  {day.day}
-                </span>
-                <MapPin className="h-4 w-4" />
-              </div>
-              <div className="text-sm font-medium mb-1">
-                {getLocationName(day.location)}
-              </div>
-              <div className="flex items-center gap-1 text-sm">
-                <Clock className="h-3 w-3" />
-                <span>{day.hours}h</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="pt-3 border-t border-gray-200">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Total do mês:</span>
-            <span className="text-lg font-bold text-primary">{totalHours}h</span>
+  return <Card className="shadow-sm border border-gray-100 overflow-hidden">
+      <CardContent className="p-0">
+        <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 px-[4px]">
+          <div className="flex items-center mb-4 mx-[15px]">
+            <CalendarDays className="h-5 w-5 text-primary mr-2" />
+            <h2 className="text-lg font-semibold text-gray-800">Extras do Mês Atual</h2>
+          </div>
+          
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 px-0 py-0">
+            <WorkedDaysCalendar monthYear={getCurrentMonthYear()} workedDays={workedDays} total={totalHours.toString()} isAdmin={false} />
           </div>
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
-
 export default MonthlyExtraCalendar;
