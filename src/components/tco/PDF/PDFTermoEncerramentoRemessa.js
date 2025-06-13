@@ -16,7 +16,7 @@ export const addTermoEncerramentoRemessa = (doc, data) => {
     const cidadeEncerramento = data.municipio || "VÁRZEA GRANDE";
     const local = data.localEncerramento || "NO QUARTEL DO 25º BATALHÃO DE POLÍCIA MILITAR 2º COMANDO REGIONAL";
     const year = new Date().getFullYear();
-    const tcoRef = data.tcoRefEncerramento || `Nº ${data.tcoNumber || 'INDEFINIDO'}/2ºCR/${year}`;
+    const tcoRef = data.tcoRefEncerramento || `Nº ${data.tcoNumber || 'INDEFINIDO'}/25ºBPM/2ºCR/${year}`;
     
     // Aplicação da flexão de gênero conforme solicitado
     const generoAutor = autor?.sexo?.toLowerCase() === 'feminino' ? 'DA SRA.' : 'DO SR.';
