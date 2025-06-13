@@ -80,7 +80,7 @@ export const generateAutuacaoPage = (doc, currentY, data) => {
     // --- Texto da Autuação ---
     const dataAtualExtenso = getDataAtualExtenso();
     const cidadeAutuacao = data.municipio || "VÁRZEA GRANDE";
-    const localAutuacao = data.localEncerramento || "NO CISC DO PARQUE DO LADGO";
+    const localAutuacao = data.localEncerramento || "NO CISC DO PARQUE DO LAGO";
     const autuacaoText = `${dataAtualExtenso}, NESTA CIDADE DE ${cidadeAutuacao.toUpperCase()}, ESTADO DE MATO GROSSO, ${localAutuacao.toUpperCase()}, AUTUO AS PEÇAS QUE ADIANTE SE SEGUEM, DO QUE PARA CONSTAR, LAVREI E ASSINO ESTE TERMO.`;
     yPos = addWrappedText(doc, yPos, autuacaoText, MARGIN_LEFT, 12, "normal", null, 'justify', data);
     yPos += 20; // Espaço antes da assinatura
