@@ -25,7 +25,6 @@ interface Droga {
   isUnknownMaterial: boolean;
   customMaterialDesc: string;
 }
-
 interface ComponenteGuarnicao {
   rg: string;
   nome: string;
@@ -79,9 +78,8 @@ const initialNovaDrogaState: Omit<Droga, 'id'> = {
   odor: "",
   indicios: "",
   isUnknownMaterial: false,
-  customMaterialDesc: "",
+  customMaterialDesc: ""
 };
-
 const formatRepresentacao = (representacao: string): string => {
   if (representacao === "representar") return "representar";
   if (representacao === "decidir_posteriormente") return "decidir_posteriormente";
@@ -170,7 +168,6 @@ const calculateAge = (birthDate: Date, referenceDate: Date) => {
     days
   };
 };
-
 const TCOForm: React.FC<TCOFormProps> = ({
   selectedTco,
   onClear
@@ -227,7 +224,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
   // << CORREÇÃO: Substituídos por um estado de array para a lista de drogas e um estado para o formulário de nova droga. >>
   const [drogas, setDrogas] = useState<Droga[]>([]);
   const [novaDroga, setNovaDroga] = useState<Omit<Droga, 'id'>>(initialNovaDrogaState);
-
   const [juizadoEspecialData, setJuizadoEspecialData] = useState("");
   const [juizadoEspecialHora, setJuizadoEspecialHora] = useState("");
   const [videoLinks, setVideoLinks] = useState<string[]>([]);
@@ -252,56 +248,70 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const [relatoTestemunha, setRelatoTestemunha] = useState("A TESTEMUNHA ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, COMPROMISSADA NA FORMA DA LEI, QUE AOS COSTUMES RESPONDEU NEGATIVAMENTE OU QUE É AMIGA/PARENTE DE UMA DAS PARTES, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.");
   const [conclusaoPolicial, setConclusaoPolicial] = useState("");
   const [isRelatoPolicialManuallyEdited, setIsRelatoPolicialManuallyEdited] = useState(false);
-
   const isPrimaryDrugCase = natureza.split(' + ')[0] === "Porte de drogas para consumo";
-  
+
   // << CORREÇÃO: Novas funções para manipular a lista de drogas. >>
   const handleNovaDrogaChange = useCallback((field: keyof Omit<Droga, 'id'>, value: string | boolean) => {
     setNovaDroga(prev => {
-        const updatedDroga = { ...prev, [field]: value };
+      const updatedDroga = {
+        ...prev,
+        [field]: value
+      };
 
-        // A lógica de autocompletar os "indícios" agora vive aqui, reagindo à mudança no formulário.
-        const { substancia, cor } = updatedDroga;
-        let indicios = "";
-        let isUnknownMaterial = false;
-
-        if (substancia === "Vegetal" && cor !== "Verde") {
-            isUnknownMaterial = true;
-            indicios = "Material desconhecido";
-        } else if (substancia === "Artificial" && cor !== "Amarelada" && cor !== "Branca") {
-            isUnknownMaterial = true;
-            indicios = "Material desconhecido";
-        } else {
-            isUnknownMaterial = false;
-            if (substancia === "Vegetal" && cor === "Verde") indicios = "Maconha";
-            else if (substancia === "Artificial" && cor === "Amarelada") indicios = "Pasta-Base";
-            else if (substancia === "Artificial" && cor === "Branca") indicios = "Cocaína";
-            else indicios = "";
-        }
-        
-        return { ...updatedDroga, indicios, isUnknownMaterial };
+      // A lógica de autocompletar os "indícios" agora vive aqui, reagindo à mudança no formulário.
+      const {
+        substancia,
+        cor
+      } = updatedDroga;
+      let indicios = "";
+      let isUnknownMaterial = false;
+      if (substancia === "Vegetal" && cor !== "Verde") {
+        isUnknownMaterial = true;
+        indicios = "Material desconhecido";
+      } else if (substancia === "Artificial" && cor !== "Amarelada" && cor !== "Branca") {
+        isUnknownMaterial = true;
+        indicios = "Material desconhecido";
+      } else {
+        isUnknownMaterial = false;
+        if (substancia === "Vegetal" && cor === "Verde") indicios = "Maconha";else if (substancia === "Artificial" && cor === "Amarelada") indicios = "Pasta-Base";else if (substancia === "Artificial" && cor === "Branca") indicios = "Cocaína";else indicios = "";
+      }
+      return {
+        ...updatedDroga,
+        indicios,
+        isUnknownMaterial
+      };
     });
   }, []);
-
   const handleAdicionarDroga = useCallback(() => {
     if (!novaDroga.quantidade.trim() || !novaDroga.substancia) {
-      toast({ title: "Erro", description: "Preencha pelo menos a quantidade e a substância da droga.", className: "bg-red-600 text-white border-red-700" });
+      toast({
+        title: "Erro",
+        description: "Preencha pelo menos a quantidade e a substância da droga.",
+        className: "bg-red-600 text-white border-red-700"
+      });
       return;
     }
     const drogaParaAdicionar: Droga = {
-      id: new Date().toISOString() + Math.random(), // ID único para a lista
+      id: new Date().toISOString() + Math.random(),
+      // ID único para a lista
       ...novaDroga
     };
     setDrogas(prev => [...prev, drogaParaAdicionar]);
     setNovaDroga(initialNovaDrogaState); // Limpa o formulário para a próxima droga
-    toast({ title: "Sucesso", description: `"${drogaParaAdicionar.indicios}" adicionado(a) à lista.`, className: "bg-green-600 text-white border-green-700" });
+    toast({
+      title: "Sucesso",
+      description: `"${drogaParaAdicionar.indicios}" adicionado(a) à lista.`,
+      className: "bg-green-600 text-white border-green-700"
+    });
   }, [novaDroga, toast]);
-
   const handleRemoverDroga = useCallback((id: string) => {
     setDrogas(prev => prev.filter(d => d.id !== id));
-    toast({ title: "Removido", description: "Item removido da lista de drogas.", className: "bg-blue-600 text-white border-blue-700" });
+    toast({
+      title: "Removido",
+      description: "Item removido da lista de drogas.",
+      className: "bg-blue-600 text-white border-blue-700"
+    });
   }, []);
-
   const handleVitimaRelatoChange = (index: number, relato: string) => {
     const newVitimas = [...vitimas];
     if (newVitimas[index]) {
@@ -342,14 +352,13 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setAutores(newAutores);
     }
   };
-
   useEffect(() => {
     if (tcoNumber && !isTimerRunning) {
       setStartTime(new Date());
       setIsTimerRunning(true);
     }
   }, [tcoNumber, isTimerRunning]);
-  
+
   // << CORREÇÃO: O useEffect que atualizava os indícios foi removido daqui, pois sua lógica foi movida para handleNovaDrogaChange. >>
   // useEffect(() => { ... }, [substancia, cor]); // REMOVIDO
 
@@ -360,26 +369,23 @@ const TCOForm: React.FC<TCOFormProps> = ({
       const descricoesDrogas = drogas.map(droga => {
         const indicioFinal = droga.isUnknownMaterial && droga.customMaterialDesc ? droga.customMaterialDesc : droga.indicios;
         if (!indicioFinal) return "";
-
         const quantidadeNum = parseInt(droga.quantidade.match(/\d+/)?.[0] || "1", 10);
         const quantidadeText = numberToText(quantidadeNum);
-        
+
         // << CORREÇÃO: Lógica ajustada para singular/plural de "PORÇÃO PEQUENA" >>
         const porcaoTexto = quantidadeNum > 1 ? "PORÇÕES PEQUENAS" : "PORÇÃO PEQUENA";
+        return droga.isUnknownMaterial ? `${quantidadeText.toUpperCase()} ${porcaoTexto} DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.` : `${quantidadeText.toUpperCase()} ${porcaoTexto} DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`;
 
-        return droga.isUnknownMaterial 
-          ? `${quantidadeText.toUpperCase()} ${porcaoTexto} DE SUBSTÂNCIA DE MATERIAL DESCONHECIDO, ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`
-          : `${quantidadeText.toUpperCase()} ${porcaoTexto} DE SUBSTÂNCIA ANÁLOGA A ${indicioFinal.toUpperCase()}, CONFORME FOTO EM ANEXO.`;
-      
-      // << CORREÇÃO: Alterado de '\n\n' para '\n' para remover a linha em branco >>
-      }).filter(Boolean).join('\n'); 
-      
+        // << CORREÇÃO: Alterado de '\n\n' para '\n' para remover a linha em branco >>
+      }).filter(Boolean).join('\n');
       setApreensoes(descricoesDrogas);
-      
-      // Lógica original para limpar vítimas em caso de droga
-      setVitimas([{ ...initialPersonData, nome: "" }]);
-      setRepresentacao("");
 
+      // Lógica original para limpar vítimas em caso de droga
+      setVitimas([{
+        ...initialPersonData,
+        nome: ""
+      }]);
+      setRepresentacao("");
     } else {
       // Se não for caso de droga, limpa as descrições de drogas do campo de apreensões
       if (apreensoes.includes("SUBSTÂNCIA ANÁLOGA A") || apreensoes.includes("MATERIAL DESCONHECIDO")) {
@@ -390,25 +396,26 @@ const TCOForm: React.FC<TCOFormProps> = ({
         setDrogas([]);
       }
       // Lógica original para restaurar vítimas é mantida
-       setVitimas(prevVitimas => {
+      setVitimas(prevVitimas => {
         if (prevVitimas.length === 1 && prevVitimas[0].nome === "") {
-          return [{ ...initialPersonData }];
+          return [{
+            ...initialPersonData
+          }];
         }
-        if (prevVitimas.length === 0 || (prevVitimas.length === 1 && !prevVitimas[0].nome && !prevVitimas[0].cpf)) {
-          return [{ ...initialPersonData }];
+        if (prevVitimas.length === 0 || prevVitimas.length === 1 && !prevVitimas[0].nome && !prevVitimas[0].cpf) {
+          return [{
+            ...initialPersonData
+          }];
         }
         return prevVitimas;
       });
     }
   }, [natureza, drogas, isPrimaryDrugCase]);
-
   useEffect(() => {
     const primeiraNatureza = natureza.split(' + ')[0];
     const displayNaturezaReal = primeiraNatureza === "Outros" ? customNatureza.trim() : natureza;
-
     let tipificacaoAtual = "";
     let penaAtual = "";
-
     if (primeiraNatureza === "Outros") {
       tipificacaoAtual = tipificacao || "[TIPIFICAÇÃO LEGAL A SER INSERIDA]";
       penaAtual = penaDescricao || "";
@@ -511,7 +518,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
         setPenaDescricao(penaAtual);
       }
     }
-
     const autoresValidos = autores.filter(a => a.nome?.trim());
     const autorTexto = autoresValidos.length === 0 ? "O(A) AUTOR(A)" : autoresValidos.length === 1 ? autoresValidos[0].sexo.toLowerCase() === "feminino" ? "A AUTORA" : "O AUTOR" : autoresValidos.every(a => a.sexo.toLowerCase() === "feminino") ? "AS AUTORAS" : "OS AUTORES";
     const testemunhasValidas = testemunhas.filter(t => t.nome?.trim());
@@ -519,7 +525,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
     const conclusaoBase = `DIANTE DAS CIRCUNSTÂNCIAS E DE TUDO O QUE FOI RELATADO, RESTA ACRESCENTAR QUE ${autorTexto} INFRINGIU, EM TESE, A CONDUTA DE ${displayNaturezaReal.toUpperCase()}, PREVISTA EM ${tipificacaoAtual}. NADA MAIS HAVENDO A TRATAR, DEU-SE POR FINDO O PRESENTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA QUE VAI DEVIDAMENTE ASSINADO PELAS PARTES${testemunhaTexto ? ` E ${testemunhaTexto}` : ""}, E POR MIM, RESPONSÁVEL PELA LAVRATURA, QUE O DIGITEI. E PELO FATO DE ${autorTexto} TER SE COMPROMETIDO A COMPARECER AO JUIZADO ESPECIAL CRIMINAL, ESTE FOI LIBERADO SEM LESÕES CORPORAIS APARENTES, APÓS A ASSINATURA DO TERMO DE COMPROMISSO.`;
     setConclusaoPolicial(conclusaoBase);
   }, [natureza, customNatureza, tipificacao, penaDescricao, autores, testemunhas]);
-
   useEffect(() => {
     if (isRelatoPolicialManuallyEdited) return;
     let updatedRelato = relatoPolicialTemplate;
@@ -527,42 +532,25 @@ const TCOForm: React.FC<TCOFormProps> = ({
     const gupm = formatarGuarnicao(componentesGuarnicao);
     const displayNaturezaRealParaRelato = (natureza.split(' + ')[0] === "Outros" ? customNatureza : natureza) || "[NATUREZA PENDENTE]";
     const operacaoText = operacao ? `, DURANTE A ${operacao.toUpperCase()},` : "";
-    updatedRelato = updatedRelato
-      .replace("[HORÁRIO]", horaFato || "[HORÁRIO PENDENTE]")
-      .replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : "[DATA PENDENTE]")
-      .replace("[GUARNIÇÃO]", guarnicao || "[GUARNIÇÃO PENDENTE]")
-      .replace("[OPERACAO_TEXT]", operacaoText)
-      .replace("[GUPM]", gupm)
-      .replace("[BAIRRO]", bairro)
-      .replace("[MEIO DE ACIONAMENTO]", comunicante || "[ACIONAMENTO PENDENTE]")
-      .replace("[NATUREZA]", displayNaturezaRealParaRelato.toUpperCase())
-      .replace("[LOCAL]", localFato || "[LOCAL PENDENTE]")
-      .replace("[VERSÃO INICIAL]", "[VERSÃO INICIAL]")
-      .replace("[O QUE A PM DEPAROU]", "[O QUE A PM DEPAROU]")
-      .replace("[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]", "[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]")
-      .replace("[DILIGÊNCIAS E APREENSÕES REALIZADAS]", "[DILIGÊNCIAS E APREENSÕES REALIZADAS]")
-      .replace("[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]", "[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]");
-
+    updatedRelato = updatedRelato.replace("[HORÁRIO]", horaFato || "[HORÁRIO PENDENTE]").replace("[DATA]", dataFato ? new Date(dataFato + 'T00:00:00Z').toLocaleDateString('pt-BR', {
+      timeZone: 'UTC'
+    }) : "[DATA PENDENTE]").replace("[GUARNIÇÃO]", guarnicao || "[GUARNIÇÃO PENDENTE]").replace("[OPERACAO_TEXT]", operacaoText).replace("[GUPM]", gupm).replace("[BAIRRO]", bairro).replace("[MEIO DE ACIONAMENTO]", comunicante || "[ACIONAMENTO PENDENTE]").replace("[NATUREZA]", displayNaturezaRealParaRelato.toUpperCase()).replace("[LOCAL]", localFato || "[LOCAL PENDENTE]").replace("[VERSÃO INICIAL]", "[VERSÃO INICIAL]").replace("[O QUE A PM DEPAROU]", "[O QUE A PM DEPAROU]").replace("[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]", "[VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]").replace("[DILIGÊNCIAS E APREENSÕES REALIZADAS]", "[DILIGÊNCIAS E APREENSÕES REALIZADAS]").replace("[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]", "[ENCAMINHAMENTO PARA REGISTRO DOS FATOS]");
     if (!isRelatoPolicialManuallyEdited || relatoPolicial === relatoPolicialTemplate) {
       setRelatoPolicial(updatedRelato.toUpperCase());
     }
   }, [horaFato, dataFato, guarnicao, operacao, componentesGuarnicao, endereco, comunicante, natureza, customNatureza, localFato, relatoPolicialTemplate, isRelatoPolicialManuallyEdited, relatoPolicial]);
-
-
   useEffect(() => {
     const novoRelatoAutor = formatarRelatoAutor(autores).toUpperCase();
     if (!relatoAutor.includes('[INSIRA DECLARAÇÃO]') || relatoAutor.startsWith("O AUTOR") || relatoAutor.startsWith("A AUTORA") || relatoAutor.startsWith("OS AUTORES") || relatoAutor.startsWith("AS AUTORAS")) {
       setRelatoAutor(novoRelatoAutor);
     }
   }, [autores, relatoAutor]);
-
   useEffect(() => {
     const currentFirstAutorName = autores.length > 0 ? autores[0].nome : "";
     if (currentFirstAutorName !== autor) {
       setAutor(currentFirstAutorName);
     }
   }, [autores, autor]);
-
   useEffect(() => {
     const updatedAutores = autores.map(autorPessoa => {
       if (autorPessoa.nome.trim() !== "" && !autorPessoa.relato) {
@@ -580,7 +568,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setAutores(updatedAutores);
     }
   }, [autores]);
-
   useEffect(() => {
     const autoresComRelato = autores.filter(a => a.nome.trim() !== "" && a.relato);
     if (autoresComRelato.length > 0) {
@@ -591,7 +578,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setRelatoAutor(novoRelatoAutor);
     }
   }, [autores]);
-
   const handleAddPolicialToList = useCallback((novoPolicial: ComponenteGuarnicao) => {
     const alreadyExists = componentesGuarnicao.some(comp => comp.rg === novoPolicial.rg);
     if (!alreadyExists) {
@@ -620,11 +606,9 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
     }
   }, [componentesGuarnicao, toast]);
-
   const handleRemovePolicialFromList = useCallback((index: number) => {
     setComponentesGuarnicao(prevList => prevList.filter((_, i) => i !== index));
   }, []);
-
   const handleToggleApoioPolicial = useCallback((index: number) => {
     setComponentesGuarnicao(prevList => {
       const updatedList = [...prevList];
@@ -641,7 +625,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
       duration: 5000
     });
   }, [componentesGuarnicao, toast]);
-
   const handleAddVitima = () => {
     const hasOnlyPlaceholder = vitimas.length === 1 && !vitimas[0].nome && !vitimas[0].cpf || vitimas.length === 1 && vitimas[0].nome === "O ESTADO";
     if (hasOnlyPlaceholder) {
@@ -711,7 +694,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setAutor(newAutores.length > 0 ? newAutores[0].nome : "");
     }
     const today = new Date();
-    const minorAuthor = newAutores.find((autorPessoa) => {
+    const minorAuthor = newAutores.find(autorPessoa => {
       if (autorPessoa.dataNascimento) {
         const birthDate = new Date(autorPessoa.dataNascimento + 'T00:00:00Z');
         if (!isNaN(birthDate.getTime())) {
@@ -725,7 +708,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
       isMinor: !!minorAuthor
     });
   };
-
   const handleVitimaChange = (index: number, field: string, value: string) => {
     const newVitimas = [...vitimas];
     let processedValue = value;
@@ -747,7 +729,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
     }
     setVitimas(newVitimas);
   };
-
   const handleTestemunhaChange = (index: number, field: string, value: string) => {
     const newTestemunhas = [...testemunhas];
     let processedValue = value;
@@ -762,7 +743,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
     };
     setTestemunhas(newTestemunhas);
   };
-
   const handleAutorDetalhadoChange = (index: number, field: string, value: string) => {
     const newAutores = [...autores];
     let processedValue = value;
@@ -812,14 +792,12 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setAutor(processedValue);
     }
   };
-
   const handleRelatoPolicialChange = (value: string) => {
     setRelatoPolicial(value);
     if (value !== relatoPolicialTemplate && !value.includes("[HORÁRIO]")) {
       setIsRelatoPolicialManuallyEdited(true);
     }
   };
-
   const handleAddVideoLink = () => {
     if (newVideoLink.trim() && !videoLinks.includes(newVideoLink.trim())) {
       if (!/^(https?:\/\/)/i.test(newVideoLink.trim())) {
@@ -898,10 +876,8 @@ const TCOForm: React.FC<TCOFormProps> = ({
       duration: 5000
     });
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (hasMinorAuthor.isMinor) {
       toast({
         title: "Submissão Bloqueada",
@@ -911,12 +887,10 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
       return;
     }
-
     const completionNow = new Date();
     const completionDate = completionNow.toISOString().split('T')[0];
     const completionTime = completionNow.toTimeString().slice(0, 5);
     const autoresValidos = autores.filter(a => a.nome?.trim());
-
     if (!tcoNumber.trim()) {
       toast({
         title: "Campo Obrigatório",
@@ -975,19 +949,15 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
       return;
     }
-
     setIsSubmitting(true);
     setIsTimerRunning(false);
-
     try {
       const displayNaturezaRealSubmit = primeiraNaturezaSubmit === "Outros" ? customNatureza.trim() : natureza;
-      
       const vitimasFiltradas = vitimas.filter(v => v.nome?.trim() || v.cpf?.trim());
       const testemunhasFiltradas = testemunhas.filter(t => t.nome?.trim() || t.cpf?.trim());
       const userInfo = JSON.parse(localStorage.getItem("user") || "{}");
       const userId = userInfo.id || null;
       const userRegistration = userInfo.registration || "";
-
       const imageBase64Array: {
         name: string;
         data: string;
@@ -1009,7 +979,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
           });
         }
       }
-      
       const relatoAutorConsolidado = autoresValidos.filter(a => a.relato && a.relato.trim() !== "").map(a => a.relato).join('\n\n') || relatoAutor;
 
       // << CORREÇÃO: O objeto enviado para o PDF agora contém o array 'drogas' em vez de campos individuais. >>
@@ -1042,7 +1011,8 @@ const TCOForm: React.FC<TCOFormProps> = ({
         apreensoes: apreensoes.trim(),
         conclusaoPolicial: conclusaoPolicial.trim(),
         lacreNumero: isPrimaryDrugCase ? lacreNumero.trim() : undefined,
-        drogas: isPrimaryDrugCase ? drogas : undefined, // << CAMPO NOVO COM O ARRAY DE DROGAS >>
+        drogas: isPrimaryDrugCase ? drogas : undefined,
+        // << CAMPO NOVO COM O ARRAY DE DROGAS >>
         startTime: startTime?.toISOString(),
         endTime: completionNow.toISOString(),
         userRegistration: userRegistration,
@@ -1054,10 +1024,9 @@ const TCOForm: React.FC<TCOFormProps> = ({
         representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined,
         downloadLocal: true,
         providencias: providencias,
-        documentosAnexos: documentosAnexos,
+        documentosAnexos: documentosAnexos
       };
       Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
-
       console.log("Dados para gerar PDF:", tcoDataParaPDF);
       const pdfGenerationPromise = generatePDF(tcoDataParaPDF);
       const timeoutPromise = new Promise<Blob>((_, reject) => {
@@ -1066,15 +1035,12 @@ const TCOForm: React.FC<TCOFormProps> = ({
       const pdfBlob = await Promise.race([pdfGenerationPromise, timeoutPromise]);
       if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
-
       const desiredFileName = generateTCOFilename(tcoDataParaPDF);
       const filePath = `tcos/${userId || 'anonimo'}/${desiredFileName}`;
-
       const bucketExists = await ensureBucketExists();
       if (!bucketExists) {
         throw new Error("Não foi possível criar ou verificar o bucket de armazenamento.");
       }
-
       const {
         url: downloadURL,
         error: uploadError
@@ -1083,11 +1049,9 @@ const TCOForm: React.FC<TCOFormProps> = ({
         natureza: displayNaturezaRealSubmit,
         createdBy: userId || 'anonimo'
       });
-
       if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
       if (!downloadURL) throw new Error("URL do arquivo não disponível após o upload.");
       console.log('URL pública do arquivo:', downloadURL);
-
       const tcoMetadata = {
         tconumber: tcoNumber.trim(),
         natureza: displayNaturezaRealSubmit,
@@ -1102,7 +1066,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
         createdby: userId,
         createdat: new Date().toISOString()
       };
-
       console.log("Metadados para salvar no DB:", tcoMetadata);
       let attempt = 0;
       let metadataSuccess = false;
@@ -1132,12 +1095,10 @@ const TCOForm: React.FC<TCOFormProps> = ({
           }
         }
       }
-
       if (!metadataSuccess) {
         const errorMessage = lastError instanceof Error ? lastError.message : String(lastError || 'Erro desconhecido');
         throw new Error(`Falha ao salvar metadados após ${attempt} tentativas: ${errorMessage}`);
       }
-
       toast({
         title: "TCO Registrado com Sucesso!",
         description: "PDF enviado e informações salvas no sistema.",
@@ -1145,7 +1106,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
         duration: 5000
       });
       navigate("/?tab=tco");
-
     } catch (error: any) {
       console.error("Erro geral no processo de submissão do TCO:", error);
       const errorMessage = error instanceof Error ? error.message : String(error || 'Erro desconhecido.');
@@ -1159,7 +1119,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setIsSubmitting(false);
     }
   };
-
   const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
     if (e.key === 'Enter') {
       const target = e.target as HTMLElement;
@@ -1169,164 +1128,51 @@ const TCOForm: React.FC<TCOFormProps> = ({
       }
     }
   };
-
   const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Conduzir veículo sem CNH gerando perigo de dano", "Entregar veículo automotor a pessoa não habilitada", "Trafegar em velocidade incompatível com segurança", "Omissão de socorro", "Rixa", "Invasão de domicílio", "Fraude em comércio", "Ato obsceno", "Falsa identidade", "Resistência", "Desobediência", "Desacato", "Exercício arbitrário das próprias razões", "Outros"];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
-
-  return (
-    <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
+  return <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
-        {hasMinorAuthor.isMinor && hasMinorAuthor.details && (
-          <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
+        {hasMinorAuthor.isMinor && hasMinorAuthor.details && <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
             <p className="font-semibold">Atenção: Autor Menor de Idade Detectado</p>
             <p>
               O autor {autores[hasMinorAuthor.details.index].nome || 'sem nome'} possui {hasMinorAuthor.details.years} anos,{' '}
               {hasMinorAuthor.details.months} meses e {hasMinorAuthor.details.days} dias. Não é permitido registrar TCO para menores de 18 anos.
             </p>
-          </div>
-        )}
+          </div>}
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Básicas</h2>
-          <BasicInformationTab
-            tcoNumber={tcoNumber}
-            setTcoNumber={setTcoNumber}
-            natureza={natureza}
-            setNatureza={setNatureza}
-            autor={autor}
-            setAutor={setAutor}
-            penaDescricao={penaDescricao}
-            naturezaOptions={naturezaOptions}
-            customNatureza={customNatureza}
-            setCustomNatureza={setCustomNatureza}
-            startTime={startTime}
-            isTimerRunning={isTimerRunning}
-            juizadoEspecialData={juizadoEspecialData}
-            setJuizadoEspecialData={setJuizadoEspecialData}
-            juizadoEspecialHora={juizadoEspecialHora}
-            setJuizadoEspecialHora={setJuizadoEspecialHora}
-          />
+          <BasicInformationTab tcoNumber={tcoNumber} setTcoNumber={setTcoNumber} natureza={natureza} setNatureza={setNatureza} autor={autor} setAutor={setAutor} penaDescricao={penaDescricao} naturezaOptions={naturezaOptions} customNatureza={customNatureza} setCustomNatureza={setCustomNatureza} startTime={startTime} isTimerRunning={isTimerRunning} juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData} juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora} />
         </div>
 
-        {isPrimaryDrugCase && (
-          <div className="mb-8">
+        {isPrimaryDrugCase && <div className="mb-8">
             {/* << CORREÇÃO: As props do DrugVerificationTab foram completamente alteradas para refletir o novo modelo de dados. >> */}
-            <DrugVerificationTab
-              novaDroga={novaDroga}
-              onNovaDrogaChange={handleNovaDrogaChange}
-              onAdicionarDroga={handleAdicionarDroga}
-              drogasAdicionadas={drogas}
-              onRemoverDroga={handleRemoverDroga}
-              lacreNumero={lacreNumero}
-              setLacreNumero={setLacreNumero}
-            />
-          </div>
-        )}
+            <DrugVerificationTab novaDroga={novaDroga} onNovaDrogaChange={handleNovaDrogaChange} onAdicionarDroga={handleAdicionarDroga} drogasAdicionadas={drogas} onRemoverDroga={handleRemoverDroga} lacreNumero={lacreNumero} setLacreNumero={setLacreNumero} />
+          </div>}
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Gerais da Ocorrência</h2>
-          <GeneralInformationTab
-            natureza={natureza}
-            tipificacao={tipificacao}
-            setTipificacao={setTipificacao}
-            isCustomNatureza={natureza.split(' + ')[0] === "Outros"}
-            customNatureza={customNatureza}
-            dataFato={dataFato}
-            setDataFato={setDataFato}
-            horaFato={horaFato}
-            setHoraFato={setHoraFato}
-            dataInicioRegistro={dataInicioRegistro}
-            horaInicioRegistro={horaInicioRegistro}
-            setHoraInicioRegistro={setHoraInicioRegistro}
-            dataTerminoRegistro={dataTerminoRegistro}
-            horaTerminoRegistro={horaTerminoRegistro}
-            localFato={localFato}
-            setLocalFato={setLocalFato}
-            endereco={endereco}
-            setEndereco={setEndereco}
-            municipio={municipio}
-            comunicante={comunicante}
-            setComunicante={setComunicante}
-            guarnicao={guarnicao}
-            setGuarnicao={setGuarnicao}
-            operacao={operacao}
-            setOperacao={setOperacao}
-            condutorNome={condutorParaDisplay?.nome || ""}
-            condutorPosto={condutorParaDisplay?.posto || ""}
-            condutorRg={condutorParaDisplay?.rg || ""}
-          />
+          <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza.split(' + ')[0] === "Outros"} customNatureza={customNatureza} dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro} setHoraInicioRegistro={setHoraInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Pessoas Envolvidas</h2>
-          <PessoasEnvolvidasTab
-            vitimas={vitimas}
-            handleVitimaChange={handleVitimaChange}
-            handleAddVitima={handleAddVitima}
-            handleRemoveVitima={handleRemoveVitima}
-            testemunhas={testemunhas}
-            handleTestemunhaChange={handleTestemunhaChange}
-            handleAddTestemunha={handleAddTestemunha}
-            handleRemoveTestemunha={handleRemoveTestemunha}
-            autores={autores}
-            handleAutorDetalhadoChange={handleAutorDetalhadoChange}
-            handleAddAutor={handleAddAutor}
-            handleRemoveAutor={handleRemoveAutor}
-            natureza={natureza}
-          />
+          <PessoasEnvolvidasTab vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima} testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha} autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor} natureza={natureza} />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Guarnição Policial</h2>
-          <GuarnicaoTab
-            currentGuarnicaoList={componentesGuarnicao}
-            onAddPolicial={handleAddPolicialToList}
-            onRemovePolicial={handleRemovePolicialFromList}
-            onToggleApoioPolicial={handleToggleApoioPolicial}
-          />
+          <GuarnicaoTab currentGuarnicaoList={componentesGuarnicao} onAddPolicial={handleAddPolicialToList} onRemovePolicial={handleRemovePolicialFromList} onToggleApoioPolicial={handleToggleApoioPolicial} />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Histórico e Narrativas</h2>
-          <HistoricoTab
-            relatoPolicial={relatoPolicial}
-            setRelatoPolicial={handleRelatoPolicialChange}
-            relatoAutor={relatoAutor}
-            setRelatoAutor={setRelatoAutor}
-            relatoVitima={relatoVitima}
-            setRelatoVitima={setRelatoVitima}
-            relatoTestemunha={relatoTestemunha}
-            setRelatoTestemunha={setRelatoTestemunha}
-            apreensoes={apreensoes}
-            setApreensoes={setApreensoes}
-            conclusaoPolicial={conclusaoPolicial}
-            setConclusaoPolicial={setConclusaoPolicial}
-            drugSeizure={isPrimaryDrugCase}
-            representacao={representacao}
-            setRepresentacao={setRepresentacao}
-            natureza={natureza}
-            videoLinks={videoLinks}
-            setVideoLinks={setVideoLinks}
-            solicitarCorpoDelito={autores.length > 0 ? autores[0].laudoPericial : "Não"}
-            autorSexo={autores.length > 0 ? autores[0].sexo : "masculino"}
-            providencias={providencias}
-            setProvidencias={setProvidencias}
-            documentosAnexos={documentosAnexos}
-            setDocumentosAnexos={setDocumentosAnexos}
-            lacreNumero={lacreNumero}
-            vitimas={vitimas}
-            setVitimaRelato={handleVitimaRelatoChange}
-            setVitimaRepresentacao={handleVitimaRepresentacaoChange}
-            testemunhas={testemunhas}
-            setTestemunhaRelato={handleTestemunhaRelatoChange}
-            autores={autores}
-            setAutorRelato={handleAutorRelatoChange}
-          />
+          <HistoricoTab relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange} relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor} relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima} relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha} apreensoes={apreensoes} setApreensoes={setApreensoes} conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial} drugSeizure={isPrimaryDrugCase} representacao={representacao} setRepresentacao={setRepresentacao} natureza={natureza} videoLinks={videoLinks} setVideoLinks={setVideoLinks} solicitarCorpoDelito={autores.length > 0 ? autores[0].laudoPericial : "Não"} autorSexo={autores.length > 0 ? autores[0].sexo : "masculino"} providencias={providencias} setProvidencias={setProvidencias} documentosAnexos={documentosAnexos} setDocumentosAnexos={setDocumentosAnexos} lacreNumero={lacreNumero} vitimas={vitimas} setVitimaRelato={handleVitimaRelatoChange} setVitimaRepresentacao={handleVitimaRepresentacaoChange} testemunhas={testemunhas} setTestemunhaRelato={handleTestemunhaRelatoChange} autores={autores} setAutorRelato={handleAutorRelatoChange} />
         </div>
 
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Anexos (Opcional)</CardTitle>
+            <CardTitle>Anexos</CardTitle>
             <CardDescription>Adicione fotos ou links de vídeos relacionados à ocorrência.</CardDescription>
           </CardHeader>
           <CardContent className="px-[8px]">
@@ -1339,55 +1185,25 @@ const TCOForm: React.FC<TCOFormProps> = ({
                     Anexe imagens relevantes (JPG, PNG, GIF). Serão incluídas no PDF.
                   </p>
                 </div>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/jpeg, image/png, image/gif"
-                  ref={imageInputRef}
-                  onChange={handleImageFileChange}
-                  className="hidden"
-                  id="imageUpload"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => imageInputRef.current?.click()}
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto mx-auto"
-                  aria-label="Selecionar imagens para anexar"
-                >
+                <input type="file" multiple accept="image/jpeg, image/png, image/gif" ref={imageInputRef} onChange={handleImageFileChange} className="hidden" id="imageUpload" />
+                <Button type="button" variant="outline" onClick={() => imageInputRef.current?.click()} className="border-blue-600 text-blue-600 hover:bg-blue-50 w-full sm:w-auto mx-auto" aria-label="Selecionar imagens para anexar">
                   <Plus className="mr-2 h-5 w-5" />
                   Selecionar Fotos
                 </Button>
-                {imageFiles.length > 0 && (
-                  <div className="w-full pt-2">
+                {imageFiles.length > 0 && <div className="w-full pt-2">
                     <p className="text-sm font-medium text-gray-600 mb-1.5">Arquivos selecionados:</p>
                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
-                      {imageFiles.map((file, index) => (
-                        <li
-                          key={`${file.name}-${index}-${file.lastModified}`}
-                          className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm"
-                        >
+                      {imageFiles.map((file, index) => <li key={`${file.name}-${index}-${file.lastModified}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
                           <span className="truncate mr-2 flex-1 text-gray-700" title={file.name}>
                             {file.name} <span className="text-gray-400 text-xs">({(file.size / 1024).toFixed(1)} KB)</span>
                           </span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveImageFile(index)}
-                            className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7"
-                            aria-label={`Remover imagem ${file.name}`}
-                          >
+                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveImageFile(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover imagem ${file.name}`}>
                             <X className="h-4 w-4" />
                           </Button>
-                        </li>
-                      ))}
+                        </li>)}
                     </ul>
-                  </div>
-                )}
-                {imageFiles.length === 0 && (
-                  <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p>
-                )}
+                  </div>}
+                {imageFiles.length === 0 && <p className="text-xs text-gray-400 text-center italic pt-2">Nenhuma imagem adicionada.</p>}
               </div>
 
               <div className="p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col space-y-4 hover:border-green-500 transition-colors duration-200 ease-in-out">
@@ -1397,115 +1213,51 @@ const TCOForm: React.FC<TCOFormProps> = ({
                   <p className="text-sm text-gray-500 px-4 mt-1">Adicione links para vídeos online (YouTube, Drive, etc.).</p>
                 </div>
                 <div className="flex w-full space-x-2 items-center pt-1">
-                  <Input
-                    type="url"
-                    value={newVideoLink}
-                    onChange={(e) => setNewVideoLink(e.target.value)}
-                    placeholder="https://..."
-                    aria-label="Link do vídeo"
-                    className="flex-1 text-sm"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleAddVideoLink}
-                    className="bg-green-600 hover:bg-green-700 text-white shrink-0"
-                    size="icon"
-                    aria-label="Adicionar link de vídeo"
-                    disabled={!newVideoLink.trim()}
-                  >
+                  <Input type="url" value={newVideoLink} onChange={e => setNewVideoLink(e.target.value)} placeholder="https://..." aria-label="Link do vídeo" className="flex-1 text-sm" />
+                  <Button type="button" onClick={handleAddVideoLink} className="bg-green-600 hover:bg-green-700 text-white shrink-0" size="icon" aria-label="Adicionar link de vídeo" disabled={!newVideoLink.trim()}>
                     <Plus className="h-5 w-5" />
                   </Button>
                 </div>
-                {videoLinks.length > 0 && (
-                  <div className="w-full pt-2">
+                {videoLinks.length > 0 && <div className="w-full pt-2">
                     <p className="text-sm font-medium text-gray-600 mb-1.5">Links adicionados:</p>
                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
-                      {videoLinks.map((link, index) => (
-                        <li
-                          key={`${index}-${link}`}
-                          className="flex justify-between items-start p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm gap-2"
-                        >
-                          <a
-                            href={link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline break-all min-w-0 flex-1 leading-relaxed"
-                            title={`Abrir link: ${link}`}
-                            style={{
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              wordBreak: 'break-all'
-                            }}
-                          >
+                      {videoLinks.map((link, index) => <li key={`${index}-${link}`} className="flex justify-between items-start p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm gap-2">
+                          <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all min-w-0 flex-1 leading-relaxed" title={`Abrir link: ${link}`} style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      wordBreak: 'break-all'
+                    }}>
                             {link}
                           </a>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveVideoLink(index)}
-                            className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7 shrink-0 mt-0.5"
-                            aria-label={`Remover link ${link}`}
-                          >
+                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveVideoLink(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7 shrink-0 mt-0.5" aria-label={`Remover link ${link}`}>
                             <X className="h-4 w-4" />
                           </Button>
-                        </li>
-                      ))}
+                        </li>)}
                     </ul>
-                  </div>
-                )}
-                {videoLinks.length === 0 && (
-                  <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p>
-                )}
+                  </div>}
+                {videoLinks.length === 0 && <p className="text-xs text-gray-400 text-center italic pt-2">Nenhum link de vídeo adicionado.</p>}
               </div>
             </div>
           </CardContent>
         </Card>
 
         <div className="flex justify-end mt-8 pt-6 border-t border-gray-300">
-          <Button
-            type="submit"
-            disabled={isSubmitting || hasMinorAuthor.isMinor}
-            size="lg"
-            className="min-w-[200px]"
-          >
-            {isSubmitting ? (
-              <>
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
+          <Button type="submit" disabled={isSubmitting || hasMinorAuthor.isMinor} size="lg" className="min-w-[200px]">
+            {isSubmitting ? <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Processando...
-              </>
-            ) : (
-              <>
+              </> : <>
                 <FileText className="mr-2 h-5 w-5" />
                 Finalizar e Salvar TCO
-              </>
-            )}
+              </>}
           </Button>
         </div>
       </form>
-    </div>
-  );
+    </div>;
 };
-
 export default TCOForm;
