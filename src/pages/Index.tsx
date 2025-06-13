@@ -28,6 +28,8 @@ import MonthlyExtraCalendar from "@/components/MonthlyExtraCalendar";
 import RankingChart from "@/components/RankingChart";
 import ManualUserRegistration from "@/components/ManualUserRegistration";
 import VersionDialog from "@/components/VersionDialog";
+import TCOProductivityRanking from "@/components/TCOProductivityRanking";
+
 interface IndexProps {
   initialActiveTab?: string;
 }
@@ -179,6 +181,7 @@ const Index = ({
                     <NotificationsList showOnlyUnread={true} />
                   </CardContent>
                 </Card>}
+              <TCOProductivityRanking />
               <MonthlyHoursSummary />
               <MonthlyExtraCalendar />
               <UpcomingShifts />
