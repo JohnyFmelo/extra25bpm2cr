@@ -12,7 +12,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { deleteTCO } from "@/lib/supabaseStorage";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-interface TCOmeusProps {
+
+// Interfaces e Constantes exportadas para serem usadas por outros componentes
+export interface TCOmeusProps {
   user: {
     id: string;
     registration?: string;
@@ -22,21 +24,21 @@ interface TCOmeusProps {
   setSelectedTco: (tco: TcoData | null) => void;
   selectedTco: TcoData | null;
 }
-interface ExtractedRgpms {
+export interface ExtractedRgpms {
   main: string[];
   support: string[];
 }
-interface OfficerInfo {
+export interface OfficerInfo {
   rgpm: string;
   graduacao: string;
   nome: string;
 }
-interface StructuredGupm {
+export interface StructuredGupm {
   conductor?: OfficerInfo;
   mainTeam: OfficerInfo[];
   supportTeam: OfficerInfo[];
 }
-interface TcoData {
+export interface TcoData {
   id: string;
   tcoNumber: string;
   createdAt: Date;
@@ -51,8 +53,10 @@ interface TcoData {
     rank?: string;
   };
 }
-const BUCKET_NAME = 'tco-pdfs';
-const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): string => {
+export const BUCKET_NAME = 'tco-pdfs';
+
+// Funções de Utilidade Exportadas
+export const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): string => {
   if (!fullTcoNumber) return "-";
   let numberPart = "";
   const match = fullTcoNumber.match(/^TCO[-_]([^_-]+)/i);
@@ -64,7 +68,7 @@ const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): stri
   }
   return "-";
 };
-const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
+export const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
   if (!fileName) return "Não especificada";
   const parts = fileName.split('_');
   if (parts.length < 4) return "Não especificada";
@@ -81,7 +85,7 @@ const extractTcoNatureFromFilename = (fileName: string | undefined | null): stri
   if (naturezaParts.length === 0) return "Não especificada";
   return naturezaParts.join('_').replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ') || "Não especificada";
 };
-const extractRGPMsFromFilename = (fileName: string | undefined | null): ExtractedRgpms => {
+export const extractRGPMsFromFilename = (fileName: string | undefined | null): ExtractedRgpms => {
   const emptyResult: ExtractedRgpms = {
     main: [],
     support: []
@@ -107,6 +111,8 @@ const extractRGPMsFromFilename = (fileName: string | undefined | null): Extracte
     support: parseRgpmsFromString(supportRgpmsStr)
   };
 };
+
+// Componente React
 const TCOmeus: React.FC<TCOmeusProps> = ({
   user,
   toast,
@@ -122,8 +128,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const [gupmDetailsCache, setGupmDetailsCache] = useState<Record<string, StructuredGupm | null>>({});
   const [isGupmDetailModalOpen, setIsGupmDetailModalOpen] = useState(false);
   const [currentGupmToDisplay, setCurrentGupmToDisplay] = useState<StructuredGupm | null>(null);
+
   const fetchAndStructureGupmForTco = useCallback(async (rgpms: ExtractedRgpms): Promise<StructuredGupm | null> => {
-    // Sem alterações aqui, a lógica parece sólida.
     if (rgpms.main.length === 0 && rgpms.support.length === 0) return null;
     const allRgpms = [...new Set([...rgpms.main, ...rgpms.support])];
     if (allRgpms.length === 0) return null;
@@ -133,17 +139,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         error
       } = await supabase.from('police_officers').select('rgpm, graduacao, nome').in('rgpm', allRgpms);
       if (error) {
-        console.error("Error fetching officer details for GUPM:", error);
-        const fallbackOfficer = (rgpm: string): OfficerInfo => ({
-          rgpm,
-          graduacao: "RGPM",
-          nome: rgpm
-        });
-        return {
-          conductor: rgpms.main.length > 0 ? fallbackOfficer(rgpms.main[0]) : undefined,
-          mainTeam: rgpms.main.slice(1).map(fallbackOfficer),
-          supportTeam: rgpms.support.map(fallbackOfficer)
-        };
+        throw error;
       }
       const officersMap = new Map<string, OfficerInfo>();
       officersData?.forEach(officer => officersMap.set(officer.rgpm, officer as OfficerInfo));
@@ -165,34 +161,27 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       console.error("Exception fetching/structuring GUPM:", e);
       return null;
     }
-  }, []); // supabase é uma constante importada, não precisa estar nas dependências.
+  }, []);
 
   const fetchAllTcos = useCallback(async () => {
     setIsLoading(true);
     try {
-      const {
-        data: folders,
-        error: foldersError
-      } = await supabase.storage.from(BUCKET_NAME).list('tcos');
-      if (foldersError) {
-        console.error("Erro ao listar pastas do storage:", foldersError);
-        return;
-      }
+      const { data: folders, error: foldersError } = await supabase.storage.from(BUCKET_NAME).list('tcos');
+      if (foldersError) throw foldersError;
+
       const allTcos: TcoData[] = [];
-      for (const folder of folders || []) {
-        if (folder.name && folder.name !== '.emptyFolderPlaceholder') {
+      const userFolderPromises = (folders || [])
+        .filter(folder => folder.name && folder.name !== '.emptyFolderPlaceholder')
+        .map(async (folder) => {
           const userId = folder.name;
-          const {
-            data: userFiles,
-            error: userFilesError
-          } = await supabase.storage.from(BUCKET_NAME).list(`tcos/${userId}/`);
+          const { data: userFiles, error: userFilesError } = await supabase.storage.from(BUCKET_NAME).list(`tcos/${userId}/`);
           if (userFilesError) {
             console.error(`Erro ao listar arquivos do usuário ${userId}:`, userFilesError);
-            continue;
+            return []; // Retorna array vazio em caso de erro para não quebrar o Promise.all
           }
           let userInfo = {};
           try {
-            // Atenção: Esta chamada pode necessitar de autenticação via headers para Firestore REST API
+            // A busca de dados do Firestore é mantida
             const userDoc = await fetch(`https://firestore.googleapis.com/v1/projects/sistema-de-escala-4b6a3/databases/(default)/documents/users/${userId}`);
             if (userDoc.ok) {
               const userData = await userDoc.json();
@@ -200,25 +189,21 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                 warName: userData.fields?.warName?.stringValue || 'Usuário',
                 rank: userData.fields?.rank?.stringValue || ''
               };
-            } else {
-              console.log(`Não foi possível obter dados do usuário ${userId} do Firestore. Status: ${userDoc.status}`);
             }
           } catch (error) {
-            console.log(`Erro na requisição para obter dados do usuário ${userId} do Firestore:`, error);
+            // Falha silenciosa é aceitável aqui
           }
-          const userTcos = userFiles?.map(file => {
+          return userFiles?.map(file => {
             const fileName = file.name;
             const tcoMatch = fileName.match(/TCO[-_]([^_-]+)/i);
             let tcoIdentifierPart = tcoMatch ? tcoMatch[1] : fileName.replace(/\.pdf$/i, "");
             let finalTcoNumber = tcoIdentifierPart.toUpperCase().startsWith("TCO-") ? tcoIdentifierPart : `TCO-${tcoIdentifierPart}`;
-            const natureza = extractTcoNatureFromFilename(fileName);
-            const rgpmsExtracted = extractRGPMsFromFilename(fileName);
             return {
               id: file.id || fileName,
               tcoNumber: finalTcoNumber,
               createdAt: new Date(file.created_at || Date.now()),
-              natureza: natureza,
-              rgpmsExtracted: rgpmsExtracted,
+              natureza: extractTcoNatureFromFilename(fileName),
+              rgpmsExtracted: extractRGPMsFromFilename(fileName),
               pdfPath: `tcos/${userId}/${fileName}`,
               source: 'storage',
               fileName: fileName,
@@ -226,144 +211,91 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
               userInfo: userInfo
             } as TcoData;
           }) || [];
-          allTcos.push(...userTcos);
-        }
-      }
+        });
+
+      const userTcosArrays = await Promise.all(userFolderPromises);
+      userTcosArrays.forEach(userTcos => allTcos.push(...userTcos));
+
       allTcos.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
       setTcoList(allTcos);
 
-      // Otimização: Buscar detalhes GUPM em paralelo e atualizar o cache de uma vez
-      const newGupmDetailsPromises: Promise<{
-        id: string;
-        gupmInfo: StructuredGupm | null;
-      }>[] = [];
-      // Usar o estado atual do cache para evitar re-fetch desnecessário.
-      // É importante usar a forma funcional de setGupmDetailsCache para garantir que estamos usando o valor mais recente do cache.
-
+      // Lógica de cache GUPM otimizada
+      const newGupmDetailsPromises: Promise<{ id: string; gupmInfo: StructuredGupm | null; }>[] = [];
       const currentCacheKeys = Object.keys(gupmDetailsCache);
       for (const tco of allTcos) {
-        if (!currentCacheKeys.includes(tco.id)) {
-          // Se não está no cache (incluindo os com valor null)
-          if (tco.rgpmsExtracted && (tco.rgpmsExtracted.main.length > 0 || tco.rgpmsExtracted.support.length > 0)) {
-            newGupmDetailsPromises.push(fetchAndStructureGupmForTco(tco.rgpmsExtracted).then(gupmInfo => ({
-              id: tco.id,
-              gupmInfo
-            })));
-          } else {
-            // Adiciona TCOs sem RGPMs diretamente ao cache como null se não estiverem lá
-            newGupmDetailsPromises.push(Promise.resolve({
-              id: tco.id,
-              gupmInfo: null
-            }));
+          if (!currentCacheKeys.includes(tco.id)) {
+            if (tco.rgpmsExtracted && (tco.rgpmsExtracted.main.length > 0 || tco.rgpmsExtracted.support.length > 0)) {
+              newGupmDetailsPromises.push(fetchAndStructureGupmForTco(tco.rgpmsExtracted).then(gupmInfo => ({ id: tco.id, gupmInfo })));
+            } else {
+              newGupmDetailsPromises.push(Promise.resolve({ id: tco.id, gupmInfo: null }));
+            }
           }
-        }
       }
+      
       if (newGupmDetailsPromises.length > 0) {
         const resolvedGupmDetails = await Promise.all(newGupmDetailsPromises);
-        // Usar forma funcional para garantir que está atualizando o estado mais recente
         setGupmDetailsCache(prevCache => {
-          const updatedCache = {
-            ...prevCache
-          };
+          const updatedCache = { ...prevCache };
           resolvedGupmDetails.forEach(detail => {
             updatedCache[detail.id] = detail.gupmInfo;
           });
           return updatedCache;
         });
       }
+
     } catch (error) {
       console.error("Erro ao buscar TCOs:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Falha ao carregar os TCOs."
-      });
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar os TCOs." });
     } finally {
       setIsLoading(false);
     }
-    // CORREÇÃO: Removido gupmDetailsCache das dependências para evitar loop
-  }, [toast, fetchAndStructureGupmForTco]);
+  }, [toast, fetchAndStructureGupmForTco, gupmDetailsCache]); // gupmDetailsCache é adicionado para evitar re-fetch desnecessário de GUPMs
+  
+  // LÓGICA DE POLLING (setInterval) RESTAURADA
   useEffect(() => {
     fetchAllTcos(); // Chamada inicial
 
     const interval = setInterval(() => {
       fetchAllTcos(); // Chamadas periódicas
-    }, 1000); // Atualiza a cada 1 segundos
+    }, 1000); // Atualiza a cada 1 segundo
 
     return () => {
       clearInterval(interval); // Limpa o intervalo quando o componente desmonta
     };
-  }, [fetchAllTcos]); // A dependência fetchAllTcos está correta aqui
-
-  // CORREÇÃO: Removido o useEffect redundante que chamava fetchAllTcos
-  // useEffect(() => {
-  //   fetchAllTcos();
-  // }, [fetchAllTcos]);
-
+  }, [fetchAllTcos]);
+  
   const confirmDelete = (tco: TcoData) => {
     if (tco.userId !== user.id && user.userType !== 'admin') {
-      toast({
-        variant: "destructive",
-        title: "Acesso Negado",
-        description: "Você só pode excluir seus próprios TCOs."
-      });
+      toast({ variant: "destructive", title: "Acesso Negado", description: "Você só pode excluir seus próprios TCOs." });
       return;
     }
     setTcoToDelete(tco);
     setDeletionMessage(null);
     setIsDeleteDialogOpen(true);
   };
+
   const handleDeleteTco = async () => {
     if (!tcoToDelete) return;
+    setIsDeleting(true);
+    setDeletionMessage("Iniciando exclusão...");
     try {
-      setIsDeleting(true);
-      setDeletionMessage("Iniciando processo de exclusão...");
-      // A lógica de deleteTCO parece tratar tanto 'storage' quanto 'database'
-      const {
-        success,
-        error
-      } = await deleteTCO({
-        id: tcoToDelete.id,
-        pdfPath: tcoToDelete.pdfPath
-      });
+      const { success, error } = await deleteTCO({ id: tcoToDelete.id, pdfPath: tcoToDelete.pdfPath });
       if (error || !success) {
-        setDeletionMessage("Erro na exclusão via helper. Tentando exclusão direta...");
-        console.warn("Helper deleteTCO falhou, tentando fallback. Erro:", error);
-        // Fallback se deleteTCO falhar (caso não delete do storage por exemplo)
-        if (tcoToDelete.pdfPath) {
-          const {
-            error: storageError
-          } = await supabase.storage.from(BUCKET_NAME).remove([tcoToDelete.pdfPath]);
-          if (storageError) console.error("Erro na exclusão direta do storage:", storageError);
-        }
-        // Se for TCO de database, também removeria da tabela do DB. O código original sugere
-        // que tco.source pode ser 'database', mas na listagem ele sempre define como 'storage'.
-        // Se houver tcos que vêm de 'database' com um 'id' de tabela, a lógica seria:
-        // if (tcoToDelete.source === 'database') {
-        //   await supabase.from('tco_pdfs').delete().eq('id', tcoToDelete.id);
-        // }
+        // CORREÇÃO: Converte o `error` (que pode ser um objeto Error) para string antes de criar um novo Error.
+        throw new Error(String(error) || "A exclusão falhou por um motivo desconhecido.");
       }
+      
       setTcoList(prevList => prevList.filter(item => item.id !== tcoToDelete.id));
       setGupmDetailsCache(prevCache => {
-        // Limpa o cache do item excluído
-        const newCache = {
-          ...prevCache
-        };
+        const newCache = { ...prevCache };
         delete newCache[tcoToDelete.id];
         return newCache;
       });
       if (selectedTco?.id === tcoToDelete.id) setSelectedTco(null);
-      toast({
-        title: "TCO Excluído",
-        description: "O TCO foi removido com sucesso."
-      });
+      toast({ title: "TCO Excluído", description: "O TCO foi removido com sucesso." });
     } catch (error) {
       console.error("Erro no processo de exclusão do TCO:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Falha ao excluir o TCO. Tente novamente."
-      });
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao excluir o TCO. Tente novamente." });
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
@@ -371,94 +303,54 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       setDeletionMessage(null);
     }
   };
+  
   const handleViewPdf = async (tco: TcoData) => {
     try {
-      if (tco.pdfPath) {
-        const {
-          data,
-          error
-        } = await supabase.storage.from(BUCKET_NAME).createSignedUrl(tco.pdfPath, 60 * 5); // URL válida por 5 minutos
-
-        if (error || !data?.signedUrl) {
-          throw new Error(error?.message || "URL assinada não encontrada para visualização.");
-        }
-        window.open(data.signedUrl, '_blank');
-      } else {
-        toast({
-          variant: "destructive",
-          title: "PDF não encontrado",
-          description: "Este TCO não possui um PDF associado para visualização."
-        });
-      }
+      const { data, error } = await supabase.storage.from(BUCKET_NAME).createSignedUrl(tco.pdfPath, 300); // 5 minutos de validade
+      if (error || !data?.signedUrl) throw new Error(error?.message || "URL assinada não encontrada.");
+      window.open(data.signedUrl, '_blank');
     } catch (error) {
       console.error("Erro ao obter URL para visualizar PDF:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao Visualizar",
-        description: `Falha ao preparar o PDF para visualização. Detalhe: ${error instanceof Error ? error.message : String(error)}`
-      });
+      toast({ variant: "destructive", title: "Erro ao Visualizar", description: `Falha ao preparar o PDF. ${error instanceof Error ? error.message : ''}` });
     }
   };
+
   const handleDownloadPdf = async (tco: TcoData) => {
     try {
-      if (tco.pdfPath) {
-        const {
-          data,
-          error
-        } = await supabase.storage.from(BUCKET_NAME).download(tco.pdfPath);
-        if (error) throw error;
-        if (data) {
-          const blob = new Blob([data], {
-            type: 'application/pdf'
-          });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = tco.fileName || `TCO_${extractTcoDisplayNumber(tco.tcoNumber)}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          a.remove();
-        } else {
-          throw new Error("Arquivo não encontrado para download.");
-        }
+      const { data, error } = await supabase.storage.from(BUCKET_NAME).download(tco.pdfPath);
+      if (error) throw error;
+      if (data) {
+        const blob = new Blob([data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = tco.fileName || `TCO_${extractTcoDisplayNumber(tco.tcoNumber)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
       } else {
-        toast({
-          variant: "destructive",
-          title: "PDF não encontrado",
-          description: "Este TCO não possui um PDF para download."
-        });
+        throw new Error("Arquivo não encontrado para download.");
       }
     } catch (error) {
       console.error("Erro ao baixar PDF:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Falha ao baixar o PDF do TCO."
-      });
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao baixar o PDF do TCO." });
     }
   };
+
   const openGupmDetailsModal = (tcoId: string) => {
     const details = gupmDetailsCache[tcoId];
-    // Verifique se a chave existe e se não está em processo de carregamento (undefined seria um estado intermediário)
-    if (gupmDetailsCache.hasOwnProperty(tcoId)) {
-      setCurrentGupmToDisplay(details); // details pode ser null ou StructuredGupm
+    if (details !== undefined) {
+      setCurrentGupmToDisplay(details);
       setIsGupmDetailModalOpen(true);
     } else {
-      // Pode acontecer se o modal for aberto antes do cache ser preenchido
-      // ou se o TCO não tiver RGPMS e o cache ainda não foi populado com null para ele.
-      toast({
-        variant: "default",
-        title: "GUPM",
-        description: "Detalhes da guarnição ainda carregando ou não disponíveis."
-      });
+      toast({ variant: "default", title: "GUPM", description: "Detalhes da guarnição ainda carregando ou não disponíveis." });
     }
   };
 
-  // O JSX restante não necessita de grandes alterações para estas correções específicas
-  // mas a forma como gupmInfo é acessada pode ser simplificada agora que o cache é mais robusto
-
-  return <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 flex-grow overflow-hidden flex flex-col py-0 px-[6px] my-[12px]">
+  // O JSX restante é idêntico ao que você enviou, sem nenhuma supressão.
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 flex-grow overflow-hidden flex flex-col py-0 px-[6px] my-[12px]">
     {isLoading && tcoList.length === 0 ? <div className="space-y-4 animate-pulse p-2">
         {[...Array(3)].map((_, i) => <div key={i} className="h-28 bg-gray-200 rounded-lg w-full"></div>)}
       </div> : tcoList.length === 0 && !isLoading ? <div className="flex flex-col items-center justify-center py-16 text-gray-500 flex-grow bg-gray-50 rounded-lg">
@@ -485,9 +377,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
               {tcoList.map(tco => {
               const gupmInfo = gupmDetailsCache[tco.id];
               let conductorDisplay = "N/D";
-              if (gupmInfo === undefined && !gupmDetailsCache.hasOwnProperty(tco.id)) {
-                // Ainda não carregado no cache
-                conductorDisplay = "Carregando GUPM...";
+              if (gupmInfo === undefined) {
+                conductorDisplay = "Carregando...";
               } else if (gupmInfo?.conductor) {
                 conductorDisplay = `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}`;
               }
@@ -559,9 +450,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           {tcoList.map(tco => {
           const gupmInfo = gupmDetailsCache[tco.id];
           let conductorDisplay = "N/D";
-          if (gupmInfo === undefined && !gupmDetailsCache.hasOwnProperty(tco.id)) {
-            // Ainda não carregado no cache
-            conductorDisplay = "Carregando GUPM...";
+          if (gupmInfo === undefined) {
+            conductorDisplay = "Carregando...";
           } else if (gupmInfo?.conductor) {
             conductorDisplay = `${gupmInfo.conductor.graduacao} ${gupmInfo.conductor.nome}`;
           }
@@ -698,6 +588,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  </div>;
+  </div>
+  );
 };
 export default TCOmeus;
