@@ -32,10 +32,15 @@ const TCOProductivityRanking = () => {
         const q = query(tcosRef, where("condutor", "==", user.nome));
         const querySnapshot = await getDocs(q);
 
-        const tcos = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const tcos = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            dataOcorrencia: data.dataOcorrencia,
+            createdAt: data.createdAt,
+            ...data
+          };
+        });
 
         const total = tcos.length;
         
