@@ -231,7 +231,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
             }
           }
       }
-      
+
       if (newGupmDetailsPromises.length > 0) {
         const resolvedGupmDetails = await Promise.all(newGupmDetailsPromises);
         setGupmDetailsCache(prevCache => {
@@ -250,7 +250,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       setIsLoading(false);
     }
   }, [toast, fetchAndStructureGupmForTco, gupmDetailsCache]); // gupmDetailsCache é adicionado para evitar re-fetch desnecessário de GUPMs
-  
+
   // LÓGICA DE POLLING (setInterval) RESTAURADA
   useEffect(() => {
     fetchAllTcos(); // Chamada inicial
@@ -263,7 +263,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       clearInterval(interval); // Limpa o intervalo quando o componente desmonta
     };
   }, [fetchAllTcos]);
-  
+
   const confirmDelete = (tco: TcoData) => {
     if (tco.userId !== user.id && user.userType !== 'admin') {
       toast({ variant: "destructive", title: "Acesso Negado", description: "Você só pode excluir seus próprios TCOs." });
@@ -282,9 +282,9 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       const { success, error } = await deleteTCO({ id: tcoToDelete.id, pdfPath: tcoToDelete.pdfPath });
       if (error || !success) {
         // A lógica de fallback do original foi mantida no helper, mas um erro aqui pode ser lançado
-        throw new Error(error || "A exclusão falhou por um motivo desconhecido.");
+        throw new Error(String(error) || "A exclusão falhou por um motivo desconhecido.");
       }
-      
+
       setTcoList(prevList => prevList.filter(item => item.id !== tcoToDelete.id));
       setGupmDetailsCache(prevCache => {
         const newCache = { ...prevCache };
@@ -295,7 +295,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       toast({ title: "TCO Excluído", description: "O TCO foi removido com sucesso." });
     } catch (error) {
       console.error("Erro no processo de exclusão do TCO:", error);
-      toast({ variant: "destructive", title: "Erro", description: "Falha ao excluir o TCO. Tente novamente." });
+      toast({ variant: "destructive", title: "Erro", description: `Falha ao excluir o TCO. Tente novamente.` });
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
@@ -303,7 +303,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       setDeletionMessage(null);
     }
   };
-  
+
   const handleViewPdf = async (tco: TcoData) => {
     try {
       const { data, error } = await supabase.storage.from(BUCKET_NAME).createSignedUrl(tco.pdfPath, 300); // 5 minutos de validade
