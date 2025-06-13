@@ -1,3 +1,4 @@
+
 import { useMemo, useState } from 'react';
 import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -72,11 +73,11 @@ export const WorkedDaysCalendar = ({
   const getLocationColor = (location: string | undefined) => {
     switch (location) {
       case 'bpm':
-        return 'bg-purple-600 text-white';
+        return 'bg-blue-600 text-white';
       case 'saiop':
         return 'bg-green-500 text-white';
       case 'sinfra':
-        return 'bg-blue-500 text-white';
+        return 'bg-slate-600 text-white';
       default:
         return 'bg-white';
     }
@@ -183,7 +184,7 @@ export const WorkedDaysCalendar = ({
       <div className="flex flex-wrap gap-4 pt-2 border-t border-gray-200">
         {totals.bpm > 0 && (
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-purple-600"></div>
+            <div className="w-3 h-3 rounded bg-blue-600"></div>
             <span className="text-sm text-gray-600">25° BPM: {totals.bpm}h</span>
           </div>
         )}
@@ -195,7 +196,7 @@ export const WorkedDaysCalendar = ({
         )}
         {totals.sinfra > 0 && (
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-blue-500"></div>
+            <div className="w-3 h-3 rounded bg-slate-600"></div>
             <span className="text-sm text-gray-600">SINFRA: {totals.sinfra}h</span>
           </div>
         )}
