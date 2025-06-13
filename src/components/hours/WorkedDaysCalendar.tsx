@@ -72,8 +72,7 @@ export const WorkedDaysCalendar = ({
   const getLocationColor = (location: string | undefined) => {
     switch (location) {
       case 'bpm':
-        // CORREÇÃO: Trocado roxo por um cinza-escuro (preto), mais sóbrio.
-        return 'bg-gray-800 text-white';
+        return 'bg-purple-600 text-white';
       case 'saiop':
         return 'bg-green-500 text-white';
       case 'sinfra':
@@ -122,7 +121,7 @@ export const WorkedDaysCalendar = ({
     }
   };
 
-  const totalsByLocation = calculateTotalHoursByLocation();
+  const totals = calculateTotalHoursByLocation();
   const [month, year] = monthYear.split('/');
   const monthYearFormatted = format(new Date(parseInt(year), parseInt(month) - 1), 'MMMM yyyy', { locale: ptBR });
 
@@ -150,7 +149,7 @@ export const WorkedDaysCalendar = ({
           const location = belongsToCurrentMonth ? getLocationForDay(dayNum) : undefined;
           const hours = belongsToCurrentMonth ? getHoursForDay(dayNum) : '';
           const locationClasses = getLocationColor(location);
-          const dateKey = format(date, 'yyyy-M-d');
+          const dateKey = format(date, 'yyyy-MM-dd');
           const annotation = annotations[dateKey];
           
           return (
@@ -182,23 +181,22 @@ export const WorkedDaysCalendar = ({
       </div>
 
       <div className="flex flex-wrap gap-4 pt-2 border-t border-gray-200">
-        {totalsByLocation.bpm > 0 && (
+        {totals.bpm > 0 && (
           <div className="flex items-center gap-2">
-            {/* CORREÇÃO: Cor da legenda atualizada para corresponder ao calendário. */}
-            <div className="w-3 h-3 rounded bg-gray-800"></div>
-            <span className="text-sm text-gray-600">25° BPM: {totalsByLocation.bpm}h</span>
+            <div className="w-3 h-3 rounded bg-purple-600"></div>
+            <span className="text-sm text-gray-600">25° BPM: {totals.bpm}h</span>
           </div>
         )}
-        {totalsByLocation.saiop > 0 && (
+        {totals.saiop > 0 && (
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-green-500"></div>
-            <span className="text-sm text-gray-600">SAIOP: {totalsByLocation.saiop}h</span>
+            <span className="text-sm text-gray-600">SAIOP: {totals.saiop}h</span>
           </div>
         )}
-        {totalsByLocation.sinfra > 0 && (
+        {totals.sinfra > 0 && (
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded bg-blue-500"></div>
-            <span className="text-sm text-gray-600">SINFRA: {totalsByLocation.sinfra}h</span>
+            <span className="text-sm text-gray-600">SINFRA: {totals.sinfra}h</span>
           </div>
         )}
       </div>
@@ -208,7 +206,7 @@ export const WorkedDaysCalendar = ({
         onOpenChange={setIsAnnotationDialogOpen}
         date={selectedDate}
         onSave={handleSaveAnnotation}
-        currentAnnotation={selectedDate ? annotations[format(selectedDate, 'yyyy-M-d')] : ''}
+        currentAnnotation={selectedDate ? annotations[format(selectedDate, 'yyyy-MM-dd')] : ''}
       />
     </div>
   );
