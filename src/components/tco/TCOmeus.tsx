@@ -1,20 +1,20 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Plus, Edit, Trash2, FileText, X } from 'lucide-react';
-import TCOForm from './TCOForm';
 import { dataOperations } from '@/lib/firebase';
-import { TimeSlot } from '@/types/user';
-import { useToast } from "@/components/ui/use-toast"
+import { TCO } from '@/types/tco';
+import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { TCORankingChart } from './TCORankingChart';
 
 const TCOMeus = () => {
-  const [tcos, setTCOs] = useState<TimeSlot[]>([]);
+  const [tcos, setTCOs] = useState<TCO[]>([]);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingTCO, setEditingTCO] = useState<TimeSlot | null>(null);
+  const [editingTCO, setEditingTCO] = useState<TCO | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -24,7 +24,20 @@ const TCOMeus = () => {
   const fetchTCOs = async () => {
     try {
       const data = await dataOperations.fetch();
-      setTCOs(data);
+      // Convert TimeSlot data to TCO format if needed
+      const tcoData = data.map((item: any) => ({
+        id: item.id || '',
+        tcoNumber: item.tcoNumber || 'N/A',
+        natureza: item.natureza || 'Não informado',
+        dataOcorrencia: item.dataOcorrencia || item.date || '',
+        horaOcorrencia: item.horaOcorrencia || item.start_time || '',
+        localOcorrencia: item.localOcorrencia || 'Não informado',
+        autores: item.autores || [],
+        vitimas: item.vitimas || [],
+        componentesGuarnicao: item.componentesGuarnicao || [],
+        ...item
+      }));
+      setTCOs(tcoData);
     } catch (error) {
       console.error("Failed to fetch TCOs:", error);
       toast({
@@ -35,14 +48,14 @@ const TCOMeus = () => {
     }
   };
 
-  const handleSave = async (tcoData: TimeSlot) => {
+  const handleSave = async (tcoData: TCO) => {
     try {
       if (editingTCO) {
         // Update existing TCO
         await dataOperations.update(tcoData, {
-          date: editingTCO.date,
-          start_time: editingTCO.start_time,
-          end_time: editingTCO.end_time
+          date: editingTCO.dataOcorrencia,
+          start_time: editingTCO.horaOcorrencia,
+          end_time: editingTCO.horaOcorrencia // Using same time for end_time
         });
         toast({
           title: "TCO atualizado com sucesso!",
@@ -69,7 +82,7 @@ const TCOMeus = () => {
     }
   };
 
-  const handleEdit = (tco: TimeSlot) => {
+  const handleEdit = (tco: TCO) => {
     setEditingTCO(tco);
     setShowForm(true);
   };
@@ -90,9 +103,9 @@ const TCOMeus = () => {
 
       // Delete the TCO
       await dataOperations.delete({
-        date: tcoToDelete.date,
-        start_time: tcoToDelete.start_time,
-        end_time: tcoToDelete.end_time
+        date: tcoToDelete.dataOcorrencia,
+        start_time: tcoToDelete.horaOcorrencia,
+        end_time: tcoToDelete.horaOcorrencia
       });
       fetchTCOs(); // Refresh TCO list
       toast({
@@ -109,7 +122,7 @@ const TCOMeus = () => {
     }
   };
 
-  const handleViewPDF = (tco: TimeSlot) => {
+  const handleViewPDF = (tco: TCO) => {
     // Placeholder for PDF viewing logic
     console.log('View PDF for TCO:', tco);
     toast({
@@ -274,14 +287,10 @@ const TCOMeus = () => {
               </Button>
             </div>
             <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
-              <TCOForm
-                initialData={editingTCO}
-                onSave={handleSave}
-                onCancel={() => {
-                  setShowForm(false);
-                  setEditingTCO(null);
-                }}
-              />
+              <div className="text-center text-gray-500 p-8">
+                <p>Formulário TCO será carregado aqui</p>
+                <p className="text-sm">Funcionalidade em desenvolvimento</p>
+              </div>
             </div>
           </div>
         </div>
