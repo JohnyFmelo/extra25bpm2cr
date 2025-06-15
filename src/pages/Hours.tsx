@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MonthSelector } from "@/components/hours/MonthSelector";
 import { UserSelector } from "@/components/hours/UserSelector";
@@ -9,6 +9,8 @@ import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
@@ -21,6 +23,8 @@ const Hours = () => {
   const [userData, setUserData] = useState<any>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [activeConsult, setActiveConsult] = useState<'individual' | 'general'>('individual');
+  const [searchTerm, setSearchTerm] = useState("");
+
   const {
     toast
   } = useToast();
@@ -119,6 +123,7 @@ const Hours = () => {
     setLoadingGeneral(true);
     try {
       if (selectedUser === 'all') {
+        setSearchTerm("");
         const allUsersResults = [];
         for (const user of users) {
           try {
@@ -195,6 +200,11 @@ const Hours = () => {
     const year = new Date().getFullYear();
     return `${month}/${year}`;
   };
+
+  const filteredAllUsersData = allUsersData.filter(user =>
+    user.Nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return <div className="bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
       <div className="pb-2 flex flex-col flex-grow w-full">
         <Tabs defaultValue="hours" className="space-y-6 flex flex-col flex-grow">
@@ -252,13 +262,38 @@ const Hours = () => {
                           </> : "Consultar"}
                       </Button>
 
-                      {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-stone-50">
-                          <UserHoursDisplay data={userData} onClose={() => {
-                      const updatedData = [...allUsersData];
-                      updatedData.splice(index, 1);
-                      setAllUsersData(updatedData);
-                    }} isAdmin={true} monthYear={getSelectedMonthYear(selectedGeneralMonth)} />
-                        </div>)}
+                      {selectedUser === 'all' && allUsersData.length > 0 && (
+                        <div className="mt-4 space-y-4">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <Input
+                              type="text"
+                              placeholder="Buscar por nome..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className="pl-10"
+                            />
+                          </div>
+                          
+                          {filteredAllUsersData.length > 0 ? (
+                            filteredAllUsersData.map((userData) => (
+                              <div key={userData.Matricula.toString()} className="mb-4 p-4 rounded-md shadow-sm bg-stone-50">
+                                <UserHoursDisplay 
+                                  data={userData} 
+                                  onClose={() => {
+                                    const updatedData = allUsersData.filter(u => u.Matricula !== userData.Matricula);
+                                    setAllUsersData(updatedData);
+                                  }} 
+                                  isAdmin={true} 
+                                  monthYear={getSelectedMonthYear(selectedGeneralMonth)} 
+                                />
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-center text-gray-500 mt-4">Nenhum usuário encontrado.</p>
+                          )}
+                        </div>
+                      )}
 
                       {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} isAdmin={true} monthYear={getSelectedMonthYear(selectedGeneralMonth)} />}
                     </div>
