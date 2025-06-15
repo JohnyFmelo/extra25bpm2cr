@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -21,6 +22,7 @@ export interface Notification {
   readBy: string[];
   type: 'all' | 'individual';
   recipientId: string | null;
+  hiddenFor?: string[];
 }
 
 interface NotificationsListProps {
@@ -44,7 +46,6 @@ const NotificationsList = ({
   const { user: currentUser } = useUser();
   const isAdmin = currentUser?.userType === "admin";
 
-  // Uso do ref para rolar para a notificação expandida
   const expandedCardRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -58,8 +59,13 @@ const NotificationsList = ({
       const allNotifs = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        readBy: doc.data().readBy || []
+        readBy: doc.data().readBy || [],
+        hiddenFor: doc.data().hiddenFor || []
       }) as Notification).filter(notif => {
+        if (notif.hiddenFor?.includes(currentUser.id)) {
+            return false;
+        }
+
         if (isAdmin) {
           return true;
         }
@@ -114,11 +120,19 @@ const NotificationsList = ({
   };
 
   const handleCloseNotification = async (notificationId: string) => {
+    if (!currentUser?.id) return;
     try {
-      await handleMarkAsRead(notificationId);
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      const notifRef = doc(db, "recados", notificationId);
+      await updateDoc(notifRef, {
+        hiddenFor: arrayUnion(currentUser.id)
+      });
     } catch (error) {
-      console.error("Error closing notification:", error);
+      console.error("Error hiding notification:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível ocultar a notificação.",
+      });
     }
   };
 

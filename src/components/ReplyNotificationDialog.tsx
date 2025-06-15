@@ -36,7 +36,7 @@ const ReplyNotificationDialog = ({ open, onClose, originalNotification }: ReplyN
         try {
             await addDoc(collection(db, "recados"), {
                 senderId: currentUser.id,
-                senderName: currentUser.name || "Usuário anônimo",
+                senderName: currentUser.warName || "Usuário anônimo",
                 graduation: currentUser.rank || "",
                 isAdmin: currentUser.userType === 'admin',
                 text: message,
@@ -74,7 +74,15 @@ const ReplyNotificationDialog = ({ open, onClose, originalNotification }: ReplyN
                         Para: {originalNotification.graduation} {originalNotification.senderName}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4">
+                <div className="py-4 space-y-4">
+                    <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700">
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
+                           Em resposta a:
+                        </p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 whitespace-pre-wrap max-h-24 overflow-y-auto">
+                            {originalNotification.text}
+                        </p>
+                    </div>
                     <Textarea 
                         placeholder="Digite sua resposta aqui..."
                         value={message}

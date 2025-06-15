@@ -60,7 +60,7 @@ const NotificationCard = ({
                 const userDoc = await getDoc(userDocRef);
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
-                    setRecipientInfo(`${userData.graduation || ''} ${userData.name || ''}`.trim());
+                    setRecipientInfo(`${userData.rank || ''} ${userData.warName || ''}`.trim());
                 } else {
                     setRecipientInfo("Destinatário desconhecido");
                 }
