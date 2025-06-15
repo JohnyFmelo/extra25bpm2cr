@@ -18,8 +18,6 @@ interface BasicInformationTabProps {
   setTcoNumber: (value: string) => void;
   natureza: string;
   setNatureza: (value: string) => void;
-  autor: string;
-  setAutor: (value: string) => void;
   penaDescricao: string;
   naturezaOptions: string[];
   customNatureza: string;
