@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -123,7 +122,11 @@ const VolunteersManager = () => {
             <div className="flex items-center">
               <div>
                 <p className="font-semibold">{user.rank} {user.warName}</p>
-                <p className="text-sm text-muted-foreground">{user.email}</p>
+                {user.email ? (
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground/70 italic">E-mail não informado</p>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-2">
