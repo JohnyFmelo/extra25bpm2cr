@@ -83,7 +83,7 @@ export const extractTcoNatureFromFilename = (fileName: string | undefined | null
     naturezaParts.push(lastNaturePart);
   }
   if (naturezaParts.length === 0) return "Não especificada";
-  return naturezaParts.join('_').replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ') || "Não especificada";
+  return naturezaParts.join('_').replace(/_/g, ' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ') || "Não especificada";
 };
 export const extractRGPMsFromFilename = (fileName: string | undefined | null): ExtractedRgpms => {
   const emptyResult: ExtractedRgpms = {
@@ -554,32 +554,52 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           <DialogDescription className="text-sm">Policiais envolvidos na ocorrência do TCO.</DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4 text-sm max-h-[60vh] overflow-y-auto pr-2">
-          {currentGupmToDisplay?.conductor && <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
-              <p className="font-semibold text-gray-700 text-base mb-0.5">Condutor:</p>
-              <p className="text-gray-600">
-                {`${currentGupmToDisplay.conductor.graduacao} ${currentGupmToDisplay.conductor.nome} (RGPM: ${currentGupmToDisplay.conductor.rgpm})`}
-              </p>
-            </div>}
-          {currentGupmToDisplay && currentGupmToDisplay.mainTeam.length > 0 && <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
-              <p className="font-semibold text-gray-700 text-base mb-1.5">Guarnição Principal:</p>
+          {/* Guarnição (Condutor + Principais) */}
+          {(currentGupmToDisplay?.conductor || (currentGupmToDisplay && currentGupmToDisplay.mainTeam.length > 0)) ? (
+            <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
+              <p className="font-semibold text-gray-700 text-base mb-1.5">Guarnição:</p>
               <ul className="space-y-1.5 text-gray-600">
-                {currentGupmToDisplay.mainTeam.map((officer, index) => <li key={`main-${index}`}>
-                    {`${officer.graduacao} ${officer.nome} (RGPM: ${officer.rgpm})`}
-                  </li>)}
+                {/* Condutor em destaque */}
+                {currentGupmToDisplay?.conductor && (
+                  <li className="font-semibold text-blue-700">
+                    {`${currentGupmToDisplay.conductor.graduacao} ${currentGupmToDisplay.conductor.nome} `}
+                    <span className="text-xs bg-blue-100 rounded px-1 ml-2 align-middle">Condutor</span>
+                    <span className="text-gray-400 text-xs ml-2">(RGPM: {currentGupmToDisplay.conductor.rgpm})</span>
+                  </li>
+                )}
+                {/* Outros membros da guarnição principal (sem destaque extra) */}
+                {currentGupmToDisplay?.mainTeam.map((officer, index) => (
+                  <li key={`main-${index}`}>
+                    {`${officer.graduacao} ${officer.nome} `}
+                    <span className="text-gray-400 text-xs ml-2">(RGPM: {officer.rgpm})</span>
+                  </li>
+                ))}
               </ul>
-            </div>}
-          {currentGupmToDisplay && currentGupmToDisplay.supportTeam.length > 0 && <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+            </div>
+          ) : null}
+
+          {/* Equipe de Apoio (caso exista) */}
+          {currentGupmToDisplay && currentGupmToDisplay.supportTeam.length > 0 && (
+            <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
               <p className="font-semibold text-blue-700 text-base mb-1.5">Equipe de Apoio:</p>
               <ul className="space-y-1.5 text-blue-600">
-                {currentGupmToDisplay.supportTeam.map((officer, index) => <li key={`support-${index}`}>
-                    {`${officer.graduacao} ${officer.nome} (RGPM: ${officer.rgpm})`}
-                  </li>)}
+                {currentGupmToDisplay.supportTeam.map((officer, index) => (
+                  <li key={`support-${index}`}>
+                    {`${officer.graduacao} ${officer.nome} `}
+                    <span className="text-gray-400 text-xs ml-2">(RGPM: {officer.rgpm})</span>
+                  </li>
+                ))}
               </ul>
-            </div>}
-          {(!currentGupmToDisplay || !currentGupmToDisplay.conductor && currentGupmToDisplay.mainTeam.length === 0 && currentGupmToDisplay.supportTeam.length === 0) && <div className="text-center py-6">
+            </div>
+          )}
+
+          {/* Caso não haja ninguém na guarnição */}
+          {(!currentGupmToDisplay || (!currentGupmToDisplay.conductor && (!currentGupmToDisplay.mainTeam || currentGupmToDisplay.mainTeam.length === 0) && (!currentGupmToDisplay.supportTeam || currentGupmToDisplay.supportTeam.length === 0))) && (
+            <div className="text-center py-6">
               <Users className="h-10 w-10 text-gray-400 mx-auto mb-3" />
               <p className="text-gray-500">Nenhuma informação de guarnição disponível para este TCO.</p>
-            </div>}
+            </div>
+          )}
         </div>
         <DialogFooter className="pt-4">
           <Button variant="outline" onClick={() => setIsGupmDetailModalOpen(false)} className="w-full sm:w-auto">
