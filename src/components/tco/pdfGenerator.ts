@@ -135,14 +135,15 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             const isDrugCase = Array.isArray(data.drogas) && data.drogas.length > 0;
             const documentosAnexosList = [];
 
-            // Encontra todos os autores que são fiéis depositários
+            // Encontra todos os autores que são fiéis depositários, criando cópias para evitar mutações.
             const fieisDepositarios = (Array.isArray(data.autores) ? data.autores.filter(
                 (a: any) => a &&
                 typeof a.fielDepositario === 'string' &&
                 a.fielDepositario.trim().toLowerCase() === 'sim' &&
                 typeof a.nome === 'string' &&
                 a.nome.trim() !== ''
-            ) : []) as any[];
+            ).map(a => ({...a})) // CLONAGEM PARA ISOLAR O OBJETO
+            : []) as any[];
 
             if (data.autores && data.autores.length > 0) {
                 data.autores.forEach((autor: any) => {
@@ -214,7 +215,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     // Chama o Termo de Depósito para cada fiel depositário encontrado.
                     if (fieisDepositarios.length > 0) {
                         fieisDepositarios.forEach(depositario => {
-                            console.log("Adicionando Termo de Depósito para:", depositario.nome);
+                            console.log("Adicionando Termo de Depósito para (com dados isolados):", depositario.nome);
                             addTermoDeposito(doc, updatedData, depositario);
                         });
                     }
