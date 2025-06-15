@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Trophy, TrendingUp } from "lucide-react";
@@ -383,13 +382,13 @@ const TCOProductivityRanking: React.FC = () => {
                   {currentUserRank}º
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-white/80 font-medium">
+                  <div className="text-xs text-white/80 font-medium text-left">
                     {currentUserData.graduacao}
                   </div>
-                  <div className="font-semibold text-sm truncate">
+                  <div className="font-semibold text-sm flex flex-col justify-center break-words text-left">
                     {currentUserData.officerName}
                   </div>
-                  <div className="text-xs text-white/80">{currentUserData.tcoCount} TCOs</div>
+                  <div className="text-xs text-white/80 text-left">{currentUserData.tcoCount} TCOs</div>
                 </div>
               </div>
               <div className="text-right">
@@ -406,28 +405,26 @@ const TCOProductivityRanking: React.FC = () => {
             <h4 className="text-sm font-semibold mb-3 text-center">🏆 RANKING COMPLETO</h4>
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {ranking.map((officer, index) => (
-                <div key={officer.rgpm} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                      index === 0 ? 'bg-yellow-400 text-blue-600' :
-                      index === 1 ? 'bg-gray-300 text-gray-600' :
-                      index === 2 ? 'bg-orange-400 text-white' :
-                      'bg-white/20 text-white'
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs text-white/80 font-medium">
-                        {officer.graduacao}
-                      </div>
-                      <div className="text-sm font-medium break-words">
-                        {officer.officerName}
-                      </div>
-                    </div>
+                <div
+                  key={officer.rgpm}
+                  className="flex items-center gap-3"
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                    index === 0 ? 'bg-yellow-400 text-blue-600' :
+                    index === 1 ? 'bg-gray-300 text-gray-600' :
+                    index === 2 ? 'bg-orange-400 text-white' :
+                    'bg-white/20 text-white'
+                  }`}>
+                    {index + 1}
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="text-sm font-bold">{officer.tcoCount}</div>
-                    <div className="text-xs text-white/70">TCOs</div>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <span className="text-xs text-white/80 font-medium break-words">
+                      {officer.graduacao}
+                    </span>
+                    <span className="text-sm font-medium break-words whitespace-pre-line leading-tight">
+                      {officer.officerName}
+                    </span>
+                    <span className="text-xs text-white/80 mt-1">{officer.tcoCount} TCOs</span>
                   </div>
                 </div>
               ))}
@@ -435,12 +432,8 @@ const TCOProductivityRanking: React.FC = () => {
           </div>
         )}
         
-        {/* Last Update */}
-        <div className="text-center mt-3">
-          <p className="text-xs text-white/70">
-            ⏰ Última atualização: {stats.lastUpdate}
-          </p>
-        </div>
+        {/* Last Update removido conforme pedido do usuário */}
+
       </CardContent>
     </Card>
   );
