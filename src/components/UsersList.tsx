@@ -250,7 +250,8 @@ const UsersList = () => {
             </div>
             <div className="space-y-2">
                <Label>Filtrar por status</Label>
-               <div className="flex flex-wrap gap-2 pt-2">
+               <ScrollArea className="w-full whitespace-nowrap">
+                <div className="flex w-max space-x-2 pb-2">
                   <Button
                     variant={filterStatus === "all" ? "secondary" : "outline"}
                     size="sm"
@@ -297,6 +298,8 @@ const UsersList = () => {
                     Desatualizados
                   </Button>
                 </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
             </div>
           </div>
         </CardContent>
