@@ -83,7 +83,13 @@ export const extractTcoNatureFromFilename = (fileName: string | undefined | null
     naturezaParts.push(lastNaturePart);
   }
   if (naturezaParts.length === 0) return "Não especificada";
-  return naturezaParts.join('_').replace(/_/g, ' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ') || "Não especificada";
+  return naturezaParts
+    .join('_')
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+    || "Não especificada";
 };
 export const extractRGPMsFromFilename = (fileName: string | undefined | null): ExtractedRgpms => {
   const emptyResult: ExtractedRgpms = {
