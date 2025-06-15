@@ -15,7 +15,6 @@ interface OfficerRanking {
   officerName: string;
   graduacao: string;
   tcoCount: number;
-  lastActivity: string;
 }
 
 interface ExtractedRgpms {
@@ -127,7 +126,6 @@ const TCOProductivityRanking: React.FC = () => {
       try {
         setIsLoading(true);
         
-        // Buscar todas as pastas de usuários no Supabase Storage
         const { data: userFolders, error: foldersError } = await supabase.storage
           .from(BUCKET_NAME)
           .list('tcos/');
@@ -139,9 +137,8 @@ const TCOProductivityRanking: React.FC = () => {
         }
 
         let allTcos: TcoData[] = [];
-        const officerTcoCountMap = new Map<string, { count: number; lastActivity: string; officerInfo?: OfficerInfo }>();
+        const officerTcoCountMap = new Map<string, { count: number; officerInfo?: OfficerInfo }>();
 
-        // Para cada pasta de usuário, buscar os TCOs
         for (const folder of userFolders || []) {
           if (folder.name === '.emptyFolderPlaceholder') continue;
           
@@ -162,14 +159,13 @@ const TCOProductivityRanking: React.FC = () => {
               ? tcoIdentifierPart 
               : `TCO-${tcoIdentifierPart}`;
             
-            const natureza = extractTcoNatureFromFilename(fileName);
             const rgpmsExtracted = extractRGPMsFromFilename(fileName);
             
             return {
               id: file.id || fileName,
               tcoNumber: finalTcoNumber,
               createdAt: new Date(file.created_at || Date.now()),
-              natureza: natureza,
+              natureza: "",
               fileName: fileName,
               userId: folder.name,
               rgpmsExtracted: rgpmsExtracted
@@ -178,34 +174,26 @@ const TCOProductivityRanking: React.FC = () => {
 
           allTcos = [...allTcos, ...userTcos];
 
-          // Processar RGPMs de cada TCO para contar participação dos militares
           userTcos.forEach(tco => {
-            const tcoDate = tco.createdAt.toLocaleDateString('pt-BR');
-            
-            // Contar participação do condutor (primeiro da guarnição principal)
             if (tco.rgpmsExtracted.main.length > 0) {
               const conductorRgpm = tco.rgpmsExtracted.main[0];
-              const current = officerTcoCountMap.get(conductorRgpm) || { count: 0, lastActivity: '' };
+              const current = officerTcoCountMap.get(conductorRgpm) || { count: 0 };
               officerTcoCountMap.set(conductorRgpm, {
                 count: current.count + 1,
-                lastActivity: tcoDate > current.lastActivity ? tcoDate : current.lastActivity,
                 officerInfo: current.officerInfo
               });
             }
 
-            // Contar participação dos demais da guarnição principal
             tco.rgpmsExtracted.main.slice(1).forEach(rgpm => {
-              const current = officerTcoCountMap.get(rgpm) || { count: 0, lastActivity: '' };
+              const current = officerTcoCountMap.get(rgpm) || { count: 0 };
               officerTcoCountMap.set(rgpm, {
                 count: current.count + 1,
-                lastActivity: tcoDate > current.lastActivity ? tcoDate : current.lastActivity,
                 officerInfo: current.officerInfo
               });
             });
           });
         }
 
-        // Buscar informações dos oficiais no banco de dados
         const allRgpms = Array.from(officerTcoCountMap.keys());
         if (allRgpms.length > 0) {
           const { data: officersData, error: officersError } = await supabase
@@ -226,7 +214,6 @@ const TCOProductivityRanking: React.FC = () => {
           }
         }
 
-        // Calcular estatísticas gerais
         const total = allTcos.length;
         
         if (total === 0) {
@@ -241,7 +228,6 @@ const TCOProductivityRanking: React.FC = () => {
           return;
         }
 
-        // Calcular dias únicos com TCOs
         const uniqueDates = new Set(
           allTcos.map(tco => tco.createdAt.toISOString().split('T')[0]).filter(Boolean)
         );
@@ -249,7 +235,6 @@ const TCOProductivityRanking: React.FC = () => {
         const activeDays = uniqueDates.size;
         const averagePerDay = activeDays > 0 ? total / activeDays : 0;
         
-        // Encontrar a última atualização geral
         const sortedAllTcos = allTcos.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         const lastUpdate = sortedAllTcos.length > 0 
           ? sortedAllTcos[0].createdAt.toLocaleDateString('pt-BR')
@@ -262,15 +247,13 @@ const TCOProductivityRanking: React.FC = () => {
           lastUpdate
         });
 
-        // Criar ranking de militares
         const officerRanking: OfficerRanking[] = Array.from(officerTcoCountMap.entries())
           .filter(([_, data]) => data.count > 0)
           .map(([rgpm, data]) => ({
             rgpm,
             officerName: data.officerInfo?.nome || 'Militar não identificado',
             graduacao: data.officerInfo?.graduacao || '',
-            tcoCount: data.count,
-            lastActivity: data.lastActivity
+            tcoCount: data.count
           }))
           .sort((a, b) => b.tcoCount - a.tcoCount);
 
@@ -285,10 +268,6 @@ const TCOProductivityRanking: React.FC = () => {
 
     fetchAllTcos();
   }, []);
-
-  const handleCardClick = () => {
-    window.open('/ranking-tco', '_blank');
-  };
 
   if (isLoading) {
     return (
@@ -308,16 +287,12 @@ const TCOProductivityRanking: React.FC = () => {
     );
   }
 
-  // Encontrar posição do usuário atual no ranking (se ele tiver RGPM)
   const currentUserRgpm = user.rgpm;
   const currentUserRank = currentUserRgpm ? ranking.findIndex(r => r.rgpm === currentUserRgpm) + 1 : 0;
   const currentUserData = currentUserRgpm ? ranking.find(r => r.rgpm === currentUserRgpm) : null;
 
   return (
-    <Card 
-      className="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg cursor-pointer hover:shadow-xl transition-shadow duration-300"
-      onClick={handleCardClick}
-    >
+    <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div>
@@ -325,7 +300,7 @@ const TCOProductivityRanking: React.FC = () => {
               <Trophy className="h-5 w-5 text-yellow-300" />
               Ranking TCO - Militares
             </h3>
-            <p className="text-sm text-white/80">Participação de militares nos TCOs • Clique para ver o ranking completo</p>
+            <p className="text-sm text-white/80">Participação de militares nos TCOs</p>
           </div>
           <TrendingUp className="h-8 w-8 text-white/60" />
         </div>
@@ -357,8 +332,11 @@ const TCOProductivityRanking: React.FC = () => {
                   {currentUserRank}º
                 </div>
                 <div className="flex-1 min-w-0">
+                  <div className="text-xs text-white/80 font-medium">
+                    {currentUserData.graduacao}
+                  </div>
                   <div className="font-semibold text-sm truncate">
-                    {currentUserData.graduacao} {currentUserData.officerName}
+                    {currentUserData.officerName}
                   </div>
                   <div className="text-xs text-white/80">{currentUserData.tcoCount} TCOs</div>
                 </div>
@@ -371,27 +349,34 @@ const TCOProductivityRanking: React.FC = () => {
           </div>
         )}
 
-        {/* Top 3 Ranking */}
+        {/* Full Ranking */}
         {ranking.length > 0 && (
           <div className="bg-white/10 rounded-lg p-4">
-            <h4 className="text-sm font-semibold mb-3 text-center">🏆 TOP 3 MILITARES</h4>
-            <div className="space-y-2">
-              {ranking.slice(0, 3).map((officer, index) => (
+            <h4 className="text-sm font-semibold mb-3 text-center">🏆 RANKING COMPLETO</h4>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {ranking.map((officer, index) => (
                 <div key={officer.rgpm} className="flex items-center justify-between">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
                       index === 0 ? 'bg-yellow-400 text-blue-600' :
                       index === 1 ? 'bg-gray-300 text-gray-600' :
-                      'bg-orange-400 text-white'
+                      index === 2 ? 'bg-orange-400 text-white' :
+                      'bg-white/20 text-white'
                     }`}>
                       {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">
-                        {officer.graduacao} {officer.officerName}
+                      <div className="text-xs text-white/80 font-medium">
+                        {officer.graduacao}
                       </div>
-                      <div className="text-xs text-white/70">{officer.tcoCount} TCOs</div>
+                      <div className="text-sm font-medium break-words">
+                        {officer.officerName}
+                      </div>
                     </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-sm font-bold">{officer.tcoCount}</div>
+                    <div className="text-xs text-white/70">TCOs</div>
                   </div>
                 </div>
               ))}
