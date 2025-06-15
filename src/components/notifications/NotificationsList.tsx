@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -62,22 +63,61 @@ const NotificationsList = ({
         ...doc.data(),
         readBy: doc.data().readBy || [],
         hiddenFor: doc.data().hiddenFor || []
-      }) as Notification).filter(notif => {
-        if (notif.hiddenFor?.includes(currentUser.id)) {
+      }) as Notification);
+      
+      const userVisibleNotifs = allNotifs.filter(notif => {
+        if (notif.hiddenFor?.includes(currentUser.id!)) {
             return false;
         }
 
         if (isAdmin) {
           return true;
         }
-        return notif.type === 'all' || notif.recipientId === currentUser.id
+
+        if (notif.type === 'all') {
+            return true;
+        }
+
+        if (notif.type === 'individual') {
+            return notif.senderId === currentUser.id || notif.recipientId === currentUser.id;
+        }
+        
+        return false;
       });
+
+      const generalNotifications = userVisibleNotifs.filter(n => n.type === 'all');
+      const individualMessages = userVisibleNotifs.filter(n => n.type === 'individual');
+
+      const conversations = new Map<string, Notification[]>();
+      individualMessages.forEach(msg => {
+          if (!msg.recipientId || !msg.senderId) return;
+          const otherUserId = msg.senderId === currentUser.id ? msg.recipientId : msg.senderId;
+          const conversationId = [currentUser.id!, otherUserId].sort().join('__');
+          
+          if (!conversations.has(conversationId)) {
+              conversations.set(conversationId, []);
+          }
+          conversations.get(conversationId)!.push(msg);
+      });
+
+      const conversationSummaries = Array.from(conversations.entries()).map(([conversationId, msgs]) => {
+          const latestMessage = msgs.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0))[0];
+          const isUnread = msgs.some(m => !m.readBy.includes(currentUser.id!));
+          return {
+              ...latestMessage,
+              id: conversationId,
+              readBy: isUnread ? [] : [currentUser.id!],
+          };
+      });
+
+      const displayItems = [...generalNotifications, ...conversationSummaries]
+          .sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
       
       const filteredNotifs = showOnlyUnread 
-        ? allNotifs.filter(n => currentUser.id && !n.readBy.includes(currentUser.id)) 
-        : allNotifs;
+        ? displayItems.filter(n => currentUser.id && !n.readBy.includes(currentUser.id)) 
+        : displayItems;
       
-      setNotifications(filteredNotifs);
+      setNotifications(filteredNotifs as Notification[]);
     });
 
     return () => unsubscribe();
