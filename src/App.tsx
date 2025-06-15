@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -16,6 +15,8 @@ import { UserProvider, useUser } from "@/context/UserContext";
 import { useVersioning } from "./hooks/useVersioning";
 import ImprovementsDialog from "./components/ImprovementsDialog";
 import RgpmUpdateDialog from "./components/RgpmUpdateDialog";
+import NewNotificationDialog from "./components/NewNotificationDialog";
+import { Notification } from "./components/notifications/NotificationsList";
 
 // Protected Route component
 const ProtectedRoute = ({
@@ -94,6 +95,28 @@ const Layout = ({
 
 const App = () => {
   const [activeTab, setActiveTab] = useState<string>("main");
+  const [newNotification, setNewNotification] = useState<Notification | null>(null);
+
+  useEffect(() => {
+    const handleNewNotification = (event: CustomEvent) => {
+      const notification = event.detail as Notification;
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+      // Don't show notification if the user is the sender
+      if (currentUser.id && notification.senderId === currentUser.id) {
+        return;
+      }
+      
+      setNewNotification(notification);
+    };
+
+    window.addEventListener('newNotification', handleNewNotification as EventListener);
+    
+    return () => {
+      window.removeEventListener('newNotification', handleNewNotification as EventListener);
+    };
+  }, []);
+
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -129,6 +152,12 @@ const App = () => {
                 {/* Redirect any unknown routes to login */}
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
+              
+              <NewNotificationDialog
+                open={!!newNotification}
+                onClose={() => setNewNotification(null)}
+                notification={newNotification}
+              />
             </TooltipProvider>
           </BrowserRouter>
         </QueryClientProvider>

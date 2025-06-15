@@ -9,8 +9,9 @@ import NotificationCard from "./NotificationCard";
 import { Timestamp } from "firebase/firestore";
 import { Bell, Sparkles } from "lucide-react";
 
-interface Notification {
+export interface Notification {
   id: string;
+  senderId: string;
   text: string;
   timestamp: Timestamp | null;
   senderName: string;
@@ -293,7 +294,6 @@ const NotificationsList = ({
 export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const { toast } = useToast();
   const isInitialLoad = useRef(true);
   
   useEffect(() => {
@@ -307,10 +307,9 @@ export const useNotifications = () => {
             const isForCurrentUser = newNotif.type === 'all' || newNotif.recipientId === currentUser.id;
 
             if (isForCurrentUser) {
-              toast({
-                title: `Nova Mensagem de ${newNotif.graduation} ${newNotif.senderName}`,
-                description: newNotif.text.substring(0, 100) + (newNotif.text.length > 100 ? '...' : ''),
-              });
+              window.dispatchEvent(new CustomEvent('newNotification', { 
+                detail: newNotif 
+              }));
             }
           }
         });
@@ -337,7 +336,7 @@ export const useNotifications = () => {
     });
 
     return () => unsubscribe();
-  }, [currentUser.id, toast]);
+  }, [currentUser.id]);
 
   return unreadCount;
 };
