@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,9 +98,19 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
     if (handleFielDepositarioChangeProp) {
       handleFielDepositarioChangeProp(field, value);
     } else {
-      setFielDepositario((prev) => ({ ...prev, [field]: value }));
+      setFielDepositario((prev) => {
+        const newState = { ...prev, [field]: value };
+        // HACK: Store data on window object to be picked up by PDF generator
+        (window as any).tempFielDepositario = newState;
+        return newState;
+      });
     }
   };
+
+  // HACK: Ensure window object is populated on initial render
+  React.useEffect(() => {
+    (window as any).tempFielDepositario = fielDepositario;
+  }, []);
 
   return <Card>
       <CardHeader>

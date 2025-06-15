@@ -125,6 +125,12 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 videoLinks: processedVideoLinks,
                 hidePagination: true
             };
+            
+            // HACK: Retrieve fiel depositario data from window object if it exists
+            if ((window as any).tempFielDepositario) {
+                data.fielDepositario = (window as any).tempFielDepositario;
+                delete (window as any).tempFielDepositario; // Clean up
+            }
 
             const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
             let yPosition;
