@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -7,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Ban, Trash2, Loader2, UserCircle, Search, Users, Filter, Mail, Shield, AlertCircle, CheckCircle, MoreVertical, AlertTriangle, UserCheck, Crown } from "lucide-react";
+import { Ban, Trash2, Loader2, UserCircle, Search, Users, Mail, Shield, AlertCircle, CheckCircle, MoreVertical, AlertTriangle, UserCheck, Crown } from "lucide-react";
 import UserDetailsDialog from "./UserDetailsDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
 
 interface User {
   id: string;
@@ -32,7 +34,7 @@ const UsersList = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "blocked">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "blocked" | "updated" | "outdated">("all");
   const [currentSystemVersion, setCurrentSystemVersion] = useState("1.0.0");
   const {
     toast
@@ -88,6 +90,10 @@ const UsersList = () => {
       filtered = filtered.filter(user => !user.blocked);
     } else if (filterStatus === "blocked") {
       filtered = filtered.filter(user => user.blocked);
+    } else if (filterStatus === 'updated') {
+      filtered = filtered.filter(user => getVersionStatus(user.currentVersion).status === 'updated');
+    } else if (filterStatus === 'outdated') {
+      filtered = filtered.filter(user => getVersionStatus(user.currentVersion).status === 'outdated');
     }
     setFilteredUsers(filtered);
   };
@@ -243,31 +249,55 @@ const UsersList = () => {
                 className="pl-10 h-11 border-2 focus:border-blue-500"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={filterStatus === "all" ? "default" : "outline"}
-                onClick={() => setFilterStatus("all")}
-                className="flex items-center gap-2"
-              >
-                <Filter className="h-4 w-4" />
-                Todos
-              </Button>
-              <Button
-                variant={filterStatus === "active" ? "default" : "outline"}
-                onClick={() => setFilterStatus("active")}
-                className="flex items-center gap-2"
-              >
-                <UserCheck className="h-4 w-4" />
-                Ativos
-              </Button>
-              <Button
-                variant={filterStatus === "blocked" ? "destructive" : "outline"}
-                onClick={() => setFilterStatus("blocked")}
-                className="flex items-center gap-2"
-              >
-                <AlertCircle className="h-4 w-4" />
-                Bloqueados
-              </Button>
+            <div className="space-y-2">
+               <Label>Filtrar por status</Label>
+               <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={filterStatus === "all" ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterStatus("all")}
+                  className="flex items-center gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  Todos
+                </Button>
+                <Button
+                  variant={filterStatus === "active" ? "secondary" : "outline"}
+                   size="sm"
+                  onClick={() => setFilterStatus("active")}
+                  className="flex items-center gap-2"
+                >
+                  <UserCheck className="h-4 w-4" />
+                  Ativos
+                </Button>
+                <Button
+                  variant={filterStatus === "blocked" ? "destructive" : "outline"}
+                   size="sm"
+                  onClick={() => setFilterStatus("blocked")}
+                  className="flex items-center gap-2"
+                >
+                  <Ban className="h-4 w-4" />
+                  Bloqueados
+                </Button>
+                <Button
+                  variant={filterStatus === "updated" ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterStatus("updated")}
+                  className="flex items-center gap-2"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  Atualizados
+                </Button>
+                <Button
+                  variant={filterStatus === "outdated" ? "destructive" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterStatus("outdated")}
+                  className="flex items-center gap-2"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  Desatualizados
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
