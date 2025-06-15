@@ -1,6 +1,5 @@
-
 import { useState, useEffect, useRef } from "react";
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc, getDoc } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc, getDoc, where, getDocs, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -199,36 +198,105 @@ const NotificationsList = ({
 
   const handleCloseNotification = async (notificationId: string) => {
     if (!currentUser?.id) return;
-    try {
-      const notifRef = doc(db, "recados", notificationId);
-      await updateDoc(notifRef, {
-        hiddenFor: arrayUnion(currentUser.id)
-      });
-    } catch (error) {
-      console.error("Error hiding notification:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível ocultar a notificação.",
-      });
+
+    if (notificationId.includes('__')) { // It's a conversation
+        const [user1, user2] = notificationId.split('__');
+        const recadosRef = collection(db, "recados");
+
+        const q1 = query(recadosRef,
+            where('type', '==', 'individual'),
+            where('senderId', '==', user1),
+            where('recipientId', '==', user2)
+        );
+        const q2 = query(recadosRef,
+            where('type', '==', 'individual'),
+            where('senderId', '==', user2),
+            where('recipientId', '==', user1)
+        );
+
+        try {
+            const [snapshot1, snapshot2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+            const batch = writeBatch(db);
+            snapshot1.docs.forEach(doc => batch.update(doc.ref, { hiddenFor: arrayUnion(currentUser.id) }));
+            snapshot2.docs.forEach(doc => batch.update(doc.ref, { hiddenFor: arrayUnion(currentUser.id) }));
+            await batch.commit();
+        } catch (error) {
+            console.error("Error hiding conversation:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro",
+                description: "Não foi possível ocultar a conversa.",
+            });
+        }
+    } else { // It's a single notification
+        try {
+            const notifRef = doc(db, "recados", notificationId);
+            await updateDoc(notifRef, {
+                hiddenFor: arrayUnion(currentUser.id)
+            });
+        } catch (error) {
+            console.error("Error hiding notification:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro",
+                description: "Não foi possível ocultar a notificação.",
+            });
+        }
     }
   };
 
   const handleDeleteNotification = async (notificationId: string) => {
-    try {
-      await deleteDoc(doc(db, "recados", notificationId));
-      setDeleteDialogOpen(false);
-      toast({
-        title: "Sucesso",
-        description: "Recado excluído com sucesso."
-      });
-    } catch (error) {
-      console.error("Error deleting notification:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível excluir o recado."
-      });
+    if (notificationId.includes('__')) { // It's a conversation
+        const [user1, user2] = notificationId.split('__');
+        const recadosRef = collection(db, "recados");
+
+        const q1 = query(recadosRef,
+            where('type', '==', 'individual'),
+            where('senderId', '==', user1),
+            where('recipientId', '==', user2)
+        );
+        const q2 = query(recadosRef,
+            where('type', '==', 'individual'),
+            where('senderId', '==', user2),
+            where('recipientId', '==', user1)
+        );
+
+        try {
+            const [snapshot1, snapshot2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+            const batch = writeBatch(db);
+            snapshot1.docs.forEach(doc => batch.delete(doc.ref));
+            snapshot2.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+
+            setDeleteDialogOpen(false);
+            toast({
+                title: "Sucesso",
+                description: "Conversa excluída com sucesso."
+            });
+        } catch (error) {
+            console.error("Error deleting conversation:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro",
+                description: "Não foi possível excluir a conversa."
+            });
+        }
+    } else {
+        try {
+            await deleteDoc(doc(db, "recados", notificationId));
+            setDeleteDialogOpen(false);
+            toast({
+                title: "Sucesso",
+                description: "Recado excluído com sucesso."
+            });
+        } catch (error) {
+            console.error("Error deleting notification:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro",
+                description: "Não foi possível excluir o recado."
+            });
+        }
     }
   };
 
