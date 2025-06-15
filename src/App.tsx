@@ -16,6 +16,7 @@ import { useVersioning } from "./hooks/useVersioning";
 import ImprovementsDialog from "./components/ImprovementsDialog";
 import RgpmUpdateDialog from "./components/RgpmUpdateDialog";
 import NewNotificationDialog from "./components/NewNotificationDialog";
+import ReplyNotificationDialog from "./components/ReplyNotificationDialog";
 import { Notification } from "./components/notifications/NotificationsList";
 
 // Protected Route component
@@ -96,6 +97,7 @@ const Layout = ({
 const App = () => {
   const [activeTab, setActiveTab] = useState<string>("main");
   const [newNotification, setNewNotification] = useState<Notification | null>(null);
+  const [replyToNotification, setReplyToNotification] = useState<Notification | null>(null);
 
   useEffect(() => {
     const handleNewNotification = (event: CustomEvent) => {
@@ -116,6 +118,11 @@ const App = () => {
       window.removeEventListener('newNotification', handleNewNotification as EventListener);
     };
   }, []);
+
+  const handleReply = (notification: Notification) => {
+    setNewNotification(null);
+    setReplyToNotification(notification);
+  };
 
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -157,6 +164,12 @@ const App = () => {
                 open={!!newNotification}
                 onClose={() => setNewNotification(null)}
                 notification={newNotification}
+                onReply={handleReply}
+              />
+              <ReplyNotificationDialog
+                open={!!replyToNotification}
+                onClose={() => setReplyToNotification(null)}
+                originalNotification={replyToNotification}
               />
             </TooltipProvider>
           </BrowserRouter>

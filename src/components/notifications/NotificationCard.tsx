@@ -45,6 +45,11 @@ const NotificationCard = ({
 
   useEffect(() => {
     const fetchRecipientInfo = async () => {
+        if (notification.type === 'all') {
+            setRecipientInfo("Todos");
+            return;
+        }
+
         if (notification.type === 'individual' && notification.recipientId) {
             if (notification.recipientId === currentUser?.id) {
                 setRecipientInfo("Você");
@@ -61,8 +66,10 @@ const NotificationCard = ({
                 }
             } catch (error) {
                 console.error("Error fetching recipient info:", error);
-                setRecipientInfo(null);
+                setRecipientInfo("Erro ao buscar");
             }
+        } else if (notification.type === 'individual' && !notification.recipientId) {
+            setRecipientInfo("Destinatário Indefinido");
         } else {
             setRecipientInfo(null);
         }
@@ -188,10 +195,15 @@ const NotificationCard = ({
                                 </Badge>
                             </>
                         )}
-                        {notification.type === 'individual' && (
+                        {notification.type === 'individual' ? (
                           <>
                             <span className="text-slate-300 dark:text-slate-600">•</span>
                             <span>Pessoal</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-slate-300 dark:text-slate-600">•</span>
+                            <span>Geral</span>
                           </>
                         )}
                     </div>

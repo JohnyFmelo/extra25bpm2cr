@@ -12,15 +12,16 @@ import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/context/UserContext";
-import { User, Shield, Eye } from "lucide-react";
+import { User, Shield, Eye, Reply } from "lucide-react";
 
 interface NewNotificationDialogProps {
   open: boolean;
   onClose: () => void;
   notification: Notification | null;
+  onReply: (notification: Notification) => void;
 }
 
-const NewNotificationDialog = ({ open, onClose, notification }: NewNotificationDialogProps) => {
+const NewNotificationDialog = ({ open, onClose, notification, onReply }: NewNotificationDialogProps) => {
     const { toast } = useToast();
     const { user: currentUser } = useUser();
 
@@ -48,6 +49,12 @@ const NewNotificationDialog = ({ open, onClose, notification }: NewNotificationD
     if (!notification) {
         return null;
     }
+
+    const handleReplyClick = () => {
+      if (notification) {
+          onReply(notification);
+      }
+    };
 
     const getSenderIcon = () => {
         if (notification.isAdmin) {
@@ -87,8 +94,14 @@ const NewNotificationDialog = ({ open, onClose, notification }: NewNotificationD
                     </p>
                 </div>
                 
-                <DialogFooter className="px-6 py-4 bg-slate-50 dark:bg-slate-800 border-t dark:border-slate-700">
-                    <Button onClick={handleClose} className="w-full sm:w-auto">
+                <DialogFooter className="px-6 py-4 bg-slate-50 dark:bg-slate-800 border-t dark:border-slate-700 sm:justify-between w-full">
+                    {notification.senderId !== currentUser?.id ? (
+                      <Button onClick={handleReplyClick} variant="outline">
+                        <Reply className="mr-2" />
+                        Responder
+                      </Button>
+                    ) : <div />}
+                    <Button onClick={handleClose}>
                         <Eye className="mr-2" />
                         Marcar como lida e fechar
                     </Button>
