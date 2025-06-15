@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,8 +43,8 @@ interface PessoasEnvolvidasTabProps {
   handleAddAutor: () => void;
   handleRemoveAutor: (index: number) => void;
   natureza: string;
-  fielDepositario?: PersonalInfo; // Make prop optional
-  handleFielDepositarioChange?: (field: keyof PersonalInfo, value: string) => void; // Make handler optional
+  fielDepositario?: PersonalInfo; 
+  handleFielDepositarioChange?: (field: keyof PersonalInfo, value: string) => void;
 }
 
 const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
@@ -62,55 +61,17 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
   handleAddAutor,
   handleRemoveAutor,
   natureza,
-  fielDepositario: fielDepositarioProp,
-  handleFielDepositarioChange: handleFielDepositarioChangeProp,
+  fielDepositario,
+  handleFielDepositarioChange,
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
 
-  const [fielDepositario, setFielDepositario] = React.useState<PersonalInfo>(
-    fielDepositarioProp || {
-      nome: "",
-      sexo: "",
-      estadoCivil: "",
-      profissao: "",
-      endereco: "",
-      dataNascimento: "",
-      naturalidade: "",
-      filiacaoMae: "",
-      filiacaoPai: "",
-      rg: "",
-      cpf: "",
-      celular: "",
-      email: "",
-      laudoPericial: "",
-      objetoDepositado: "",
-    }
-  );
-
-  React.useEffect(() => {
-    if (fielDepositarioProp) {
-      setFielDepositario(fielDepositarioProp);
-    }
-  }, [fielDepositarioProp]);
-
   const handleOnChange = (field: keyof PersonalInfo, value: string) => {
-    if (handleFielDepositarioChangeProp) {
-      handleFielDepositarioChangeProp(field, value);
-    } else {
-      setFielDepositario((prev) => {
-        const newState = { ...prev, [field]: value };
-        // HACK: Store data on window object to be picked up by PDF generator
-        (window as any).tempFielDepositario = newState;
-        return newState;
-      });
+    if (handleFielDepositarioChange) {
+      handleFielDepositarioChange(field, value);
     }
   };
-
-  // HACK: Ensure window object is populated on initial render
-  React.useEffect(() => {
-    (window as any).tempFielDepositario = fielDepositario;
-  }, []);
 
   return <Card>
       <CardHeader>

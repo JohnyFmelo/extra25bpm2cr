@@ -48,6 +48,7 @@ interface Pessoa {
   laudoPericial: string;
   relato?: string; // Added for victim testimony
   representacao?: string; // Added for victim representation
+  objetoDepositado?: string; // Added for fiel depositario
 }
 interface TCOFormProps {
   selectedTco?: any;
@@ -67,7 +68,8 @@ const initialPersonData: Pessoa = {
   cpf: "",
   celular: "",
   email: "",
-  laudoPericial: "Não"
+  laudoPericial: "Não",
+  objetoDepositado: "",
 };
 
 // << CORREÇÃO: Estado inicial para o formulário de uma nova droga. Usado para limpar os campos após adicionar. >>
@@ -239,6 +241,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const [testemunhas, setTestemunhas] = useState<Pessoa[]>([{
     ...initialPersonData
   }]);
+  const [fielDepositario, setFielDepositario] = useState<Pessoa>({ ...initialPersonData });
   const [providencias, setProvidencias] = useState("");
   const [documentosAnexos, setDocumentosAnexos] = useState("");
   const relatoPolicialTemplate = `POR VOLTA DAS [HORÁRIO] DO DIA [DATA], NESTA CIDADE DE VÁRZEA GRANDE-MT, A GUARNIÇÃO DA VIATURA [GUARNIÇÃO][OPERACAO_TEXT] COMPOSTA PELOS MILITARES [GUPM], DURANTE RONDAS NO BAIRRO [BAIRRO], FOI ACIONADA VIA [MEIO DE ACIONAMENTO] PARA ATENDER A UMA OCORRÊNCIA DE [NATUREZA] NO [LOCAL], ONDE [VERSÃO INICIAL]. CHEGANDO NO LOCAL, A EQUIPE [O QUE A PM DEPAROU]. A VERSÃO DAS PARTES FOI REGISTRADA EM CAMPO PRÓPRIO. [VERSÃO SUMÁRIA DAS PARTES E TESTEMUNHAS]. [DILIGÊNCIAS E APREENSÕES REALIZADAS]. DIANTE DISSO, [ENCAMINHAMENTO PARA REGISTRO DOS FATOS].`;
@@ -1024,7 +1027,8 @@ const TCOForm: React.FC<TCOFormProps> = ({
         representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined,
         downloadLocal: true,
         providencias: providencias,
-        documentosAnexos: documentosAnexos
+        documentosAnexos: documentosAnexos,
+        fielDepositario: fielDepositario,
       };
       Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
       console.log("Dados para gerar PDF:", tcoDataParaPDF);
@@ -1157,7 +1161,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Pessoas Envolvidas</h2>
-          <PessoasEnvolvidasTab vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima} testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha} autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor} natureza={natureza} />
+          <PessoasEnvolvidasTab vitimas={vitimas} handleVitimaChange={handleVitimaChange} handleAddVitima={handleAddVitima} handleRemoveVitima={handleRemoveVitima} testemunhas={testemunhas} handleTestemunhaChange={handleTestemunhaChange} handleAddTestemunha={handleAddTestemunha} handleRemoveTestemunha={handleRemoveTestemunha} autores={autores} handleAutorDetalhadoChange={handleAutorDetalhadoChange} handleAddAutor={handleAddAutor} handleRemoveAutor={handleRemoveAutor} natureza={natureza} fielDepositario={fielDepositario} handleFielDepositarioChange={handleFielDepositarioChange} />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
