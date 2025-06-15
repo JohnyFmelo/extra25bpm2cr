@@ -109,7 +109,13 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                             <Label htmlFor={`fiel-depositario-${index}`}>Fiel Depositário?</Label>
                             <Select 
                                 value={autor.fielDepositario || "Não"}
-                                onValueChange={(value) => handleAutorDetalhadoChange(index, 'fielDepositario', value)}
+                                onValueChange={(value) => {
+                                    handleAutorDetalhadoChange(index, 'fielDepositario', value)
+                                    // Initialize objetoDepositado if it's the first time being set to "Sim"
+                                    if (value === "Sim" && autor.objetoDepositado === undefined) {
+                                        handleAutorDetalhadoChange(index, 'objetoDepositado', "");
+                                    }
+                                }}
                             >
                                 <SelectTrigger id={`fiel-depositario-${index}`} className="mt-2">
                                     <SelectValue placeholder="Selecione"/>

@@ -16,11 +16,13 @@ const ensureAndProcessText = (text: any, toUpperCase = true, fallback = 'NÃO IN
 
 export const addTermoDeposito = (doc: jsPDF, data: any) => {
     const { PAGE_WIDTH, MARGIN_LEFT, MARGIN_RIGHT, MAX_LINE_WIDTH } = getPageConstants(doc);
-    const depositario = data.fielDepositario; // O objeto do depositário agora é passado diretamente
+    // Busca o depositário pelo índice passado, que é uma forma mais segura
+    const depositario = (data.fielDepositarioIndex !== undefined && Array.isArray(data.autores)) 
+        ? data.autores[data.fielDepositarioIndex] 
+        : undefined;
 
     console.log("Iniciando geração do Termo de Depósito");
     
-    // A verificação agora é simples, pois o objeto já foi validado anteriormente
     if (!depositario) {
         console.log("Nenhum fiel depositário qualificado foi fornecido para o Termo de Depósito.");
         return;

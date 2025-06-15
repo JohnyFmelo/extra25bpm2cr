@@ -151,16 +151,16 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 });
             }
 
-            // Valida e encontra o fiel depositário antecipadamente
-            const fielDepositarioEncontrado = Array.isArray(data.autores) ? data.autores.find(
+            // Valida e encontra o *índice* do fiel depositário antecipadamente
+            const fielDepositarioIndex = Array.isArray(data.autores) ? data.autores.findIndex(
                 (a: any) => a &&
                 typeof a.fielDepositario === 'string' &&
                 a.fielDepositario.trim().toLowerCase() === 'sim' &&
                 typeof a.nome === 'string' &&
                 a.nome.trim() !== ''
-            ) : undefined;
+            ) : -1;
 
-            if (fielDepositarioEncontrado) {
+            if (fielDepositarioIndex !== -1) {
                 documentosAnexosList.push("TERMO DE DEPÓSITO");
             }
             
@@ -210,10 +210,11 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
                     }
 
-                    // Chama o Termo de Depósito se um depositário válido foi encontrado
-                    if (fielDepositarioEncontrado) {
-                        console.log("Adicionando Termo de Depósito para:", fielDepositarioEncontrado.nome);
-                        addTermoDeposito(doc, { ...updatedData, fielDepositario: fielDepositarioEncontrado });
+                    // Chama o Termo de Depósito se um depositário válido foi encontrado, passando seu índice
+                    if (fielDepositarioIndex !== -1) {
+                        const depositarioNome = updatedData.autores[fielDepositarioIndex].nome;
+                        console.log("Adicionando Termo de Depósito para:", depositarioNome);
+                        addTermoDeposito(doc, { ...updatedData, fielDepositarioIndex });
                     }
                     
                     // << CORREÇÃO: A chamada para os termos relacionados a drogas agora usa a flag 'isDrugCase' >>
