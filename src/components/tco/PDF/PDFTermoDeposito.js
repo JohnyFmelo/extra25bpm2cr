@@ -1,6 +1,13 @@
 
 import { MARGIN_TOP, addStandardFooterContent, addNewPage, getPageConstants } from './pdfUtils.js';
 
+const ensureString = (value, fallback = 'Não informado') => {
+    if (value === null || value === undefined || value === '') {
+        return fallback;
+    }
+    return String(value);
+};
+
 export const addTermoDeposito = (doc, data) => {
     const { PAGE_WIDTH, MARGIN_LEFT, MARGIN_RIGHT } = getPageConstants(doc);
 
@@ -20,7 +27,7 @@ export const addTermoDeposito = (doc, data) => {
 
         const policialPrincipal = data.componentesGuarnicao?.[0] || { graduacao: 'POLICIAL', nome: 'NÃO IDENTIFICADO', rg: 'N/A' };
         
-        const textoPrincipal = `Aos ${data.dataFatoExtenso || 'data não informada'}, nesta cidade de ${data.cidadeFato || 'cidade não informada'}, no local da ocorrência, eu, ${policialPrincipal.graduacao} ${policialPrincipal.nome}, RG nº ${policialPrincipal.rg}, nomeio FIEL DEPOSITÁRIO o(a) Sr(a). ${depositario.nome || 'Nome não informado'}, portador(a) do RG nº ${depositario.rg || 'N/A'} e CPF nº ${depositario.cpf || 'N/A'}, residente e domiciliado(a) no endereço ${depositario.endereco || 'Endereço não informado'}, o qual se compromete a manter sob sua guarda e conservação, sem ônus para o Estado, o(s) seguinte(s) bem(ns):`;
+        const textoPrincipal = `Aos ${ensureString(data.dataFatoExtenso, 'data não informada')}, nesta cidade de ${ensureString(data.cidadeFato, 'cidade não informada')}, no local da ocorrência, eu, ${ensureString(policialPrincipal.graduacao)} ${ensureString(policialPrincipal.nome)}, RG nº ${ensureString(policialPrincipal.rg)}, nomeio FIEL DEPOSITÁRIO o(a) Sr(a). ${ensureString(depositario.nome, 'Nome não informado')}, portador(a) do RG nº ${ensureString(depositario.rg, 'N/A')} e CPF nº ${ensureString(depositario.cpf, 'N/A')}, residente e domiciliado(a) no endereço ${ensureString(depositario.endereco, 'Endereço não informado')}, o qual se compromete a manter sob sua guarda e conservação, sem ônus para o Estado, o(s) seguinte(s) bem(ns):`;
         const splitText = doc.splitTextToSize(textoPrincipal, PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT);
         doc.text(splitText, MARGIN_LEFT, y);
         y += doc.getTextDimensions(splitText).h + 10;
@@ -29,7 +36,7 @@ export const addTermoDeposito = (doc, data) => {
         doc.text("BEM(NS) DEPOSITADO(S):", MARGIN_LEFT, y);
         y += 6;
         doc.setFont("helvetica", "normal");
-        const objetoText = doc.splitTextToSize(depositario.objetoDepositado || "Nenhum objeto descrito.", PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT);
+        const objetoText = doc.splitTextToSize(ensureString(depositario.objetoDepositado, "Nenhum objeto descrito."), PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT);
         doc.text(objetoText, MARGIN_LEFT, y);
         y += doc.getTextDimensions(objetoText).h + 10;
 
@@ -41,14 +48,14 @@ export const addTermoDeposito = (doc, data) => {
         // Assinaturas
         doc.text("________________________________________", PAGE_WIDTH / 2, y, { align: 'center' });
         y += 5;
-        doc.text((depositario.nome || '').toUpperCase(), PAGE_WIDTH / 2, y, { align: 'center' });
+        doc.text(ensureString(depositario.nome, '').toUpperCase(), PAGE_WIDTH / 2, y, { align: 'center' });
         y += 5;
         doc.text("Fiel Depositário(a)", PAGE_WIDTH / 2, y, { align: 'center' });
         y += 20;
 
         doc.text("________________________________________", PAGE_WIDTH / 2, y, { align: 'center' });
         y += 5;
-        doc.text(`${policialPrincipal.graduacao.toUpperCase()} ${policialPrincipal.nome.toUpperCase()}`, PAGE_WIDTH / 2, y, { align: 'center' });
+        doc.text(`${ensureString(policialPrincipal.graduacao, '').toUpperCase()} ${ensureString(policialPrincipal.nome, '').toUpperCase()}`, PAGE_WIDTH / 2, y, { align: 'center' });
         y += 5;
         doc.text("Policial Militar", PAGE_WIDTH / 2, y, { align: 'center' });
 
