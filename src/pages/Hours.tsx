@@ -10,6 +10,7 @@ import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AllUsersHours } from "@/components/hours/AllUsersHours";
+
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
@@ -269,4 +270,5 @@ const Hours = () => {
     </div>
   );
 };
+
 export default Hours;
