@@ -1155,5 +1155,154 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
   const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Conduzir veículo sem CNH gerando perigo de dano", "Entregar veículo automotor a pessoa não habilitada", "Trafegar em velocidade incompatível com segurança", "Omissão de socorro", "Rixa", "Invasão de domicílio", "Fraude em comércio", "Ato obsceno", "Falsa identidade", "Resistência", "Desobediência", "Desacato", "Exercício arbitrário das próprias razões", "Outros"];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
-  return <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
-      <form onSubmit={handleSubmit
+  return (
+    <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
+      <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown}>
+        <Card>
+          <CardHeader>
+            <CardTitle>TERMO CIRCUNSTANCIADO DE OCORRÊNCIA</CardTitle>
+            <CardDescription>Preencha os campos abaixo para gerar o TCO.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-8">
+              <BasicInformationTab
+                tcoNumber={tcoNumber}
+                setTcoNumber={setTcoNumber}
+                natureza={natureza}
+                setNatureza={setNatureza}
+                customNatureza={customNatureza}
+                setCustomNatureza={setCustomNatureza}
+                tipificacao={tipificacao}
+                setTipificacao={setTipificacao}
+                penaDescricao={penaDescricao}
+                setPenaDescricao={setPenaDescricao}
+                naturezaOptions={naturezaOptions}
+              />
+              <GeneralInformationTab
+                dataFato={dataFato}
+                setDataFato={setDataFato}
+                horaFato={horaFato}
+                setHoraFato={setHoraFato}
+                localFato={localFato}
+                setLocalFato={setLocalFato}
+                endereco={endereco}
+                setEndereco={setEndereco}
+                municipio={municipio}
+                comunicante={comunicante}
+                setComunicante={setComunicante}
+              />
+              <GuarnicaoTab
+                guarnicao={guarnicao}
+                setGuarnicao={setGuarnicao}
+                operacao={operacao}
+                setOperacao={setOperacao}
+                componentesGuarnicao={componentesGuarnicao}
+                onAddPolicial={handleAddPolicialToList}
+                onRemovePolicial={handleRemovePolicialFromList}
+                onToggleApoio={handleToggleApoioPolicial}
+                condutorParaDisplay={condutorParaDisplay}
+              />
+              {isPrimaryDrugCase && (
+                <DrugVerificationTab
+                  drogas={drogas}
+                  novaDroga={novaDroga}
+                  onNovaDrogaChange={handleNovaDrogaChange}
+                  onAdicionarDroga={handleAdicionarDroga}
+                  onRemoverDroga={handleRemoverDroga}
+                  lacreNumero={lacreNumero}
+                  setLacreNumero={setLacreNumero}
+                />
+              )}
+              <PessoasEnvolvidasTab
+                autores={autores}
+                handleAutorDetalhadoChange={handleAutorDetalhadoChange}
+                handleAddAutor={handleAddAutor}
+                handleRemoveAutor={handleRemoveAutor}
+                vitimas={vitimas}
+                handleVitimaChange={handleVitimaChange}
+                handleAddVitima={handleAddVitima}
+                handleRemoveVitima={handleRemoveVitima}
+                testemunhas={testemunhas}
+                handleTestemunhaChange={handleTestemunhaChange}
+                handleAddTestemunha={handleAddTestemunha}
+                handleRemoveTestemunha={handleRemoveTestemunha}
+                natureza={natureza}
+                fielDepositario={fielDepositario}
+                handleFielDepositarioChange={handleFielDepositarioChange}
+              />
+              <HistoricoTab
+                relatoPolicial={relatoPolicial}
+                onRelatoPolicialChange={handleRelatoPolicialChange}
+                relatoAutor={relatoAutor}
+                setRelatoAutor={setRelatoAutor}
+                relatoVitima={relatoVitima}
+                setRelatoVitima={setRelatoVitima}
+                relatoTestemunha={relatoTestemunha}
+                setRelatoTestemunha={setRelatoTestemunha}
+                autores={autores}
+                onAutorRelatoChange={handleAutorRelatoChange}
+                vitimas={vitimas}
+                onVitimaRelatoChange={handleVitimaRelatoChange}
+                onVitimaRepresentacaoChange={handleVitimaRepresentacaoChange}
+                testemunhas={testemunhas}
+                onTestemunhaRelatoChange={handleTestemunhaRelatoChange}
+                natureza={natureza}
+                representacao={representacao}
+                setRepresentacao={setRepresentacao}
+                conclusaoPolicial={conclusaoPolicial}
+                providencias={providencias}
+                setProvidencias={setProvidencias}
+                documentosAnexos={documentosAnexos}
+                setDocumentosAnexos={setDocumentosAnexos}
+              />
+              
+              <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center"><ImageIcon className="mr-2 h-5 w-5" />Anexos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="image-upload">Fotos</Label>
+                            <Input id="image-upload" type="file" multiple onChange={handleImageFileChange} ref={imageInputRef} />
+                            <div className="mt-2 space-y-2">
+                                {imageFiles.map((file, index) => (
+                                    <div key={index} className="flex items-center justify-between p-2 bg-gray-100 rounded">
+                                        <span className="text-sm truncate">{file.name}</span>
+                                        <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveImageFile(index)}><X className="h-4 w-4" /></Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                         <div>
+                            <Label htmlFor="video-link">Links de Vídeos</Label>
+                            <div className="flex gap-2">
+                                <Input id="video-link" value={newVideoLink} onChange={e => setNewVideoLink(e.target.value)} placeholder="https://..." />
+                                <Button type="button" onClick={handleAddVideoLink}><Plus className="h-4 w-4" /></Button>
+                            </div>
+                            <div className="mt-2 space-y-2">
+                                {videoLinks.map((link, index) => (
+                                    <div key={index} className="flex items-center justify-between p-2 bg-gray-100 rounded">
+                                        <a href={link} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 truncate hover:underline">{link}</a>
+                                        <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveVideoLink(index)}><X className="h-4 w-4" /></Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-end mt-8">
+                <Button type="submit" disabled={isSubmitting || hasMinorAuthor.isMinor} className="w-full md:w-auto">
+                  {isSubmitting ? "Gerando PDF..." : "Finalizar e Gerar PDF"}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </form>
+    </div>
+  );
+};
+export default TCOForm;
