@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
 import NotificationsDialog from "./NotificationsDialog";
-import { useNotifications } from "./NotificationsList";
+import { useNotifications } from "./notifications/NotificationsList";
 import Messages from "./Messages";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useVersioning } from "@/hooks/useVersioning";
