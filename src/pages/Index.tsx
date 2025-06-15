@@ -1,3 +1,4 @@
+
 import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut, UserPlus } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -28,7 +29,7 @@ import RankingChart from "@/components/RankingChart";
 import ManualUserRegistration from "@/components/ManualUserRegistration";
 import VersionDialog from "@/components/VersionDialog";
 import TCOProductivityRanking from "@/components/TCOProductivityRanking";
-import { useNotifications } from "@/components/notifications/NotificationsList";
+import { useNotifications } from "@/components/NotificationsList";
 
 interface IndexProps {
   initialActiveTab?: string;
