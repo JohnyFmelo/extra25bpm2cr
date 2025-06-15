@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, Dispatch, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -980,6 +980,8 @@ const TCOForm: React.FC<TCOFormProps> = ({
         }
       }
       const relatoAutorConsolidado = autoresValidos.filter(a => a.relato && a.relato.trim() !== "").map(a => a.relato).join('\n\n') || relatoAutor;
+      const relatoVitimaConsolidado = vitimasFiltradas.map(v => v.relato).filter(Boolean).join('\n\n');
+      const relatoTestemunhaConsolidado = testemunhasFiltradas.map(t => t.relato).filter(Boolean).join('\n\n');
 
       // << CORREÇÃO: O objeto enviado para o PDF agora contém o array 'drogas' em vez de campos individuais. >>
       const tcoDataParaPDF: any = {
@@ -1007,12 +1009,11 @@ const TCOForm: React.FC<TCOFormProps> = ({
         componentesGuarnicao: componentesValidos,
         relatoPolicial: relatoPolicial.trim(),
         relatoAutor: relatoAutorConsolidado.trim(),
-        relatoTestemunha: relatoTestemunha.trim(),
+        relatoTestemunha: relatoTestemunhaConsolidado.trim(),
         apreensoes: apreensoes.trim(),
         conclusaoPolicial: conclusaoPolicial.trim(),
         lacreNumero: isPrimaryDrugCase ? lacreNumero.trim() : undefined,
         drogas: isPrimaryDrugCase ? drogas : undefined,
-        // << CAMPO NOVO COM O ARRAY DE DROGAS >>
         startTime: startTime?.toISOString(),
         endTime: completionNow.toISOString(),
         userRegistration: userRegistration,
@@ -1020,7 +1021,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
         imageBase64: imageBase64Array,
         juizadoEspecialData: juizadoEspecialData.trim() || undefined,
         juizadoEspecialHora: juizadoEspecialHora.trim() || undefined,
-        relatoVitima: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' ? relatoVitima.trim() : undefined,
+        relatoVitima: relatoVitimaConsolidado.trim() ? relatoVitimaConsolidado.trim() : undefined,
         representacao: vitimasFiltradas.length > 0 && vitimasFiltradas[0].nome !== 'O ESTADO' && representacao ? formatRepresentacao(representacao) : undefined,
         downloadLocal: true,
         providencias: providencias,
@@ -1161,13 +1162,35 @@ const TCOForm: React.FC<TCOFormProps> = ({
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
-          <h2 className="text-xl font-semibold mb-4">Guarnição Policial</h2>
-          <GuarnicaoTab currentGuarnicaoList={componentesGuarnicao} onAddPolicial={handleAddPolicialToList} onRemovePolicial={handleRemovePolicialFromList} onToggleApoioPolicial={handleToggleApoioPolicial} />
-        </div>
-
-        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Histórico e Narrativas</h2>
-          <HistoricoTab relatoPolicial={relatoPolicial} setRelatoPolicial={handleRelatoPolicialChange} relatoAutor={relatoAutor} setRelatoAutor={setRelatoAutor} relatoVitima={relatoVitima} setRelatoVitima={setRelatoVitima} relatoTestemunha={relatoTestemunha} setRelatoTestemunha={setRelatoTestemunha} apreensoes={apreensoes} setApreensoes={setApreensoes} conclusaoPolicial={conclusaoPolicial} setConclusaoPolicial={setConclusaoPolicial} drugSeizure={isPrimaryDrugCase} representacao={representacao} setRepresentacao={setRepresentacao} natureza={natureza} videoLinks={videoLinks} setVideoLinks={setVideoLinks} solicitarCorpoDelito={autores.length > 0 ? autores[0].laudoPericial : "Não"} autorSexo={autores.length > 0 ? autores[0].sexo : "masculino"} providencias={providencias} setProvidencias={setProvidencias} documentosAnexos={documentosAnexos} setDocumentosAnexos={setDocumentosAnexos} lacreNumero={lacreNumero} vitimas={vitimas} setVitimaRelato={handleVitimaRelatoChange} setVitimaRepresentacao={handleVitimaRepresentacaoChange} testemunhas={testemunhas} setTestemunhaRelato={handleTestemunhaRelatoChange} autores={autores} setAutorRelato={handleAutorRelatoChange} />
+          <HistoricoTab
+            relatoPolicial={relatoPolicial}
+            setRelatoPolicial={handleRelatoPolicialChange}
+            apreensoes={apreensoes}
+            setApreensoes={setApreensoes}
+            conclusaoPolicial={conclusaoPolicial}
+            setConclusaoPolicial={setConclusaoPolicial}
+            drugSeizure={isPrimaryDrugCase}
+            representacao={representacao}
+            setRepresentacao={setRepresentacao}
+            natureza={natureza}
+            videoLinks={videoLinks}
+            setVideoLinks={setVideoLinks}
+            solicitarCorpoDelito={autores.length > 0 ? autores[0].laudoPericial : "Não"}
+            autorSexo={autores.length > 0 ? autores[0].sexo : "masculino"}
+            providencias={providencias}
+            setProvidencias={setProvidencias}
+            documentosAnexos={documentosAnexos}
+            setDocumentosAnexos={setDocumentosAnexos}
+            lacreNumero={lacreNumero}
+            vitimas={vitimas}
+            setVitimaRelato={handleVitimaRelatoChange}
+            setVitimaRepresentacao={handleVitimaRepresentacaoChange}
+            testemunhas={testemunhas}
+            setTestemunhaRelato={handleTestemunhaRelatoChange}
+            autores={autores}
+            setAutorRelato={handleAutorRelatoChange}
+          />
         </div>
 
         <Card className="mb-8">

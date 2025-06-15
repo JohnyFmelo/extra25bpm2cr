@@ -18,10 +18,6 @@ interface DrugItem {
 interface HistoricoTabProps {
   relatoPolicial: string;
   setRelatoPolicial: (value: string) => void;
-  relatoVitima: string;
-  setRelatoVitima: (value: string) => void;
-  relatoTestemunha: string;
-  setRelatoTestemunha: (value: string) => void;
   apreensoes: string;
   setApreensoes: (value: string) => void;
   conclusaoPolicial: string;
@@ -103,10 +99,6 @@ interface HistoricoTabProps {
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
   relatoPolicial,
   setRelatoPolicial,
-  relatoVitima,
-  setRelatoVitima,
-  relatoTestemunha,
-  setRelatoTestemunha,
   apreensoes,
   setApreensoes,
   conclusaoPolicial,
