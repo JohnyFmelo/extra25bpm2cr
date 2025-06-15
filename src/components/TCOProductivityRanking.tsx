@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Trophy, TrendingUp } from "lucide-react";
@@ -15,6 +16,7 @@ interface OfficerRanking {
   officerName: string;
   graduacao: string;
   tcoCount: number;
+  mostRecentTco: Date | null;
 }
 
 interface ExtractedRgpms {
@@ -39,6 +41,23 @@ interface TcoData {
 }
 
 const BUCKET_NAME = 'tco-pdfs';
+
+// Hierarquia militar do mais moderno (1) ao mais antigo (13)
+const RANK_HIERARCHY: { [key: string]: number } = {
+  'Sd PM': 1,
+  'Cb PM': 2,
+  '3º Sargento': 3,
+  '2º Sargento': 4,
+  '1º Sgt PM': 5,
+  'Sub ten PM': 6,
+  'Aspirante PM': 7,
+  '2º Tenente': 8,
+  '1º Ten PM': 9,
+  'Cap PM': 10,
+  'Maj PM': 11,
+  'Ten Cel PM': 12,
+  'Cel PM': 13
+};
 
 const extractTcoDisplayNumber = (fullTcoNumber: string | undefined | null): string => {
   if (!fullTcoNumber) return "-";
@@ -137,7 +156,7 @@ const TCOProductivityRanking: React.FC = () => {
         }
 
         let allTcos: TcoData[] = [];
-        const officerTcoCountMap = new Map<string, { count: number; officerInfo?: OfficerInfo }>();
+        const officerTcoCountMap = new Map<string, { count: number; officerInfo?: OfficerInfo; mostRecentTco: Date | null }>();
 
         for (const folder of userFolders || []) {
           if (folder.name === '.emptyFolderPlaceholder') continue;
@@ -177,18 +196,28 @@ const TCOProductivityRanking: React.FC = () => {
           userTcos.forEach(tco => {
             if (tco.rgpmsExtracted.main.length > 0) {
               const conductorRgpm = tco.rgpmsExtracted.main[0];
-              const current = officerTcoCountMap.get(conductorRgpm) || { count: 0 };
+              const current = officerTcoCountMap.get(conductorRgpm) || { count: 0, mostRecentTco: null };
+              const newMostRecent = current.mostRecentTco ? 
+                (tco.createdAt > current.mostRecentTco ? tco.createdAt : current.mostRecentTco) : 
+                tco.createdAt;
+              
               officerTcoCountMap.set(conductorRgpm, {
                 count: current.count + 1,
-                officerInfo: current.officerInfo
+                officerInfo: current.officerInfo,
+                mostRecentTco: newMostRecent
               });
             }
 
             tco.rgpmsExtracted.main.slice(1).forEach(rgpm => {
-              const current = officerTcoCountMap.get(rgpm) || { count: 0 };
+              const current = officerTcoCountMap.get(rgpm) || { count: 0, mostRecentTco: null };
+              const newMostRecent = current.mostRecentTco ? 
+                (tco.createdAt > current.mostRecentTco ? tco.createdAt : current.mostRecentTco) : 
+                tco.createdAt;
+              
               officerTcoCountMap.set(rgpm, {
                 count: current.count + 1,
-                officerInfo: current.officerInfo
+                officerInfo: current.officerInfo,
+                mostRecentTco: newMostRecent
               });
             });
           });
@@ -253,9 +282,31 @@ const TCOProductivityRanking: React.FC = () => {
             rgpm,
             officerName: data.officerInfo?.nome || 'Militar não identificado',
             graduacao: data.officerInfo?.graduacao || '',
-            tcoCount: data.count
+            tcoCount: data.count,
+            mostRecentTco: data.mostRecentTco
           }))
-          .sort((a, b) => b.tcoCount - a.tcoCount);
+          .sort((a, b) => {
+            // 1. Por quantidade de TCOs (decrescente)
+            if (a.tcoCount !== b.tcoCount) {
+              return b.tcoCount - a.tcoCount;
+            }
+            
+            // 2. Por TCO mais recente (mais recente primeiro)
+            if (a.mostRecentTco && b.mostRecentTco) {
+              if (a.mostRecentTco.getTime() !== b.mostRecentTco.getTime()) {
+                return b.mostRecentTco.getTime() - a.mostRecentTco.getTime();
+              }
+            } else if (a.mostRecentTco && !b.mostRecentTco) {
+              return -1;
+            } else if (!a.mostRecentTco && b.mostRecentTco) {
+              return 1;
+            }
+            
+            // 3. Por hierarquia (do mais moderno ao mais antigo)
+            const rankA = RANK_HIERARCHY[a.graduacao] || 999;
+            const rankB = RANK_HIERARCHY[b.graduacao] || 999;
+            return rankA - rankB;
+          });
 
         setRanking(officerRanking);
 
