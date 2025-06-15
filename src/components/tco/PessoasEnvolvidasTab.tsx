@@ -42,7 +42,7 @@ interface PessoasEnvolvidasTabProps {
   autores: PersonalInfo[];
   handleAutorDetalhadoChange: (index: number, field: string, value: string) => void;
   handleAddAutor: () => void;
-  handleRemoveAutor: () => void;
+  handleRemoveAutor: (index: number) => void;
   natureza: string;
 }
 
@@ -103,7 +103,6 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                 </CardHeader>
                 <CardContent className="px-[5px]">
                   <PersonalInfoFields data={autor} onChangeHandler={handleAutorDetalhadoChange} prefix={`autor_${index}_`} index={index} isAuthor={true} />
-                    {/* Changed from RadioGroup to Select for Fiel Depositário */}
                     
                 </CardContent>
               </Card>)}
