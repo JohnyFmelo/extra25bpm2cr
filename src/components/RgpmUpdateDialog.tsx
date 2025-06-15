@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -73,7 +72,7 @@ const RgpmUpdateDialog = ({ open, onSuccess }: RgpmUpdateDialogProps) => {
       <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Atualizar RGPM</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-gray-700 dark:text-gray-300">
             Para continuar, por favor, informe seu RGPM. Ele deve conter 6 dígitos e não pode ter pontos.
           </DialogDescription>
         </DialogHeader>

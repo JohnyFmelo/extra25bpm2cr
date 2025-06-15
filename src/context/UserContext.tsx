@@ -48,7 +48,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
               warName: firebaseData.warName || userData.warName,
               rank: firebaseData.rank || userData.rank,
               service: firebaseData.service || userData.service,
-              rgpm: firebaseData.rgpm || userData.rgpm,
+              rgpm: firebaseData.rgpm,
               email: firebaseData.email || userData.email,
               registration: firebaseData.registration || userData.registration,
               currentVersion: firebaseData.currentVersion || userData.currentVersion,
