@@ -12,7 +12,7 @@ import { Notification } from "./notifications/NotificationsList";
 import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useState } from "react";
+import { useUser } from "@/context/UserContext";
 
 interface NewNotificationDialogProps {
   open: boolean;
@@ -22,14 +22,7 @@ interface NewNotificationDialogProps {
 
 const NewNotificationDialog = ({ open, onClose, notification }: NewNotificationDialogProps) => {
     const { toast } = useToast();
-    const [currentUser, setCurrentUser] = useState<any>(null);
-
-    useEffect(() => {
-        const user = localStorage.getItem("user");
-        if (user) {
-            setCurrentUser(JSON.parse(user));
-        }
-    }, []);
+    const { user: currentUser } = useUser();
 
     const handleClose = async () => {
         if (notification && currentUser) {

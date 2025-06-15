@@ -1,9 +1,11 @@
 
-import { useState } from "react";
-import { Clock, X, User, Shield, MessageSquare, Eye } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Clock, X, User, Shield, MessageSquare, Eye, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useUser } from "@/context/UserContext";
 
 interface Notification {
   id: string;
@@ -39,6 +41,36 @@ const NotificationCard = ({
   onClose
 }: NotificationCardProps) => {
   const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const { user: currentUser } = useUser();
+  const [recipientInfo, setRecipientInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRecipientInfo = async () => {
+        if (notification.type === 'individual' && notification.recipientId) {
+            if (notification.recipientId === currentUser?.id) {
+                setRecipientInfo("Você");
+                return;
+            }
+            try {
+                const userDocRef = doc(db, "users", notification.recipientId);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    setRecipientInfo(`${userData.graduation || ''} ${userData.name || ''}`.trim());
+                } else {
+                    setRecipientInfo("Destinatário desconhecido");
+                }
+            } catch (error) {
+                console.error("Error fetching recipient info:", error);
+                setRecipientInfo(null);
+            }
+        } else {
+            setRecipientInfo(null);
+        }
+    };
+    fetchRecipientInfo();
+  }, [notification.type, notification.recipientId, currentUser?.id]);
+
 
   const handleMouseDown = () => {
     const timer = setTimeout(() => {
@@ -139,14 +171,22 @@ const NotificationCard = ({
             </div>
             
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-slate-800 text-sm truncate">
-                  {notification.graduation} {notification.senderName}
-                </h3>
-                {notification.isAdmin && (
-                  <Badge variant="destructive" className="text-xs px-2 py-0">
-                    Admin
-                  </Badge>
+              <div className="flex items-center gap-x-2 gap-y-1 mb-1 flex-wrap">
+                <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-slate-800 text-sm truncate">
+                      {notification.graduation} {notification.senderName}
+                    </h3>
+                    {notification.isAdmin && (
+                      <Badge variant="destructive" className="text-xs px-2 py-0">
+                        Admin
+                      </Badge>
+                    )}
+                </div>
+                {recipientInfo && (
+                    <div className="flex items-center gap-1 text-xs text-slate-600">
+                        <ArrowRight className="h-3 w-3" />
+                        <span className="font-medium">{recipientInfo}</span>
+                    </div>
                 )}
               </div>
               

@@ -53,9 +53,12 @@ const NotificationsList = ({
         id: doc.id,
         ...doc.data(),
         readBy: doc.data().readBy || []
-      }) as Notification).filter(notif => 
-        notif.type === 'all' || notif.recipientId === currentUser.id
-      );
+      }) as Notification).filter(notif => {
+        if (isAdmin) {
+          return true;
+        }
+        return notif.type === 'all' || notif.recipientId === currentUser.id
+      });
       
       const filteredNotifs = showOnlyUnread 
         ? allNotifs.filter(n => !n.readBy.includes(currentUser.id)) 
@@ -65,7 +68,7 @@ const NotificationsList = ({
     });
 
     return () => unsubscribe();
-  }, [currentUser.id, showOnlyUnread]);
+  }, [currentUser.id, showOnlyUnread, isAdmin]);
 
   useEffect(() => {
     if (expandedCardRef.current) {
