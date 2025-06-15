@@ -13,11 +13,11 @@ import { generateHistoricoContent } from './PDF/PDFhistorico.js';
 import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
 import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
+import { addTermoDeposito } from './PDF/PDFtermoDeposito.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
-import { addTermoDeposito } from "./PDF/PDFTermoDeposito.js";
 
 /**
  * Remove acentos e caracteres especiais de uma string
@@ -132,7 +132,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
             yPosition = addNewPage(doc, data);
 
-            // << CORREÇÃO: Lógica para preparar a lista de anexos agora usa o array 'data.drogas >>
+            // << CORREÇÃO: Lógica para preparar a lista de anexos agora usa o array 'data.drogas' >>
             const isDrugCase = Array.isArray(data.drogas) && data.drogas.length > 0;
             const documentosAnexosList = [];
 
@@ -151,10 +151,15 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     }
                 });
             }
-            
-            const hasFielDepositario = Array.isArray(data.autores) && data.autores.some(a => a.fielDepositario === 'Sim');
-            if (hasFielDepositario) {
-                documentosAnexosList.push('TERMO DE DEPÓSITO');
+
+            let temFielDepositario = false;
+            if (Array.isArray(data.autores)) {
+                temFielDepositario = data.autores.some(
+                    (a: any) => a && typeof a.fielDepositario === 'string' && a.fielDepositario.trim().toLowerCase() === 'sim'
+                );
+            }
+            if (temFielDepositario) {
+                documentosAnexosList.push("TERMO DE DEPÓSITO");
             }
             
             // << CORREÇÃO: A lógica de apreensão e drogas é simplificada para usar 'isDrugCase' >>
@@ -184,7 +189,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
 
             const updatedData = {
                 ...data,
-                documentosAnexos: documentosAnexosList.join('\n'),
+                documentosAnexos: documentosAnexosList.join('\n')
             };
 
             generateHistoricoContent(doc, yPosition, updatedData)
@@ -202,8 +207,8 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     } else {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
                     }
-                    
-                    if (hasFielDepositario) {
+
+                    if (temFielDepositario) {
                         console.log("Adicionando Termo de Depósito");
                         addTermoDeposito(doc, updatedData);
                     }
@@ -221,6 +226,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Adicionando Termo de Apreensão para outros objetos");
                         addTermoApreensao(doc, updatedData);
                     }
+
 
                     if (pessoasComLaudo.length > 0) {
                         pessoasComLaudo.forEach((pessoa: any) => {
