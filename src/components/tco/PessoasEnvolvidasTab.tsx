@@ -41,7 +41,7 @@ interface PessoasEnvolvidasTabProps {
   handleAddTestemunha: () => void;
   handleRemoveTestemunha: (index: number) => void;
   autores: PersonalInfo[];
-  handleAutorDetalhadoChange: (index: number, field: string, value: string) => void;
+  handleAutorDetalhadoChange: (index: number, field: string, value: string | boolean) => void;
   handleAddAutor: () => void;
   handleRemoveAutor: (index: number) => void;
   natureza: string;
