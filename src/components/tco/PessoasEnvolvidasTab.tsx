@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -172,9 +171,8 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
           </TabsContent>
         </Tabs>
 
-        {/* Conditionally render the manual fiel depositário container */}
-        {fielDepositario && handleFielDepositarioChange && (
-          <div className="mt-8 pt-6 border-t border-dashed">
+        {/* Always render the manual fiel depositário container, but handle missing props gracefully */}
+        <div className="mt-8 pt-6 border-t border-dashed">
             <Card className="border-blue-200 border-2 bg-blue-50/50">
               <CardHeader>
                 <CardTitle className="flex items-center text-blue-800">
@@ -186,46 +184,46 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <Label htmlFor="fd-nome">Nome Completo</Label>
-                    <Input id="fd-nome" value={fielDepositario.nome || ''} onChange={e => handleFielDepositarioChange('nome', e.target.value)} placeholder="Nome do fiel depositário" />
+                    <Input id="fd-nome" value={fielDepositario?.nome || ''} onChange={e => handleFielDepositarioChange?.('nome', e.target.value)} placeholder="Nome do fiel depositário" disabled={!handleFielDepositarioChange} />
                   </div>
                   <div>
                     <Label htmlFor="fd-cpf">CPF</Label>
-                    <Input id="fd-cpf" value={fielDepositario.cpf || ''} onChange={e => handleFielDepositarioChange('cpf', e.target.value)} placeholder="000.000.000-00" />
+                    <Input id="fd-cpf" value={fielDepositario?.cpf || ''} onChange={e => handleFielDepositarioChange?.('cpf', e.target.value)} placeholder="000.000.000-00" disabled={!handleFielDepositarioChange} />
                   </div>
                    <div>
                     <Label htmlFor="fd-rg">RG</Label>
-                    <Input id="fd-rg" value={fielDepositario.rg || ''} onChange={e => handleFielDepositarioChange('rg', e.target.value)} placeholder="RG do fiel depositário" />
+                    <Input id="fd-rg" value={fielDepositario?.rg || ''} onChange={e => handleFielDepositarioChange?.('rg', e.target.value)} placeholder="RG do fiel depositário" disabled={!handleFielDepositarioChange} />
                   </div>
                   <div>
                     <Label htmlFor="fd-filiacaoMae">Filiação (Mãe)</Label>
-                    <Input id="fd-filiacaoMae" value={fielDepositario.filiacaoMae || ''} onChange={e => handleFielDepositarioChange('filiacaoMae', e.target.value)} placeholder="Nome da mãe" />
+                    <Input id="fd-filiacaoMae" value={fielDepositario?.filiacaoMae || ''} onChange={e => handleFielDepositarioChange?.('filiacaoMae', e.target.value)} placeholder="Nome da mãe" disabled={!handleFielDepositarioChange} />
                   </div>
                   <div>
                     <Label htmlFor="fd-filiacaoPai">Filiação (Pai)</Label>
-                    <Input id="fd-filiacaoPai" value={fielDepositario.filiacaoPai || ''} onChange={e => handleFielDepositarioChange('filiacaoPai', e.target.value)} placeholder="Nome do pai" />
+                    <Input id="fd-filiacaoPai" value={fielDepositario?.filiacaoPai || ''} onChange={e => handleFielDepositarioChange?.('filiacaoPai', e.target.value)} placeholder="Nome do pai" disabled={!handleFielDepositarioChange} />
                   </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="fd-endereco">Endereço</Label>
-                    <Input id="fd-endereco" value={fielDepositario.endereco || ''} onChange={e => handleFielDepositarioChange('endereco', e.target.value)} placeholder="Endereço completo" />
+                    <Input id="fd-endereco" value={fielDepositario?.endereco || ''} onChange={e => handleFielDepositarioChange?.('endereco', e.target.value)} placeholder="Endereço completo" disabled={!handleFielDepositarioChange} />
                   </div>
                   <div>
                     <Label htmlFor="fd-celular">Celular</Label>
-                    <Input id="fd-celular" value={fielDepositario.celular || ''} onChange={e => handleFielDepositarioChange('celular', e.target.value)} placeholder="(65) 99999-9999" />
+                    <Input id="fd-celular" value={fielDepositario?.celular || ''} onChange={e => handleFielDepositarioChange?.('celular', e.target.value)} placeholder="(65) 99999-9999" disabled={!handleFielDepositarioChange} />
                   </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="fd-objeto">Objeto Depositado</Label>
                     <Textarea
                         id="fd-objeto"
                         placeholder="Descreva o bem deixado sob a posse do fiel depositário"
-                        value={fielDepositario.objetoDepositado || ""}
-                        onChange={e => handleFielDepositarioChange('objetoDepositado', e.target.value)}
+                        value={fielDepositario?.objetoDepositado || ""}
+                        onChange={e => handleFielDepositarioChange?.('objetoDepositado', e.target.value)}
+                        disabled={!handleFielDepositarioChange}
                     />
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-        )}
       </CardContent>
     </Card>;
 };
