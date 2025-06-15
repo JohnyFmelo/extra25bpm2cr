@@ -304,28 +304,21 @@ const UsersList = () => {
                     >
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center space-x-3">
-                            <Avatar className="h-12 w-12 border-2 border-blue-200">
-                              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold">
-                                {getInitials(user.warName)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-gray-900 truncate">
-                                  {user.rank} {user.warName}
-                                </h3>
-                                {isAdmin && (
-                                  <Crown className="h-4 w-4 text-yellow-500" />
-                                )}
-                              </div>
-                              {user.registration && (
-                                <p className="text-sm text-gray-500">Mat.: {user.registration}</p>
-                              )}
-                              {user.service && (
-                                <p className="text-xs text-blue-600 font-medium">({user.service})</p>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-gray-900 truncate">
+                                {user.rank} {user.warName}
+                              </h3>
+                              {isAdmin && (
+                                <Crown className="h-4 w-4 text-yellow-500" />
                               )}
                             </div>
+                            {user.registration && (
+                              <p className="text-sm text-gray-500">Mat.: {user.registration}</p>
+                            )}
+                            {user.service && (
+                              <p className="text-xs text-blue-600 font-medium">({user.service})</p>
+                            )}
                           </div>
                           
                           <DropdownMenu>
