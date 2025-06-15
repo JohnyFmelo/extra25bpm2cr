@@ -60,7 +60,7 @@ export const addTermoDeposito = (doc: jsPDF, data: any, depositario: any) => {
         const filiacaoMaeDepositario = ensureAndProcessText(depositario.filiacaoMae);
         const enderecoDepositario = ensureAndProcessText(depositario.endereco);
         const celularDepositario = ensureAndProcessText(depositario.celular, false, 'Não informado');
-        const objetoDepositadoText = ensureAndProcessText(depositario.objetoDepositado);
+        const objetoDepositadoText = ensureAndProcessText(depositario.objetoDepositado, true, 'OBJETO NÃO INFORMADO');
 
         const bairro = typeof depositario.endereco === 'string' && depositario.endereco.trim() !== '' ?
             (depositario.endereco.trim().split(',').pop()?.trim().toUpperCase() || 'NÃO INFORMADO')
