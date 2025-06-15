@@ -4,7 +4,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { fetchUserHours } from "@/services/hoursService";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { CalendarDays, Clock, MapPin, TrendingUp } from "lucide-react";
+import { CalendarDays, Clock, Award, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const monthNames = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
@@ -80,13 +80,13 @@ const MonthlyExtraCalendar = () => {
   const getLocationColor = (location: string) => {
     switch (location) {
       case 'bpm':
-        return 'bg-purple-600 text-white';
+        return 'bg-purple-500 text-white border-purple-600';
       case 'saiop':
-        return 'bg-green-500 text-white';
+        return 'bg-green-500 text-white border-green-600';
       case 'sinfra':
-        return 'bg-blue-500 text-white';
+        return 'bg-blue-500 text-white border-blue-600';
       default:
-        return 'bg-white/20 text-white';
+        return 'bg-gray-500 text-white border-gray-600';
     }
   };
 
@@ -107,7 +107,7 @@ const MonthlyExtraCalendar = () => {
 
   if (loading) {
     return (
-      <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg">
+      <Card className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg">
         <CardContent className="p-6">
           <div className="animate-pulse">
             <div className="h-4 bg-white/20 rounded mb-2"></div>
@@ -127,61 +127,64 @@ const MonthlyExtraCalendar = () => {
   }
 
   return (
-    <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg">
-      <CardHeader className="pb-2">
+    <Card className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-xl transition-shadow">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-white/90" />
-              Dias Trabalhados - {format(new Date(), 'MMMM yyyy', { locale: ptBR })}
+            <h3 className="text-xl font-bold flex items-center gap-2 mb-1">
+              <CalendarDays className="h-6 w-6" />
+              Dias Trabalhados
             </h3>
-            <p className="text-sm text-white/80">Seus serviços extras do mês</p>
+            <p className="text-blue-100 text-sm">
+              {format(new Date(), 'MMMM yyyy', { locale: ptBR })}
+            </p>
           </div>
-          <TrendingUp className="h-8 w-8 text-white/60" />
+          <div className="bg-white/20 rounded-full p-2">
+            <BarChart3 className="h-6 w-6" />
+          </div>
         </div>
       </CardHeader>
       
-      <CardContent className="pt-0">
-        {/* Stats Row */}
-        <div className="flex justify-between items-center mb-4 bg-white/10 rounded-lg p-3">
-          <div className="text-center">
-            <div className="text-2xl font-bold">{workedDays.length}</div>
-            <div className="text-xs text-white/80">Dias</div>
+      <CardContent className="pt-0 pb-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="bg-white/15 backdrop-blur-sm rounded-lg p-4 text-center border border-white/20">
+            <div className="text-2xl font-bold mb-1">{workedDays.length}</div>
+            <div className="text-xs text-blue-100">Dias</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold">{totalHours}h</div>
-            <div className="text-xs text-white/80">Total</div>
+          <div className="bg-white/15 backdrop-blur-sm rounded-lg p-4 text-center border border-white/20">
+            <div className="text-2xl font-bold mb-1">{totalHours}h</div>
+            <div className="text-xs text-blue-100">Total</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold">{totalHours > 0 ? (totalHours / workedDays.length).toFixed(1) : 0}h</div>
-            <div className="text-xs text-white/80">Média/dia</div>
+          <div className="bg-white/15 backdrop-blur-sm rounded-lg p-4 text-center border border-white/20">
+            <div className="text-2xl font-bold mb-1">{totalHours > 0 ? (totalHours / workedDays.length).toFixed(1) : 0}h</div>
+            <div className="text-xs text-blue-100">Média</div>
           </div>
         </div>
 
         {/* Worked Days List */}
-        <div className="bg-white/10 rounded-lg p-4">
-          <h4 className="text-sm font-semibold mb-3 text-center">📅 DIAS TRABALHADOS</h4>
-          <div className="space-y-3 max-h-80 overflow-y-auto">
-            {workedDays.map((day, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3"
-              >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${getLocationColor(day.location)}`}>
+        <div className="space-y-3 max-h-64 overflow-y-auto">
+          {workedDays.map((day, index) => (
+            <div
+              key={index}
+              className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 hover:bg-white/15 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-sm font-bold border-2 ${getLocationColor(day.location)}`}>
                   {day.day}
                 </div>
-                <div className="flex flex-col flex-1 min-w-0">
-                  <span className="text-sm font-medium text-white">
+                <div className="flex-1">
+                  <div className="font-semibold text-base mb-1">
                     {getLocationName(day.location)}
-                  </span>
-                  <div className="flex items-center gap-1 text-xs text-white/80 mt-1">
-                    <Clock className="h-3 w-3" />
+                  </div>
+                  <div className="flex items-center gap-2 text-blue-100 text-sm">
+                    <Clock className="h-4 w-4" />
                     <span>{day.hours}h trabalhadas</span>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
