@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Hours from "./pages/Hours";
+import RankingTCO from "./pages/RankingTCO";
 import TopBar from "./components/TopBar";
 import BottomMenuBar from "./components/BottomMenuBar";
 import { useUserBlockListener } from "./hooks/useUserBlockListener";

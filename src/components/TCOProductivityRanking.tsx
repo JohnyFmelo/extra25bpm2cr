@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Trophy, TrendingUp } from "lucide-react";
@@ -287,6 +286,10 @@ const TCOProductivityRanking: React.FC = () => {
     fetchAllTcos();
   }, []);
 
+  const handleCardClick = () => {
+    window.open('/ranking-tco', '_blank');
+  };
+
   if (isLoading) {
     return (
       <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
@@ -311,7 +314,10 @@ const TCOProductivityRanking: React.FC = () => {
   const currentUserData = currentUserRgpm ? ranking.find(r => r.rgpm === currentUserRgpm) : null;
 
   return (
-    <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg">
+    <Card 
+      className="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg cursor-pointer hover:shadow-xl transition-shadow duration-300"
+      onClick={handleCardClick}
+    >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div>
@@ -319,7 +325,7 @@ const TCOProductivityRanking: React.FC = () => {
               <Trophy className="h-5 w-5 text-yellow-300" />
               Ranking TCO - Militares
             </h3>
-            <p className="text-sm text-white/80">Participação de militares nos TCOs</p>
+            <p className="text-sm text-white/80">Participação de militares nos TCOs • Clique para ver o ranking completo</p>
           </div>
           <TrendingUp className="h-8 w-8 text-white/60" />
         </div>
@@ -350,8 +356,8 @@ const TCOProductivityRanking: React.FC = () => {
                 <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-blue-600 font-bold">
                   {currentUserRank}º
                 </div>
-                <div>
-                  <div className="font-semibold text-sm">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm truncate">
                     {currentUserData.graduacao} {currentUserData.officerName}
                   </div>
                   <div className="text-xs text-white/80">{currentUserData.tcoCount} TCOs</div>
@@ -372,23 +378,20 @@ const TCOProductivityRanking: React.FC = () => {
             <div className="space-y-2">
               {ranking.slice(0, 3).map((officer, index) => (
                 <div key={officer.rgpm} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
                       index === 0 ? 'bg-yellow-400 text-blue-600' :
                       index === 1 ? 'bg-gray-300 text-gray-600' :
                       'bg-orange-400 text-white'
                     }`}>
                       {index + 1}
                     </div>
-                    <div>
-                      <div className="text-sm font-medium">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">
                         {officer.graduacao} {officer.officerName}
                       </div>
                       <div className="text-xs text-white/70">{officer.tcoCount} TCOs</div>
                     </div>
-                  </div>
-                  <div className="text-xs text-white/70">
-                    {officer.lastActivity}
                   </div>
                 </div>
               ))}
