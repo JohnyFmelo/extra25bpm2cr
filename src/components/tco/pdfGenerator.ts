@@ -134,19 +134,12 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
 
             const isDrugCase = Array.isArray(data.drogas) && data.drogas.length > 0;
             const documentosAnexosList = [];
-
-            // Encontra todos os autores que são fiéis depositários, criando cópias profundas para evitar mutações.
-            const fieisDepositarios = (Array.isArray(data.autores) ? data.autores.filter(
-                (a: any) => a &&
-                typeof a.fielDepositario === 'string' &&
-                a.fielDepositario.trim().toLowerCase() === 'sim' &&
-                typeof a.nome === 'string' &&
-                a.nome.trim() !== ''
-            ).map(a => JSON.parse(JSON.stringify(a))) // DEEP CLONE para isolamento total
-            : []) as any[];
-
-            if (fieisDepositarios.length > 0) {
-                console.log("Fiéis Depositários ENCONTRADOS (clonados):", JSON.stringify(fieisDepositarios, null, 2));
+            
+            // Check for a manually entered Fiel Depositario
+            const fielDepositarioManual = data.fielDepositario && data.fielDepositario.nome ? data.fielDepositario : null;
+            
+            if (fielDepositarioManual) {
+                console.log("Fiel Depositário MANUAL encontrado:", JSON.stringify(fielDepositarioManual, null, 2));
             }
 
             if (data.autores && data.autores.length > 0) {
@@ -165,8 +158,8 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 });
             }
 
-            // Adiciona o termo de depósito à lista se um fiel depositário foi encontrado
-            if (fieisDepositarios.length > 0) {
+            // Adiciona o termo de depósito à lista se um fiel depositário manual foi informado
+            if (fielDepositarioManual) {
                 documentosAnexosList.push("TERMO DE DEPÓSITO");
             }
             
@@ -216,12 +209,11 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
                     }
 
-                    // Chama o Termo de Depósito para cada fiel depositário encontrado.
-                    if (fieisDepositarios.length > 0) {
-                        fieisDepositarios.forEach(depositario => {
-                            console.log("Adicionando Termo de Depósito para (com dados isolados e clonados):", depositario.nome);
-                            addTermoDeposito(doc, updatedData, depositario);
-                        });
+                    // Chama o Termo de Depósito se um fiel depositário manual foi encontrado.
+                    if (fielDepositarioManual) {
+                        console.log("Adicionando Termo de Depósito para (com dados manuais):", fielDepositarioManual.nome);
+                        // Passamos o objeto do fiel depositário diretamente.
+                        addTermoDeposito(doc, updatedData, fielDepositarioManual);
                     }
                     
                     // << CORREÇÃO: A chamada para os termos relacionados a drogas agora usa a flag 'isDrugCase' >>
