@@ -29,7 +29,7 @@ import RankingChart from "@/components/RankingChart";
 import ManualUserRegistration from "@/components/ManualUserRegistration";
 import VersionDialog from "@/components/VersionDialog";
 import TCOProductivityRanking from "@/components/TCOProductivityRanking";
-import { useNotifications } from "@/components/NotificationsList";
+import { useNotifications } from "@/components/notifications/NotificationsList";
 
 interface IndexProps {
   initialActiveTab?: string;
