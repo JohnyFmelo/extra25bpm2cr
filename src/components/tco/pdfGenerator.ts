@@ -151,14 +151,16 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     }
                 });
             }
+            
+            const depositario = data.autores?.find((a: any) => 
+                a && 
+                typeof a.fielDepositario === 'string' && 
+                a.fielDepositario.trim().toLowerCase() === 'sim' &&
+                typeof a.nome === 'string' && 
+                a.nome.trim() !== ''
+            );
 
-            let temFielDepositario = false;
-            if (Array.isArray(data.autores)) {
-                temFielDepositario = data.autores.some(
-                    (a: any) => a && typeof a.fielDepositario === 'string' && a.fielDepositario.trim().toLowerCase() === 'sim'
-                );
-            }
-            if (temFielDepositario) {
+            if (depositario) {
                 documentosAnexosList.push("TERMO DE DEPÓSITO");
             }
             
@@ -189,7 +191,8 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
 
             const updatedData = {
                 ...data,
-                documentosAnexos: documentosAnexosList.join('\n')
+                documentosAnexos: documentosAnexosList.join('\n'),
+                depositario,
             };
 
             generateHistoricoContent(doc, yPosition, updatedData)
@@ -208,7 +211,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
                     }
 
-                    if (temFielDepositario) {
+                    if (updatedData.depositario) {
                         console.log("Adicionando Termo de Depósito");
                         addTermoDeposito(doc, updatedData);
                     }

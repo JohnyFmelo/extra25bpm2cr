@@ -1,4 +1,3 @@
-
 // PDFtermoDeposito.ts
 import jsPDF from 'jspdf';
 import { getPageConstants, addNewPage, addStandardFooterContent } from './pdfUtils.js';
@@ -17,28 +16,14 @@ const ensureAndProcessText = (text: any, toUpperCase = true, fallback = 'NÃO IN
 
 export const addTermoDeposito = (doc: jsPDF, data: any) => {
     const { PAGE_WIDTH, MARGIN_LEFT, MARGIN_RIGHT, MAX_LINE_WIDTH } = getPageConstants(doc);
-
-    console.log("Iniciando geração do Termo de Depósito");
-    console.log("Dados dos autores:", JSON.stringify(data.autores, null, 2));
-
-    // Find the FIRST author who is designated as a faithful depositary
-    const depositario = data.autores?.find((a: any) => {
-        const isValidDepo = a && 
-            typeof a.fielDepositario === 'string' && 
-            a.fielDepositario.trim().toLowerCase() === 'sim' &&
-            typeof a.nome === 'string' && 
-            a.nome.trim() !== '';
-        
-        console.log(`Verificando autor ${a?.nome}: fielDepositario="${a?.fielDepositario}", válido=${isValidDepo}`);
-        return isValidDepo;
-    });
+    const { depositario } = data;
 
     if (!depositario) {
-        console.log("Nenhum fiel depositário qualificado encontrado para o Termo de Depósito.");
+        console.log("Termo de Depósito chamado sem um depositário válido. Pulando geração.");
         return;
     }
 
-    console.log("Fiel depositário encontrado:", depositario.nome);
+    console.log("Iniciando geração do Termo de Depósito para:", depositario.nome);
 
     try {
         let y = addNewPage(doc, data);
