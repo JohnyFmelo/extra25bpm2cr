@@ -1,7 +1,8 @@
 
 import { useState } from "react";
-import { Clock, X, User, Shield, MessageSquare } from "lucide-react";
+import { Clock, X, User, Shield, MessageSquare, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Timestamp } from "firebase/firestore";
 
 interface Notification {
@@ -83,100 +84,144 @@ const NotificationCard = ({
 
   const getSenderIcon = () => {
     if (notification.isAdmin) {
-      return <Shield className="h-5 w-5 text-red-500" />;
+      return <Shield className="h-4 w-4 text-red-500" />;
     }
-    return <User className="h-5 w-5 text-blue-500" />;
+    return <User className="h-4 w-4 text-blue-500" />;
   };
 
   return (
     <div
-      className="relative p-6 cursor-pointer"
+      className={`
+        group relative overflow-hidden rounded-2xl border transition-all duration-300 cursor-pointer
+        ${isUnread 
+          ? 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-blue-200/60 shadow-lg hover:shadow-xl' 
+          : 'bg-white/70 backdrop-blur-sm border-slate-200/50 hover:border-slate-300/70 hover:shadow-md'
+        }
+        hover:scale-[1.02] active:scale-[0.98]
+      `}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onClick={onToggle}
     >
-      {/* Indicator bar for unread */}
+      {/* Gradient overlay for unread */}
       {isUnread && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500" />
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-400/5 to-purple-400/5 pointer-events-none" />
       )}
+
+      {/* Status indicator */}
+      <div className={`absolute top-0 left-0 w-full h-1 ${isUnread ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-slate-200'}`} />
 
       {/* Close button */}
       {onClose && (
         <Button
           variant="ghost"
           size="sm"
-          className="absolute top-4 right-4 h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 z-10 opacity-70 hover:opacity-100 transition-opacity"
+          className="absolute top-3 right-3 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-100 hover:text-red-600 z-10"
           onClick={handleClose}
         >
           <X className="h-4 w-4" />
         </Button>
       )}
 
-      <div className="pr-8">
+      <div className="p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center space-x-3 flex-1">
+            <div className={`
+              p-2 rounded-xl transition-colors duration-200
+              ${notification.isAdmin 
+                ? 'bg-red-100 text-red-600' 
+                : 'bg-blue-100 text-blue-600'
+              }
+            `}>
               {getSenderIcon()}
-              <div>
-                <h3 className="font-semibold text-slate-800 text-base">
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-slate-800 text-sm truncate">
                   {notification.graduation} {notification.senderName}
                 </h3>
-                <div className="flex items-center space-x-2 text-sm text-slate-500">
-                  <Clock className="h-3 w-3" />
-                  <span>{formatTimestamp(notification.timestamp)}</span>
-                  {notification.type === 'individual' && (
-                    <>
-                      <span>•</span>
-                      <MessageSquare className="h-3 w-3" />
-                      <span>Mensagem pessoal</span>
-                    </>
-                  )}
-                </div>
+                {notification.isAdmin && (
+                  <Badge variant="destructive" className="text-xs px-2 py-0">
+                    Admin
+                  </Badge>
+                )}
+              </div>
+              
+              <div className="flex items-center space-x-2 text-xs text-slate-500">
+                <Clock className="h-3 w-3" />
+                <span>{formatTimestamp(notification.timestamp)}</span>
+                {notification.type === 'individual' && (
+                  <>
+                    <span>•</span>
+                    <MessageSquare className="h-3 w-3" />
+                    <span>Pessoal</span>
+                  </>
+                )}
               </div>
             </div>
+            
             {isUnread && (
-              <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse flex-shrink-0" />
+              <div className="flex items-center space-x-2">
+                <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                  Nova
+                </Badge>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Content */}
-        <div className="text-slate-700 text-sm leading-relaxed mb-4">
-          {isExpanded ? (
-            <p className="whitespace-pre-wrap break-words">{notification.text}</p>
-          ) : (
-            <p className="line-clamp-3 whitespace-pre-wrap break-words">
-              {notification.text}
-            </p>
+        {/* Content preview */}
+        <div className="mb-4">
+          <p className={`
+            text-slate-700 text-sm leading-relaxed
+            ${isExpanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}
+          `}>
+            {notification.text}
+          </p>
+          
+          {!isExpanded && notification.text.length > 100 && (
+            <button className="text-blue-600 text-xs mt-1 hover:text-blue-700 transition-colors">
+              Ver mais...
+            </button>
           )}
         </div>
 
-        {/* Footer with actions */}
+        {/* Expanded actions */}
         {isExpanded && (
-          <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-            <div className="flex items-center space-x-3">
-              {isUnread && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMarkAsRead();
-                  }}
-                  className="text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                >
-                  Marcar como lida
-                </Button>
-              )}
-            </div>
-            
-            <div className="text-xs text-slate-500 flex items-center space-x-1">
-              <MessageSquare className="h-3 w-3" />
-              <span>
-                {notification.type === 'individual' ? 'Pessoal' : 'Geral'}
-              </span>
+          <div className="pt-4 border-t border-slate-200/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                {isUnread && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMarkAsRead();
+                    }}
+                    className="text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors"
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    Marcar como lida
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex items-center space-x-2 text-xs text-slate-500">
+                <div className={`
+                  px-2 py-1 rounded-full text-xs font-medium
+                  ${notification.type === 'individual' 
+                    ? 'bg-purple-100 text-purple-700' 
+                    : 'bg-green-100 text-green-700'
+                  }
+                `}>
+                  {notification.type === 'individual' ? 'Mensagem Pessoal' : 'Mensagem Geral'}
+                </div>
+              </div>
             </div>
           </div>
         )}

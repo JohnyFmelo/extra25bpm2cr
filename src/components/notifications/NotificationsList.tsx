@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -7,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import NotificationCard from "./NotificationCard";
 import { Timestamp } from "firebase/firestore";
-import { MessageSquare, Bell } from "lucide-react";
+import { Bell, Sparkles } from "lucide-react";
 
 interface Notification {
   id: string;
@@ -153,26 +154,52 @@ const NotificationsList = ({
 
   if (notifications.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-6 shadow-lg">
-          <Bell className="h-8 w-8 text-blue-500" />
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="relative mb-8">
+          <div className="w-24 h-24 bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 rounded-full flex items-center justify-center shadow-lg">
+            <Bell className="h-10 w-10 text-blue-500" />
+          </div>
+          <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-yellow-200 to-orange-200 rounded-full flex items-center justify-center shadow-md">
+            <Sparkles className="h-4 w-4 text-yellow-600" />
+          </div>
         </div>
-        <h3 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">
-          {showOnlyUnread ? "Nenhuma notificação nova" : "Nenhuma notificação"}
-        </h3>
-        <p className="text-slate-500 text-sm max-w-md leading-relaxed">
-          {showOnlyUnread 
-            ? "Você está em dia com suas notificações! Continue assim." 
-            : "Ainda não há notificações para exibir. Elas aparecerão aqui quando chegarem."
-          }
-        </p>
+        
+        <div className="max-w-md">
+          <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">
+            {showOnlyUnread ? "Tudo em dia!" : "Nenhuma notificação"}
+          </h3>
+          <p className="text-slate-500 leading-relaxed">
+            {showOnlyUnread 
+              ? "Você está em dia com suas notificações. Continue assim!" 
+              : "Quando houver novas mensagens, elas aparecerão aqui para você."
+            }
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="w-full space-y-4">
-      <div className="space-y-3">
+      {/* Header stats */}
+      {!showOnlyUnread && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-800">Central de Notificações</h2>
+              <p className="text-sm text-slate-600">
+                {notifications.filter(n => !n.readBy.includes(currentUser.id)).length} não lidas de {notifications.length} total
+              </p>
+            </div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3">
+              <Bell className="h-6 w-6 text-blue-500" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications grid */}
+      <div className="space-y-4">
         {notifications.map((notification, index) => {
           const isUnread = !notification.readBy.includes(currentUser.id);
           const isExpanded = expandedId === notification.id;
@@ -180,14 +207,8 @@ const NotificationsList = ({
           return (
             <div
               key={notification.id}
-              className={`
-                relative overflow-hidden rounded-xl border transition-all duration-300 hover:shadow-lg hover:scale-[1.01] animate-in slide-in-from-bottom-4
-                ${isUnread 
-                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-md' 
-                  : 'bg-white border-slate-200 hover:border-slate-300'
-                }
-              `}
-              style={{ animationDelay: `${index * 50}ms` }}
+              className="animate-in slide-in-from-bottom-4 duration-300"
+              style={{ animationDelay: `${index * 100}ms` }}
             >
               <NotificationCard
                 notification={notification}
