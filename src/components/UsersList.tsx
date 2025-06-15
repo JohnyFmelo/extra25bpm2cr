@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { collection, getDocs, doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -12,7 +11,7 @@ import { Ban, Trash2, Loader2, UserCircle, Search, Users, Mail, Shield, AlertCir
 import UserDetailsDialog from "./UserDetailsDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 
 interface User {
@@ -241,7 +240,7 @@ const UsersList = () => {
         <CardContent className="p-6">
           <div className="flex flex-col space-y-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Buscar por nome, email, posto ou força..."
                 value={searchTerm}
@@ -251,53 +250,56 @@ const UsersList = () => {
             </div>
             <div className="space-y-2">
                <Label>Filtrar por status</Label>
-               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={filterStatus === "all" ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterStatus("all")}
-                  className="flex items-center gap-2"
-                >
-                  <Users className="h-4 w-4" />
-                  Todos
-                </Button>
-                <Button
-                  variant={filterStatus === "active" ? "secondary" : "outline"}
-                   size="sm"
-                  onClick={() => setFilterStatus("active")}
-                  className="flex items-center gap-2"
-                >
-                  <UserCheck className="h-4 w-4" />
-                  Ativos
-                </Button>
-                <Button
-                  variant={filterStatus === "blocked" ? "destructive" : "outline"}
-                   size="sm"
-                  onClick={() => setFilterStatus("blocked")}
-                  className="flex items-center gap-2"
-                >
-                  <Ban className="h-4 w-4" />
-                  Bloqueados
-                </Button>
-                <Button
-                  variant={filterStatus === "updated" ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterStatus("updated")}
-                  className="flex items-center gap-2"
-                >
-                  <CheckCircle className="h-4 w-4" />
-                  Atualizados
-                </Button>
-                <Button
-                  variant={filterStatus === "outdated" ? "destructive" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterStatus("outdated")}
-                  className="flex items-center gap-2"
-                >
-                  <AlertTriangle className="h-4 w-4" />
-                  Desatualizados
-                </Button>
-              </div>
+               <ScrollArea className="w-full whitespace-nowrap">
+                <div className="flex w-max space-x-2 pb-2">
+                  <Button
+                    variant={filterStatus === "all" ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterStatus("all")}
+                    className="flex items-center gap-2"
+                  >
+                    <Users className="h-4 w-4" />
+                    Todos
+                  </Button>
+                  <Button
+                    variant={filterStatus === "active" ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterStatus("active")}
+                    className="flex items-center gap-2"
+                  >
+                    <UserCheck className="h-4 w-4" />
+                    Ativos
+                  </Button>
+                  <Button
+                    variant={filterStatus === "blocked" ? "destructive" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterStatus("blocked")}
+                    className="flex items-center gap-2"
+                  >
+                    <Ban className="h-4 w-4" />
+                    Bloqueados
+                  </Button>
+                  <Button
+                    variant={filterStatus === "updated" ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterStatus("updated")}
+                    className="flex items-center gap-2"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Atualizados
+                  </Button>
+                  <Button
+                    variant={filterStatus === "outdated" ? "destructive" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterStatus("outdated")}
+                    className="flex items-center gap-2"
+                  >
+                    <AlertTriangle className="h-4 w-4" />
+                    Desatualizados
+                  </Button>
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
             </div>
           </div>
         </CardContent>
