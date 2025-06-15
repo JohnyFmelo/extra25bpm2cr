@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -32,9 +33,19 @@ const Hours = () => {
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
     setUserData(storedUser);
+    if (storedUser?.userType === 'admin') {
+      setActiveConsult('general');
+    } else {
+      setActiveConsult('individual');
+    }
     const handleStorageChange = () => {
       const updatedUser = JSON.parse(localStorage.getItem('user') || '{}');
       setUserData(updatedUser);
+      if (updatedUser?.userType === 'admin') {
+        setActiveConsult('general');
+      } else {
+        setActiveConsult('individual');
+      }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => {
@@ -215,19 +226,23 @@ const Hours = () => {
           <TabsContent value="hours" className="flex-grow">
             
 
-            <Tabs defaultValue="individual" value={activeConsult} onValueChange={value => setActiveConsult(value as 'individual' | 'general')} className="w-full flex-grow">
-              <TabsList className="grid w-full grid-cols-2 bg-white/50 rounded-xl mb-6">
-                <TabsTrigger value="individual" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
-                  Consulta Individual
-                </TabsTrigger>
-                {userData?.userType === 'admin' && <TabsTrigger value="general" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
-                    Consulta Geral
-                  </TabsTrigger>}
-              </TabsList>
+            <Tabs value={activeConsult} onValueChange={value => setActiveConsult(value as 'individual' | 'general')} className="w-full flex-grow">
+              {userData?.userType === 'admin' && (
+                <TabsList className="grid w-full grid-cols-2 bg-white/50 rounded-xl mb-6">
+                  <TabsTrigger value="individual" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
+                    Consulta Individual
+                  </TabsTrigger>
+                  <TabsTrigger value="general" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
+                      Consulta Geral
+                    </TabsTrigger>
+                </TabsList>
+              )}
 
               <TabsContent value="individual" className="flex-grow">
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
-                  <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
+                  <h2 className="text-xl font-bold text-primary mb-4">
+                    {userData?.userType === 'admin' ? "Consulta Individual" : "Minhas Horas"}
+                  </h2>
                   <div className="space-y-4">
                     <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
 
@@ -306,3 +321,4 @@ const Hours = () => {
     </div>;
 };
 export default Hours;
+
