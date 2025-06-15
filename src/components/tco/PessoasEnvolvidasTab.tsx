@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,8 +44,8 @@ interface PessoasEnvolvidasTabProps {
   handleAddAutor: () => void;
   handleRemoveAutor: (index: number) => void;
   natureza: string;
-  fielDepositario: PersonalInfo; // New prop for manual depositary
-  handleFielDepositarioChange: (field: keyof PersonalInfo, value: string) => void; // New handler
+  fielDepositario?: PersonalInfo; // Make prop optional
+  handleFielDepositarioChange?: (field: keyof PersonalInfo, value: string) => void; // Make handler optional
 }
 
 const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
@@ -171,58 +172,60 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
           </TabsContent>
         </Tabs>
 
-        {/* NEW MANUAL FIEL DEPOSITÁRIO CONTAINER */}
-        <div className="mt-8 pt-6 border-t border-dashed">
-          <Card className="border-blue-200 border-2 bg-blue-50/50">
-            <CardHeader>
-              <CardTitle className="flex items-center text-blue-800">
-                <User className="mr-2 h-5 w-5" />
-                Fiel Depositário (Preenchimento Manual)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <Label htmlFor="fd-nome">Nome Completo</Label>
-                  <Input id="fd-nome" value={fielDepositario.nome || ''} onChange={e => handleFielDepositarioChange('nome', e.target.value)} placeholder="Nome do fiel depositário" />
+        {/* Conditionally render the manual fiel depositário container */}
+        {fielDepositario && handleFielDepositarioChange && (
+          <div className="mt-8 pt-6 border-t border-dashed">
+            <Card className="border-blue-200 border-2 bg-blue-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center text-blue-800">
+                  <User className="mr-2 h-5 w-5" />
+                  Fiel Depositário (Preenchimento Manual)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <Label htmlFor="fd-nome">Nome Completo</Label>
+                    <Input id="fd-nome" value={fielDepositario.nome || ''} onChange={e => handleFielDepositarioChange('nome', e.target.value)} placeholder="Nome do fiel depositário" />
+                  </div>
+                  <div>
+                    <Label htmlFor="fd-cpf">CPF</Label>
+                    <Input id="fd-cpf" value={fielDepositario.cpf || ''} onChange={e => handleFielDepositarioChange('cpf', e.target.value)} placeholder="000.000.000-00" />
+                  </div>
+                   <div>
+                    <Label htmlFor="fd-rg">RG</Label>
+                    <Input id="fd-rg" value={fielDepositario.rg || ''} onChange={e => handleFielDepositarioChange('rg', e.target.value)} placeholder="RG do fiel depositário" />
+                  </div>
+                  <div>
+                    <Label htmlFor="fd-filiacaoMae">Filiação (Mãe)</Label>
+                    <Input id="fd-filiacaoMae" value={fielDepositario.filiacaoMae || ''} onChange={e => handleFielDepositarioChange('filiacaoMae', e.target.value)} placeholder="Nome da mãe" />
+                  </div>
+                  <div>
+                    <Label htmlFor="fd-filiacaoPai">Filiação (Pai)</Label>
+                    <Input id="fd-filiacaoPai" value={fielDepositario.filiacaoPai || ''} onChange={e => handleFielDepositarioChange('filiacaoPai', e.target.value)} placeholder="Nome do pai" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="fd-endereco">Endereço</Label>
+                    <Input id="fd-endereco" value={fielDepositario.endereco || ''} onChange={e => handleFielDepositarioChange('endereco', e.target.value)} placeholder="Endereço completo" />
+                  </div>
+                  <div>
+                    <Label htmlFor="fd-celular">Celular</Label>
+                    <Input id="fd-celular" value={fielDepositario.celular || ''} onChange={e => handleFielDepositarioChange('celular', e.target.value)} placeholder="(65) 99999-9999" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="fd-objeto">Objeto Depositado</Label>
+                    <Textarea
+                        id="fd-objeto"
+                        placeholder="Descreva o bem deixado sob a posse do fiel depositário"
+                        value={fielDepositario.objetoDepositado || ""}
+                        onChange={e => handleFielDepositarioChange('objetoDepositado', e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="fd-cpf">CPF</Label>
-                  <Input id="fd-cpf" value={fielDepositario.cpf || ''} onChange={e => handleFielDepositarioChange('cpf', e.target.value)} placeholder="000.000.000-00" />
-                </div>
-                 <div>
-                  <Label htmlFor="fd-rg">RG</Label>
-                  <Input id="fd-rg" value={fielDepositario.rg || ''} onChange={e => handleFielDepositarioChange('rg', e.target.value)} placeholder="RG do fiel depositário" />
-                </div>
-                <div>
-                  <Label htmlFor="fd-filiacaoMae">Filiação (Mãe)</Label>
-                  <Input id="fd-filiacaoMae" value={fielDepositario.filiacaoMae || ''} onChange={e => handleFielDepositarioChange('filiacaoMae', e.target.value)} placeholder="Nome da mãe" />
-                </div>
-                <div>
-                  <Label htmlFor="fd-filiacaoPai">Filiação (Pai)</Label>
-                  <Input id="fd-filiacaoPai" value={fielDepositario.filiacaoPai || ''} onChange={e => handleFielDepositarioChange('filiacaoPai', e.target.value)} placeholder="Nome do pai" />
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="fd-endereco">Endereço</Label>
-                  <Input id="fd-endereco" value={fielDepositario.endereco || ''} onChange={e => handleFielDepositarioChange('endereco', e.target.value)} placeholder="Endereço completo" />
-                </div>
-                <div>
-                  <Label htmlFor="fd-celular">Celular</Label>
-                  <Input id="fd-celular" value={fielDepositario.celular || ''} onChange={e => handleFielDepositarioChange('celular', e.target.value)} placeholder="(65) 99999-9999" />
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="fd-objeto">Objeto Depositado</Label>
-                  <Textarea
-                      id="fd-objeto"
-                      placeholder="Descreva o bem deixado sob a posse do fiel depositário"
-                      value={fielDepositario.objetoDepositado || ""}
-                      onChange={e => handleFielDepositarioChange('objetoDepositado', e.target.value)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </CardContent>
     </Card>;
 };
