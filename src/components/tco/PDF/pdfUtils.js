@@ -165,7 +165,7 @@ export const addStandardHeaderContent = (doc, data = {}) => {
     doc.setFont("helvetica", "normal"); doc.setFontSize(9);
     const tcoNum = data?.tcoNumber || "Não informado."; // Pega dos dados passados
     const year = new Date().getFullYear(); // Pega o ano atual dinamicamente
-    doc.text(`REF.:TERMO CIRCUNSTANCIADO DE OCORRÊNCIA Nº ${tcoNum}/25º BPM/2ºCR/${year}`, MARGIN_LEFT, headerY);
+    doc.text(`REF.:TERMO CIRCUNSTANCIADO DE OCORRÊNCIA Nº ${tcoNum}/2ºCR/${year}`, MARGIN_LEFT, headerY);
 };
 
 /** Adiciona Rodapé padrão */
