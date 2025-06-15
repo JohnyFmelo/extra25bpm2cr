@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -80,10 +79,14 @@ export const fetchAllUsers = async () => {
             return {
                 registration: data.registration || '',
                 name: `${data.rank || ''} ${data.warName || ''}`.trim(),
+                warName: data.warName || '',
             };
         });
 
-        const validUsers = firebaseUsers.filter(user => user.registration);
+        const validUsers = firebaseUsers.filter(user => user.registration && user.warName);
+
+        // Sort users alphabetically by warName, ignoring the rank
+        validUsers.sort((a, b) => a.warName.localeCompare(b.warName));
 
         const users = validUsers.map(user => ({
             value: user.registration,
