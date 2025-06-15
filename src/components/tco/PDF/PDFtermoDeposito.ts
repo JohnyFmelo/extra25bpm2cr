@@ -1,3 +1,4 @@
+
 // PDFtermoDeposito.ts
 import jsPDF from 'jspdf';
 import { getPageConstants, addNewPage, addStandardFooterContent } from './pdfUtils.js';
@@ -21,7 +22,6 @@ export const addTermoDeposito = (doc: jsPDF, data: any) => {
     console.log("Dados dos autores:", JSON.stringify(data.autores, null, 2));
 
     // Find the FIRST author who is designated as a faithful depositary
-    // Corrigir verificação para aceitar tanto "sim" quanto "Sim"
     const depositario = data.autores?.find((a: any) => {
         const isValidDepo = a && 
             typeof a.fielDepositario === 'string' && 
@@ -64,7 +64,6 @@ export const addTermoDeposito = (doc: jsPDF, data: any) => {
         const now = new Date();
         const dataHoje = now.toLocaleDateString('pt-BR');
         const horaAtual = now.toTimeString().slice(0, 5);
-        const cellHeight = 8;
 
         // Process depositario data
         const nomeDepositario = ensureAndProcessText(depositario.nome);
@@ -86,87 +85,69 @@ export const addTermoDeposito = (doc: jsPDF, data: any) => {
             objeto: objetoDepositadoText
         });
 
-        // Draw table container
+        // Start table section
         const tableStartY = y;
-        const tableHeight = cellHeight * 8;
+        const rowHeight = 8;
         
-        console.log("Iniciando desenho da tabela na posição Y:", tableStartY);
-        
-        // Desenhar o contorno da tabela
-        doc.rect(MARGIN_LEFT, tableStartY, PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT, tableHeight);
-
+        // Table header and structure similar to Termo de Apreensão
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
-
-        // Resetar y para o início da tabela para o conteúdo
-        y = tableStartY;
-
-        // Line 1: Nome
-        doc.text(`NOME OU RAZÃO SOCIAL: ${nomeDepositario}`, MARGIN_LEFT + 2, y + 5);
-        y += cellHeight;
-        doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y);
-        console.log("Linha 1 - Nome adicionada, Y atual:", y);
-
-        // Line 2: CPF
-        doc.text(`CPF/CNPJ: ${cpfDepositario}`, MARGIN_LEFT + 2, y + 5);
-        y += cellHeight;
-        doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y);
-        console.log("Linha 2 - CPF adicionada, Y atual:", y);
-
-        // Line 3: Filiação Pai
-        doc.text(`FILIAÇÃO PAI: ${filiacaoPaiDepositario}`, MARGIN_LEFT + 2, y + 5);
-        y += cellHeight;
-        doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y);
-
-        // Line 4: Filiação Mãe
-        doc.text(`FILIAÇÃO MÃE: ${filiacaoMaeDepositario}`, MARGIN_LEFT + 2, y + 5);
-        y += cellHeight;
-        doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y);
-
-        // Line 5: Endereço e Bairro
-        doc.text(`ENDEREÇO: ${enderecoDepositario}`, MARGIN_LEFT + 2, y + 5);
-        doc.text(`BAIRRO: ${bairro}`, MARGIN_LEFT + 120, y + 5);
-        y += cellHeight;
-        doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y);
-
-        // Line 6: Município, UF, CEP, Tel
-        doc.text(`MUNICÍPIO: Várzea Grande`, MARGIN_LEFT + 2, y + 5);
-        doc.text(`UF: MT`, MARGIN_LEFT + 60, y + 5);
-        doc.text(`CEP: [Não informado]`, MARGIN_LEFT + 90, y + 5);
-        doc.text(`TEL: ${celularDepositario}`, MARGIN_LEFT + 140, y + 5);
-        y += cellHeight;
-        doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y);
-
-        // Line 7: Local do depósito, data e hora
-        doc.text(`LOCAL DO DEPÓSITO: ${enderecoDepositario}`, MARGIN_LEFT + 2, y + 5);
-        doc.text(`DATA: ${dataHoje}`, MARGIN_LEFT + 120, y + 5);
-        doc.text(`HORA: ${horaAtual}`, MARGIN_LEFT + 160, y + 5);
-        y += cellHeight;
-        doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y);
-
-        // Line 8: Descrição do bem (Refactored)
-        const descBemLabel = `DESCRIÇÃO DO BEM: `;
-        const descBemX = MARGIN_LEFT + 2;
-        const descBemY = y + 5;
-        const labelWidth = doc.getStringUnitWidth(descBemLabel) * doc.getFontSize() / doc.internal.scaleFactor;
-        const valueX = descBemX + labelWidth + 1;
-        const availableWidth = (PAGE_WIDTH - MARGIN_RIGHT) - valueX;
-
-        doc.text(descBemLabel, descBemX, descBemY);
-
-        const objetoLines = doc.splitTextToSize(objetoDepositadoText, availableWidth > 0 ? availableWidth : 100);
-        doc.text(objetoLines, valueX, descBemY);
         
-        const textBlockHeight = (objetoLines.length || 1) * 4;
-        const finalCellHeight = Math.max(cellHeight, textBlockHeight + 2);
+        // Table border
+        const tableWidth = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+        const tableHeight = rowHeight * 8; // 8 rows
+        doc.rect(MARGIN_LEFT, tableStartY, tableWidth, tableHeight);
         
-        y += finalCellHeight;
+        let currentY = tableStartY;
         
-        // Garantir que y esteja no final da tabela
-        y = Math.max(y, tableStartY + tableHeight);
-        console.log("Posição Y após tabela completa:", y);
-
-        // Space after table
-        y += 15;
+        // Row 1: Nome
+        currentY += rowHeight;
+        doc.text(`NOME OU RAZÃO SOCIAL: ${nomeDepositario}`, MARGIN_LEFT + 2, currentY - 3);
+        doc.line(MARGIN_LEFT, currentY, PAGE_WIDTH - MARGIN_RIGHT, currentY);
+        
+        // Row 2: CPF
+        currentY += rowHeight;
+        doc.text(`CPF/CNPJ: ${cpfDepositario}`, MARGIN_LEFT + 2, currentY - 3);
+        doc.line(MARGIN_LEFT, currentY, PAGE_WIDTH - MARGIN_RIGHT, currentY);
+        
+        // Row 3: Filiação Pai
+        currentY += rowHeight;
+        doc.text(`FILIAÇÃO PAI: ${filiacaoPaiDepositario}`, MARGIN_LEFT + 2, currentY - 3);
+        doc.line(MARGIN_LEFT, currentY, PAGE_WIDTH - MARGIN_RIGHT, currentY);
+        
+        // Row 4: Filiação Mãe
+        currentY += rowHeight;
+        doc.text(`FILIAÇÃO MÃE: ${filiacaoMaeDepositario}`, MARGIN_LEFT + 2, currentY - 3);
+        doc.line(MARGIN_LEFT, currentY, PAGE_WIDTH - MARGIN_RIGHT, currentY);
+        
+        // Row 5: Endereço e Bairro
+        currentY += rowHeight;
+        doc.text(`ENDEREÇO: ${enderecoDepositario}`, MARGIN_LEFT + 2, currentY - 3);
+        doc.text(`BAIRRO: ${bairro}`, MARGIN_LEFT + 120, currentY - 3);
+        doc.line(MARGIN_LEFT, currentY, PAGE_WIDTH - MARGIN_RIGHT, currentY);
+        
+        // Row 6: Município, UF, CEP, Tel
+        currentY += rowHeight;
+        doc.text(`MUNICÍPIO: Várzea Grande`, MARGIN_LEFT + 2, currentY - 3);
+        doc.text(`UF: MT`, MARGIN_LEFT + 60, currentY - 3);
+        doc.text(`CEP: [Não informado]`, MARGIN_LEFT + 90, currentY - 3);
+        doc.text(`TEL: ${celularDepositario}`, MARGIN_LEFT + 140, currentY - 3);
+        doc.line(MARGIN_LEFT, currentY, PAGE_WIDTH - MARGIN_RIGHT, currentY);
+        
+        // Row 7: Local do depósito, data e hora
+        currentY += rowHeight;
+        doc.text(`LOCAL DO DEPÓSITO: ${enderecoDepositario}`, MARGIN_LEFT + 2, currentY - 3);
+        doc.text(`DATA: ${dataHoje}`, MARGIN_LEFT + 120, currentY - 3);
+        doc.text(`HORA: ${horaAtual}`, MARGIN_LEFT + 160, currentY - 3);
+        doc.line(MARGIN_LEFT, currentY, PAGE_WIDTH - MARGIN_RIGHT, currentY);
+        
+        // Row 8: Descrição do bem
+        currentY += rowHeight;
+        doc.text(`DESCRIÇÃO DO BEM: ${objetoDepositadoText}`, MARGIN_LEFT + 2, currentY - 3);
+        
+        // Update Y position to after the table
+        y = tableStartY + tableHeight + 15;
+        console.log("Posição Y após tabela:", y);
 
         // Receipt confirmation
         doc.setFontSize(10);
