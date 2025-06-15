@@ -13,7 +13,6 @@ import { generateHistoricoContent } from './PDF/PDFhistorico.js';
 import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
 import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
-import { addTermoDeposito } from './PDF/PDFtermoDeposito.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
@@ -152,40 +151,10 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 });
             }
 
-            let temFielDepositario = false;
-            if (Array.isArray(data.autores)) {
-                temFielDepositario = data.autores.some(
-                    (a: any) => a && typeof a.fielDepositario === 'string' && a.fielDepositario.trim().toLowerCase() === 'sim'
-                );
-            }
-            if (temFielDepositario) {
-                documentosAnexosList.push("TERMO DE DEPÓSITO");
-            }
-            
-            // << CORREÇÃO: A lógica de apreensão e drogas é simplificada para usar 'isDrugCase' >>
-            // A apreensão será adicionada se for um caso de droga.
-            if (isDrugCase) {
-                const lacreTexto = data.lacreNumero ? ` LACRE Nº ${data.lacreNumero}` : '';
-                documentosAnexosList.push(`TERMO DE APREENSÃO${lacreTexto}`);
-                documentosAnexosList.push(`TERMO DE CONSTATAÇÃO PRELIMINAR DE DROGA${lacreTexto}`);
-                documentosAnexosList.push("REQUISIÇÃO DE EXAME PERICIAL EM DROGAS");
-            } else if (data.apreensoes && data.apreensoes.trim() !== '') {
-                 // Adiciona termo de apreensão para casos que não são de droga, mas têm apreensões.
-                documentosAnexosList.push(`TERMO DE APREENSÃO`);
-            }
-
             const pessoasComLaudo = [
                 ...(data.autores || []).filter((a: any) => a.laudoPericial === "Sim").map((a: any) => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
                 ...(data.vitimas || []).filter((v: any) => v.laudoPericial === "Sim").map((v: any) => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
             ].filter((p: any) => p.nome && p.nome.trim());
-
-            if (pessoasComLaudo.length > 0) {
-                pessoasComLaudo.forEach((pessoa: any) => {
-                    const generoArtigo = pessoa.sexo?.toLowerCase() === 'feminino' ? 'DA' : 'DO';
-                    const generoTipo = pessoa.tipo === 'Autor' ? (pessoa.sexo?.toLowerCase() === 'feminino' ? 'AUTORA' : 'AUTOR') : 'VÍTIMA';
-                    documentosAnexosList.push(`REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ${generoArtigo} ${generoTipo}`);
-                });
-            }
 
             const updatedData = {
                 ...data,
@@ -208,11 +177,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
                     }
 
-                    if (temFielDepositario) {
-                        console.log("Adicionando Termo de Depósito");
-                        addTermoDeposito(doc, updatedData);
-                    }
-                    
                     // << CORREÇÃO: A chamada para os termos relacionados a drogas agora usa a flag 'isDrugCase' >>
                     if (isDrugCase) {
                         console.log("Adicionando Termos de Droga (Apreensão, Constatação, Requisição)");
