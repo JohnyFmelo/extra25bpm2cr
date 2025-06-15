@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Clock, X, User, Shield, MessageSquare, Eye, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -116,115 +115,107 @@ const NotificationCard = ({
 
   const getSenderIcon = () => {
     if (notification.isAdmin) {
-      return <Shield className="h-4 w-4 text-red-500" />;
+      return <Shield className="h-5 w-5 text-red-600 dark:text-red-400" />;
     }
-    return <User className="h-4 w-4 text-blue-500" />;
+    return <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />;
   };
 
   return (
     <div
       className={`
-        group relative overflow-hidden rounded-2xl border transition-all duration-300 cursor-pointer
+        group relative overflow-hidden rounded-lg border-l-4
+        transition-shadow duration-300 cursor-pointer
         ${isUnread 
-          ? 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-blue-200/60 shadow-lg hover:shadow-xl' 
-          : 'bg-white/70 backdrop-blur-sm border-slate-200/50 hover:border-slate-300/70 hover:shadow-md'
+          ? 'border-blue-500 bg-blue-50 dark:bg-slate-800/60' 
+          : 'border-transparent bg-white dark:bg-slate-800/30'
         }
-        hover:scale-[1.02] active:scale-[0.98]
+        shadow-sm hover:shadow-lg border border-slate-200/80 dark:border-slate-700/50
       `}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onClick={onToggle}
     >
-      {/* Gradient overlay for unread */}
-      {isUnread && (
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-400/5 to-purple-400/5 pointer-events-none" />
-      )}
-
-      {/* Status indicator */}
-      <div className={`absolute top-0 left-0 w-full h-1 ${isUnread ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-slate-200'}`} />
-
       {/* Close button */}
       {onClose && (
         <Button
           variant="ghost"
-          size="sm"
-          className="absolute top-3 right-3 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-100 hover:text-red-600 z-10"
+          size="icon"
+          className="absolute top-2 right-2 h-7 w-7 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity z-10"
           onClick={handleClose}
         >
           <X className="h-4 w-4" />
         </Button>
       )}
 
-      <div className="p-6">
+      <div className="p-4">
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center space-x-3 flex-1">
-            <div className={`
-              p-2 rounded-xl transition-colors duration-200
-              ${notification.isAdmin 
-                ? 'bg-red-100 text-red-600' 
-                : 'bg-blue-100 text-blue-600'
-              }
-            `}>
-              {getSenderIcon()}
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-x-2 gap-y-1 mb-1 flex-wrap">
-                <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-800 text-sm truncate">
-                      {notification.graduation} {notification.senderName}
-                    </h3>
-                    {notification.isAdmin && (
-                      <Badge variant="destructive" className="text-xs px-2 py-0">
-                        Admin
-                      </Badge>
-                    )}
+        <div className="flex items-start justify-between gap-4 mb-3">
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+                <div className={`
+                    flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center
+                    ${notification.isAdmin 
+                        ? 'bg-red-100 dark:bg-red-900/30' 
+                        : 'bg-blue-100 dark:bg-blue-900/30'
+                    }
+                `}>
+                    {getSenderIcon()}
                 </div>
-                {recipientInfo && (
-                    <div className="flex items-center gap-1 text-xs text-slate-600">
-                        <ArrowRight className="h-3 w-3" />
-                        <span className="font-medium">{recipientInfo}</span>
+                
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
+                        <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-sm leading-tight">
+                          {notification.graduation} {notification.senderName}
+                        </h3>
+                        {recipientInfo && (
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                                <ArrowRight className="h-3 w-3" />
+                                <span className="font-medium truncate">{recipientInfo}</span>
+                            </div>
+                        )}
                     </div>
-                )}
-              </div>
-              
-              <div className="flex items-center space-x-2 text-xs text-slate-500">
-                <Clock className="h-3 w-3" />
-                <span>{formatTimestamp(notification.timestamp)}</span>
-                {notification.type === 'individual' && (
-                  <>
-                    <span>•</span>
-                    <MessageSquare className="h-3 w-3" />
-                    <span>Pessoal</span>
-                  </>
-                )}
-              </div>
+                    
+                    <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{formatTimestamp(notification.timestamp)}</span>
+                        </div>
+                        {notification.isAdmin && (
+                            <>
+                                <span className="text-slate-300 dark:text-slate-600">•</span>
+                                <Badge variant="destructive" className="text-xs px-1.5 py-0 leading-tight">
+                                    Admin
+                                </Badge>
+                            </>
+                        )}
+                        {notification.type === 'individual' && (
+                          <>
+                            <span className="text-slate-300 dark:text-slate-600">•</span>
+                            <span>Pessoal</span>
+                          </>
+                        )}
+                    </div>
+                </div>
             </div>
             
             {isUnread && (
-              <div className="flex items-center space-x-2">
-                <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
-                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                  Nova
-                </Badge>
-              </div>
+                <div className="flex-shrink-0 pt-1">
+                    <div className="h-2.5 w-2.5 bg-blue-500 rounded-full" title="Não lida"></div>
+                </div>
             )}
-          </div>
         </div>
 
         {/* Content preview */}
-        <div className="mb-4">
+        <div className={`pl-14 transition-all duration-300 ${isExpanded ? 'mb-4' : ''}`}>
           <p className={`
-            text-slate-700 text-sm leading-relaxed
-            ${isExpanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}
+            text-slate-600 dark:text-slate-300 text-sm leading-relaxed
+            ${isExpanded ? 'whitespace-pre-wrap' : 'line-clamp-3'}
           `}>
             {notification.text}
           </p>
           
           {!isExpanded && notification.text.length > 100 && (
-            <button className="text-blue-600 text-xs mt-1 hover:text-blue-700 transition-colors">
+            <button className="text-blue-600 dark:text-blue-400 text-xs mt-1 hover:underline font-medium">
               Ver mais...
             </button>
           )}
@@ -232,7 +223,7 @@ const NotificationCard = ({
 
         {/* Expanded actions */}
         {isExpanded && (
-          <div className="pt-4 border-t border-slate-200/50">
+          <div className="pt-4 border-t border-slate-200/70 dark:border-slate-700/50 ml-14">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 {isUnread && (
@@ -243,20 +234,20 @@ const NotificationCard = ({
                       e.stopPropagation();
                       onMarkAsRead();
                     }}
-                    className="text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors"
+                    className="text-xs"
                   >
-                    <Eye className="h-3 w-3 mr-1" />
+                    <Eye className="h-3.5 w-3.5 mr-1.5" />
                     Marcar como lida
                   </Button>
                 )}
               </div>
               
-              <div className="flex items-center space-x-2 text-xs text-slate-500">
+              <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
                 <div className={`
-                  px-2 py-1 rounded-full text-xs font-medium
+                  px-2 py-1 rounded-md text-xs font-medium
                   ${notification.type === 'individual' 
-                    ? 'bg-purple-100 text-purple-700' 
-                    : 'bg-green-100 text-green-700'
+                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300' 
+                    : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
                   }
                 `}>
                   {notification.type === 'individual' ? 'Mensagem Pessoal' : 'Mensagem Geral'}
