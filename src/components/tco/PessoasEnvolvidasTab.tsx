@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Trash2, User, Users } from "lucide-react";
 import PersonalInfoFields from "./PersonalInfoFields";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -63,6 +63,25 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
+
+  const depositarioIndex = autores.findIndex(a => a.fielDepositario === 'Sim');
+
+  const handleFielDepositarioChange = (newIndexStr: string) => {
+    const newIndex = newIndexStr === 'nenhum' ? -1 : parseInt(newIndexStr, 10);
+
+    autores.forEach((autor, index) => {
+      const isSelected = index === newIndex;
+      // Only update if the state is different
+      if ((autor.fielDepositario === 'Sim') !== isSelected) {
+        handleAutorDetalhadoChange(index, 'fielDepositario', isSelected ? 'Sim' : 'Não');
+      }
+      // Initialize objetoDepositado if it's the first time being set to "Sim" for this author
+      if (isSelected && autor.objetoDepositado === undefined) {
+          handleAutorDetalhadoChange(index, 'objetoDepositado', "");
+      }
+    });
+  };
+
   return <Card>
       <CardHeader>
         <CardTitle className="flex items-center">
@@ -103,42 +122,6 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                 </CardHeader>
                 <CardContent className="px-[5px]">
                   <PersonalInfoFields data={autor} onChangeHandler={handleAutorDetalhadoChange} prefix={`autor_${index}_`} index={index} isAuthor={true} />
-                    {/* Changed from RadioGroup to Select for Fiel Depositário */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-2 border-t border-dashed">
-                        <div>
-                            <Label htmlFor={`fiel-depositario-${index}`}>Fiel Depositário?</Label>
-                            <Select 
-                                value={autor.fielDepositario || "Não"}
-                                onValueChange={(value) => {
-                                    handleAutorDetalhadoChange(index, 'fielDepositario', value)
-                                    // Initialize objetoDepositado if it's the first time being set to "Sim"
-                                    if (value === "Sim" && autor.objetoDepositado === undefined) {
-                                        handleAutorDetalhadoChange(index, 'objetoDepositado', "");
-                                    }
-                                }}
-                            >
-                                <SelectTrigger id={`fiel-depositario-${index}`} className="mt-2">
-                                    <SelectValue placeholder="Selecione"/>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Sim">Sim</SelectItem>
-                                    <SelectItem value="Não">Não</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        {autor.fielDepositario === "Sim" && (
-                            <div className="md:col-span-2">
-                                <Label htmlFor={`objeto-depositado-${index}`}>Objeto Depositado</Label>
-                                <Textarea 
-                                    id={`objeto-depositado-${index}`} 
-                                    placeholder="Descreva o bem deixado sob a posse do autor" 
-                                    value={autor.objetoDepositado || ""} 
-                                    onChange={e => handleAutorDetalhadoChange(index, 'objetoDepositado', e.target.value)} 
-                                    className="mt-2" 
-                                />
-                            </div>
-                        )}
-                    </div>
                 </CardContent>
               </Card>)}
             
@@ -202,6 +185,62 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* NEW CONTAINER FOR FIEL DEPOSITÁRIO */}
+        <div className="mt-8 pt-6 border-t border-dashed">
+          <Card className="border-blue-200 border-2 bg-blue-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center text-blue-800">
+                <User className="mr-2 h-5 w-5" />
+                Fiel Depositário
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="fiel-depositario-select">Selecionar Fiel Depositário (dentre os Autores)</Label>
+                  <Select
+                    value={depositarioIndex > -1 ? String(depositarioIndex) : "nenhum"}
+                    onValueChange={handleFielDepositarioChange}
+                  >
+                    <SelectTrigger id="fiel-depositario-select" className="mt-2">
+                      <SelectValue placeholder="Selecione um autor..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="nenhum">Nenhum / Não se aplica</SelectItem>
+                      {autores.map((autor, index) => (
+                        <SelectItem key={`autor-option-${index}`} value={String(index)}>
+                          {autor.nome || `Autor ${index + 1}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {depositarioIndex > -1 && (
+                  <>
+                    <Card className="mt-4 bg-gray-50 p-4">
+                        <CardContent className="text-sm space-y-1 p-0">
+                           <p><strong>Nome:</strong> {autores[depositarioIndex].nome || 'Não informado'}</p>
+                           <p><strong>CPF:</strong> {autores[depositarioIndex].cpf || 'Não informado'}</p>
+                        </CardContent>
+                    </Card>
+                    <div className="md:col-span-2 mt-4">
+                      <Label htmlFor="objeto-depositado-standalone">Objeto Depositado</Label>
+                      <Textarea 
+                          id="objeto-depositado-standalone" 
+                          placeholder="Descreva o bem deixado sob a posse do fiel depositário" 
+                          value={autores[depositarioIndex].objetoDepositado || ""} 
+                          onChange={e => handleAutorDetalhadoChange(depositarioIndex, 'objetoDepositado', e.target.value)} 
+                          className="mt-2" 
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </CardContent>
     </Card>;
 };
