@@ -1,3 +1,4 @@
+
 // PDFtermoDeposito.ts
 import jsPDF from 'jspdf';
 import { getPageConstants, addNewPage, addStandardFooterContent } from './pdfUtils.js';
@@ -19,13 +20,15 @@ export const addTermoDeposito = (doc: jsPDF, data: any, depositario: any) => {
 
     console.log("--- INICIANDO GERAÇÃO DO TERMO DE DEPÓSITO ---");
     
-    if (!depositario || typeof depositario !== 'object' || !depositario.nome) {
-        console.error("TERMO DE DEPÓSITO: Objeto do fiel depositário é inválido ou não foi fornecido. Objeto recebido:", depositario);
-        return;
-    }
+    // Create a safe version of the depositario object to prevent crashes and ensure the term is always generated.
+    const safeDepositario = (depositario && typeof depositario === 'object') ? depositario : {};
 
-    console.log("Fiel depositário recebido com sucesso:", depositario.nome);
-    console.log("Dados completos do depositário para o termo:", JSON.stringify(depositario, null, 2));
+    if (!depositario || typeof depositario !== 'object' || !depositario.nome) {
+        console.warn("TERMO DE DEPÓSITO: Fiel depositário inválido ou não fornecido. Gerando com dados padrão. Objeto recebido:", depositario);
+    } else {
+        console.log("Fiel depositário recebido com sucesso:", safeDepositario.nome);
+        console.log("Dados completos do depositário para o termo:", JSON.stringify(safeDepositario, null, 2));
+    }
 
     try {
         let y = addNewPage(doc, data);
@@ -53,17 +56,17 @@ export const addTermoDeposito = (doc: jsPDF, data: any, depositario: any) => {
         const horaAtual = now.toTimeString().slice(0, 5);
         const cellHeight = 8;
 
-        // Process depositario data
-        const nomeDepositario = ensureAndProcessText(depositario.nome);
-        const cpfDepositario = ensureAndProcessText(depositario.cpf, false, 'Não informado');
-        const filiacaoPaiDepositario = ensureAndProcessText(depositario.filiacaoPai);
-        const filiacaoMaeDepositario = ensureAndProcessText(depositario.filiacaoMae);
-        const enderecoDepositario = ensureAndProcessText(depositario.endereco);
-        const celularDepositario = ensureAndProcessText(depositario.celular, false, 'Não informado');
-        const objetoDepositadoText = ensureAndProcessText(depositario.objetoDepositado, true, 'OBJETO NÃO INFORMADO');
+        // Process depositario data from the safe object
+        const nomeDepositario = ensureAndProcessText(safeDepositario.nome);
+        const cpfDepositario = ensureAndProcessText(safeDepositario.cpf, false, 'Não informado');
+        const filiacaoPaiDepositario = ensureAndProcessText(safeDepositario.filiacaoPai);
+        const filiacaoMaeDepositario = ensureAndProcessText(safeDepositario.filiacaoMae);
+        const enderecoDepositario = ensureAndProcessText(safeDepositario.endereco);
+        const celularDepositario = ensureAndProcessText(safeDepositario.celular, false, 'Não informado');
+        const objetoDepositadoText = ensureAndProcessText(safeDepositario.objetoDepositado, true, 'OBJETO NÃO INFORMADO');
 
-        const bairro = typeof depositario.endereco === 'string' && depositario.endereco.trim() !== '' ?
-            (depositario.endereco.trim().split(',').pop()?.trim().toUpperCase() || 'NÃO INFORMADO')
+        const bairro = typeof safeDepositario.endereco === 'string' && safeDepositario.endereco.trim() !== '' ?
+            (safeDepositario.endereco.trim().split(',').pop()?.trim().toUpperCase() || 'NÃO INFORMADO')
             : 'NÃO INFORMADO';
 
         console.log("Dados processados do depositário:", {
@@ -208,7 +211,7 @@ export const addTermoDeposito = (doc: jsPDF, data: any, depositario: any) => {
         const rgCondutor = condutor ? ensureAndProcessText(condutor.rg, false, 'NÃO INFORMADO') : 'NÃO INFORMADO';
 
         doc.setFont('helvetica', 'bold');
-        doc.text(`CONDUTOR DA OCORRÊNCIA`, MARGIN_LEFT + 2, y);
+        doc.text(`CONDUTOR DA OCORRÊncia`, MARGIN_LEFT + 2, y);
         y += 7;
         doc.setFont('helvetica', 'normal');
         doc.text(`NOME COMPLETO: ${nomeCondutor}`, MARGIN_LEFT + 2, y);
@@ -223,7 +226,7 @@ export const addTermoDeposito = (doc: jsPDF, data: any, depositario: any) => {
         console.log("Termo de Depósito gerado com sucesso para:", nomeDepositario);
 
     } catch (error) {
-        console.error("Erro CRÍTICO ao gerar Termo de Depósito para:", depositario?.nome);
+        console.error("Erro CRÍTICO ao gerar Termo de Depósito para:", safeDepositario?.nome || 'Depositário Desconhecido');
         console.error("Detalhes do erro:", error);
     }
 };
