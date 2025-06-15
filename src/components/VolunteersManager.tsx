@@ -1,5 +1,4 @@
 
-```tsx
 import { useState, useEffect } from "react";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -143,4 +142,3 @@ const VolunteersManager = () => {
 };
 
 export default VolunteersManager;
-```
