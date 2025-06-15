@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Ban, Trash2, Loader2, UserCircle, Search, Users, Filter, Mail, Shield, AlertCircle, CheckCircle, MoreVertical, AlertTriangle, UserCheck, Crown } from "lucide-react";
+import { Ban, Trash2, Loader2, UserCircle, Search, Users, Filter, Mail, Shield, AlertCircle, CheckCircle, MoreVertical, AlertTriangle, UserCheck, Crown, Key } from "lucide-react";
 import UserDetailsDialog from "./UserDetailsDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -110,6 +110,30 @@ const UsersList = () => {
       }
     }
   };
+
+  const handleResetPassword = async (userId: string) => {
+    if (confirm("Tem certeza que deseja resetar a senha deste usuário para '122333'? O usuário será forçado a alterar a senha no próximo login.")) {
+      try {
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, {
+          password: "123456",
+          passwordReset: true,
+        });
+        toast({
+          title: "Senha resetada",
+          description: "A senha do usuário foi resetada com sucesso.",
+        });
+      } catch (error) {
+        console.error("Error resetting password:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível resetar a senha do usuário.",
+        });
+      }
+    }
+  };
+
   const handleToggleBlock = async (user: User) => {
     try {
       const userRef = doc(db, "users", user.id);
@@ -334,6 +358,13 @@ const UsersList = () => {
                               }}>
                                 <Ban className="h-4 w-4 mr-2" />
                                 {user.blocked ? "Desbloquear" : "Bloquear"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                handleResetPassword(user.id);
+                              }}>
+                                <Key className="h-4 w-4 mr-2" />
+                                Resetar Senha
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={(e) => {
