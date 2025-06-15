@@ -1,4 +1,3 @@
-
 import {
     MARGIN_LEFT, MARGIN_RIGHT, getPageConstants,
     addSectionTitle, addField, addWrappedText, formatarDataHora, formatarDataSimples,
@@ -300,7 +299,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     }
 
     // --- SEÇÃO 3: HISTÓRICO ---
-    const primeiroAutor = autoresValidos.length > 0 ? autoresValidos[0] : null;
+    const autoresValidos = data.autores ? data.autores.filter(a => a?.nome && a.nome.trim() !== '') : [];
     const vitimasComRelato = !isDrugCase ? (data.vitimas ? data.vitimas.filter(v => v?.nome && v.nome.trim() !== '') : []) : [];
     const testemunhasComRelato = data.testemunhas ? data.testemunhas.filter(t => t?.nome && t.nome.trim() !== "") : [];
 
@@ -312,25 +311,27 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addWrappedText(doc, yPos, ensureString(data.relatoPolicial), MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
     yPos += 2;
 
-    let tituloRelatoAutor = "RELATO DO(A) AUTOR(A) DO FATO";
-    let autorRole = "AUTOR(A) DO FATO";
-    if (primeiroAutor && primeiroAutor.sexo) {
-        if (primeiroAutor.sexo.toLowerCase() === 'feminino') {
-            tituloRelatoAutor = "RELATO DA AUTORA DO FATO";
-            autorRole = "AUTORA DO FATO";
-        } else if (primeiroAutor.sexo.toLowerCase() === 'masculino') {
-            tituloRelatoAutor = "RELATO DO AUTOR DO FATO";
-            autorRole = "AUTOR DO FATO";
-        }
-    }
-    
-    yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, historicoSectionNumber.toFixed(1), 2, data);
-    historicoSectionNumber += 0.1;
-    yPos = addWrappedText(doc, yPos, ensureString(data.relatoAutor), MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
-    if (primeiroAutor) {
-        yPos = addSignatureWithNameAndRole(doc, yPos, ensureString(primeiroAutor.nome), autorRole, data);
-    } else {
-        yPos += 10;
+    if (autoresValidos.length > 0) {
+        autoresValidos.forEach(autor => {
+            let tituloRelatoAutor = `RELATO DO(A) AUTOR(A) ${ensureString(autor.nome).toUpperCase()}`;
+            let autorRole = "AUTOR(A) DO FATO";
+            if (autor && autor.sexo) {
+                if (autor.sexo.toLowerCase() === 'feminino') {
+                    tituloRelatoAutor = `RELATO DA AUTORA ${ensureString(autor.nome).toUpperCase()}`;
+                    autorRole = "AUTORA DO FATO";
+                } else if (autor.sexo.toLowerCase() === 'masculino') {
+                    tituloRelatoAutor = `RELATO DO AUTOR ${ensureString(autor.nome).toUpperCase()}`;
+                    autorRole = "AUTOR DO FATO";
+                }
+            }
+            
+            yPos = addSectionTitle(doc, yPos, tituloRelatoAutor, historicoSectionNumber.toFixed(1), 2, data);
+            historicoSectionNumber += 0.1;
+            
+            const relatoAutorText = ensureString(autor.relato || "O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.");
+            yPos = addWrappedText(doc, yPos, relatoAutorText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'justify', data);
+            yPos = addSignatureWithNameAndRole(doc, yPos, ensureString(autor.nome), autorRole, data);
+        });
     }
 
     if (!isDrugCase && vitimasComRelato.length > 0) {
@@ -372,6 +373,16 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     yPos = addWrappedText(doc, yPos, ensureString(data.apreensaoDescricao || data.apreensoes || "Nenhum."), MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
     yPos += 2;
 
+    const depositarios = data.autores ? data.autores.filter(a => a?.fielDepositario === 'Sim' && a.objetoDepositado && a.objetoDepositado.trim() !== '') : [];
+    if (depositarios.length > 0) {
+        yPos = addSectionTitle(doc, yPos, "OBJETOS EM DEPÓSITO", "4.3", 2, data);
+        const objetosText = depositarios.map(d => {
+            return `FIEL DEPOSITÁRIO: ${ensureString(d.nome).toUpperCase()}\nBEM(NS) DEPOSITADO(S): ${ensureString(d.objetoDepositado)}`;
+        }).join("\n\n");
+        yPos = addWrappedText(doc, yPos, objetosText, MARGIN_LEFT, 12, "normal", MAX_LINE_WIDTH, 'left', data);
+        yPos += 2;
+    }
+
     const hasPhotos = data.objetosApreendidos && data.objetosApreendidos.length > 0;
     const hasVideos = data.videoLinks && data.videoLinks.length > 0;
     const hasImages = data.imageBase64 && data.imageBase64.length > 0;
@@ -382,14 +393,16 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
     else if (!hasPhotos && !hasVideos && hasImages) sectionTitleFotosVideos = "IMAGENS ADICIONAIS";
     else if (hasImages && (hasPhotos || hasVideos)) sectionTitleFotosVideos = "FOTOS, VÍDEOS E IMAGENS ADICIONAIS";
 
+    const fotosVideosSectionNumber = depositarios.length > 0 ? "4.4" : "4.3";
+
     if (hasPhotos || hasVideos || hasImages) {
-        yPos = addSectionTitle(doc, yPos, sectionTitleFotosVideos, "4.3", 2, data);
+        yPos = addSectionTitle(doc, yPos, sectionTitleFotosVideos, fotosVideosSectionNumber, 2, data);
         if (hasImages) {
             yPos = checkPageBreak(doc, yPos, 50, data);
             yPos = addImagesToPDF(doc, yPos, data.imageBase64, PAGE_WIDTH, PAGE_HEIGHT);
         }
         if (hasVideos) {
-            yPos = addSectionTitle(doc, yPos, "LINKS PARA VÍDEOS", "4.3.1", 3, data);
+            yPos = addSectionTitle(doc, yPos, "LINKS PARA VÍDEOS", `${fotosVideosSectionNumber}.1`, 3, data);
             yPos = checkPageBreak(doc, yPos, 40, data);
             const qrSize = 30;
             const qrMargin = 10;
@@ -436,7 +449,7 @@ export const generateHistoricoContent = async (doc, currentY, data) => {
             yPos = startY + totalQRHeight;
         }
     } else {
-        yPos = addSectionTitle(doc, yPos, "FOTOS E VÍDEOS", "4.3", 2, data);
+        yPos = addSectionTitle(doc, yPos, "FOTOS E VÍDEOS", fotosVideosSectionNumber, 2, data);
         yPos = addWrappedText(doc, yPos, "Nenhuma foto, vídeo ou imagem adicional anexada.", MARGIN_LEFT, 12, "italic", MAX_LINE_WIDTH, 'left', data);
         yPos += 2;
     }

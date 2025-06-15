@@ -18,8 +18,6 @@ interface DrugItem {
 interface HistoricoTabProps {
   relatoPolicial: string;
   setRelatoPolicial: (value: string) => void;
-  relatoAutor: string;
-  setRelatoAutor: (value: string) => void;
   relatoVitima: string;
   setRelatoVitima: (value: string) => void;
   relatoTestemunha: string;
@@ -105,8 +103,6 @@ interface HistoricoTabProps {
 const HistoricoTab: React.FC<HistoricoTabProps> = ({
   relatoPolicial,
   setRelatoPolicial,
-  relatoAutor,
-  setRelatoAutor,
   relatoVitima,
   setRelatoVitima,
   relatoTestemunha,
@@ -335,7 +331,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
                   <Textarea 
                     id={`relatoAutor-${index}`} 
                     placeholder={`Descreva o relato do autor ${autor.nome}`} 
-                    value={autor.relato || "O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO."} 
+                    value={autor.relato || "O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO."} 
                     onChange={e => handleAutorRelatoChange(index, e.target.value)} 
                     className="min-h-[150px]" 
                   />
