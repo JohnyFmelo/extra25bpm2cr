@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,7 @@ import {
 import { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { Eye, EyeOff } from "lucide-react";
 
 interface UserDetailsDialogProps {
   open: boolean;
@@ -27,6 +27,7 @@ interface UserDetailsDialogProps {
     userType?: string;
     service?: string;
     rgpm?: string;
+    password?: string;
   } | null;
   onUserUpdated: () => void;
 }
@@ -37,7 +38,9 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
   const [rank, setRank] = useState("");
   const [registration, setRegistration] = useState("");
   const [userType, setUserType] = useState("");
-  // const [service, setService] = useState(""); // Removido
+  const [service, setService] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [rgpm, setRgpm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -49,8 +52,10 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
       setRank(userData.rank || "");
       setRegistration(userData.registration || "");
       setUserType(userData.userType || "");
-      // setService(userData.service || ""); // Removido
+      setService(userData.service || "");
+      setPassword(userData.password || "");
       setRgpm(userData.rgpm || "");
+      setShowPassword(false);
     }
   }, [userData, open]);
 
@@ -72,7 +77,8 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
         rank,
         registration,
         userType,
-        // service, // Removido
+        service,
+        password,
         rgpm,
         updatedAt: new Date().toISOString(),
       };
@@ -180,7 +186,41 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
               onChange={(e) => setRegistration(e.target.value)}
             />
           </div>
-          {/* O campo de serviço foi removido daqui */}
+          <div className="space-y-2">
+            <Label htmlFor="service">Serviço</Label>
+            <Select value={service} onValueChange={setService}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o serviço" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Operacional">Operacional</SelectItem>
+                <SelectItem value="Administrativo">Administrativo</SelectItem>
+                <SelectItem value="Inteligência">Inteligência</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Senha</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Senha do usuário"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 rounded-md"
+                onClick={() => setShowPassword((prev) => !prev)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showPassword ? "Ocultar senha" : "Mostrar senha"}</span>
+              </Button>
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="userType">Tipo de Usuário</Label>
             <Select value={userType} onValueChange={setUserType}>
