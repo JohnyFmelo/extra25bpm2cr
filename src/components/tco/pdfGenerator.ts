@@ -135,6 +135,15 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             const isDrugCase = Array.isArray(data.drogas) && data.drogas.length > 0;
             const documentosAnexosList = [];
 
+            // Encontra o objeto do fiel depositário antecipadamente para evitar problemas de mutação de array.
+            const fielDepositario = Array.isArray(data.autores) ? data.autores.find(
+                (a: any) => a &&
+                typeof a.fielDepositario === 'string' &&
+                a.fielDepositario.trim().toLowerCase() === 'sim' &&
+                typeof a.nome === 'string' &&
+                a.nome.trim() !== ''
+            ) : undefined;
+
             if (data.autores && data.autores.length > 0) {
                 data.autores.forEach((autor: any) => {
                     if (autor.nome && autor.nome.trim()) {
@@ -151,16 +160,8 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 });
             }
 
-            // Valida e encontra o *índice* do fiel depositário antecipadamente
-            const fielDepositarioIndex = Array.isArray(data.autores) ? data.autores.findIndex(
-                (a: any) => a &&
-                typeof a.fielDepositario === 'string' &&
-                a.fielDepositario.trim().toLowerCase() === 'sim' &&
-                typeof a.nome === 'string' &&
-                a.nome.trim() !== ''
-            ) : -1;
-
-            if (fielDepositarioIndex !== -1) {
+            // Adiciona o termo de depósito à lista se um fiel depositário foi encontrado
+            if (fielDepositario) {
                 documentosAnexosList.push("TERMO DE DEPÓSITO");
             }
             
@@ -210,11 +211,10 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
                     }
 
-                    // Chama o Termo de Depósito se um depositário válido foi encontrado, passando seu índice separadamente
-                    if (fielDepositarioIndex !== -1) {
-                        const depositarioNome = updatedData.autores[fielDepositarioIndex].nome;
-                        console.log("Adicionando Termo de Depósito para:", depositarioNome);
-                        addTermoDeposito(doc, updatedData, fielDepositarioIndex);
+                    // Chama o Termo de Depósito passando o objeto do depositário diretamente.
+                    if (fielDepositario) {
+                        console.log("Adicionando Termo de Depósito para:", fielDepositario.nome);
+                        addTermoDeposito(doc, updatedData, fielDepositario);
                     }
                     
                     // << CORREÇÃO: A chamada para os termos relacionados a drogas agora usa a flag 'isDrugCase' >>
@@ -230,7 +230,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Adicionando Termo de Apreensão para outros objetos");
                         addTermoApreensao(doc, updatedData);
                     }
-
 
                     if (pessoasComLaudo.length > 0) {
                         pessoasComLaudo.forEach((pessoa: any) => {
