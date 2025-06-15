@@ -38,6 +38,7 @@ const NotificationsList = ({
     graduation: string;
   }[]>([]);
   const { toast } = useToast();
+  const isInitialLoad = useRef(true);
   
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = currentUser.userType === "admin";
@@ -48,6 +49,23 @@ const NotificationsList = ({
   useEffect(() => {
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, snapshot => {
+      if (!isInitialLoad.current) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const newNotif = { id: change.doc.id, ...change.doc.data() } as Notification;
+            
+            const isForCurrentUser = newNotif.type === 'all' || newNotif.recipientId === currentUser.id;
+
+            if (isForCurrentUser) {
+              toast({
+                title: `Nova Mensagem de ${newNotif.graduation} ${newNotif.senderName}`,
+                description: newNotif.text.substring(0, 100) + (newNotif.text.length > 100 ? '...' : ''),
+              });
+            }
+          }
+        });
+      }
+
       const allNotifs = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -67,10 +85,14 @@ const NotificationsList = ({
       window.dispatchEvent(new CustomEvent('notificationsUpdate', { 
         detail: { count: unreadCount } 
       }));
+
+      if (isInitialLoad.current) {
+        isInitialLoad.current = false;
+      }
     });
 
     return () => unsubscribe();
-  }, [currentUser.id, showOnlyUnread]);
+  }, [currentUser.id, showOnlyUnread, toast]);
 
   useEffect(() => {
     if (expandedCardRef.current) {

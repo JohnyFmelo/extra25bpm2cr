@@ -8,7 +8,6 @@ import UsersList from "@/components/UsersList";
 import ProfileUpdateDialog from "@/components/ProfileUpdateDialog";
 import PasswordChangeDialog from "@/components/PasswordChangeDialog";
 import InformationDialog from "@/components/InformationDialog";
-import NotificationsList, { useNotifications } from "@/components/NotificationsList";
 import { TravelManagement } from "@/components/TravelManagement";
 import { useToast } from "@/hooks/use-toast";
 import TCOForm from "@/components/TCOForm";
@@ -20,7 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { collection, query, onSnapshot, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { CalendarDays, Users as UsersIcon, Clock, MapPin, Calendar, Navigation } from "lucide-react";
+import { Users as UsersIcon, Clock, MapPin, Calendar, Navigation } from "lucide-react";
 import UpcomingShifts from "@/components/UpcomingShifts";
 import MonthlyHoursSummary from "@/components/MonthlyHoursSummary";
 import ActiveTrips from "@/components/ActiveTrips";
@@ -168,15 +167,6 @@ const Index = ({
 
           <TabsContent value="main" className="flex-grow">
             <div className="space-y-8">
-              {hasNotifications && <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-amber-500">
-                  <CardContent className="p-6">
-                    <div className="flex items-center mb-2">
-                      <CalendarDays className="h-5 w-5 text-amber-500 mr-2" />
-                      <h3 className="text-lg font-semibold text-gray-800">Notificações</h3>
-                    </div>
-                    <NotificationsList showOnlyUnread={true} />
-                  </CardContent>
-                </Card>}
               <TCOProductivityRanking />
               <MonthlyHoursSummary />
               <MonthlyExtraCalendar />
