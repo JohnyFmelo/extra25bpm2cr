@@ -1,3 +1,4 @@
+
 // PDFtermoDeposito.ts
 import jsPDF from 'jspdf';
 import { getPageConstants, addNewPage, addStandardFooterContent } from './pdfUtils.js';
@@ -19,11 +20,11 @@ export const addTermoDeposito = (doc: jsPDF, data: any) => {
     const { depositario } = data;
 
     if (!depositario) {
-        console.log("Termo de Depósito chamado sem um depositário válido. Pulando geração.");
+        console.log("Termo de Depósito: Nenhum fiel depositário válido encontrado. Pulando geração.");
         return;
     }
 
-    console.log("Iniciando geração do Termo de Depósito para:", depositario.nome);
+    console.log("Gerando Termo de Depósito para:", depositario.nome);
 
     try {
         let y = addNewPage(doc, data);
@@ -57,12 +58,16 @@ export const addTermoDeposito = (doc: jsPDF, data: any) => {
         const filiacaoMaeDepositario = ensureAndProcessText(depositario.filiacaoMae);
         const enderecoDepositario = ensureAndProcessText(depositario.endereco);
         const celularDepositario = ensureAndProcessText(depositario.celular, false, 'Não informado');
-        const objetoDepositadoText = ensureAndProcessText(depositario.objetoDepositado);
+        const objetoDepositadoText = ensureAndProcessText(data.apreensoes);
 
-        const bairro = typeof depositario.endereco === 'string' && depositario.endereco.trim() !== '' ?
-            (depositario.endereco.trim().split(',').pop()?.trim().toUpperCase() || 'NÃO INFORMADO')
-            : 'NÃO INFORMADO';
-
+        let bairro = 'NÃO INFORMADO';
+        if (typeof depositario.endereco === 'string' && depositario.endereco.trim()) {
+            const parts = depositario.endereco.split(',');
+            if (parts.length > 1) {
+                bairro = parts[parts.length - 1].trim().toUpperCase();
+            }
+        }
+        
         console.log("Dados processados do depositário:", {
             nome: nomeDepositario,
             cpf: cpfDepositario,
@@ -187,6 +192,8 @@ export const addTermoDeposito = (doc: jsPDF, data: any) => {
 
     } catch (error) {
         console.error("Erro detalhado ao gerar Termo de Depósito:", error);
-        console.error("Stack trace:", error.stack);
+        if (error instanceof Error) {
+            console.error("Stack trace:", error.stack);
+        }
     }
 };

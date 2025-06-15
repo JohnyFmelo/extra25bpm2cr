@@ -152,13 +152,10 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 });
             }
             
-            const depositario = data.autores?.find((a: any) => 
-                a && 
-                typeof a.fielDepositario === 'string' && 
-                a.fielDepositario.trim().toLowerCase() === 'sim' &&
-                typeof a.nome === 'string' && 
-                a.nome.trim() !== ''
-            );
+            // Logic to find the depositary author
+            const depositario = Array.isArray(data.autores) ? data.autores.find(
+                (a: any) => a && typeof a.fielDepositario === 'string' && a.fielDepositario.trim().toLowerCase() === 'sim' && a.nome?.trim()
+            ) : undefined;
 
             if (depositario) {
                 documentosAnexosList.push("TERMO DE DEPÓSITO");
@@ -192,7 +189,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             const updatedData = {
                 ...data,
                 documentosAnexos: documentosAnexosList.join('\n'),
-                depositario,
+                depositario, // Pass the found depositary object
             };
 
             generateHistoricoContent(doc, yPosition, updatedData)
@@ -212,7 +209,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                     }
 
                     if (updatedData.depositario) {
-                        console.log("Adicionando Termo de Depósito");
+                        console.log("Adicionando Termo de Depósito com depositário:", updatedData.depositario.nome);
                         addTermoDeposito(doc, updatedData);
                     }
                     
@@ -229,7 +226,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Adicionando Termo de Apreensão para outros objetos");
                         addTermoApreensao(doc, updatedData);
                     }
-
 
                     if (pessoasComLaudo.length > 0) {
                         pessoasComLaudo.forEach((pessoa: any) => {
