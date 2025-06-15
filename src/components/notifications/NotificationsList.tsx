@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -10,6 +9,7 @@ import NotificationCard from "./NotificationCard";
 import { Timestamp } from "firebase/firestore";
 import { Bell, Sparkles } from "lucide-react";
 import { useUser } from "@/context/UserContext";
+import ChatDialog from '../ChatDialog';
 
 export interface Notification {
   id: string;
@@ -45,6 +45,7 @@ const NotificationsList = ({
   
   const { user: currentUser } = useUser();
   const isAdmin = currentUser?.userType === "admin";
+  const [chatUser, setChatUser] = useState<{ id: string; name: string; rank: string; } | null>(null);
 
   const expandedCardRef = useRef<HTMLDivElement | null>(null);
 
@@ -116,6 +117,43 @@ const NotificationsList = ({
         title: "Erro",
         description: "Não foi possível marcar como lido."
       });
+    }
+  };
+
+  const handleOpenChat = async (notification: Notification) => {
+    if (!currentUser) return;
+    const isMyMessage = notification.senderId === currentUser.id;
+    const otherUserId = isMyMessage ? notification.recipientId : notification.senderId;
+
+    if (!otherUserId) {
+        toast({ variant: "destructive", title: "Erro", description: "Não é possível abrir o chat para esta mensagem." });
+        return;
+    }
+
+    if (!isMyMessage) {
+        setChatUser({
+            id: notification.senderId,
+            name: notification.senderName,
+            rank: notification.graduation
+        });
+    } else {
+        try {
+            const userDocRef = doc(db, "users", otherUserId);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                setChatUser({
+                    id: otherUserId,
+                    name: userData.warName || "Usuário",
+                    rank: userData.rank || ""
+                });
+            } else {
+                toast({ variant: "destructive", title: "Erro", description: "Destinatário não encontrado." });
+            }
+        } catch (e) {
+            console.error("Error fetching recipient info for chat:", e);
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar dados do destinatário." });
+        }
     }
   };
 
@@ -257,7 +295,13 @@ const NotificationsList = ({
                   notification={notification}
                   isUnread={isUnread}
                   isExpanded={isExpanded}
-                  onToggle={() => setExpandedId(isExpanded ? null : notification.id)}
+                  onToggle={() => {
+                    if (notification.type === 'individual') {
+                        handleOpenChat(notification);
+                    } else {
+                        setExpandedId(isExpanded ? null : notification.id);
+                    }
+                  }}
                   onMarkAsRead={() => handleMarkAsRead(notification.id)}
                   onLongPress={() => {
                     if (isAdmin) {
@@ -273,6 +317,14 @@ const NotificationsList = ({
           })}
         </div>
       </ScrollArea>
+
+      {chatUser && (
+        <ChatDialog
+            open={!!chatUser}
+            onClose={() => setChatUser(null)}
+            otherUser={chatUser}
+        />
+      )}
 
       {/* AlertDialog e viewers Dialog: sem mudanças */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
