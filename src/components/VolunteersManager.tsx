@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-// Adicionado 'writeBatch' para atualizações em massa eficientes
 import { collection, getDocs, doc, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/components/ui/use-toast";
@@ -8,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Users, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-// Adicionado o componente Button para as novas ações
 import { Button } from "@/components/ui/button";
 
 interface User {
@@ -23,7 +21,6 @@ const VolunteersManager = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  // Novo estado para controlar o carregamento da atualização em massa
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const { toast } = useToast();
 
@@ -35,12 +32,13 @@ const VolunteersManager = () => {
     setIsLoading(true);
     try {
       const querySnapshot = await getDocs(collection(db, "users"));
-      const usersData = querySnapshot.docs.map(userDoc => ({
-        id: userDoc.id,
-        ...userDoc.data(),
-        isVolunteer: userDoc.data().isVolunteer ?? false,
-      }) as User)
-      .sort((a, b) => (a.warName || "").localeCompare(b.warName || ""));
+      const usersData = querySnapshot.docs
+        .map(userDoc => ({
+          id: userDoc.id,
+          ...userDoc.data(),
+          isVolunteer: userDoc.data().isVolunteer ?? false,
+        }) as User)
+        .sort((a, b) => (a.warName || "").localeCompare(b.warName || ""));
       
       setUsers(usersData);
     } catch (error) {
@@ -59,6 +57,7 @@ const VolunteersManager = () => {
     try {
       const userRef = doc(db, "users", user.id);
       const newIsVolunteerStatus = !user.isVolunteer;
+      
       await updateDoc(userRef, {
         isVolunteer: newIsVolunteerStatus,
       });
@@ -83,7 +82,6 @@ const VolunteersManager = () => {
     }
   };
 
-  // Nova função para marcar/desmarcar todos os usuários filtrados
   const handleToggleAllVolunteers = async (makeVolunteer: boolean) => {
     if (filteredUsers.length === 0) {
       toast({
@@ -140,9 +138,9 @@ const VolunteersManager = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
           <p className="text-muted-foreground">Carregando usuários...</p>
         </div>
       </div>
@@ -150,85 +148,126 @@ const VolunteersManager = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-6 w-6" />
-          Gerenciar Voluntários
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="relative">
-          {/* MELHORIA: Cor do ícone fixada para garantir visibilidade */}
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <Input
-            placeholder="Pesquisar por nome, posto ou e-mail..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10"
-          />
-        </div>
+    <div className="w-full max-w-6xl mx-auto p-6">
+      <Card className="shadow-lg">
+        <CardHeader className="pb-6">
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <Users className="h-7 w-7 text-primary" />
+            Gerenciar Voluntários
+          </CardTitle>
+          <p className="text-muted-foreground mt-2">
+            Gerencie o status de voluntário dos usuários cadastrados
+          </p>
+        </CardHeader>
 
-        {/* NOVO: Botões para ações em massa */}
-        <div className="flex flex-wrap gap-2 pt-2">
-            <Button
+        <CardContent className="space-y-6">
+          {/* Seção de busca */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar por nome, posto ou e-mail..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-11"
+            />
+          </div>
+
+          {/* Estatísticas e ações em massa */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-muted/30 rounded-lg">
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+              <span>Total: {filteredUsers.length} usuários</span>
+              <span>Voluntários: {filteredUsers.filter(u => u.isVolunteer).length}</span>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <Button
                 size="sm"
                 onClick={() => handleToggleAllVolunteers(true)}
                 disabled={isBulkUpdating || filteredUsers.length === 0}
-            >
+                className="min-w-[140px]"
+              >
                 {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Marcar Visíveis como Voluntários
-            </Button>
-            <Button
+                Marcar Todos
+              </Button>
+              <Button
                 size="sm"
-                variant="secondary"
+                variant="outline"
                 onClick={() => handleToggleAllVolunteers(false)}
                 disabled={isBulkUpdating || filteredUsers.length === 0}
-            >
-                {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Desmarcar Visíveis
-            </Button>
-        </div>
-        
-        {/* MELHORIA: Layout da lista agora é responsivo e mais legível */}
-        <div className="space-y-3">
-            {filteredUsers.map(user => (
-              <div
-                key={user.id}
-                className={`
-                  flex flex-col items-start gap-3 
-                  sm:flex-row sm:items-center sm:justify-between
-                  p-4 rounded-lg border transition-colors
-                  ${user.isVolunteer ? 'bg-accent/50 dark:bg-accent/20' : 'hover:bg-muted/50'}
-                `}
+                className="min-w-[140px]"
               >
-                {/* Seção de informações do usuário */}
-                <div>
-                  <p className="font-semibold">{user.rank} {user.warName}</p>
-                  {user.email ? (
-                    // Cor do e-mail melhorada para maior contraste
-                    <p className="text-sm text-slate-600 dark:text-slate-400">{user.email}</p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground/70 italic">E-mail não informado</p>
-                  )}
-                </div>
+                {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Desmarcar Todos
+              </Button>
+            </div>
+          </div>
+          
+          {/* Lista de usuários */}
+          {filteredUsers.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium">Nenhum usuário encontrado</p>
+              <p className="text-sm">Tente ajustar os termos de busca</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredUsers.map(user => (
+                <div
+                  key={user.id}
+                  className={`
+                    group flex items-center justify-between p-4 rounded-lg border transition-all duration-200
+                    ${user.isVolunteer 
+                      ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' 
+                      : 'bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'
+                    }
+                  `}
+                >
+                  {/* Informações do usuário */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3">
+                      <div className={`
+                        w-2 h-2 rounded-full flex-shrink-0
+                        ${user.isVolunteer ? 'bg-green-500' : 'bg-gray-300'}
+                      `} />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                          {user.rank && `${user.rank} `}{user.warName}
+                        </p>
+                        {user.email ? (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                            {user.email}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+                            E-mail não informado
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Seção do switch, alinhado à direita em telas pequenas */}
-                <div className="flex w-full items-center justify-end space-x-2 sm:w-auto">
-                  <Switch
-                    id={`volunteer-switch-${user.id}`}
-                    checked={!!user.isVolunteer}
-                    onCheckedChange={() => handleToggleVolunteer(user)}
-                  />
-                  <Label htmlFor={`volunteer-switch-${user.id}`} className="cursor-pointer text-sm">
-                    Voluntário
-                  </Label>
+                  {/* Switch de voluntário */}
+                  <div className="flex items-center gap-3 ml-4">
+                    <Label 
+                      htmlFor={`volunteer-switch-${user.id}`} 
+                      className="text-sm font-medium cursor-pointer select-none"
+                    >
+                      Voluntário
+                    </Label>
+                    <Switch
+                      id={`volunteer-switch-${user.id}`}
+                      checked={!!user.isVolunteer}
+                      onCheckedChange={() => handleToggleVolunteer(user)}
+                      className="data-[state=checked]:bg-green-600"
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
-        </div>
-      </CardContent>
-    </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
