@@ -132,7 +132,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
             yPosition = addNewPage(doc, data);
 
-            // << CORREÇÃO: Lógica para preparar a lista de anexos agora usa o array 'data.drogas' >>
             const isDrugCase = Array.isArray(data.drogas) && data.drogas.length > 0;
             const documentosAnexosList = [];
 
@@ -152,13 +151,16 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 });
             }
 
-            let temFielDepositario = false;
-            if (Array.isArray(data.autores)) {
-                temFielDepositario = data.autores.some(
-                    (a: any) => a && typeof a.fielDepositario === 'string' && a.fielDepositario.trim().toLowerCase() === 'sim'
-                );
-            }
-            if (temFielDepositario) {
+            // Valida e encontra o fiel depositário antecipadamente
+            const fielDepositarioEncontrado = Array.isArray(data.autores) ? data.autores.find(
+                (a: any) => a &&
+                typeof a.fielDepositario === 'string' &&
+                a.fielDepositario.trim().toLowerCase() === 'sim' &&
+                typeof a.nome === 'string' &&
+                a.nome.trim() !== ''
+            ) : undefined;
+
+            if (fielDepositarioEncontrado) {
                 documentosAnexosList.push("TERMO DE DEPÓSITO");
             }
             
@@ -208,9 +210,10 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
                     }
 
-                    if (temFielDepositario) {
-                        console.log("Adicionando Termo de Depósito");
-                        addTermoDeposito(doc, updatedData);
+                    // Chama o Termo de Depósito se um depositário válido foi encontrado
+                    if (fielDepositarioEncontrado) {
+                        console.log("Adicionando Termo de Depósito para:", fielDepositarioEncontrado.nome);
+                        addTermoDeposito(doc, { ...updatedData, fielDepositario: fielDepositarioEncontrado });
                     }
                     
                     // << CORREÇÃO: A chamada para os termos relacionados a drogas agora usa a flag 'isDrugCase' >>

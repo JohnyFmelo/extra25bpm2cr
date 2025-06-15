@@ -1,4 +1,3 @@
-
 // PDFtermoDeposito.ts
 import jsPDF from 'jspdf';
 import { getPageConstants, addNewPage, addStandardFooterContent } from './pdfUtils.js';
@@ -17,29 +16,18 @@ const ensureAndProcessText = (text: any, toUpperCase = true, fallback = 'NÃO IN
 
 export const addTermoDeposito = (doc: jsPDF, data: any) => {
     const { PAGE_WIDTH, MARGIN_LEFT, MARGIN_RIGHT, MAX_LINE_WIDTH } = getPageConstants(doc);
+    const depositario = data.fielDepositario; // O objeto do depositário agora é passado diretamente
 
     console.log("Iniciando geração do Termo de Depósito");
-    console.log("Dados dos autores:", JSON.stringify(data.autores, null, 2));
-
-    // Find the FIRST author who is designated as a faithful depositary
-    // Corrigir verificação para aceitar tanto "sim" quanto "Sim"
-    const depositario = data.autores?.find((a: any) => {
-        const isValidDepo = a && 
-            typeof a.fielDepositario === 'string' && 
-            a.fielDepositario.trim().toLowerCase() === 'sim' &&
-            typeof a.nome === 'string' && 
-            a.nome.trim() !== '';
-        
-        console.log(`Verificando autor ${a?.nome}: fielDepositario="${a?.fielDepositario}", válido=${isValidDepo}`);
-        return isValidDepo;
-    });
-
+    
+    // A verificação agora é simples, pois o objeto já foi validado anteriormente
     if (!depositario) {
-        console.log("Nenhum fiel depositário qualificado encontrado para o Termo de Depósito.");
+        console.log("Nenhum fiel depositário qualificado foi fornecido para o Termo de Depósito.");
         return;
     }
 
-    console.log("Fiel depositário encontrado:", depositario.nome);
+    console.log("Fiel depositário recebido:", depositario.nome);
+    console.log("Dados completos do depositário:", JSON.stringify(depositario, null, 2));
 
     try {
         let y = addNewPage(doc, data);
