@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -43,6 +42,9 @@ const NotificationsList = ({
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = currentUser.userType === "admin";
 
+  // Uso do ref para rolar para a notificação expandida
+  const expandedCardRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, snapshot => {
@@ -69,6 +71,15 @@ const NotificationsList = ({
 
     return () => unsubscribe();
   }, [currentUser.id, showOnlyUnread]);
+
+  useEffect(() => {
+    if (expandedCardRef.current) {
+      expandedCardRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [expandedId]);
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
@@ -180,7 +191,7 @@ const NotificationsList = ({
   }
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full h-full flex flex-col flex-1 min-h-0">
       {/* Header stats */}
       {!showOnlyUnread && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200/50">
@@ -198,36 +209,42 @@ const NotificationsList = ({
         </div>
       )}
 
-      {/* Notifications grid */}
-      <div className="space-y-4">
-        {notifications.map((notification, index) => {
-          const isUnread = !notification.readBy.includes(currentUser.id);
-          const isExpanded = expandedId === notification.id;
-          
-          return (
-            <div
-              key={notification.id}
-              className="animate-in slide-in-from-bottom-4 duration-300"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <NotificationCard
-                notification={notification}
-                isUnread={isUnread}
-                isExpanded={isExpanded}
-                onToggle={() => setExpandedId(isExpanded ? null : notification.id)}
-                onMarkAsRead={() => handleMarkAsRead(notification.id)}
-                onLongPress={() => {
-                  setSelectedNotification(notification.id);
-                  setDeleteDialogOpen(true);
-                }}
-                onClose={() => handleCloseNotification(notification.id)}
-                showActions={isAdmin}
-              />
-            </div>
-          );
-        })}
-      </div>
+      {/* Notifications grid COM SCROLL */}
+      <ScrollArea className="flex-1 max-h-[60vh] min-h-[256px] pr-1">
+        <div className="space-y-4">
+          {notifications.map((notification, index) => {
+            const isUnread = !notification.readBy.includes(currentUser.id);
+            const isExpanded = expandedId === notification.id;
+            // O ref só no expandido 
+            const cardRef = isExpanded ? expandedCardRef : null;
 
+            return (
+              <div
+                key={notification.id}
+                className="animate-in slide-in-from-bottom-4 duration-300"
+                style={{ animationDelay: `${index * 100}ms` }}
+                ref={cardRef}
+              >
+                <NotificationCard
+                  notification={notification}
+                  isUnread={isUnread}
+                  isExpanded={isExpanded}
+                  onToggle={() => setExpandedId(isExpanded ? null : notification.id)}
+                  onMarkAsRead={() => handleMarkAsRead(notification.id)}
+                  onLongPress={() => {
+                    setSelectedNotification(notification.id);
+                    setDeleteDialogOpen(true);
+                  }}
+                  onClose={() => handleCloseNotification(notification.id)}
+                  showActions={isAdmin}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </ScrollArea>
+
+      {/* AlertDialog e viewers Dialog: sem mudanças */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
