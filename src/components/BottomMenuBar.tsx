@@ -58,12 +58,14 @@ interface BottomMenuBarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   isAdmin: boolean;
+  isVolunteer?: boolean;
 }
 
 const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
   activeTab,
   onTabChange,
-  isAdmin
+  isAdmin,
+  isVolunteer,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -102,12 +104,14 @@ const BottomMenuBar: React.FC<BottomMenuBarProps> = ({
           onClick={() => handleTabChange("hours")} 
           active={activeTab === "hours" || isCurrentPage("/hours")} 
         />
-        <BottomMenuItem 
-          icon={<Calendar className="h-5 w-5" />} 
-          label="Extra" 
-          onClick={() => handleTabChange("extra")} 
-          active={activeTab === "extra"} 
-        />
+        {(isAdmin || isVolunteer) && (
+          <BottomMenuItem 
+            icon={<Calendar className="h-5 w-5" />} 
+            label="Extra" 
+            onClick={() => handleTabChange("extra")} 
+            active={activeTab === "extra"} 
+          />
+        )}
         <BottomMenuItem 
           icon={<MapPinned className="h-5 w-5" />} 
           label="Viagens" 

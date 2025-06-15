@@ -77,7 +77,7 @@ const Layout = ({
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 mb-20 py-0 lg:px-0">
         {children}
       </main>
-      <BottomMenuBar activeTab={activeTab} onTabChange={onTabChange} isAdmin={user?.userType === 'admin'} />
+      <BottomMenuBar activeTab={activeTab} onTabChange={onTabChange} isAdmin={user?.userType === 'admin'} isVolunteer={user?.isVolunteer} />
       
       <ImprovementsDialog
         open={shouldShowImprovements}

@@ -1,4 +1,3 @@
-
 import { Users, MessageSquare, Plus, ArrowLeft, RefreshCw, LogOut, UserPlus } from "lucide-react";
 import IconCard from "@/components/IconCard";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
@@ -30,6 +29,7 @@ import ManualUserRegistration from "@/components/ManualUserRegistration";
 import VersionDialog from "@/components/VersionDialog";
 import TCOProductivityRanking from "@/components/TCOProductivityRanking";
 import { useNotifications } from "@/components/notifications/NotificationsList";
+import VolunteersManager from "@/components/VolunteersManager";
 
 interface IndexProps {
   initialActiveTab?: string;
@@ -47,6 +47,7 @@ const Index = ({
   const [showVersionDialog, setShowVersionDialog] = useState(false);
   const [activeTrips, setActiveTrips] = useState<any[]>([]);
   const [travelTab, setTravelTab] = useState("trips");
+  const [extraSubTab, setExtraSubTab] = useState("extra");
   const {
     toast
   } = useToast();
@@ -160,17 +161,35 @@ const Index = ({
           </TabsContent>
 
           <TabsContent value="extra">
-            <div className="relative">
-              <div className="absolute right-0 -top-14">
-                
+            {user.userType === "admin" ? (
+              <Tabs value={extraSubTab} onValueChange={setExtraSubTab} className="w-full">
+                <TabsList className={tabListClasses}>
+                  <TabsTrigger value="extra" className={tabTriggerClasses}>Extra</TabsTrigger>
+                  <TabsTrigger value="volunteers" className={tabTriggerClasses}>Voluntários</TabsTrigger>
+                </TabsList>
+                <TabsContent value="extra">
+                  <div className="relative">
+                    <div className="absolute right-0 -top-14">
+                    </div>
+                      <div className="fixed bottom-8 right-8 z-10">
+                        <Button onClick={handleEditorClick} className="fixed bottom-6 right-6 rounded-full p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] py-[26px] bg-green-500 hover:bg-green-400">
+                          <Plus className="h-8 w-8" />
+                        </Button>
+                      </div>
+                    <TimeSlotsList />
+                  </div>
+                </TabsContent>
+                <TabsContent value="volunteers">
+                  <VolunteersManager />
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <div className="relative">
+                <div className="absolute right-0 -top-14">
+                </div>
+                <TimeSlotsList />
               </div>
-              {user.userType === "admin" && <div className="fixed bottom-8 right-8 z-10">
-                  <Button onClick={handleEditorClick} className="fixed bottom-6 right-6 rounded-full p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] py-[26px] bg-green-500 hover:bg-green-400">
-                    <Plus className="h-8 w-8" />
-                  </Button>
-                </div>}
-              <TimeSlotsList />
-            </div>
+            )}
           </TabsContent>
 
           <TabsContent value="settings">
