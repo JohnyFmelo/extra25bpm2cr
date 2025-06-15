@@ -1,4 +1,3 @@
-
 // PDFtermoDeposito.ts
 import jsPDF from 'jspdf';
 import { getPageConstants, addNewPage, addStandardFooterContent } from './pdfUtils.js';
@@ -144,39 +143,23 @@ export const addTermoDeposito = (doc: jsPDF, data: any) => {
         y += cellHeight;
         doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y);
 
-        // Line 8: Descrição do bem
+        // Line 8: Descrição do bem (Refactored)
         const descBemLabel = `DESCRIÇÃO DO BEM: `;
         const descBemX = MARGIN_LEFT + 2;
         const descBemY = y + 5;
-        const availableWidthForObjeto = (PAGE_WIDTH - MARGIN_RIGHT) - descBemX - doc.getStringUnitWidth(descBemLabel) * doc.getFontSize() / doc.internal.scaleFactor;
-        
-        let objetoLines = [objetoDepositadoText];
-        if (objetoDepositadoText !== 'NÃO INFORMADO') {
-             objetoLines = doc.splitTextToSize(objetoDepositadoText, availableWidthForObjeto > 0 ? availableWidthForObjeto : 100);
-        }
+        const labelWidth = doc.getStringUnitWidth(descBemLabel) * doc.getFontSize() / doc.internal.scaleFactor;
+        const valueX = descBemX + labelWidth + 1;
+        const availableWidth = (PAGE_WIDTH - MARGIN_RIGHT) - valueX;
 
-        if (objetoLines.length === 1) {
-            doc.text(`${descBemLabel}${objetoLines[0]}`, descBemX, descBemY);
-        } else {
-            doc.text(descBemLabel, descBemX, descBemY);
-            let currentYForObjeto = descBemY;
-            const labelWidth = doc.getStringUnitWidth(descBemLabel) * doc.getFontSize() / doc.internal.scaleFactor;
-            const firstLineOfObjetoX = descBemX + labelWidth + 1;
+        doc.text(descBemLabel, descBemX, descBemY);
 
-            objetoLines.forEach((line, index) => {
-                if (index === 0) {
-                     doc.text(line, firstLineOfObjetoX, currentYForObjeto);
-                } else {
-                     currentYForObjeto += 4;
-                     doc.text(line, firstLineOfObjetoX, currentYForObjeto);
-                }
-            });
-             y = currentYForObjeto - 5 + cellHeight;
-        }
+        const objetoLines = doc.splitTextToSize(objetoDepositadoText, availableWidth > 0 ? availableWidth : 100);
+        doc.text(objetoLines, valueX, descBemY);
         
-        if (objetoLines.length === 1) {
-           y += cellHeight;
-        }
+        const textBlockHeight = (objetoLines.length || 1) * 4;
+        const finalCellHeight = Math.max(cellHeight, textBlockHeight + 2);
+        
+        y += finalCellHeight;
         
         // Garantir que y esteja no final da tabela
         y = Math.max(y, tableStartY + tableHeight);
