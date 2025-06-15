@@ -80,11 +80,7 @@ const NotificationsList = ({
       
       setNotifications(filteredNotifs);
 
-      // Dispatch event to notify about notifications count
-      const unreadCount = allNotifs.filter(n => !n.readBy.includes(currentUser.id)).length;
-      window.dispatchEvent(new CustomEvent('notificationsUpdate', { 
-        detail: { count: unreadCount } 
-      }));
+      // Event dispatch is now handled by the useNotifications hook to ensure it's always active.
 
       if (isInitialLoad.current) {
         isInitialLoad.current = false;
@@ -335,6 +331,10 @@ export const useNotifications = () => {
       
       const count = notifs.filter(n => !n.readBy.includes(currentUser.id)).length;
       setUnreadCount(count);
+      // Dispatch event to notify about notifications count globally
+      window.dispatchEvent(new CustomEvent('notificationsUpdate', { 
+        detail: { count: count } 
+      }));
     });
 
     return () => unsubscribe();

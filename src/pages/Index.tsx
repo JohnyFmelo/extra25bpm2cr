@@ -28,6 +28,7 @@ import RankingChart from "@/components/RankingChart";
 import ManualUserRegistration from "@/components/ManualUserRegistration";
 import VersionDialog from "@/components/VersionDialog";
 import TCOProductivityRanking from "@/components/TCOProductivityRanking";
+import { useNotifications } from "@/components/notifications/NotificationsList";
 
 interface IndexProps {
   initialActiveTab?: string;
@@ -43,37 +44,19 @@ const Index = ({
   const [showInformationDialog, setShowInformationDialog] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showVersionDialog, setShowVersionDialog] = useState(false);
-  const [hasNotifications, setHasNotifications] = useState(false);
   const [activeTrips, setActiveTrips] = useState<any[]>([]);
   const [travelTab, setTravelTab] = useState("trips");
   const {
     toast
   } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const unreadCount = useNotifications();
+  useNotifications(); // This hook now handles global notification count updates.
   const navigate = useNavigate();
 
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
 
-  useEffect(() => {
-    const handleNotificationsChange = (count: number) => {
-      setHasNotifications(count > 0);
-    };
-    if (unreadCount > 0) {
-      setHasNotifications(true);
-    }
-    const notificationsChangeEvent = new CustomEvent('notificationsUpdate', {
-      detail: {
-        count: unreadCount
-      }
-    });
-    window.addEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
-    return () => {
-      window.removeEventListener('notificationsUpdate', (e: any) => handleNotificationsChange(e.detail.count));
-    };
-  }, [unreadCount]);
   useEffect(() => {
     const today = new Date();
     const travelsRef = collection(db, "travels");
