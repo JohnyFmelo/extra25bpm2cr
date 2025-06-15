@@ -9,6 +9,7 @@ export interface User {
   warName?: string;
   rank?: string;
   rgpm?: string;
+  isVolunteer?: boolean;
 }
 
 export interface TimeSlot {

@@ -15,6 +15,7 @@ type UserType = {
   currentVersion?: string;
   lastVersionUpdate?: Date;
   rgpm?: string;
+  isVolunteer?: boolean;
 };
 
 type UserContextType = {
@@ -52,7 +53,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
               email: firebaseData.email || userData.email,
               registration: firebaseData.registration || userData.registration,
               currentVersion: firebaseData.currentVersion || userData.currentVersion,
-              lastVersionUpdate: firebaseData.lastVersionUpdate || userData.lastVersionUpdate
+              lastVersionUpdate: firebaseData.lastVersionUpdate || userData.lastVersionUpdate,
+              isVolunteer: firebaseData.isVolunteer ?? false,
             };
             
             // Atualiza tanto o estado quanto o localStorage
