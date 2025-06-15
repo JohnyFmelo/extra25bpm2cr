@@ -135,22 +135,37 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             const isDrugCase = Array.isArray(data.drogas) && data.drogas.length > 0;
             const documentosAnexosList = [];
 
-            // Encontra todos os autores que são fiéis depositários, criando cópias profundas para evitar mutações.
-            const fieisDepositarios = (Array.isArray(data.autores) ? data.autores.filter(
-                (a: any) => a &&
-                typeof a.fielDepositario === 'string' &&
-                a.fielDepositario.trim().toLowerCase() === 'sim' &&
-                typeof a.nome === 'string' &&
-                a.nome.trim() !== ''
-            ).map(a => JSON.parse(JSON.stringify(a))) // DEEP CLONE para isolamento total
-            : []) as any[];
+            // --- LÓGICA DO FIEL DEPOSITÁRIO ATUALIZADA ---
+            // Primeiro, procura por um depositário manual. Se não achar, procura por um autor selecionado.
+            const manualDepositario = (Array.isArray(data.autores) ? data.autores.find(
+                (a: any) => a && a.isManualDepositario
+            ) : null);
+
+            let fieisDepositarios: any[] = [];
+
+            if (manualDepositario) {
+                console.log("Fiel Depositário MANUAL encontrado:", JSON.stringify(manualDepositario, null, 2));
+                // Cria uma cópia profunda para isolar os dados
+                fieisDepositarios = [JSON.parse(JSON.stringify(manualDepositario))];
+            } else {
+                 // Lógica antiga como fallback: procura autor com a flag 'fielDepositario'.
+                 // Removido o check de nome para maior robustez.
+                fieisDepositarios = (Array.isArray(data.autores) ? data.autores.filter(
+                    (a: any) => a &&
+                    typeof a.fielDepositario === 'string' &&
+                    a.fielDepositario.trim().toLowerCase() === 'sim'
+                ).map(a => JSON.parse(JSON.stringify(a))) // DEEP CLONE
+                : []) as any[];
+            }
+            // --- FIM DA LÓGICA ATUALIZADA ---
 
             if (fieisDepositarios.length > 0) {
-                console.log("Fiéis Depositários ENCONTRADOS (clonados):", JSON.stringify(fieisDepositarios, null, 2));
+                console.log("Fiéis Depositários ENCONTRADOS para o PDF (clonados):", JSON.stringify(fieisDepositarios, null, 2));
             }
 
             if (data.autores && data.autores.length > 0) {
-                data.autores.forEach((autor: any) => {
+                // Filtra o autor manual para não aparecer nos termos de compromisso
+                data.autores.filter((a: any) => !a.isManualDepositario).forEach((autor: any) => {
                     if (autor.nome && autor.nome.trim()) {
                         documentosAnexosList.push(`TERMO DE COMPROMISSO DE ${autor.nome.toUpperCase()}`);
                     }
@@ -204,7 +219,11 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 .then(() => {
                     // --- ADIÇÃO DOS TERMOS ---
                     if (updatedData.autores && updatedData.autores.length > 0) {
-                        addTermoCompromisso(doc, updatedData);
+                        // Passar a lista de autores filtrada para não gerar termo de compromisso para o depositario manual
+                        const autoresParaTermo = updatedData.autores.filter((a: any) => !a.isManualDepositario);
+                        if (autoresParaTermo.length > 0) {
+                            addTermoCompromisso(doc, { ...updatedData, autores: autoresParaTermo });
+                        }
                     } else {
                         console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
                     }
