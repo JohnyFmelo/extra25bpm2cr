@@ -9,8 +9,6 @@ import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AllUsersHours } from "@/components/hours/AllUsersHours";
-
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
@@ -20,7 +18,6 @@ const Hours = () => {
   const [data, setData] = useState<HoursData | null>(null);
   const [generalData, setGeneralData] = useState<HoursData | null>(null);
   const [allUsersData, setAllUsersData] = useState<HoursData[]>([]);
-  const [generalSearchTerm, setGeneralSearchTerm] = useState('');
   const [userData, setUserData] = useState<any>(null);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [activeConsult, setActiveConsult] = useState<'individual' | 'general'>('individual');
@@ -255,19 +252,13 @@ const Hours = () => {
                           </> : "Consultar"}
                       </Button>
 
-                      {selectedUser === 'all' && allUsersData.length > 0 && (
-                        <AllUsersHours
-                          users={allUsersData}
-                          searchTerm={generalSearchTerm}
-                          onSearchChange={setGeneralSearchTerm}
-                          monthYear={getSelectedMonthYear(selectedGeneralMonth)}
-                          onClose={(index) => {
-                            const updatedData = [...allUsersData];
-                            updatedData.splice(index, 1);
-                            setAllUsersData(updatedData);
-                          }}
-                        />
-                      )}
+                      {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-stone-50">
+                          <UserHoursDisplay data={userData} onClose={() => {
+                      const updatedData = [...allUsersData];
+                      updatedData.splice(index, 1);
+                      setAllUsersData(updatedData);
+                    }} isAdmin={true} monthYear={getSelectedMonthYear(selectedGeneralMonth)} />
+                        </div>)}
 
                       {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} isAdmin={true} monthYear={getSelectedMonthYear(selectedGeneralMonth)} />}
                     </div>
