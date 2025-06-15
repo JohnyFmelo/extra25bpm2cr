@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,9 +12,10 @@ import RankingTCO from "./pages/RankingTCO";
 import TopBar from "./components/TopBar";
 import BottomMenuBar from "./components/BottomMenuBar";
 import { useUserBlockListener } from "./hooks/useUserBlockListener";
-import { UserProvider } from "@/context/UserContext";
+import { UserProvider, useUser } from "@/context/UserContext";
 import { useVersioning } from "./hooks/useVersioning";
 import ImprovementsDialog from "./components/ImprovementsDialog";
+import RgpmUpdateDialog from "./components/RgpmUpdateDialog";
 
 // Protected Route component
 const ProtectedRoute = ({
@@ -43,7 +44,7 @@ const Layout = ({
   activeTab: string;
   onTabChange: (tab: string) => void;
 }) => {
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const { user } = useUser();
   const { 
     shouldShowImprovements, 
     currentSystemVersion, 
@@ -51,6 +52,17 @@ const Layout = ({
     updateUserVersion,
     setShouldShowImprovements 
   } = useVersioning();
+  const [showRgpmDialog, setShowRgpmDialog] = useState(false);
+
+  useEffect(() => {
+    if (user && !user.rgpm) {
+      setShowRgpmDialog(true);
+    }
+  }, [user]);
+
+  const handleRgpmUpdateSuccess = () => {
+    setShowRgpmDialog(false);
+  };
 
   const handleImprovementsClose = () => {
     updateUserVersion();
@@ -70,6 +82,11 @@ const Layout = ({
         onOpenChange={handleImprovementsClose}
         version={currentSystemVersion}
         improvements={improvements}
+      />
+      
+      <RgpmUpdateDialog
+        open={showRgpmDialog}
+        onSuccess={handleRgpmUpdateSuccess}
       />
     </div>
   );
