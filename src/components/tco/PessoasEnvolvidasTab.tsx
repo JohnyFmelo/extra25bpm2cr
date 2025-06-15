@@ -61,11 +61,45 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
   handleAddAutor,
   handleRemoveAutor,
   natureza,
-  fielDepositario,
-  handleFielDepositarioChange
+  fielDepositario: fielDepositarioProp,
+  handleFielDepositarioChange: handleFielDepositarioChangeProp,
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
+
+  const [fielDepositario, setFielDepositario] = React.useState<PersonalInfo>(
+    fielDepositarioProp || {
+      nome: "",
+      sexo: "",
+      estadoCivil: "",
+      profissao: "",
+      endereco: "",
+      dataNascimento: "",
+      naturalidade: "",
+      filiacaoMae: "",
+      filiacaoPai: "",
+      rg: "",
+      cpf: "",
+      celular: "",
+      email: "",
+      laudoPericial: "",
+      objetoDepositado: "",
+    }
+  );
+
+  React.useEffect(() => {
+    if (fielDepositarioProp) {
+      setFielDepositario(fielDepositarioProp);
+    }
+  }, [fielDepositarioProp]);
+
+  const handleOnChange = (field: keyof PersonalInfo, value: string) => {
+    if (handleFielDepositarioChangeProp) {
+      handleFielDepositarioChangeProp(field, value);
+    } else {
+      setFielDepositario((prev) => ({ ...prev, [field]: value }));
+    }
+  };
 
   return <Card>
       <CardHeader>
@@ -184,31 +218,31 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <Label htmlFor="fd-nome">Nome Completo</Label>
-                    <Input id="fd-nome" value={fielDepositario?.nome || ''} onChange={e => handleFielDepositarioChange?.('nome', e.target.value)} placeholder="Nome do fiel depositário" disabled={!handleFielDepositarioChange} />
+                    <Input id="fd-nome" value={fielDepositario?.nome || ''} onChange={e => handleOnChange('nome', e.target.value)} placeholder="Nome do fiel depositário" />
                   </div>
                   <div>
                     <Label htmlFor="fd-cpf">CPF</Label>
-                    <Input id="fd-cpf" value={fielDepositario?.cpf || ''} onChange={e => handleFielDepositarioChange?.('cpf', e.target.value)} placeholder="000.000.000-00" disabled={!handleFielDepositarioChange} />
+                    <Input id="fd-cpf" value={fielDepositario?.cpf || ''} onChange={e => handleOnChange('cpf', e.target.value)} placeholder="000.000.000-00" />
                   </div>
                    <div>
                     <Label htmlFor="fd-rg">RG</Label>
-                    <Input id="fd-rg" value={fielDepositario?.rg || ''} onChange={e => handleFielDepositarioChange?.('rg', e.target.value)} placeholder="RG do fiel depositário" disabled={!handleFielDepositarioChange} />
+                    <Input id="fd-rg" value={fielDepositario?.rg || ''} onChange={e => handleOnChange('rg', e.target.value)} placeholder="RG do fiel depositário" />
                   </div>
                   <div>
                     <Label htmlFor="fd-filiacaoMae">Filiação (Mãe)</Label>
-                    <Input id="fd-filiacaoMae" value={fielDepositario?.filiacaoMae || ''} onChange={e => handleFielDepositarioChange?.('filiacaoMae', e.target.value)} placeholder="Nome da mãe" disabled={!handleFielDepositarioChange} />
+                    <Input id="fd-filiacaoMae" value={fielDepositario?.filiacaoMae || ''} onChange={e => handleOnChange('filiacaoMae', e.target.value)} placeholder="Nome da mãe" />
                   </div>
                   <div>
                     <Label htmlFor="fd-filiacaoPai">Filiação (Pai)</Label>
-                    <Input id="fd-filiacaoPai" value={fielDepositario?.filiacaoPai || ''} onChange={e => handleFielDepositarioChange?.('filiacaoPai', e.target.value)} placeholder="Nome do pai" disabled={!handleFielDepositarioChange} />
+                    <Input id="fd-filiacaoPai" value={fielDepositario?.filiacaoPai || ''} onChange={e => handleOnChange('filiacaoPai', e.target.value)} placeholder="Nome do pai" />
                   </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="fd-endereco">Endereço</Label>
-                    <Input id="fd-endereco" value={fielDepositario?.endereco || ''} onChange={e => handleFielDepositarioChange?.('endereco', e.target.value)} placeholder="Endereço completo" disabled={!handleFielDepositarioChange} />
+                    <Input id="fd-endereco" value={fielDepositario?.endereco || ''} onChange={e => handleOnChange('endereco', e.target.value)} placeholder="Endereço completo" />
                   </div>
                   <div>
                     <Label htmlFor="fd-celular">Celular</Label>
-                    <Input id="fd-celular" value={fielDepositario?.celular || ''} onChange={e => handleFielDepositarioChange?.('celular', e.target.value)} placeholder="(65) 99999-9999" disabled={!handleFielDepositarioChange} />
+                    <Input id="fd-celular" value={fielDepositario?.celular || ''} onChange={e => handleOnChange('celular', e.target.value)} placeholder="(65) 99999-9999" />
                   </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="fd-objeto">Objeto Depositado</Label>
@@ -216,8 +250,7 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                         id="fd-objeto"
                         placeholder="Descreva o bem deixado sob a posse do fiel depositário"
                         value={fielDepositario?.objetoDepositado || ""}
-                        onChange={e => handleFielDepositarioChange?.('objetoDepositado', e.target.value)}
-                        disabled={!handleFielDepositarioChange}
+                        onChange={e => handleOnChange('objetoDepositado', e.target.value)}
                     />
                   </div>
                 </div>
