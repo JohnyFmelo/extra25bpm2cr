@@ -37,7 +37,7 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
   const [rank, setRank] = useState("");
   const [registration, setRegistration] = useState("");
   const [userType, setUserType] = useState("");
-  const [service, setService] = useState("");
+  // const [service, setService] = useState(""); // Removido
   const [rgpm, setRgpm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -49,7 +49,7 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
       setRank(userData.rank || "");
       setRegistration(userData.registration || "");
       setUserType(userData.userType || "");
-      setService(userData.service || "");
+      // setService(userData.service || ""); // Removido
       setRgpm(userData.rgpm || "");
     }
   }, [userData, open]);
@@ -72,7 +72,7 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
         rank,
         registration,
         userType,
-        service,
+        // service, // Removido
         rgpm,
         updatedAt: new Date().toISOString(),
       };
@@ -180,19 +180,7 @@ const UserDetailsDialog = ({ open, onOpenChange, userData, onUserUpdated }: User
               onChange={(e) => setRegistration(e.target.value)}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="service">Serviço</Label>
-            <Select value={service} onValueChange={setService}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o serviço" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Operacional">Operacional</SelectItem>
-                <SelectItem value="Administrativo">Administrativo</SelectItem>
-                <SelectItem value="Inteligência">Inteligência</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* O campo de serviço foi removido daqui */}
           <div className="space-y-2">
             <Label htmlFor="userType">Tipo de Usuário</Label>
             <Select value={userType} onValueChange={setUserType}>

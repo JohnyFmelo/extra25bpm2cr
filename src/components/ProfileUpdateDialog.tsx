@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ const ProfileUpdateDialog = ({
   const [warName, setWarName] = useState(userData?.warName || "");
   const [rank, setRank] = useState(userData?.rank || "");
   const [registration, setRegistration] = useState(userData?.registration || "");
-  const [service, setService] = useState(userData?.service || "");
+  // const [service, setService] = useState(userData?.service || ""); // Removido
   const [isLoading, setIsLoading] = useState(false);
   const {
     toast
@@ -40,7 +41,7 @@ const ProfileUpdateDialog = ({
       setWarName(userData.warName || "");
       setRank(userData.rank || "");
       setRegistration(userData.registration || "");
-      setService(userData.service || "");
+      // setService(userData.service || ""); // Removido
     }
   }, [userData, open]);
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,7 +54,7 @@ const ProfileUpdateDialog = ({
         warName,
         rank,
         registration,
-        service,
+        // service, // Removido
         updatedAt: new Date().toISOString()
       };
       await updateDoc(userRef, updatedData);
@@ -128,19 +129,7 @@ const ProfileUpdateDialog = ({
             <Label htmlFor="registration">Matrícula</Label>
             <Input id="registration" value={registration} onChange={e => setRegistration(e.target.value)} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="service">Serviço</Label>
-            <Select value={service} onValueChange={setService}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione seu serviço" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Operacional">Operacional</SelectItem>
-                <SelectItem value="Administrativo">Administrativo</SelectItem>
-                <SelectItem value="Inteligência">Inteligência</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* O campo de serviço foi removido daqui */}
           <div className="flex justify-end gap-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
