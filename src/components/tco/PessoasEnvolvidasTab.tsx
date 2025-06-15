@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Trash2, User, Users } from "lucide-react";
 import PersonalInfoFields from "./PersonalInfoFields";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PersonalInfo {
   nome: string;
@@ -25,7 +26,7 @@ interface PersonalInfo {
   laudoPericial: string;
   relato?: string; // Added for victim and witness testimony
   representacao?: string; // Added for victim representation
-  fielDepositario?: string; // 'Sim' or 'Não' -- This will be deprecated for manual entry
+  fielDepositario?: string; // 'Sim' or 'Não'
   objetoDepositado?: string; 
 }
 
@@ -43,8 +44,6 @@ interface PessoasEnvolvidasTabProps {
   handleAddAutor: () => void;
   handleRemoveAutor: (index: number) => void;
   natureza: string;
-  fielDepositario?: PersonalInfo; 
-  handleFielDepositarioChange?: (field: keyof PersonalInfo, value: string) => void;
 }
 
 const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
@@ -60,19 +59,10 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
   handleAutorDetalhadoChange,
   handleAddAutor,
   handleRemoveAutor,
-  natureza,
-  fielDepositario,
-  handleFielDepositarioChange,
+  natureza
 }) => {
   // Check if it's a drug consumption case
   const isDrugCase = natureza === "Porte de drogas para consumo";
-
-  const handleOnChange = (field: keyof PersonalInfo, value: string) => {
-    if (handleFielDepositarioChange) {
-      handleFielDepositarioChange(field, value);
-    }
-  };
-
   return <Card>
       <CardHeader>
         <CardTitle className="flex items-center">
@@ -113,6 +103,36 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
                 </CardHeader>
                 <CardContent className="px-[5px]">
                   <PersonalInfoFields data={autor} onChangeHandler={handleAutorDetalhadoChange} prefix={`autor_${index}_`} index={index} isAuthor={true} />
+                    {/* Changed from RadioGroup to Select for Fiel Depositário */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-2 border-t border-dashed">
+                        <div>
+                            <Label htmlFor={`fiel-depositario-${index}`}>Fiel Depositário?</Label>
+                            <Select 
+                                value={autor.fielDepositario || "Não"}
+                                onValueChange={(value) => handleAutorDetalhadoChange(index, 'fielDepositario', value)}
+                            >
+                                <SelectTrigger id={`fiel-depositario-${index}`} className="mt-2">
+                                    <SelectValue placeholder="Selecione"/>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Sim">Sim</SelectItem>
+                                    <SelectItem value="Não">Não</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {autor.fielDepositario === "Sim" && (
+                            <div className="md:col-span-2">
+                                <Label htmlFor={`objeto-depositado-${index}`}>Objeto Depositado</Label>
+                                <Textarea 
+                                    id={`objeto-depositado-${index}`} 
+                                    placeholder="Descreva o bem deixado sob a posse do autor" 
+                                    value={autor.objetoDepositado || ""} 
+                                    onChange={e => handleAutorDetalhadoChange(index, 'objetoDepositado', e.target.value)} 
+                                    className="mt-2" 
+                                />
+                            </div>
+                        )}
+                    </div>
                 </CardContent>
               </Card>)}
             
@@ -176,59 +196,6 @@ const PessoasEnvolvidasTab: React.FC<PessoasEnvolvidasTabProps> = ({
             </div>
           </TabsContent>
         </Tabs>
-
-        {/* Always render the manual fiel depositário container, but handle missing props gracefully */}
-        <div className="mt-8 pt-6 border-t border-dashed">
-            <Card className="border-blue-200 border-2 bg-blue-50/50">
-              <CardHeader>
-                <CardTitle className="flex items-center text-blue-800">
-                  <User className="mr-2 h-5 w-5" />
-                  Fiel Depositário (Preenchimento Manual)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <Label htmlFor="fd-nome">Nome Completo</Label>
-                    <Input id="fd-nome" value={fielDepositario?.nome || ''} onChange={e => handleOnChange('nome', e.target.value)} placeholder="Nome do fiel depositário" />
-                  </div>
-                  <div>
-                    <Label htmlFor="fd-cpf">CPF</Label>
-                    <Input id="fd-cpf" value={fielDepositario?.cpf || ''} onChange={e => handleOnChange('cpf', e.target.value)} placeholder="000.000.000-00" />
-                  </div>
-                   <div>
-                    <Label htmlFor="fd-rg">RG</Label>
-                    <Input id="fd-rg" value={fielDepositario?.rg || ''} onChange={e => handleOnChange('rg', e.target.value)} placeholder="RG do fiel depositário" />
-                  </div>
-                  <div>
-                    <Label htmlFor="fd-filiacaoMae">Filiação (Mãe)</Label>
-                    <Input id="fd-filiacaoMae" value={fielDepositario?.filiacaoMae || ''} onChange={e => handleOnChange('filiacaoMae', e.target.value)} placeholder="Nome da mãe" />
-                  </div>
-                  <div>
-                    <Label htmlFor="fd-filiacaoPai">Filiação (Pai)</Label>
-                    <Input id="fd-filiacaoPai" value={fielDepositario?.filiacaoPai || ''} onChange={e => handleOnChange('filiacaoPai', e.target.value)} placeholder="Nome do pai" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="fd-endereco">Endereço</Label>
-                    <Input id="fd-endereco" value={fielDepositario?.endereco || ''} onChange={e => handleOnChange('endereco', e.target.value)} placeholder="Endereço completo" />
-                  </div>
-                  <div>
-                    <Label htmlFor="fd-celular">Celular</Label>
-                    <Input id="fd-celular" value={fielDepositario?.celular || ''} onChange={e => handleOnChange('celular', e.target.value)} placeholder="(65) 99999-9999" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="fd-objeto">Objeto Depositado</Label>
-                    <Textarea
-                        id="fd-objeto"
-                        placeholder="Descreva o bem deixado sob a posse do fiel depositário"
-                        value={fielDepositario?.objetoDepositado || ""}
-                        onChange={e => handleOnChange('objetoDepositado', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
       </CardContent>
     </Card>;
 };

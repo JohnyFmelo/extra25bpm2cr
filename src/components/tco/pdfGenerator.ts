@@ -125,12 +125,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 videoLinks: processedVideoLinks,
                 hidePagination: true
             };
-            
-            // HACK: Retrieve fiel depositario data from window object if it exists
-            if ((window as any).tempFielDepositario) {
-                data.fielDepositario = (window as any).tempFielDepositario;
-                delete (window as any).tempFielDepositario; // Clean up
-            }
 
             const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
             let yPosition;
@@ -138,15 +132,9 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
             yPosition = addNewPage(doc, data);
 
+            // << CORREÇÃO: Lógica para preparar a lista de anexos agora usa o array 'data.drogas' >>
             const isDrugCase = Array.isArray(data.drogas) && data.drogas.length > 0;
             const documentosAnexosList = [];
-            
-            // Check for a manually entered Fiel Depositario
-            const fielDepositarioManual = data.fielDepositario && data.fielDepositario.nome ? data.fielDepositario : null;
-            
-            if (fielDepositarioManual) {
-                console.log("Fiel Depositário MANUAL encontrado:", JSON.stringify(fielDepositarioManual, null, 2));
-            }
 
             if (data.autores && data.autores.length > 0) {
                 data.autores.forEach((autor: any) => {
@@ -164,8 +152,13 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 });
             }
 
-            // Adiciona o termo de depósito à lista se um fiel depositário manual foi informado
-            if (fielDepositarioManual) {
+            let temFielDepositario = false;
+            if (Array.isArray(data.autores)) {
+                temFielDepositario = data.autores.some(
+                    (a: any) => a && typeof a.fielDepositario === 'string' && a.fielDepositario.trim().toLowerCase() === 'sim'
+                );
+            }
+            if (temFielDepositario) {
                 documentosAnexosList.push("TERMO DE DEPÓSITO");
             }
             
@@ -215,11 +208,9 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
                     }
 
-                    // Chama o Termo de Depósito se um fiel depositário manual foi encontrado.
-                    if (fielDepositarioManual) {
-                        console.log("Adicionando Termo de Depósito para (com dados manuais):", fielDepositarioManual.nome);
-                        // Passamos o objeto do fiel depositário diretamente.
-                        addTermoDeposito(doc, updatedData, fielDepositarioManual);
+                    if (temFielDepositario) {
+                        console.log("Adicionando Termo de Depósito");
+                        addTermoDeposito(doc, updatedData);
                     }
                     
                     // << CORREÇÃO: A chamada para os termos relacionados a drogas agora usa a flag 'isDrugCase' >>
@@ -235,6 +226,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Adicionando Termo de Apreensão para outros objetos");
                         addTermoApreensao(doc, updatedData);
                     }
+
 
                     if (pessoasComLaudo.length > 0) {
                         pessoasComLaudo.forEach((pessoa: any) => {
