@@ -22,6 +22,8 @@ interface PersonalInfoFieldsProps {
     email: string;
     laudoPericial: string; // Novo campo: "Sim" ou "Não"
     relato?: string; // For victim and witness testimony
+    fielDepositario?: string;
+    objetoDepositado?: string;
   };
   onChangeHandler: (index: number | null, field: string, value: string) => void;
   prefix?: string;
@@ -284,6 +286,39 @@ const PersonalInfoFields: React.FC<PersonalInfoFieldsProps> = ({
             </Select>
           </div>
         </div>}
+
+      {isAuthor && (
+        <div className="space-y-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor={`${prefix}fielDepositario_${index}`}>É fiel depositário?</Label>
+                <Select value={data.fielDepositario || "Não"} onValueChange={value => onChangeHandler(index, 'fielDepositario', value)}>
+                  <SelectTrigger id={`${prefix}fielDepositario_${index}`}>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Não">Não</SelectItem>
+                    <SelectItem value="Sim">Sim</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+          </div>
+          {data.fielDepositario === 'Sim' && (
+            <div>
+              <Label htmlFor={`${prefix}objetoDepositado_${index}`}>Objeto(s) depositado(s)</Label>
+              <Input
+                id={`${prefix}objetoDepositado_${index}`}
+                placeholder="Descreva o bem deixado sob sua posse"
+                value={data.objetoDepositado || ''}
+                onChange={e => onChangeHandler(index, 'objetoDepositado', e.target.value)}
+              />
+               <p className="text-xs text-muted-foreground mt-1">
+                Este bem constará no Termo de Depósito.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

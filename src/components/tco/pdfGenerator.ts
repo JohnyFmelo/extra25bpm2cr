@@ -17,6 +17,7 @@ import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
 import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
+import { addTermoDeposito } from "./PDF/PDFTermoDeposito.js";
 
 /**
  * Remove acentos e caracteres especiais de uma string
@@ -131,7 +132,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
             yPosition = addNewPage(doc, data);
 
-            // << CORREÇÃO: Lógica para preparar a lista de anexos agora usa o array 'data.drogas' >>
+            // << CORREÇÃO: Lógica para preparar a lista de anexos agora usa o array 'data.drogas >>
             const isDrugCase = Array.isArray(data.drogas) && data.drogas.length > 0;
             const documentosAnexosList = [];
 
@@ -149,6 +150,11 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         documentosAnexosList.push(`TERMO DE MANIFESTAÇÃO DA VÍTIMA ${vitima.nome.toUpperCase()}`);
                     }
                 });
+            }
+            
+            const hasFielDepositario = Array.isArray(data.autores) && data.autores.some(a => a.fielDepositario === 'Sim');
+            if (hasFielDepositario) {
+                documentosAnexosList.push('TERMO DE DEPÓSITO');
             }
             
             // << CORREÇÃO: A lógica de apreensão e drogas é simplificada para usar 'isDrugCase' >>
@@ -195,6 +201,11 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         addTermoManifestacao(doc, updatedData);
                     } else {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
+                    }
+                    
+                    if (hasFielDepositario) {
+                        console.log("Adicionando Termo de Depósito");
+                        addTermoDeposito(doc, updatedData);
                     }
                     
                     // << CORREÇÃO: A chamada para os termos relacionados a drogas agora usa a flag 'isDrugCase' >>

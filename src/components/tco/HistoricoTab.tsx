@@ -353,7 +353,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
                 <Textarea 
                   id={`relatoVitima-${index}`} 
                   placeholder={`Descreva o relato da vítima ${vitima.nome}`} 
-                  value={vitima.relato || "RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO."} 
+                  value={vitima.relato || "RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO."} 
                   onChange={e => handleVitimaRelatoChange(index, e.target.value)} 
                   className="min-h-[150px]" 
                 />
