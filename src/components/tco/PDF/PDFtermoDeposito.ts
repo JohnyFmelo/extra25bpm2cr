@@ -14,17 +14,15 @@ const ensureAndProcessText = (text: any, toUpperCase = true, fallback = 'NÃO IN
     return fallback;
 };
 
-export const addTermoDeposito = (doc: jsPDF, data: any) => {
+export const addTermoDeposito = (doc: jsPDF, data: any, fielDepositarioIndex: number) => {
     const { PAGE_WIDTH, MARGIN_LEFT, MARGIN_RIGHT, MAX_LINE_WIDTH } = getPageConstants(doc);
-    // Busca o depositário pelo índice passado, que é uma forma mais segura
-    const depositario = (data.fielDepositarioIndex !== undefined && Array.isArray(data.autores)) 
-        ? data.autores[data.fielDepositarioIndex] 
-        : undefined;
+    // Busca o depositário diretamente pelo índice, que é garantido como válido aqui.
+    const depositario = data.autores[fielDepositarioIndex];
 
     console.log("Iniciando geração do Termo de Depósito");
     
     if (!depositario) {
-        console.log("Nenhum fiel depositário qualificado foi fornecido para o Termo de Depósito.");
+        console.log("Fiel depositário não encontrado com o índice fornecido. Pulando Termo de Depósito.");
         return;
     }
 

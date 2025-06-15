@@ -210,11 +210,11 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
                     }
 
-                    // Chama o Termo de Depósito se um depositário válido foi encontrado, passando seu índice
+                    // Chama o Termo de Depósito se um depositário válido foi encontrado, passando seu índice separadamente
                     if (fielDepositarioIndex !== -1) {
                         const depositarioNome = updatedData.autores[fielDepositarioIndex].nome;
                         console.log("Adicionando Termo de Depósito para:", depositarioNome);
-                        addTermoDeposito(doc, { ...updatedData, fielDepositarioIndex });
+                        addTermoDeposito(doc, updatedData, fielDepositarioIndex);
                     }
                     
                     // << CORREÇÃO: A chamada para os termos relacionados a drogas agora usa a flag 'isDrugCase' >>
