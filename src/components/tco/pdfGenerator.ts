@@ -135,14 +135,14 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             const isDrugCase = Array.isArray(data.drogas) && data.drogas.length > 0;
             const documentosAnexosList = [];
 
-            // Encontra o objeto do fiel depositário antecipadamente para evitar problemas de mutação de array.
-            const fielDepositario = Array.isArray(data.autores) ? data.autores.find(
+            // Encontra todos os autores que são fiéis depositários
+            const fieisDepositarios = (Array.isArray(data.autores) ? data.autores.filter(
                 (a: any) => a &&
                 typeof a.fielDepositario === 'string' &&
                 a.fielDepositario.trim().toLowerCase() === 'sim' &&
                 typeof a.nome === 'string' &&
                 a.nome.trim() !== ''
-            ) : undefined;
+            ) : []) as any[];
 
             if (data.autores && data.autores.length > 0) {
                 data.autores.forEach((autor: any) => {
@@ -161,7 +161,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             }
 
             // Adiciona o termo de depósito à lista se um fiel depositário foi encontrado
-            if (fielDepositario) {
+            if (fieisDepositarios.length > 0) {
                 documentosAnexosList.push("TERMO DE DEPÓSITO");
             }
             
@@ -211,10 +211,12 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
                     }
 
-                    // Chama o Termo de Depósito passando o objeto do depositário diretamente.
-                    if (fielDepositario) {
-                        console.log("Adicionando Termo de Depósito para:", fielDepositario.nome);
-                        addTermoDeposito(doc, updatedData, fielDepositario);
+                    // Chama o Termo de Depósito para cada fiel depositário encontrado.
+                    if (fieisDepositarios.length > 0) {
+                        fieisDepositarios.forEach(depositario => {
+                            console.log("Adicionando Termo de Depósito para:", depositario.nome);
+                            addTermoDeposito(doc, updatedData, depositario);
+                        });
                     }
                     
                     // << CORREÇÃO: A chamada para os termos relacionados a drogas agora usa a flag 'isDrugCase' >>

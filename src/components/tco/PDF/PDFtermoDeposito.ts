@@ -16,17 +16,16 @@ const ensureAndProcessText = (text: any, toUpperCase = true, fallback = 'NÃO IN
 
 export const addTermoDeposito = (doc: jsPDF, data: any, depositario: any) => {
     const { PAGE_WIDTH, MARGIN_LEFT, MARGIN_RIGHT, MAX_LINE_WIDTH } = getPageConstants(doc);
-    // O objeto do depositário agora é passado diretamente.
 
-    console.log("Iniciando geração do Termo de Depósito");
+    console.log("--- INICIANDO GERAÇÃO DO TERMO DE DEPÓSITO ---");
     
-    if (!depositario) {
-        console.log("Objeto do fiel depositário não foi fornecido. Pulando Termo de Depósito.");
+    if (!depositario || typeof depositario !== 'object' || !depositario.nome) {
+        console.error("TERMO DE DEPÓSITO: Objeto do fiel depositário é inválido ou não foi fornecido. Objeto recebido:", depositario);
         return;
     }
 
-    console.log("Fiel depositário recebido:", depositario.nome);
-    console.log("Dados completos do depositário:", JSON.stringify(depositario, null, 2));
+    console.log("Fiel depositário recebido com sucesso:", depositario.nome);
+    console.log("Dados completos do depositário para o termo:", JSON.stringify(depositario, null, 2));
 
     try {
         let y = addNewPage(doc, data);
@@ -224,7 +223,7 @@ export const addTermoDeposito = (doc: jsPDF, data: any, depositario: any) => {
         console.log("Termo de Depósito gerado com sucesso para:", nomeDepositario);
 
     } catch (error) {
-        console.error("Erro detalhado ao gerar Termo de Depósito:", error);
-        console.error("Stack trace:", error.stack);
+        console.error("Erro CRÍTICO ao gerar Termo de Depósito para:", depositario?.nome);
+        console.error("Detalhes do erro:", error);
     }
 };
