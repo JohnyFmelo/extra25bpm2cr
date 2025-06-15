@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import NotificationCard from "./NotificationCard";
 import { Timestamp } from "firebase/firestore";
 import { Bell, Sparkles } from "lucide-react";
+import { useUser } from "@/context/UserContext";
 
 export interface Notification {
   id: string;
@@ -40,13 +41,18 @@ const NotificationsList = ({
   }[]>([]);
   const { toast } = useToast();
   
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const isAdmin = currentUser.userType === "admin";
+  const { user: currentUser } = useUser();
+  const isAdmin = currentUser?.userType === "admin";
 
   // Uso do ref para rolar para a notificação expandida
   const expandedCardRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (!currentUser?.id) {
+      setNotifications([]);
+      return;
+    }
+
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, snapshot => {
       const allNotifs = snapshot.docs.map(doc => ({
@@ -61,14 +67,14 @@ const NotificationsList = ({
       });
       
       const filteredNotifs = showOnlyUnread 
-        ? allNotifs.filter(n => !n.readBy.includes(currentUser.id)) 
+        ? allNotifs.filter(n => currentUser.id && !n.readBy.includes(currentUser.id)) 
         : allNotifs;
       
       setNotifications(filteredNotifs);
     });
 
     return () => unsubscribe();
-  }, [currentUser.id, showOnlyUnread, isAdmin]);
+  }, [currentUser?.id, showOnlyUnread, isAdmin]);
 
   useEffect(() => {
     if (expandedCardRef.current) {
@@ -80,6 +86,14 @@ const NotificationsList = ({
   }, [expandedId]);
 
   const handleMarkAsRead = async (notificationId: string) => {
+    if (!currentUser?.id) {
+      toast({
+        variant: "destructive",
+        title: "Erro de autenticação",
+        description: "Usuário não encontrado. Por favor, faça login novamente."
+      });
+      return;
+    }
     try {
       const notifRef = doc(db, "recados", notificationId);
       await updateDoc(notifRef, {
@@ -191,16 +205,16 @@ const NotificationsList = ({
   return (
     <div className="w-full h-full flex flex-col flex-1 min-h-0">
       {/* Header stats */}
-      {!showOnlyUnread && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200/50">
+      {!showOnlyUnread && currentUser?.id && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800/50 dark:to-slate-900/50 rounded-xl p-4 border border-blue-200/50 dark:border-slate-700/50 mb-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-slate-800">Central de Notificações</h2>
-              <p className="text-sm text-slate-600">
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Central de Notificações</h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 {notifications.filter(n => !n.readBy.includes(currentUser.id)).length} não lidas de {notifications.length} total
               </p>
             </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3">
+            <div className="bg-white/60 dark:bg-slate-900/50 backdrop-blur-sm rounded-lg p-3">
               <Bell className="h-6 w-6 text-blue-500" />
             </div>
           </div>
@@ -211,6 +225,8 @@ const NotificationsList = ({
       <ScrollArea className="flex-1 max-h-[60vh] min-h-[256px] pr-1">
         <div className="space-y-4">
           {notifications.map((notification, index) => {
+            if (!currentUser?.id) return null;
+
             const isUnread = !notification.readBy.includes(currentUser.id);
             const isExpanded = expandedId === notification.id;
             // O ref só no expandido 
@@ -230,8 +246,10 @@ const NotificationsList = ({
                   onToggle={() => setExpandedId(isExpanded ? null : notification.id)}
                   onMarkAsRead={() => handleMarkAsRead(notification.id)}
                   onLongPress={() => {
-                    setSelectedNotification(notification.id);
-                    setDeleteDialogOpen(true);
+                    if (isAdmin) {
+                      setSelectedNotification(notification.id);
+                      setDeleteDialogOpen(true);
+                    }
                   }}
                   onClose={() => handleCloseNotification(notification.id)}
                   showActions={isAdmin}
@@ -296,10 +314,15 @@ const NotificationsList = ({
 
 export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const { user: currentUser } = useUser();
   const isInitialLoad = useRef(true);
   
   useEffect(() => {
+    if (!currentUser?.id) {
+      setUnreadCount(0);
+      return;
+    }
+    
     const q = query(collection(db, "recados"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, snapshot => {
       if (!isInitialLoad.current) {
@@ -326,7 +349,7 @@ export const useNotifications = () => {
         notif.type === 'all' || notif.recipientId === currentUser.id
       );
       
-      const count = notifs.filter(n => !n.readBy.includes(currentUser.id)).length;
+      const count = notifs.filter(n => currentUser.id && !n.readBy.includes(currentUser.id)).length;
       setUnreadCount(count);
       // Dispatch event to notify about notifications count globally
       window.dispatchEvent(new CustomEvent('notificationsUpdate', { 
@@ -339,7 +362,7 @@ export const useNotifications = () => {
     });
 
     return () => unsubscribe();
-  }, [currentUser.id]);
+  }, [currentUser?.id]);
 
   return unreadCount;
 };
