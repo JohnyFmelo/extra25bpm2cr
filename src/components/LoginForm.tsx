@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import { EyeOff, Eye, Mail, Lock } from "lucide-react";
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { useNavigate } from "react-router-dom";
-import ForcePasswordResetDialog from "./ForcePasswordResetDialog";
 
 const LoginForm = () => {
   const [email, setEmail] = useState("");
@@ -15,7 +13,6 @@ const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [forceResetData, setForceResetData] = useState<{ open: boolean; userId: string | null }>({ open: false, userId: null });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +35,6 @@ const LoginForm = () => {
           description: "Email ou senha incorretos.",
           variant: "destructive",
         });
-        setIsLoading(false);
         return;
       }
 
@@ -56,7 +52,8 @@ const LoginForm = () => {
         return;
       }
 
-      const fullUserData = {
+      // Store ALL user data in localStorage, including 'service'
+      localStorage.setItem('user', JSON.stringify({
         id: userDoc.id,
         email: userData.email,
         userType: userData.userType,
@@ -64,24 +61,21 @@ const LoginForm = () => {
         registration: userData.registration,
         rank: userData.rank,
         blocked: userData.blocked,
-        service: userData.service,
-        password: userData.password,
-        passwordReset: userData.passwordReset,
-      };
-      localStorage.setItem('user', JSON.stringify(fullUserData));
+        service: userData.service // <-- INCLUÍDO AQUI!
+      }));
 
-      if (userData.passwordReset) {
-        setForceResetData({ open: true, userId: userDoc.id });
-      } else {
-        toast({
-          title: "Login realizado",
-          description: "Você será redirecionado em instantes.",
-          className: "bg-blue-500 text-white",
-        });
-        setEmail("");
-        setPassword("");
-        navigate("/");
-      }
+      toast({
+        title: "Login realizado",
+        description: "Você será redirecionado em instantes.",
+        className: "bg-blue-500 text-white",
+      });
+
+      // Clear form
+      setEmail("");
+      setPassword("");
+
+      // Navigate to index page
+      navigate("/");
 
     } catch (error) {
       toast({
@@ -95,63 +89,56 @@ const LoginForm = () => {
   };
 
   return (
-    <>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email
-          </label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="pl-10"
-              placeholder="Digite seu email"
-            />
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          Email
+        </label>
+        <div className="relative">
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="pl-10"
+            placeholder="Digite seu email"
+          />
         </div>
-        <div className="space-y-2">
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-            Senha
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="pl-10"
-              placeholder="Digite sua senha"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
-            </button>
-          </div>
+      </div>
+      <div className="space-y-2">
+        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+          Senha
+        </label>
+        <div className="relative">
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="pl-10"
+            placeholder="Digite sua senha"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+          </button>
         </div>
-        <Button 
-          type="submit" 
-          className="w-full bg-primary hover:bg-primary-light transition-colors duration-300"
-          disabled={isLoading}
-        >
-          {isLoading ? "Entrando..." : "Entrar"}
-        </Button>
-      </form>
-      <ForcePasswordResetDialog
-        open={forceResetData.open}
-        onOpenChange={(isOpen) => setForceResetData({ ...forceResetData, open: isOpen })}
-        userId={forceResetData.userId}
-      />
-    </>
+      </div>
+      <Button 
+        type="submit" 
+        className="w-full bg-primary hover:bg-primary-light transition-colors duration-300"
+        disabled={isLoading}
+      >
+        {isLoading ? "Entrando..." : "Entrar"}
+      </Button>
+    </form>
   );
 };
 
