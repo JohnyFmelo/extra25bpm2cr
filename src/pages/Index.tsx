@@ -57,6 +57,7 @@ const Index = ({
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
+
   useEffect(() => {
     const handleNotificationsChange = (count: number) => {
       setHasNotifications(count > 0);
@@ -133,12 +134,7 @@ const Index = ({
     if (tab === 'hours') {
       navigate('/hours');
     } else if (tab === 'extra') {
-      // Se estiver na aba editor e clicar em extra, retorna para extra
-      if (activeTab === 'editor') {
-        setActiveTab('extra');
-      } else {
-        setActiveTab(tab);
-      }
+      setActiveTab('extra');
     } else if (tab === 'tco') {
       setActiveTab(tab);
     } else {
@@ -273,8 +269,8 @@ const Index = ({
 
           <TabsContent value="editor">
             <div className="relative">
-              <div className="absolute right-0 -top-14">
-                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para aba extra">
+              <div className="absolute left-0 -top-14">
+                <button onClick={() => setActiveTab("extra")} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para aba extra">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>

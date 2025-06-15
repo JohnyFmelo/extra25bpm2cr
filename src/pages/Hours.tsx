@@ -9,8 +9,6 @@ import { UserHoursDisplay } from "@/components/hours/UserHoursDisplay";
 import { fetchUserHours, fetchAllUsers } from "@/services/hoursService";
 import type { HoursData, UserOption } from "@/types/hours";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AllUsersHours } from "@/components/hours/AllUsersHours";
-
 const Hours = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedGeneralMonth, setSelectedGeneralMonth] = useState<string>("");
@@ -141,7 +139,12 @@ const Hours = () => {
           setAllUsersData([]);
           return;
         }
-        setAllUsersData(allUsersResults);
+        const sortedResults = [...allUsersResults].sort((a, b) => {
+          const totalA = a["Total Geral"] ? parseFloat(a["Total Geral"].toString().replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
+          const totalB = b["Total Geral"] ? parseFloat(b["Total Geral"].toString().replace(/[^0-9,.]/g, '').replace(',', '.')) : 0;
+          return totalB - totalA;
+        });
+        setAllUsersData(sortedResults);
         setGeneralData(null);
       } else {
         const result = await fetchUserHours(selectedGeneralMonth, selectedUser);
@@ -192,26 +195,26 @@ const Hours = () => {
     const year = new Date().getFullYear();
     return `${month}/${year}`;
   };
-  // Barra de navegação só aparece para admin
-  const shouldShowBottomMenuBar = userData?.userType === 'admin';
-
-  return (
-    <div className="bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
+  return <div className="bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
       <div className="pb-2 flex flex-col flex-grow w-full">
         <Tabs defaultValue="hours" className="space-y-6 flex flex-col flex-grow">
           <TabsList className="hidden">
             <TabsTrigger value="hours">Hours</TabsTrigger>
           </TabsList>
+
           <TabsContent value="hours" className="flex-grow">
+            
+
             <Tabs defaultValue="individual" value={activeConsult} onValueChange={value => setActiveConsult(value as 'individual' | 'general')} className="w-full flex-grow">
               <TabsList className="grid w-full grid-cols-2 bg-white/50 rounded-xl mb-6">
                 <TabsTrigger value="individual" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
                   Consulta Individual
                 </TabsTrigger>
                 {userData?.userType === 'admin' && <TabsTrigger value="general" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-primary rounded-lg transition-all duration-300">
-                  Consulta Geral
-                </TabsTrigger>}
+                    Consulta Geral
+                  </TabsTrigger>}
               </TabsList>
+
               <TabsContent value="individual" className="flex-grow">
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
                   <h2 className="text-xl font-bold text-primary mb-4">Consulta Individual</h2>
@@ -220,55 +223,51 @@ const Hours = () => {
 
                     <Button onClick={handleConsult} disabled={loading || !userData?.registration} className="w-full">
                       {loading ? <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Consultando...
-                      </> : "Consultar"}
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Consultando...
+                        </> : "Consultar"}
                     </Button>
 
                     {!userData?.registration && <p className="text-sm text-red-500">
-                      Você precisa cadastrar sua matrícula para consultar as horas.
-                    </p>}
+                        Você precisa cadastrar sua matrícula para consultar as horas.
+                      </p>}
 
                     {data && <UserHoursDisplay data={data} onClose={() => setData(null)} isAdmin={userData?.userType === 'admin'} monthYear={getSelectedMonthYear(selectedMonth)} />}
                   </div>
                 </div>
               </TabsContent>
+
               {userData?.userType === 'admin' && <TabsContent value="general" className="flex-grow">
-                <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
-                  <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
-                  <div className="space-y-4">
-                    <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
-                    <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
-                    <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full">
-                      {loadingGeneral ? <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Consultando...
-                      </> : "Consultar"}
-                    </Button>
-                    {selectedUser === 'all' && allUsersData.length > 0 &&
-                      <AllUsersHours users={allUsersData} monthYear={getSelectedMonthYear(selectedGeneralMonth)} />
-                    }
-                    {generalData &&
-                      <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} isAdmin={true} monthYear={getSelectedMonthYear(selectedGeneralMonth)} />
-                    }
+                  <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+                    <h2 className="text-xl font-bold text-primary mb-4">Consulta Geral</h2>
+                    <div className="space-y-4">
+                      <UserSelector users={users} value={selectedUser} onChange={setSelectedUser} />
+
+                      <MonthSelector value={selectedGeneralMonth} onChange={setSelectedGeneralMonth} />
+
+                      <Button onClick={handleGeneralConsult} disabled={loadingGeneral} className="w-full">
+                        {loadingGeneral ? <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Consultando...
+                          </> : "Consultar"}
+                      </Button>
+
+                      {selectedUser === 'all' && allUsersData.map((userData, index) => <div key={index} className="mb-4 p-4 rounded-md shadow-sm bg-stone-50">
+                          <UserHoursDisplay data={userData} onClose={() => {
+                      const updatedData = [...allUsersData];
+                      updatedData.splice(index, 1);
+                      setAllUsersData(updatedData);
+                    }} isAdmin={true} monthYear={getSelectedMonthYear(selectedGeneralMonth)} />
+                        </div>)}
+
+                      {generalData && <UserHoursDisplay data={generalData} onClose={() => setGeneralData(null)} isAdmin={true} monthYear={getSelectedMonthYear(selectedGeneralMonth)} />}
+                    </div>
                   </div>
-                </div>
-              </TabsContent>}
+                </TabsContent>}
             </Tabs>
           </TabsContent>
         </Tabs>
       </div>
-      {shouldShowBottomMenuBar && (
-        // Renderize a barra apenas se admin
-        <div className="mt-0">
-          {/*
-            Nota: se estiver usando Layout, precisa coordenar para não duplicar barra, 
-            aqui assume que Layout não força BottomMenuBar na página Hours.
-          */}
-        </div>
-      )}
-    </div>
-  );
+    </div>;
 };
-
 export default Hours;
