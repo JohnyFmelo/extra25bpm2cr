@@ -1,8 +1,7 @@
 
 import { useState } from "react";
-import { Clock, X, User, Shield } from "lucide-react";
+import { Clock, X, User, Shield, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Timestamp } from "firebase/firestore";
 
 interface Notification {
@@ -82,71 +81,82 @@ const NotificationCard = ({
     }
   };
 
+  const getSenderIcon = () => {
+    if (notification.isAdmin) {
+      return <Shield className="h-5 w-5 text-red-500" />;
+    }
+    return <User className="h-5 w-5 text-blue-500" />;
+  };
+
   return (
-    <Card 
-      className={`
-        relative transition-all duration-200 cursor-pointer border-l-4 hover:shadow-md
-        ${isUnread 
-          ? 'border-l-blue-500 bg-blue-50 shadow-sm' 
-          : 'border-l-gray-300 bg-white'
-        }
-        ${isExpanded ? 'shadow-lg' : ''}
-      `}
+    <div
+      className="relative p-6 cursor-pointer"
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onClick={onToggle}
     >
-      {/* Botão de fechar */}
+      {/* Indicator bar for unread */}
+      {isUnread && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500" />
+      )}
+
+      {/* Close button */}
       {onClose && (
         <Button
           variant="ghost"
           size="sm"
-          className="absolute top-2 right-2 h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600 z-10"
+          className="absolute top-4 right-4 h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 z-10 opacity-70 hover:opacity-100 transition-opacity"
           onClick={handleClose}
         >
-          <X className="h-3 w-3" />
+          <X className="h-4 w-4" />
         </Button>
       )}
 
-      <CardContent className="p-4 pr-10">
-        {/* Header da notificação */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            {notification.isAdmin ? (
-              <Shield className="h-4 w-4 text-red-500" />
-            ) : (
-              <User className="h-4 w-4 text-blue-500" />
-            )}
-            <span className="font-semibold text-gray-900 text-sm">
-              {notification.graduation} {notification.senderName}
-            </span>
+      <div className="pr-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              {getSenderIcon()}
+              <div>
+                <h3 className="font-semibold text-slate-800 text-base">
+                  {notification.graduation} {notification.senderName}
+                </h3>
+                <div className="flex items-center space-x-2 text-sm text-slate-500">
+                  <Clock className="h-3 w-3" />
+                  <span>{formatTimestamp(notification.timestamp)}</span>
+                  {notification.type === 'individual' && (
+                    <>
+                      <span>•</span>
+                      <MessageSquare className="h-3 w-3" />
+                      <span>Mensagem pessoal</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
             {isUnread && (
-              <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+              <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse flex-shrink-0" />
             )}
-          </div>
-          
-          <div className="flex items-center gap-1 text-xs text-gray-500">
-            <Clock className="h-3 w-3" />
-            {formatTimestamp(notification.timestamp)}
           </div>
         </div>
 
-        {/* Conteúdo da mensagem */}
-        <div className="text-gray-800 text-sm leading-relaxed">
+        {/* Content */}
+        <div className="text-slate-700 text-sm leading-relaxed mb-4">
           {isExpanded ? (
             <p className="whitespace-pre-wrap break-words">{notification.text}</p>
           ) : (
-            <p className="line-clamp-2 whitespace-pre-wrap break-words">
+            <p className="line-clamp-3 whitespace-pre-wrap break-words">
               {notification.text}
             </p>
           )}
         </div>
 
-        {/* Ações */}
+        {/* Footer with actions */}
         {isExpanded && (
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
-            <div className="flex gap-2">
+          <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+            <div className="flex items-center space-x-3">
               {isUnread && (
                 <Button
                   variant="outline"
@@ -155,20 +165,23 @@ const NotificationCard = ({
                     e.stopPropagation();
                     onMarkAsRead();
                   }}
-                  className="text-xs"
+                  className="text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
                 >
                   Marcar como lida
                 </Button>
               )}
             </div>
             
-            <div className="text-xs text-gray-500">
-              {notification.type === 'individual' ? 'Mensagem pessoal' : 'Mensagem geral'}
+            <div className="text-xs text-slate-500 flex items-center space-x-1">
+              <MessageSquare className="h-3 w-3" />
+              <span>
+                {notification.type === 'individual' ? 'Pessoal' : 'Geral'}
+              </span>
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

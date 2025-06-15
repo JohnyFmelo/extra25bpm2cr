@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -8,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import NotificationCard from "./NotificationCard";
 import { Timestamp } from "firebase/firestore";
+import { MessageSquare, Bell } from "lucide-react";
 
 interface Notification {
   id: string;
@@ -153,14 +153,14 @@ const NotificationsList = ({
 
   if (notifications.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-center">
-        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-          <span className="text-2xl">📬</span>
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-6 shadow-lg">
+          <Bell className="h-8 w-8 text-blue-500" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <h3 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">
           {showOnlyUnread ? "Nenhuma notificação nova" : "Nenhuma notificação"}
         </h3>
-        <p className="text-gray-600 text-sm max-w-md">
+        <p className="text-slate-500 text-sm max-w-md leading-relaxed">
           {showOnlyUnread 
             ? "Você está em dia com suas notificações! Continue assim." 
             : "Ainda não há notificações para exibir. Elas aparecerão aqui quando chegarem."
@@ -171,27 +171,38 @@ const NotificationsList = ({
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-4">
       <div className="space-y-3">
-        {notifications.map(notification => {
+        {notifications.map((notification, index) => {
           const isUnread = !notification.readBy.includes(currentUser.id);
           const isExpanded = expandedId === notification.id;
           
           return (
-            <NotificationCard
+            <div
               key={notification.id}
-              notification={notification}
-              isUnread={isUnread}
-              isExpanded={isExpanded}
-              onToggle={() => setExpandedId(isExpanded ? null : notification.id)}
-              onMarkAsRead={() => handleMarkAsRead(notification.id)}
-              onLongPress={() => {
-                setSelectedNotification(notification.id);
-                setDeleteDialogOpen(true);
-              }}
-              onClose={() => handleCloseNotification(notification.id)}
-              showActions={isAdmin}
-            />
+              className={`
+                relative overflow-hidden rounded-xl border transition-all duration-300 hover:shadow-lg hover:scale-[1.01] animate-in slide-in-from-bottom-4
+                ${isUnread 
+                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-md' 
+                  : 'bg-white border-slate-200 hover:border-slate-300'
+                }
+              `}
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <NotificationCard
+                notification={notification}
+                isUnread={isUnread}
+                isExpanded={isExpanded}
+                onToggle={() => setExpandedId(isExpanded ? null : notification.id)}
+                onMarkAsRead={() => handleMarkAsRead(notification.id)}
+                onLongPress={() => {
+                  setSelectedNotification(notification.id);
+                  setDeleteDialogOpen(true);
+                }}
+                onClose={() => handleCloseNotification(notification.id)}
+                showActions={isAdmin}
+              />
+            </div>
           );
         })}
       </div>
