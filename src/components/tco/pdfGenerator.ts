@@ -13,7 +13,6 @@ import { generateHistoricoContent } from './PDF/PDFhistorico.js';
 import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
 import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
 import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
-import { addTermoDeposito } from './PDF/PDFtermoDeposito.js';
 import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
 import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
 import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
@@ -152,15 +151,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 });
             }
             
-            // Logic to find the depositary author
-            const depositario = Array.isArray(data.autores) ? data.autores.find(
-                (a: any) => a && typeof a.fielDepositario === 'string' && a.fielDepositario.trim().toLowerCase() === 'sim' && a.nome?.trim()
-            ) : undefined;
-
-            if (depositario) {
-                documentosAnexosList.push("TERMO DE DEPÓSITO");
-            }
-            
             // << CORREÇÃO: A lógica de apreensão e drogas é simplificada para usar 'isDrugCase' >>
             // A apreensão será adicionada se for um caso de droga.
             if (isDrugCase) {
@@ -189,7 +179,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             const updatedData = {
                 ...data,
                 documentosAnexos: documentosAnexosList.join('\n'),
-                depositario, // Pass the found depositary object
             };
 
             generateHistoricoContent(doc, yPosition, updatedData)
@@ -206,11 +195,6 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         addTermoManifestacao(doc, updatedData);
                     } else {
                         console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
-                    }
-
-                    if (updatedData.depositario) {
-                        console.log("Adicionando Termo de Depósito com depositário:", updatedData.depositario.nome);
-                        addTermoDeposito(doc, updatedData);
                     }
                     
                     // << CORREÇÃO: A chamada para os termos relacionados a drogas agora usa a flag 'isDrugCase' >>
