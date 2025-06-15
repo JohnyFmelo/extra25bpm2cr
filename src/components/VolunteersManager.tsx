@@ -1,4 +1,5 @@
 
+```tsx
 import { useState, useEffect } from "react";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -6,8 +7,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Loader2, Users, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface User {
   id: string;
@@ -20,6 +21,7 @@ interface User {
 const VolunteersManager = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,7 +36,9 @@ const VolunteersManager = () => {
         id: userDoc.id,
         ...userDoc.data(),
         isVolunteer: userDoc.data().isVolunteer ?? false,
-      }) as User);
+      }) as User)
+      .sort((a, b) => (a.warName || "").localeCompare(b.warName || ""));
+      
       setUsers(usersData);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -76,10 +80,14 @@ const VolunteersManager = () => {
     }
   };
   
-  const getInitials = (name: string) => {
-    if (!name) return "??";
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
+  const filteredUsers = users.filter(user => {
+    const searchTerm = searchQuery.toLowerCase();
+    const rank = (user.rank || '').toLowerCase();
+    const warName = (user.warName || '').toLowerCase();
+    const email = (user.email || '').toLowerCase();
+    
+    return rank.includes(searchTerm) || warName.includes(searchTerm) || email.includes(searchTerm);
+  });
 
   if (isLoading) {
     return (
@@ -101,12 +109,19 @@ const VolunteersManager = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {users.map(user => (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            placeholder="Pesquisar por nome, posto ou e-mail..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10"
+          />
+        </div>
+        
+        {filteredUsers.map(user => (
           <div key={user.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors">
-            <div className="flex items-center gap-4">
-               <Avatar>
-                <AvatarFallback>{getInitials(user.warName)}</AvatarFallback>
-              </Avatar>
+            <div className="flex items-center">
               <div>
                 <p className="font-semibold">{user.rank} {user.warName}</p>
                 <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -115,7 +130,7 @@ const VolunteersManager = () => {
             <div className="flex items-center space-x-2">
               <Switch
                 id={`volunteer-switch-${user.id}`}
-                checked={user.isVolunteer}
+                checked={!!user.isVolunteer}
                 onCheckedChange={() => handleToggleVolunteer(user)}
               />
               <Label htmlFor={`volunteer-switch-${user.id}`} className="cursor-pointer">Voluntário</Label>
@@ -128,3 +143,4 @@ const VolunteersManager = () => {
 };
 
 export default VolunteersManager;
+```
