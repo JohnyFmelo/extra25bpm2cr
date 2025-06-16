@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { format, parseISO, isPast, addDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -207,6 +208,30 @@ const TimeSlotsList = () => {
   const isAdmin = userData?.userType === 'admin';
   const userService = userData?.service;
   const [collapsedDates, setCollapsedDates] = useState<{ [key: string]: boolean }>({});
+
+  // Calcular horas totais de cada voluntário progressivamente
+  const volunteerTotalHours = useMemo(() => {
+    const totalHours: { [key: string]: number } = {};
+    
+    // Ordenar time slots por data para calcular progressivamente
+    const sortedSlots = [...timeSlots].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    sortedSlots.forEach(slot => {
+      if (slot.volunteers && slot.volunteers.length > 0) {
+        const hours = calculateTimeDifference(slot.start_time, slot.end_time);
+        const numericHours = parseFloat(hours);
+        
+        slot.volunteers.forEach(volunteer => {
+          if (!totalHours[volunteer]) {
+            totalHours[volunteer] = 0;
+          }
+          totalHours[volunteer] += numericHours;
+        });
+      }
+    });
+    
+    return totalHours;
+  }, [timeSlots]);
 
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
@@ -686,6 +711,15 @@ const TimeSlotsList = () => {
     }
   };
 
+  // Função para formatar as horas totais do voluntário
+  const formatVolunteerWithHours = (volunteer: string) => {
+    const totalHours = volunteerTotalHours[volunteer];
+    if (totalHours && totalHours > 0) {
+      return `${volunteer} - ${totalHours.toFixed(1)}h`;
+    }
+    return volunteer;
+  };
+
   return (
     <div className="space-y-6 p-4 py-0 my-0 px-0">
       <TimeSlotLimitControl
@@ -819,7 +853,7 @@ const TimeSlotsList = () => {
                                 className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center"
                               >
                                 <div className="flex items-center">
-                                  <span>{volunteer}</span>
+                                  <span>{formatVolunteerWithHours(volunteer)}</span>
                                   {isAdmin && getVolunteerHours(volunteer) && (
                                     <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
                                       {getVolunteerHours(volunteer)}h
