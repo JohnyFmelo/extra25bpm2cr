@@ -2,30 +2,27 @@ import React, { useState, useEffect, useMemo } from "react";
 import { format, parseISO, isPast, addDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
-import { dataOperations } from "@/lib/firebase"; // Supondo que dataOperations.update() exista e funcione
+import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { collection, query, onSnapshot, doc, getDoc, setDoc, updateDoc, arrayRemove, arrayUnion } from "firebase/firestore"; // Adicionado updateDoc, arrayRemove, arrayUnion
+import { collection, query, onSnapshot, doc, getDoc, setDoc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { UserRoundCog, CalendarDays, Clock, ChevronDown, ChevronUp, X } from "lucide-react";
+import { UserRoundCog, CalendarDays, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "./ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { X } from "lucide-react";
 
 interface TimeSlot {
-  id: string; // ID deve ser string e obrigatório após buscar do Firebase
+  id?: string;
   date: string;
   start_time: string;
-  end_time:string;
+  end_time: string;
   total_slots: number;
   slots_used: number;
   volunteers?: string[];
   description?: string;
   allowedMilitaryTypes?: string[];
-}
-
-interface VolunteerHoursMap { // Interface para o estado das horas dos voluntários
-  [volunteerName: string]: number;
 }
 
 interface GroupedTimeSlots {
@@ -35,8 +32,12 @@ interface GroupedTimeSlots {
   };
 }
 
-// TimeSlotLimitControl Component (mantido como está no seu código)
-const TimeSlotLimitControl = ({ /* ...props... */ slotLimit, onUpdateLimit, userSlotCount = 0, isAdmin = false }: {
+const TimeSlotLimitControl = ({
+  slotLimit,
+  onUpdateLimit,
+  userSlotCount = 0,
+  isAdmin = false
+}: {
   slotLimit: number;
   onUpdateLimit: (limit: number) => void;
   userSlotCount?: number;
@@ -48,7 +49,7 @@ const TimeSlotLimitControl = ({ /* ...props... */ slotLimit, onUpdateLimit, user
 
   const handleCustomLimitSubmit = () => {
     const limit = parseInt(customLimit);
-    if (!isNaN(limit) && limit >= 0) { // Permitir 0 para "sem limite" se desejado, ou > 0
+    if (!isNaN(limit) && limit > 0) {
       onUpdateLimit(limit);
       setShowCustomInput(false);
       setCustomLimit("");
@@ -61,27 +62,21 @@ const TimeSlotLimitControl = ({ /* ...props... */ slotLimit, onUpdateLimit, user
         <div className="bg-white p-4 rounded-lg shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              {slotLimit > 0 && userSlotCount >= slotLimit ? (
-                <p className="text-orange-600 font-medium">Limite de horários atingido</p>
-              ) : slotLimit > 0 ? (
+              {userSlotCount >= slotLimit ? (
+                <p className="text-orange-600 font-medium">Horários esgotados</p>
+              ) : (
                 <p className="text-gray-700">
                   Escolha {slotLimit - userSlotCount}{' '}
-                  {slotLimit - userSlotCount === 1 ? 'horário restante' : 'horários restantes'}
-                </p>
-              ) : (
-                 <p className="text-gray-700">Você pode se voluntariar em horários.</p>
-              )}
-              {slotLimit > 0 && (
-                <p className="text-sm text-gray-500">
-                  {userSlotCount} de {slotLimit} horários preenchidos
+                  {slotLimit - userSlotCount === 1 ? 'horário' : 'horários'}
                 </p>
               )}
+              <p className="text-sm text-gray-500">
+                {userSlotCount} de {slotLimit} horários preenchidos
+              </p>
             </div>
-            {slotLimit > 0 && (
-                <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
-                <span className="text-gray-700 font-medium">{userSlotCount}/{slotLimit}</span>
-                </div>
-            )}
+            <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
+              <span className="text-gray-700 font-medium">{userSlotCount}/{slotLimit}</span>
+            </div>
           </div>
         </div>
       )}
@@ -110,7 +105,7 @@ const TimeSlotLimitControl = ({ /* ...props... */ slotLimit, onUpdateLimit, user
                 variant="outline"
                 className="flex-1"
               >
-                Outro
+                +
               </Button>
             </div>
           </div>
@@ -124,10 +119,10 @@ const TimeSlotLimitControl = ({ /* ...props... */ slotLimit, onUpdateLimit, user
                 <div className="space-y-2">
                   <Input
                     type="number"
-                    min="0" // Permitir 0 para "sem limite"
+                    min="1"
                     value={customLimit}
                     onChange={e => setCustomLimit(e.target.value)}
-                    placeholder="Digite o limite (0 para sem limite)"
+                    placeholder="Digite o limite de horários"
                   />
                 </div>
                 <div className="flex justify-end gap-2">
@@ -147,490 +142,569 @@ const TimeSlotLimitControl = ({ /* ...props... */ slotLimit, onUpdateLimit, user
   );
 };
 
-// Funções utilitárias (mantidas)
 const getMilitaryRankWeight = (rank: string): number => {
   const rankWeights: { [key: string]: number } = {
-    "Cel": 12,"Cel PM": 12, "Ten Cel": 11, "Ten Cel PM": 11,"Maj": 10, "Maj PM": 10, "Cap": 9,"Cap PM": 9,
-    "1° Ten": 8,"1° Ten PM": 8,"2° Ten": 7,"2° Ten PM": 7,"Sub Ten": 6,"Sub Ten PM": 6,"1° Sgt": 5,"1° Sgt PM": 5,
-    "2° Sgt": 4,"2° Sgt PM": 4,"3° Sgt": 3,"3° Sgt PM": 3,"Cb": 2,"Cb PM": 2,"Sd": 1,"Sd PM": 1,"Estágio": 0,
+    "Cel": 12,
+    "Cel PM": 12,
+    "Ten Cel": 11,
+    "Ten Cel PM": 11,
+    "Maj": 10,
+    "Maj PM": 10,
+    "Cap": 9,
+    "Cap PM": 9,
+    "1° Ten": 8,
+    "1° Ten PM": 8,
+    "2° Ten": 7,
+    "2° Ten PM": 7,
+    "Sub Ten": 6,
+    "Sub Ten PM": 6,
+    "1° Sgt": 5,
+    "1° Sgt PM": 5,
+    "2° Sgt": 4,
+    "2° Sgt PM": 4,
+    "3° Sgt": 3,
+    "3° Sgt PM": 3,
+    "Cb": 2,
+    "Cb PM": 2,
+    "Sd": 1,
+    "Sd PM": 1,
+    "Estágio": 0
   };
-  // Tenta encontrar o posto completo. Se não, tenta o primeiro token (ex: "Cel" de "Cel Medico")
-  return rankWeights[rank] || rankWeights[rank.split(" ")[0]] || 0;
+  return rankWeights[rank] || 0;
 };
 
 const getRankCategory = (rank: string): { category: string; hourlyRate: number } => {
-  const rankCleaned = rank.split(" ")[0]; // Pega a parte principal do posto. Ex: "Sd" de "Sd EV"
-  const cbSdRanks = ["Sd", "Cb"];
-  const stSgtRanks = ["3Sgt", "2Sgt", "1Sgt", "SubTen", "ST", "Sgt", "Sub"]; // Adicionar variações
-  const oficiaisRanks = ["2Ten", "1Ten", "Cap", "Maj", "TenCel", "Cel", "TC", "Ten"];
-
-  const simplifiedRank = rank.replace("°", "").replace(" ", "").replace("PM",""); // Ex: "1° Sgt PM" -> "1Sgt"
-
-  if (cbSdRanks.some(r => simplifiedRank.includes(r))) return { category: "Cb/Sd", hourlyRate: 41.13 };
-  if (stSgtRanks.some(r => simplifiedRank.includes(r))) return { category: "St/Sgt", hourlyRate: 56.28 };
-  if (oficiaisRanks.some(r => simplifiedRank.includes(r))) return { category: "Oficiais", hourlyRate: 87.02 };
+  const cbSdRanks = ["Sd", "Sd PM", "Cb", "Cb PM"];
+  const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM"];
+  const oficiaisRanks = ["2° Ten", "2° Ten PM", "1° Ten", "1° Ten PM", "Cap", "Cap PM", "Maj", "Maj PM", "Ten Cel", "Ten Cel PM", "Cel", "Cel PM"];
   
-  // Fallback para os originais se a simplificação não funcionar
-  if (["Sd", "Sd PM", "Cb", "Cb PM"].includes(rank)) return { category: "Cb/Sd", hourlyRate: 41.13 };
-  if (["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM"].includes(rank)) return { category: "St/Sgt", hourlyRate: 56.28 };
-  if (["2° Ten", "2° Ten PM", "1° Ten", "1° Ten PM", "Cap", "Cap PM", "Maj", "Maj PM", "Ten Cel", "Ten Cel PM", "Cel", "Cel PM"].includes(rank)) return { category: "Oficiais", hourlyRate: 87.02 };
-
+  if (cbSdRanks.includes(rank)) return { category: "Cb/Sd", hourlyRate: 41.13 };
+  if (stSgtRanks.includes(rank)) return { category: "St/Sgt", hourlyRate: 56.28 };
+  if (oficiaisRanks.includes(rank)) return { category: "Oficiais", hourlyRate: 87.02 };
   return { category: "Outros", hourlyRate: 0 };
 };
 
 const getVolunteerRank = (volunteerFullName: string): string => {
   const parts = volunteerFullName.split(" ");
-  // Heurística para postos compostos: se o segundo token for "Sgt" ou "Ten" ou "Cel" etc.
-  if (parts.length >= 2) {
-      if (["Sgt", "Ten", "Cel", "CB", "SD", "Maj", "Cap", "Sub"].some(p => parts[1].toUpperCase().startsWith(p))) {
-           return `${parts[0]} ${parts[1]}`; // Ex: "1° Sgt", "Ten Cel"
-      }
+  if (parts.length >= 2 && (parts[1] === "Sgt" || parts[1] === "Ten")) {
+    return `${parts[0]} ${parts[1]} ${parts[2] || ''}`.trim();
   }
-  return parts[0]; // Retorna apenas o primeiro token como posto. Ex: "Cel", "Sd"
+  return parts[0];
 };
-
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(value); // Removido .replace("R$", "R$ ") para manter padrão
+  }).format(value).replace("R$", "R$ ");
 };
-
 
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Começar carregando
-  const [slotLimit, setSlotLimit] = useState<number>(0); // Default sem limite
-  const [volunteerTotalHours, setVolunteerTotalHours] = useState<VolunteerHoursMap>({}); // CORRIGIDO: tipo e nome
+  const [isLoading, setIsLoading] = useState(false);
+  const [slotLimit, setSlotLimit] = useState<number>(0);
+  const [volunteerHours, setVolunteerHours] = useState<{ [key: string]: string }>({});
   const { toast } = useToast();
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
   const isAdmin = userData?.userType === 'admin';
-  const userService = userData?.service; // Ex: 'PATAMO', 'GUARDA', etc. (para allowedMilitaryTypes)
+  const userService = userData?.service;
   const [collapsedDates, setCollapsedDates] = useState<{ [key: string]: boolean }>({});
-  const [volunteerToRemove, setVolunteerToRemove] = useState<{ name: string; timeSlot: TimeSlot; } | null>(null);
 
-  // CORRIGIDO: Retorna número
-  const calculateSlotDuration = (startTime: string, endTime: string): number => {
-    if(!startTime || !endTime) return 0;
+  const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);
-    
-    // Lida com horários que viram a meia-noite
-    if (endHour < startHour || (endHour === startHour && endMinute < startMinute)) {
+    if (endHour < startHour || endHour === 0 && startHour > 0) {
       endHour += 24;
     }
-    
-    const startTotalMinutes = startHour * 60 + startMinute;
-    const endTotalMinutes = endHour * 60 + endMinute;
-    
-    const diffMinutes = endTotalMinutes - startTotalMinutes;
-    return diffMinutes / 60; // Retorna em horas decimais
+    let diffHours = endHour - startHour;
+    let diffMinutes = endMinute - startMinute;
+    if (diffMinutes < 0) {
+      diffHours -= 1;
+      diffMinutes += 60;
+    }
+    const totalHours = diffHours + diffMinutes / 60;
+    return `${totalHours}`;
   };
 
-  // NOVO: Calcula o total de horas de cada voluntário a partir dos timeSlots
-  const calculateAllVolunteersTotalHours = (slots: TimeSlot[]): VolunteerHoursMap => {
-    const hoursMap: VolunteerHoursMap = {};
-    slots.forEach(slot => {
-      if (slot.volunteers && slot.volunteers.length > 0) {
-        const slotDuration = calculateSlotDuration(slot.start_time, slot.end_time);
-        slot.volunteers.forEach(volunteer => {
-          hoursMap[volunteer] = (hoursMap[volunteer] || 0) + slotDuration;
-        });
-      }
-    });
-    return hoursMap;
+  const fetchVolunteerHours = async () => {
+    try {
+      const currentMonth = format(new Date(), 'MMMM', { locale: ptBR }).toUpperCase();
+      
+      // Map month names to Firebase collection names
+      let collectionName: string;
+      if (currentMonth === 'JANEIRO') collectionName = "hours_janeiro";
+      else if (currentMonth === 'FEVEREIRO') collectionName = "hours_fevereiro";
+      else if (currentMonth === 'MARÇO') collectionName = "hours_marco";
+      else if (currentMonth === 'ABRIL') collectionName = "hours_abril";
+      else if (currentMonth === 'MAIO') collectionName = "hours_maio";
+      else if (currentMonth === 'JUNHO') collectionName = "hours_junho";
+      else if (currentMonth === 'JULHO') collectionName = "hours_julho";
+      else if (currentMonth === 'AGOSTO') collectionName = "hours_agosto";
+      else if (currentMonth === 'SETEMBRO') collectionName = "hours_setembro";
+      else if (currentMonth === 'OUTUBRO') collectionName = "hours_outubro";
+      else if (currentMonth === 'NOVEMBRO') collectionName = "hours_novembro";
+      else collectionName = "hours_dezembro";
+
+      console.log(`Fetching volunteer hours from Firebase collection: ${collectionName}`);
+      
+      const hoursCollection = collection(db, collectionName);
+      const querySnapshot = await getDocs(hoursCollection);
+      
+      console.log('Firebase volunteer hours data received:', querySnapshot.size, 'documents');
+
+      const hoursMap: { [key: string]: string } = {};
+      
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const nome = data.nome || data.name || data.Nome;
+        const totalHours = data.totalHours || data.total_geral || data['Total Geral'] || data.hours;
+        
+        if (nome && totalHours) {
+          hoursMap[nome.trim()] = totalHours.toString();
+          console.log(`Mapped volunteer from Firebase: ${nome.trim()} -> ${totalHours}h`);
+        }
+      });
+      
+      console.log('Final Firebase hours map:', hoursMap);
+      setVolunteerHours(hoursMap);
+    } catch (error) {
+      console.error('Error fetching volunteer hours from Firebase:', error);
+    }
   };
 
   useEffect(() => {
-    setIsLoading(true);
     const fetchSlotLimit = async () => {
       try {
-        // Assegure-se que o caminho 'settings' e documento 'slotLimit' existem no seu Firestore
-        const settingsDoc = await getDoc(doc(db, 'settings', 'userSlotLimit')); // Mudado para userSlotLimit como no seu onUpdate
+        const settingsDoc = await getDoc(doc(db, 'settings', 'slotLimit'));
         if (settingsDoc.exists()) {
-          setSlotLimit(settingsDoc.data().value || 0); // Default 0 se value não existir
-        } else {
-          // Opcional: criar o documento se não existir com um valor padrão
-           await setDoc(doc(db, 'settings', 'userSlotLimit'), { value: 0 });
-           setSlotLimit(0); // Garante que slotLimit seja definido
+          setSlotLimit(settingsDoc.data().value || 0);
         }
       } catch (error) {
         console.error('Erro ao buscar limite de slots:', error);
-        // Não mostrar toast aqui, pode ser comum o doc não existir inicialmente
       }
     };
 
-    fetchSlotLimit(); // Chamar independente de ser admin ou não, pois o usuário precisa saber o limite
-
+    fetchSlotLimit();
+    setIsLoading(true);
     const timeSlotsCollection = collection(db, 'timeSlots');
-    const q = query(timeSlotsCollection); // Adicione ordenação se necessário ex: orderBy("date"), orderBy("start_time")
-    
+    const q = query(timeSlotsCollection);
     const unsubscribe = onSnapshot(q, snapshot => {
       const formattedSlots: TimeSlot[] = snapshot.docs.map(docSnap => {
         const data = docSnap.data();
         let slotDateStr: string;
         if (data.date && typeof data.date.toDate === 'function') {
           slotDateStr = format(data.date.toDate(), 'yyyy-MM-dd');
-        } else if (typeof data.date === 'string' && data.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            slotDateStr = data.date; // Já está no formato yyyy-MM-dd
         } else {
-            console.warn(`Data em formato inválido para o slot ${docSnap.id}:`, data.date, "Usando data atual como fallback.");
-            slotDateStr = format(new Date(), 'yyyy-MM-dd'); // Fallback, ou tratar como erro
+          slotDateStr = data.date as string;
         }
         return {
           id: docSnap.id,
           date: slotDateStr,
-          start_time: data.start_time || "00:00", // Default para evitar erros
-          end_time: data.end_time || "00:00",   // Default
+          start_time: data.start_time,
+          end_time: data.end_time,
           volunteers: data.volunteers || [],
-          // slots_used é melhor calculado pelo tamanho do array volunteers para consistência
-          slots_used: (data.volunteers || []).length, 
+          slots_used: data.slots_used || 0,
           total_slots: data.total_slots || data.slots || 0,
           description: data.description || "",
           allowedMilitaryTypes: data.allowedMilitaryTypes || []
         };
       });
 
-      setTimeSlots(formattedSlots);
-      // CALCULAR E ATUALIZAR AS HORAS TOTAIS DOS VOLUNTÁRIOS AQUI:
-      setVolunteerTotalHours(calculateAllVolunteersTotalHours(formattedSlots));
-
-      // Re-inicializar collapsed state para novas datas (mantendo as já existentes)
-      const newCollapsedDatesState = { ...collapsedDates };
+      // Initialize collapsed state for past dates
+      const newCollapsedDates: { [key: string]: boolean } = {};
       formattedSlots.forEach(slot => {
-        // Se a data não existe em collapsedDates E é passada E não é admin, então colapsa.
-        if (newCollapsedDatesState[slot.date] === undefined && isPast(parseISO(slot.date)) && !isAfter(parseISO(slot.date), addDays(new Date(), -1)) && !isAdmin) {
-          newCollapsedDatesState[slot.date] = true;
-        } else if (newCollapsedDatesState[slot.date] === undefined) {
-          // Se não for definida, padrão para não colapsada (false)
-          newCollapsedDatesState[slot.date] = false;
+        if (isPast(parseISO(slot.date)) && !isAdmin) {
+          newCollapsedDates[slot.date] = true;
         }
       });
-      setCollapsedDates(newCollapsedDatesState);
-
+      setCollapsedDates(newCollapsedDates);
+      setTimeSlots(formattedSlots);
       setIsLoading(false);
     }, error => {
       console.error('Erro ao ouvir horários:', error);
       toast({
-        title: "Erro de Conexão",
-        description: "Não foi possível carregar os horários. Verifique sua conexão.",
+        title: "Erro ao atualizar horários",
+        description: "Não foi possível receber atualizações em tempo real.",
         variant: "destructive"
       });
       setIsLoading(false);
     });
 
-    // REMOVIDO: fetchVolunteerHours(); 
-    // As horas agora são calculadas dinamicamente a partir dos timeSlots.
+    fetchVolunteerHours();
 
     return () => unsubscribe();
-  }, [isAdmin]); // Removido toast, pois ele muda e causaria re-execução. O ideal é usar o toast fora do useEffect se ele for dinâmico.
-
+  }, [toast, isAdmin]);
 
   const handleVolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
-      toast({ title: "Erro", description: "Usuário não identificado. Faça login novamente.", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: "Usuário não encontrado. Por favor, faça login novamente.",
+        variant: "destructive"
+      });
       return;
     }
-    if (!timeSlot.id) {
-        toast({ title: "Erro", description: "Identificador do horário inválido.", variant: "destructive" });
-        return;
-    }
-    // Verifica o limite de slots do usuário ANTES de qualquer coisa
-    const currentUserSlotCount = timeSlots.reduce(
-        (count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count,
-        0
-      );
-  
-    if (slotLimit > 0 && currentUserSlotCount >= slotLimit && !isAdmin) { // slotLimit > 0 significa que há um limite
-    toast({ title: "Limite atingido!🚫", description: `Você já atingiu o limite de ${slotLimit} horário(s).`, variant: "destructive" });
-    return;
-    }
-    
-    // Verifica se já está voluntariado em ALGUM slot NESTA MESMA DATA
-    const isAlreadyRegisteredOnDate = timeSlots.some(
-        slot => slot.date === timeSlot.date && slot.volunteers?.includes(volunteerName)
+
+    const userSlotCount = timeSlots.reduce(
+      (count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count,
+      0
     );
-    if (isAlreadyRegisteredOnDate) {
-        toast({ title: "Erro ⛔", description: "Você já está voluntariado em um horário nesta data.", variant: "destructive" });
-        return;
-    }
-    // Verifica se o slot está cheio
-    if (timeSlot.slots_used >= timeSlot.total_slots) {
-        toast({ title: "Erro", description: "Este horário já está lotado.", variant: "destructive"});
-        return;
+
+    if (userSlotCount >= slotLimit && !isAdmin) {
+      toast({
+        title: "Limite atingido!🚫",
+        description: `Você atingiu o limite de ${slotLimit} horário${slotLimit === 1 ? '' : 's'} por usuário.`,
+        variant: "destructive"
+      });
+      return;
     }
 
-    // Verifica se o tipo de militar é permitido
-    if (timeSlot.allowedMilitaryTypes && timeSlot.allowedMilitaryTypes.length > 0 && userService && !timeSlot.allowedMilitaryTypes.includes(userService) && !isAdmin) {
-        toast({ title: "Não Qualificado", description: `Este horário é apenas para: ${timeSlot.allowedMilitaryTypes.join(", ")}.`, variant: "destructive" });
-        return;
+    const slotsForDate = timeSlots.filter(slot => slot.date === timeSlot.date);
+    const isAlreadyRegistered = slotsForDate.some(slot => slot.volunteers?.includes(volunteerName));
+    if (isAlreadyRegistered) {
+      toast({
+        title: "Erro ⛔",
+        description: "Você já está registrado em um horário nesta data.",
+        variant: "destructive"
+      });
+      return;
     }
-
 
     try {
-      const slotRef = doc(db, 'timeSlots', timeSlot.id);
-      await updateDoc(slotRef, {
-        volunteers: arrayUnion(volunteerName),
-        // slots_used será atualizado automaticamente pelo listener com base no length de volunteers
+      const updatedSlot = {
+        ...timeSlot,
+        slots_used: timeSlot.slots_used + 1,
+        volunteers: [...(timeSlot.volunteers || []), volunteerName]
+      };
+      const result = await dataOperations.update(updatedSlot, {
+        date: timeSlot.date,
+        start_time: timeSlot.start_time,
+        end_time: timeSlot.end_time
       });
 
-      toast({ title: "Sucesso!✅🤠", description: "Extra marcada. Aguarde a escala." });
+      if (!result.success) {
+        throw new Error('Falha ao atualizar o horário');
+      }
+
+      toast({
+        title: "Sucesso!✅🤠",
+        description: "Extra marcada. Aguarde a escala."
+      });
     } catch (error) {
       console.error('Erro ao voluntariar:', error);
-      toast({ title: "Erro 🤔", description: "Não foi possível reservar a Extra.", variant: "destructive" });
+      toast({
+        title: "Erro 🤔",
+        description: "Não foi possível reservar a Extra.",
+        variant: "destructive"
+      });
     }
   };
 
   const handleUnvolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
-      toast({ title: "Erro 🤔", description: "Usuário não identificado. Faça login novamente.", variant: "destructive" });
+      toast({
+        title: "Erro 🤔",
+        description: "Usuário não encontrado. Por favor, faça login novamente.",
+        variant: "destructive"
+      });
       return;
-    }
-    if (!timeSlot.id) {
-        toast({ title: "Erro", description: "Identificador do horário inválido.", variant: "destructive" });
-        return;
     }
 
     try {
-      const slotRef = doc(db, 'timeSlots', timeSlot.id);
-      await updateDoc(slotRef, {
-        volunteers: arrayRemove(volunteerName),
-        // slots_used será atualizado automaticamente
+      const updatedSlot = {
+        ...timeSlot,
+        slots_used: timeSlot.slots_used - 1,
+        volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerName)
+      };
+      const result = await dataOperations.update(updatedSlot, {
+        date: timeSlot.date,
+        start_time: timeSlot.start_time,
+        end_time: timeSlot.end_time
       });
-      toast({ title: "Desmarcado! 👀🤔", description: "Extra desmarcada com sucesso!" });
+
+      if (!result.success) {
+        throw new Error('Falha ao atualizar o horário');
+      }
+
+      toast({
+        title: "Desmarcado! 👀🤔",
+        description: "Extra desmarcada com sucesso!"
+      });
     } catch (error) {
       console.error('Erro ao desmarcar:', error);
-      toast({ title: "Erro ⛔", description: "Não foi possível desmarcar a Extra.", variant: "destructive" });
+      toast({
+        title: "Erro ⛔",
+        description: "Não foi possível desmarcar a Extra.",
+        variant: "destructive"
+      });
     }
   };
-
 
   const handleUpdateSlotLimit = async (limit: number) => {
-    if (isNaN(limit) || limit < 0) { // Permitir 0 para sem limite
-      toast({ title: "Erro 😵‍💫", description: "Por favor, insira um número válido (0 para sem limite).", variant: "destructive" });
+    if (isNaN(limit) || limit < 0) {
+      toast({
+        title: "Erro 😵‍💫",
+        description: "Por favor, insira um número válido.",
+        variant: "destructive"
+      });
       return;
     }
+
     try {
-      // Usar um nome de documento consistente, ex: 'userSlotLimit'
-      await setDoc(doc(db, 'settings', 'userSlotLimit'), { value: limit });
-      // setSlotLimit(limit); // O listener já vai atualizar, ou pode manter para feedback imediato
-      toast({ title: "Sucesso", description: `Limite de horários atualizado para ${limit === 0 ? 'sem limite' : limit}!`});
+      await setDoc(doc(db, 'settings', 'slotLimit'), { value: limit });
+      setSlotLimit(limit);
+      toast({
+        title: "Sucesso",
+        description: "Limite de horários atualizado com sucesso!"
+      });
     } catch (error) {
       console.error('Erro ao atualizar limite de slots:', error);
-      toast({ title: "Erro", description: "Não foi possível atualizar o limite.", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o limite de horários.",
+        variant: "destructive"
+      });
     }
   };
 
-  // GroupTimeSlotsByDate e formatação (mantidas com pequenas melhorias)
   const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
     return slots.reduce((groups: GroupedTimeSlots, slot) => {
       const date = slot.date;
       if (!groups[date]) {
-        groups[date] = { slots: [], dailyCost: 0 }; // dailyCost será calculado depois
+        groups[date] = { slots: [], dailyCost: 0 };
       }
       groups[date].slots.push(slot);
       return groups;
     }, {});
   };
 
-  const isVolunteeredInSlot = (timeSlot: TimeSlot) => timeSlot.volunteers?.includes(volunteerName);
-  const isSpecificSlotFull = (timeSlot: TimeSlot) => timeSlot.slots_used >= timeSlot.total_slots;
+  const isVolunteered = (timeSlot: TimeSlot) => timeSlot.volunteers?.includes(volunteerName);
+  const isSlotFull = (timeSlot: TimeSlot) => timeSlot.slots_used === timeSlot.total_slots;
 
   const formatDateHeader = (date: string) => {
-    try {
-        const parsed = parseISO(date);
-        const dayOfWeek = format(parsed, "eee", { locale: ptBR });
-        const truncatedDay = dayOfWeek.substring(0, 3);
-        return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}. ${format(parsed, "dd/MM/yy")}`; // Ponto após dia da semana
-    } catch(e) {
-        console.error("Erro ao formatar data do cabeçalho:", date, e);
-        return date; // Retorna a data original se houver erro
-    }
+    const dayOfWeek = format(parseISO(date), "eee", { locale: ptBR });
+    const truncatedDay = dayOfWeek.substring(0, 3);
+    return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}-${format(parseISO(date), "dd/MM/yy")}`;
   };
 
-
-  // Recalculado userSlotCount usando useMemo para eficiência
-  const userSlotCount = useMemo(() => {
-    if (!volunteerName) return 0;
-    return timeSlots.reduce(
-      (count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count,
+  const shouldShowVolunteerButton = (slot: TimeSlot) => {
+    const userDataString = localStorage.getItem('user');
+    const userData = userDataString ? JSON.parse(userDataString) : null;
+    if (userData?.rank === "Estágio") {
+      return false;
+    }
+    if (isVolunteered(slot)) {
+      return true;
+    }
+    if (isSlotFull(slot)) {
+      return true;
+    }
+    const userSlotCount = timeSlots.reduce(
+      (count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count,
       0
     );
-  }, [timeSlots, volunteerName]);
+    if (userSlotCount >= slotLimit && !isAdmin) {
+      return false;
+    }
+    const slotsForDate = timeSlots.filter(s => s.date === slot.date);
+    const isVolunteeredForDate = slotsForDate.some(s => s.volunteers?.includes(volunteerName));
+    return !isVolunteeredForDate;
+  };
 
+  const canVolunteerForSlot = (slot: TimeSlot) => {
+    if (isAdmin) return true;
+    const userSlotCount = timeSlots.reduce(
+      (count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count,
+      0
+    );
+    return userSlotCount < slotLimit;
+  };
 
-  // `calculatedGroupedTimeSlots` e `totalCostSummary` agora usam useMemo
-  const calculatedGroupedTimeSlotsAndCosts = useMemo(() => {
-    // Filtra primeiro os slots baseados no tipo de militar do usuário, se aplicável
+  const sortVolunteers = (volunteers: string[]) => {
+    if (!volunteers) return [];
+    return volunteers.sort((a, b) => {
+      const rankA = a.split(" ")[0];
+      const rankB = b.split(" ")[0];
+      return getMilitaryRankWeight(rankB) - getMilitaryRankWeight(rankA);
+    });
+  };
+
+  const [calculatedGroupedTimeSlots, setCalculatedGroupedTimeSlots] = useState<GroupedTimeSlots>({});
+  const [totalCostSummary, setTotalCostSummary] = useState<{
+    "Cb/Sd": number;
+    "St/Sgt": number;
+    "Oficiais": number;
+    "Total Geral": number;
+  }>({
+    "Cb/Sd": 0,
+    "St/Sgt": 0,
+    "Oficiais": 0,
+    "Total Geral": 0
+  });
+
+  useEffect(() => {
     const slotsToProcess = timeSlots.filter(slot => {
-        if (isAdmin || !slot.allowedMilitaryTypes || slot.allowedMilitaryTypes.length === 0 || !userService) {
-          return true; // Admin vê tudo, ou sem restrição, ou usuário sem tipo de serviço definido
-        }
-        return slot.allowedMilitaryTypes.includes(userService);
-      });
+      if (isAdmin || !slot.allowedMilitaryTypes || slot.allowedMilitaryTypes.length === 0 || !userService) {
+        return true;
+      }
+      return slot.allowedMilitaryTypes.includes(userService);
+    });
 
-    const grouped: GroupedTimeSlots = groupTimeSlotsByDate(slotsToProcess);
-    const newTotalCostSummary = { "Cb/Sd": 0, "St/Sgt": 0, "Oficiais": 0, "Outros": 0, "Total Geral": 0 };
+    const grouped = groupTimeSlotsByDate(slotsToProcess);
+    const newTotalCostSummary = {
+      "Cb/Sd": 0,
+      "St/Sgt": 0,
+      "Oficiais": 0,
+      "Total Geral": 0
+    };
 
     Object.keys(grouped).forEach(date => {
-      let dailyTotalCost = 0;
+      let dailyCost = 0;
       grouped[date].slots.forEach(slot => {
-        if(slot.volunteers) {
-            slot.volunteers.forEach(volFullName => {
-            const volRank = getVolunteerRank(volFullName);
-            const rankInfo = getRankCategory(volRank);
-            const slotDurationHours = calculateSlotDuration(slot.start_time, slot.end_time);
-            const slotCostForVolunteer = slotDurationHours * rankInfo.hourlyRate;
-            
-            dailyTotalCost += slotCostForVolunteer;
-            const categoryKey = rankInfo.category as keyof typeof newTotalCostSummary;
-            newTotalCostSummary[categoryKey] = (newTotalCostSummary[categoryKey] || 0) + slotCostForVolunteer;
-            newTotalCostSummary["Total Geral"] += slotCostForVolunteer;
-            });
-        }
+        slot.volunteers?.forEach(volunteerFullName => {
+          const volunteerRank = getVolunteerRank(volunteerFullName);
+          const rankInfo = getRankCategory(volunteerRank);
+          if (rankInfo.category !== "Outros") {
+            const hours = parseFloat(calculateTimeDifference(slot.start_time, slot.end_time));
+            const slotCost = hours * rankInfo.hourlyRate;
+            dailyCost += slotCost;
+            newTotalCostSummary[rankInfo.category as keyof Omit<typeof newTotalCostSummary, "Total Geral">] += slotCost;
+            newTotalCostSummary["Total Geral"] += slotCost;
+          }
+        });
       });
-      grouped[date].dailyCost = dailyTotalCost;
+      grouped[date].dailyCost = dailyCost;
     });
-    return { grouped, totalCostSummary: newTotalCostSummary };
+
+    setCalculatedGroupedTimeSlots(grouped);
+    setTotalCostSummary(newTotalCostSummary);
   }, [timeSlots, isAdmin, userService]);
 
-  const { grouped: calculatedGroupedTimeSlots, totalCostSummary } = calculatedGroupedTimeSlotsAndCosts;
+  const userSlotCount = timeSlots.reduce(
+    (count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count,
+    0
+  );
 
+  const [volunteerToRemove, setVolunteerToRemove] = useState<{
+    name: string;
+    timeSlot: TimeSlot;
+  } | null>(null);
 
-  const handleActualRemoveVolunteer = async () => { // Renomeado para evitar conflito
-    if (!volunteerToRemove || !volunteerToRemove.timeSlot.id) return;
+  const handleRemoveVolunteer = async (timeSlot: TimeSlot, volunteerNameToRemove: string) => {
     try {
-      const slotRef = doc(db, 'timeSlots', volunteerToRemove.timeSlot.id);
-      await updateDoc(slotRef, {
-        volunteers: arrayRemove(volunteerToRemove.name),
-        // slots_used será atualizado automaticamente pelo listener
+      const updatedSlot = {
+        ...timeSlot,
+        slots_used: timeSlot.slots_used - 1,
+        volunteers: (timeSlot.volunteers || []).filter(v => v !== volunteerNameToRemove)
+      };
+      const result = await dataOperations.update(updatedSlot, {
+        date: timeSlot.date,
+        start_time: timeSlot.start_time,
+        end_time: timeSlot.end_time
       });
-      toast({ title: "Sucesso! ✅", description: `${volunteerToRemove.name} foi removido.` });
+
+      if (!result.success) {
+        throw new Error('Falha ao remover voluntário');
+      }
+
+      toast({
+        title: "Sucesso! ✅",
+        description: `${volunteerNameToRemove} foi removido deste horário.`
+      });
     } catch (error) {
       console.error('Erro ao remover voluntário:', error);
-      toast({ title: "Erro ⛔", description: "Não foi possível remover o voluntário.", variant: "destructive"});
-    } finally {
-        setVolunteerToRemove(null); // Fecha o dialog em qualquer caso
+      toast({
+        title: "Erro ⛔",
+        description: "Não foi possível remover o voluntário.",
+        variant: "destructive"
+      });
     }
   };
 
+  const today = new Date();
+  const tomorrow = addDays(today, 1);
+  let weeklyCost = 0;
+  let weeklyCostDates: string[] = [];
 
-  // Calculo de Custo Semanal
-  const weeklyCostAndRange = useMemo(() => {
-    const todayDt = new Date();
-    const tomorrowDt = addDays(todayDt, 1); // A partir de amanhã
-    let cost = 0;
-    const datesForRange: string[] = [];
-
-    Object.entries(calculatedGroupedTimeSlots).forEach(([dateStr, groupData]) => {
-      try {
-        const slotDt = parseISO(dateStr);
-        // Considera datas a partir de amanhã inclusive
-        if (isAfter(slotDt, todayDt) || format(slotDt, 'yyyy-MM-dd') === format(tomorrowDt, 'yyyy-MM-dd')) {
-          cost += groupData.dailyCost;
-          datesForRange.push(dateStr);
+  if (calculatedGroupedTimeSlots) {
+    Object.entries(calculatedGroupedTimeSlots)
+      .filter(([date]) => {
+        const slotDate = parseISO(date);
+        const isWeeklyDate = isAfter(slotDate, tomorrow) || format(slotDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
+        if (isWeeklyDate) {
+          weeklyCostDates.push(date);
         }
-      } catch (e) {
-        console.error("Erro ao parsear data para custo semanal:", dateStr, e);
-      }
-    });
-    
-    let rangeText = "";
-    if (datesForRange.length > 0) {
-        datesForRange.sort((a,b) => parseISO(a).getTime() - parseISO(b).getTime());
-        const startDate = format(parseISO(datesForRange[0]), "dd/MM");
-        const endDate = format(parseISO(datesForRange[datesForRange.length - 1]), "dd/MM");
-        if(startDate === endDate) rangeText = startDate;
-        else rangeText = `${startDate} - ${endDate}`;
-    }
-    return { weeklyCost: cost, weeklyDateRangeText: rangeText };
-  }, [calculatedGroupedTimeSlots]);
+        return isWeeklyDate;
+      })
+      .forEach(([, groupedData]) => {
+        weeklyCost += groupedData.dailyCost;
+      });
+  }
 
-  const { weeklyCost, weeklyDateRangeText } = weeklyCostAndRange;
-
-
-  // CORRIGIDO: Usa volunteerTotalHours (que é um mapa de nome -> número de horas)
-  const getVolunteerDisplayHours = (volunteerNameParam: string): string | null => {
-    const totalHours = volunteerTotalHours[volunteerNameParam];
-    if (totalHours !== undefined && totalHours > 0) {
-      // Formata para 1 casa decimal, ex: 8.5h. Se for 8.0h, mostra 8h.
-      return `${parseFloat(totalHours.toFixed(1))}h`;
-    }
-    return null; // Ou "0h" se preferir mostrar explicitamente
+  const formatWeeklyDateRange = () => {
+    if (weeklyCostDates.length === 0) return "";
+    const sortedDates = weeklyCostDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    const startDate = format(parseISO(sortedDates[0]), "eee", { locale: ptBR }).substring(0, 3).toUpperCase();
+    const endDate = format(parseISO(sortedDates[sortedDates.length - 1]), "eee", { locale: ptBR }).substring(0, 3).toUpperCase();
+    return `${startDate}-${endDate}`;
   };
 
+  const weeklyDateRangeText = formatWeeklyDateRange();
 
-  const renderAllowedMilitaryTypes = (types?: string[]) => {
-    if (!types || types.length === 0) {
-      return null; // Não renderiza nada se não houver restrições
+  if (isLoading) {
+    return <div className="p-4">Carregando horários...</div>;
+  }
+
+  const getVolunteerHours = (volunteerNameParam: string) => {
+    console.log(`Looking for hours for volunteer: ${volunteerNameParam}`);
+    console.log('Available volunteer hours:', volunteerHours);
+    
+    // First, try exact match
+    if (volunteerHours[volunteerNameParam]) {
+      console.log(`Found exact match: ${volunteerHours[volunteerNameParam]}`);
+      return volunteerHours[volunteerNameParam];
+    }
+    
+    // If no exact match, try to find by war name
+    const volunteerNameParts = volunteerNameParam.split(' ');
+    const warName = volunteerNameParts.slice(1).join(' ');
+    console.log(`Trying to find by war name: ${warName}`);
+    
+    for (const key in volunteerHours) {
+      if (key.includes(warName)) {
+        console.log(`Found partial match: ${key} -> ${volunteerHours[key]}`);
+        return volunteerHours[key];
+      }
+    }
+    
+    console.log(`No hours found for volunteer: ${volunteerNameParam}`);
+    return null;
+  };
+
+  const renderAllowedMilitaryTypes = (allowedMilitaryTypes?: string[]) => {
+    if (!allowedMilitaryTypes || allowedMilitaryTypes.length === 0) {
+      return <span className="text-xs text-gray-400 italic">Sem restrição de categoria</span>;
     }
     return (
-      <div className="mb-1 text-xs text-gray-600">
-        <span className="font-medium">Para:</span> {types.join(", ")}
-      </div>
+      <span className="text-xs text-blue-700 bg-blue-0 rounded px-2 py-1">
+        PM's: {allowedMilitaryTypes.join(", ")}
+      </span>
     );
   };
 
   const toggleDateCollapse = (date: string) => {
-    setCollapsedDates(prev => ({ ...prev, [date]: !prev[date] }));
+    if (isAdmin) {
+      setCollapsedDates(prev => ({
+        ...prev,
+        [date]: !prev[date]
+      }));
+    }
   };
 
-  // Funções de verificação para botões, com lógica mais clara
-  const canUserVolunteerForSlot = (slot: TimeSlot): boolean => {
-    if(isAdmin) return true; // Admin sempre pode (para testes, etc.)
-    if(isSpecificSlotFull(slot)) return false;
-    if(isVolunteeredInSlot(slot)) return false; // Já está neste slot específico
-    
-    // Verifica limite geral do usuário
-    if(slotLimit > 0 && userSlotCount >= slotLimit) return false;
-
-    // Verifica se já está em outro slot na MESMA data
-    const isVolunteeredOnDate = timeSlots.some(s => s.date === slot.date && s.id !== slot.id && s.volunteers?.includes(volunteerName));
-    if(isVolunteeredOnDate) return false;
-
-    // Verifica restrição de tipo de militar
-    if(slot.allowedMilitaryTypes && slot.allowedMilitaryTypes.length > 0 && userService && !slot.allowedMilitaryTypes.includes(userService)){
-        return false;
-    }
-    // Verifica se usuário é estágio (Estágios não podem se voluntariar)
-    if(userData?.rank === "Estágio") return false;
-
-    return true; // Se passou por todas as verificações
-  }
-
-
-  if (isLoading) {
-    return (
-        <div className="flex justify-center items-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p className="ml-4 text-lg text-gray-700">Carregando horários...</p>
-        </div>
-      );
-  }
-  // Se não está carregando e não há slots
-  if (!isLoading && timeSlots.length === 0) {
-    return (
-        <div className="space-y-6 p-4">
-             <TimeSlotLimitControl
-                slotLimit={slotLimit}
-                onUpdateLimit={handleUpdateSlotLimit}
-                userSlotCount={userSlotCount}
-                isAdmin={isAdmin}
-            />
-            <div className="text-center py-10">
-                <CalendarDays className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-                <h3 className="text-xl font-medium text-gray-700">Nenhum horário disponível</h3>
-                <p className="text-gray-500">Verifique novamente mais tarde.</p>
-            </div>
-        </div>
-    )
-  }
-
   return (
-    <div className="space-y-6 p-4 pb-16 md:px-2"> {/* Mais padding no fundo para rolagem */}
+    <div className="space-y-6 p-4 py-0 my-0 px-0">
       <TimeSlotLimitControl
         slotLimit={slotLimit}
         onUpdateLimit={handleUpdateSlotLimit}
@@ -640,152 +714,183 @@ const TimeSlotsList = () => {
 
       {isAdmin && totalCostSummary["Total Geral"] > 0 && (
         <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumo de Custos Estimados</h2>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          <h2 className="font-semibold text-gray-900 mb-4">Resumo de Custos Totais</h2>
+          <div className="space-y-2">
             <p><strong>Cb/Sd:</strong> {formatCurrency(totalCostSummary["Cb/Sd"])}</p>
             <p><strong>St/Sgt:</strong> {formatCurrency(totalCostSummary["St/Sgt"])}</p>
             <p><strong>Oficiais:</strong> {formatCurrency(totalCostSummary["Oficiais"])}</p>
-            {totalCostSummary["Outros"] > 0 && <p><strong>Outros:</strong> {formatCurrency(totalCostSummary["Outros"])}</p>}
-            <p className="col-span-2 mt-2 pt-2 border-t font-semibold text-green-600 text-base">
-                <strong>Total Geral:</strong> {formatCurrency(totalCostSummary["Total Geral"])}
-            </p>
+            <p className="font-semibold text-green-500"><strong>Total Geral:</strong> {formatCurrency(totalCostSummary["Total Geral"])}</p>
             {weeklyCost > 0 && (
-              <p className="col-span-2 font-semibold text-blue-600">
-                <strong>Custo Próx. Semana ({weeklyDateRangeText}):</strong> {formatCurrency(weeklyCost)}
+              <p className="font-semibold text-blue-500">
+                <strong>Custo da Semana ({weeklyDateRangeText}):</strong> {formatCurrency(weeklyCost)}
               </p>
             )}
           </div>
         </div>
       )}
 
-      {Object.entries(calculatedGroupedTimeSlots).sort((a,b) => a[0].localeCompare(b[0])).map(([date, groupedData]) => {
+      {Object.entries(calculatedGroupedTimeSlots).sort().map(([date, groupedData]) => {
         const { slots, dailyCost } = groupedData;
         if (slots.length === 0) return null;
-        
-        const dateObj = parseISO(date);
-        // Considera "passado" apenas dias estritamente anteriores a hoje
-        const isDateStrictlyPast = isPast(dateObj) && !isAfter(dateObj, addDays(new Date(), -1)); 
-        const isCollapsed = collapsedDates[date] ?? (isDateStrictlyPast && !isAdmin);
-        // Ordenar slots por horário de início dentro de cada dia
-        const sortedSlotsForDate = [...slots].sort((a, b) => (a.start_time || "").localeCompare(b.start_time || ""));
-
+        const isDatePast = isPast(parseISO(date));
+        const isCollapsed = collapsedDates[date] ?? (isDatePast && !isAdmin);
+        const sortedSlots = [...slots].sort((a, b) => a.start_time.localeCompare(b.start_time));
 
         return (
-          <div key={date} className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div
-                className={`flex items-center justify-between w-full p-3 md:p-4 border-b ${isAdmin ? 'cursor-pointer hover:bg-gray-50' : ''}`}
-                onClick={isAdmin ? () => toggleDateCollapse(date) : undefined}
-            >
-                <div className="flex items-center gap-2">
-                <CalendarDays className={`h-5 w-5 ${isDateStrictlyPast ? 'text-gray-400' : 'text-blue-500'}`} />
-                <h3 className={`font-medium text-lg ${isDateStrictlyPast ? 'text-gray-500' : 'text-gray-800'}`}>{formatDateHeader(date)}</h3>
-                {isAdmin && dailyCost > 0 && (
-                    <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                    {formatCurrency(dailyCost)}
-                    </span>
-                )}
+          <div
+            key={date}
+            className="bg-white rounded-lg shadow-sm"
+            onDoubleClick={() => toggleDateCollapse(date)}
+          >
+            <div className="p-4 md:p-5 px-[5px]">
+              <div className="flex flex-col items-center">
+                <div className="flex items-center justify-between w-full mb-2">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays
+                      className={`h-5 w-5 ${isDatePast ? 'text-gray-500' : 'text-blue-500'}`}
+                    />
+                    <h3 className="font-medium text-lg text-gray-800">{formatDateHeader(date)}</h3>
+                    {isAdmin && dailyCost > 0 && (
+                      <span className="text-green-600 font-semibold text-base">
+                        {formatCurrency(dailyCost)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={isDatePast ? "outline" : "secondary"}
+                      className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
+                    >
+                      {isDatePast ? "Extra" : "Extra"}
+                    </Badge>
+                    {isAdmin && (
+                      <button className="focus:outline-none">
+                        {isCollapsed ? (
+                          <ChevronDown className="h-5 w-5 text-gray-500" />
+                        ) : (
+                          <ChevronUp className="h-5 w-5 text-gray-500" />
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                <Badge
-                    variant={isDateStrictlyPast ? "outline" : slots.some(isSpecificSlotFull) ? "destructive" : "secondary"}
-                    className={`text-xs ${isDateStrictlyPast ? 'border-gray-300 text-gray-600' : ''}`}
-                >
-                    {slots.length} {slots.length === 1 ? 'Horário' : 'Horários'}
-                </Badge>
-                {isAdmin && (
-                    <button className="focus:outline-none p-1 rounded hover:bg-gray-200">
-                    {isCollapsed ? <ChevronDown className="h-5 w-5 text-gray-500" /> : <ChevronUp className="h-5 w-5 text-gray-500" />}
-                    </button>
-                )}
-            </div>
+              </div>
 
-            </div>
+              {!isCollapsed && (
+                <div className="space-y-3 mt-4">
+                  {sortedSlots.map((slot, idx) => (
+                    <div
+                      key={slot.id || idx}
+                      className={`border rounded-lg p-4 space-y-3 transition-all ${
+                        isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'
+                      }`}
+                    >
+                      {isAdmin && (
+                        <div className="mb-1">
+                          {renderAllowedMilitaryTypes(slot.allowedMilitaryTypes)}
+                        </div>
+                      )}
 
-            {!isCollapsed && (
-              <div className="divide-y divide-gray-100">
-                {sortedSlotsForDate.map((slot, idx) => {
-                  const slotIsFull = isSpecificSlotFull(slot);
-                  const isUserVolunteeredHere = isVolunteeredInSlot(slot);
-                  const canCurrentUserVolunteer = canUserVolunteerForSlot(slot);
-                  const slotDurationHours = calculateSlotDuration(slot.start_time, slot.end_time);
-
-                  return (
-                    <div key={slot.id} className={`p-3 md:p-4 space-y-3 transition-colors ${slotIsFull ? 'bg-red-50' : isUserVolunteeredHere ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
-                        {renderAllowedMilitaryTypes(slot.allowedMilitaryTypes)}
-
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                                <Clock className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                                <p className="font-medium text-gray-800">
-                                {slot.start_time?.slice(0, 5)} - {slot.end_time?.slice(0, 5)}
-                                <span className="text-xs text-gray-500 ml-1">({slotDurationHours.toFixed(1)}h)</span>
-                                </p>
-                            </div>
-                            {slot.description && (
-                                <span className="text-xs text-gray-600 sm:ml-2 max-w-[200px] truncate" title={slot.description}>
-                                {slot.description}
-                                </span>
-                            )}
+                      <div className="flex flex-col space-y-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
+                            <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                            <p className="font-medium text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
+                              {slot.start_time?.slice(0, 5)} às {slot.end_time?.slice(0, 5)}-
+                              {calculateTimeDifference(slot.start_time, slot.end_time).slice(0, 4)}h
+                            </p>
+                          </div>
+                          {slot.description && (
+                            <span className="text-gray-700 ml-2 max-w-[200px] truncate">
+                              {slot.description}
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center justify-between">
-                            <Badge variant={slotIsFull ? "destructive" : "outline"} className="text-xs">
-                                {slotIsFull ? 'Lotado' : `${slot.total_slots - slot.slots_used} Vaga(s)`}
-                            </Badge>
-                            {/* Botão de voluntariar / desmarcar */}
-                            <div className="pt-1">
-                                {!isDateStrictlyPast && userData && ( // Botões só aparecem para datas futuras e se usuário logado
-                                    isUserVolunteeredHere ? (
-                                        <Button onClick={() => handleUnvolunteer(slot)} variant="ghost" size="sm" className="text-red-600 hover:bg-red-50 hover:text-red-700">
-                                        Desmarcar
-                                        </Button>
-                                    ) : canCurrentUserVolunteer ? (
-                                        <Button onClick={() => handleVolunteer(slot)} className="bg-blue-600 hover:bg-blue-700" size="sm">
-                                        Voluntariar
-                                        </Button>
-                                    ) : (
-                                        <Button size="sm" disabled className="text-xs">
-                                            {slotIsFull ? "Lotado" : slotLimit > 0 && userSlotCount >= slotLimit ? "Limite Atingido" : "Indisponível"}
-                                        </Button>
-                                    )
-                                )}
-                            </div>
+                          <div
+                            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+                              isSlotFull(slot)
+                                ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                                : 'bg-blue-50 text-blue-700 border border-blue-200'
+                            }`}
+                          >
+                            <span className="text-sm font-medium whitespace-nowrap">
+                              {isSlotFull(slot)
+                                ? 'Vagas Esgotadas'
+                                : `${slot.total_slots - slot.slots_used} ${
+                                    slot.total_slots - slot.slots_used === 1 ? 'vaga' : 'vagas'
+                                  }`}
+                            </span>
+                          </div>
                         </div>
+                      </div>
 
+                      {slot.volunteers && slot.volunteers.length > 0 && (
+                        <div className="pt-3 border-t border-gray-200">
+                          <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
+                          <div className="space-y-1">
+                            {sortVolunteers(slot.volunteers).map((volunteer, index) => {
+                              const hours = getVolunteerHours(volunteer);
+                              return (
+                                <div
+                                  key={index}
+                                  className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center"
+                                >
+                                  <div className="flex items-center">
+                                    <span>{volunteer}{hours ? ` - ${hours}h` : ''}</span>
+                                  </div>
+                                  {isAdmin && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500"
+                                      onClick={() =>
+                                        setVolunteerToRemove({
+                                          name: volunteer,
+                                          timeSlot: slot
+                                        })
+                                      }
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
 
-                        {slot.volunteers && slot.volunteers.length > 0 && (
-                            <div className="pt-3 border-t border-gray-200 mt-3">
-                            <p className="text-xs font-medium mb-2 text-gray-600">Voluntários ({slot.volunteers.length}):</p>
-                            <div className="space-y-1">
-                                {sortVolunteers(slot.volunteers).map((volunteer, index) => {
-                                const displayHours = getVolunteerDisplayHours(volunteer); // Pega as horas totais do voluntário
-                                return (
-                                    <div key={`${slot.id}-vol-${index}`} className="text-sm text-gray-700 flex justify-between items-center group pr-1">
-                                        <div className="flex items-center">
-                                            <span>{volunteer}</span>
-                                            {displayHours && <span className="text-xs text-blue-600 ml-1.5 font-medium">({displayHours} total)</span>}
-                                        </div>
-                                        {isAdmin && (
-                                            <Button
-                                            variant="ghost"
-                                            size="icon" // Para ícone
-                                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-100"
-                                            onClick={() => setVolunteerToRemove({ name: volunteer, timeSlot: slot })}
-                                            >
-                                            <X className="h-3.5 w-3.5" />
-                                            </Button>
-                                        )}
-                                    </div>
-                                );
-                                })}
-                            </div>
-                            </div>
-                        )}
+                      <div className="pt-2">
+                        {shouldShowVolunteerButton(slot) &&
+                          (isVolunteered(slot) ? (
+                            <Button
+                              onClick={() => handleUnvolunteer(slot)}
+                              variant="destructive"
+                              size="sm"
+                              className="w-full shadow-sm hover:shadow"
+                            >
+                              Desmarcar
+                            </Button>
+                          ) : (
+                            !isSlotFull(slot) &&
+                            canVolunteerForSlot(slot) && (
+                              <Button
+                                onClick={() => handleVolunteer(slot)}
+                                className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow w-full"
+                                size="sm"
+                              >
+                                Voluntário
+                              </Button>
+                            )
+                          ))}
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         );
       })}
@@ -793,17 +898,22 @@ const TimeSlotsList = () => {
       <AlertDialog open={!!volunteerToRemove} onOpenChange={() => setVolunteerToRemove(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover Voluntário</AlertDialogTitle>
+            <AlertDialogTitle>Remover voluntário</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja remover <strong>{volunteerToRemove?.name}</strong> do horário de
-              {' '}{volunteerToRemove?.timeSlot.start_time.slice(0,5)} às {volunteerToRemove?.timeSlot.end_time.slice(0,5)}
-              {' '}em {volunteerToRemove && formatDateHeader(volunteerToRemove.timeSlot.date)}?
+              Tem certeza que deseja remover {volunteerToRemove?.name} deste horário?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={handleActualRemoveVolunteer}>
-              Confirmar Remoção
+            <AlertDialogAction
+              onClick={() => {
+                if (volunteerToRemove) {
+                  handleRemoveVolunteer(volunteerToRemove.timeSlot, volunteerToRemove.name);
+                  setVolunteerToRemove(null);
+                }
+              }}
+            >
+              Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
