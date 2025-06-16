@@ -131,12 +131,12 @@ const VolunteersManager = () => {
             <Users className="h-7 w-7 text-primary" />
             Gerenciar Voluntários
           </CardTitle>
-          <p className="text-muted-foreground mt-2">
+          <p className="mt-2 text-zinc-700">
             Gerencie o status de voluntário dos usuários cadastrados
           </p>
         </CardHeader>
 
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 px-[6px]">
           {/* Seção de busca */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -144,7 +144,7 @@ const VolunteersManager = () => {
           </div>
 
           {/* Estatísticas e ações em massa */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-muted/30 rounded-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg bg-primary-dark">
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
               <span>Total: {filteredUsers.length} usuários</span>
               <span>Voluntários: {filteredUsers.filter(u => u.isVolunteer).length}</span>
