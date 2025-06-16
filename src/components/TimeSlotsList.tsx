@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { format, parseISO, isPast, addDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -225,7 +226,6 @@ const TimeSlotsList = () => {
   };
 
   const fetchVolunteerHours = async () => {
-    if (!isAdmin) return;
     try {
       const currentMonth = format(new Date(), 'MMMM', { locale: ptBR }).toUpperCase();
       type TableName = "JANEIRO" | "FEVEREIRO" | "MARCO" | "ABRIL" | "MAIO" | "JUNHO" | "JULHO" | "AGOSTO" | "SETEMBRO" | "OUTUBRO" | "NOVEMBRO" | "DEZEMBRO" | "ESCALA";
@@ -243,11 +243,16 @@ const TimeSlotsList = () => {
       else if (currentMonth === 'NOVEMBRO') tableName = "NOVEMBRO";
       else tableName = "DEZEMBRO";
 
+      console.log(`Fetching volunteer hours from table: ${tableName}`);
+      
       const { data, error } = await supabase.from(tableName).select('Nome, "Total Geral"');
+      
       if (error) {
         console.error('Error fetching volunteer hours:', error);
         return;
       }
+
+      console.log('Volunteer hours data received:', data);
 
       const hoursMap: { [key: string]: string } = {};
       if (data) {
@@ -257,10 +262,13 @@ const TimeSlotsList = () => {
             const totalGeral = row['Total Geral'] as string;
             if (nome && totalGeral) {
               hoursMap[nome.trim()] = totalGeral;
+              console.log(`Mapped volunteer: ${nome.trim()} -> ${totalGeral}h`);
             }
           }
         });
       }
+      
+      console.log('Final hours map:', hoursMap);
       setVolunteerHours(hoursMap);
     } catch (error) {
       console.error('Error in fetchVolunteerHours:', error);
@@ -651,16 +659,28 @@ const TimeSlotsList = () => {
   }
 
   const getVolunteerHours = (volunteerNameParam: string) => {
+    console.log(`Looking for hours for volunteer: ${volunteerNameParam}`);
+    console.log('Available volunteer hours:', volunteerHours);
+    
+    // First, try exact match
     if (volunteerHours[volunteerNameParam]) {
+      console.log(`Found exact match: ${volunteerHours[volunteerNameParam]}`);
       return volunteerHours[volunteerNameParam];
     }
+    
+    // If no exact match, try to find by war name
     const volunteerNameParts = volunteerNameParam.split(' ');
     const warName = volunteerNameParts.slice(1).join(' ');
+    console.log(`Trying to find by war name: ${warName}`);
+    
     for (const key in volunteerHours) {
       if (key.includes(warName)) {
+        console.log(`Found partial match: ${key} -> ${volunteerHours[key]}`);
         return volunteerHours[key];
       }
     }
+    
+    console.log(`No hours found for volunteer: ${volunteerNameParam}`);
     return null;
   };
 
