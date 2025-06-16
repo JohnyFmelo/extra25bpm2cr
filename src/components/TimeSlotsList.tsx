@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { format, parseISO, isPast, addDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -39,6 +38,11 @@ const TimeSlotLimitControl = ({
   onUpdateLimit,
   userSlotCount = 0,
   isAdmin = false
+}: {
+  slotLimit: number;
+  onUpdateLimit: (limit: number) => void;
+  userSlotCount?: number;
+  isAdmin?: boolean;
 }) => {
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customLimit, setCustomLimit] = useState("");
@@ -63,8 +67,8 @@ const TimeSlotLimitControl = ({
                 <p className="text-orange-600 font-medium">Horários esgotados</p>
               ) : (
                 <p className="text-gray-700">
-                  Escolha {slotLimit - userSlotCount}{' '}
-                  {slotLimit - userSlotCount === 1 ? 'horário' : 'horários'}
+                  Escolha {slotLimit - userSlotCount}{" "}
+                  {slotLimit - userSlotCount === 1 ? "horário" : "horários"}
                 </p>
               )}
               <p className="text-sm text-gray-500">
@@ -209,6 +213,22 @@ const TimeSlotsList = () => {
   const userService = userData?.service;
   const [collapsedDates, setCollapsedDates] = useState<{ [key: string]: boolean }>({});
 
+  const calculateTimeDifference = (startTime: string, endTime: string): string => {
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    let [endHour, endMinute] = endTime.split(':').map(Number);
+    if (endHour < startHour || (endHour === 0 && startHour > 0)) {
+      endHour += 24;
+    }
+    let diffHours = endHour - startHour;
+    let diffMinutes = endMinute - startMinute;
+    if (diffMinutes < 0) {
+      diffHours -= 1;
+      diffMinutes += 60;
+    }
+    const totalHours = diffHours + diffMinutes / 60;
+    return `${totalHours}`;
+  };
+
   // Calcular horas totais de cada voluntário progressivamente
   const volunteerTotalHours = useMemo(() => {
     const totalHours: { [key: string]: number } = {};
@@ -232,22 +252,6 @@ const TimeSlotsList = () => {
     
     return totalHours;
   }, [timeSlots]);
-
-  const calculateTimeDifference = (startTime: string, endTime: string): string => {
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    let [endHour, endMinute] = endTime.split(':').map(Number);
-    if (endHour < startHour || endHour === 0 && startHour > 0) {
-      endHour += 24;
-    }
-    let diffHours = endHour - startHour;
-    let diffMinutes = endMinute - startMinute;
-    if (diffMinutes < 0) {
-      diffHours -= 1;
-      diffMinutes += 60;
-    }
-    const totalHours = diffHours + diffMinutes / 60;
-    return `${totalHours}`;
-  };
 
   const fetchVolunteerHours = async () => {
     if (!isAdmin) return;
