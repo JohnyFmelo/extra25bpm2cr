@@ -124,7 +124,7 @@ const VolunteersManager = () => {
         </div>
       </div>;
   }
-  return <div className="w-full max-w-6xl mx-auto p-6">
+  return <div className="w-full max-w-6xl mx-auto p-6 px-0">
       <Card className="shadow-lg">
         <CardHeader className="pb-6">
           <CardTitle className="flex items-center gap-3 text-2xl">
