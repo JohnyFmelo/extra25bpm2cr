@@ -5,7 +5,7 @@ import { Clock, Users, Calculator } from "lucide-react";
 import { collection, query, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Badge } from "@/components/ui/badge";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface TimeSlot {
@@ -99,11 +99,11 @@ const VolunteerHoursStats = () => {
     const stats: VolunteerHours[] = Array.from(volunteerMap.entries())
       .map(([name, data]) => ({
         name,
-        totalHours: Math.round(data.totalHours * 10) / 10, // Round to 1 decimal
+        totalHours: Math.round(data.totalHours * 10) / 10,
         shiftsCount: data.shiftsCount,
         averageHours: Math.round((data.totalHours / data.shiftsCount) * 10) / 10
       }))
-      .sort((a, b) => b.totalHours - a.totalHours); // Sort by total hours descending
+      .sort((a, b) => b.totalHours - a.totalHours);
 
     setVolunteerStats(stats);
   };
