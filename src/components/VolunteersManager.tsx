@@ -131,9 +131,7 @@ const VolunteersManager = () => {
             <Users className="h-7 w-7 text-primary" />
             Gerenciar Voluntários
           </CardTitle>
-          <p className="mt-2 text-zinc-700">
-            Gerencie o status de voluntário dos usuários cadastrados
-          </p>
+          
         </CardHeader>
 
         <CardContent className="space-y-6 px-[6px]">
