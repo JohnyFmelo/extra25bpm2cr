@@ -325,9 +325,7 @@ const TimeSlotsList = () => {
       setIsLoading(false);
     });
 
-    if (isAdmin) {
-      fetchVolunteerHours();
-    }
+    fetchVolunteerHours();
 
     return () => unsubscribe();
   }, [toast, isAdmin]);
@@ -813,36 +811,34 @@ const TimeSlotsList = () => {
                         <div className="pt-3 border-t border-gray-200">
                           <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
                           <div className="space-y-1">
-                            {sortVolunteers(slot.volunteers).map((volunteer, index) => (
-                              <div
-                                key={index}
-                                className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center"
-                              >
-                                <div className="flex items-center">
-                                  <span>{volunteer}</span>
-                                  {isAdmin && getVolunteerHours(volunteer) && (
-                                    <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
-                                      {getVolunteerHours(volunteer)}h
-                                    </span>
+                            {sortVolunteers(slot.volunteers).map((volunteer, index) => {
+                              const hours = getVolunteerHours(volunteer);
+                              return (
+                                <div
+                                  key={index}
+                                  className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center"
+                                >
+                                  <div className="flex items-center">
+                                    <span>{volunteer}{hours ? ` - ${hours}h` : ''}</span>
+                                  </div>
+                                  {isAdmin && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500"
+                                      onClick={() =>
+                                        setVolunteerToRemove({
+                                          name: volunteer,
+                                          timeSlot: slot
+                                        })
+                                      }
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
                                   )}
                                 </div>
-                                {isAdmin && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500"
-                                    onClick={() =>
-                                      setVolunteerToRemove({
-                                        name: volunteer,
-                                        timeSlot: slot
-                                      })
-                                    }
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       )}
