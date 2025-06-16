@@ -181,18 +181,21 @@ const VolunteerHoursStats = () => {
                       #{index + 1}
                     </Badge>
                     <div>
-                      <p className="font-semibold text-gray-900">{volunteer.name}</p>
+                      <p className="font-semibold text-gray-900">
+                        {volunteer.name} - <span className="text-blue-600 font-bold">{volunteer.totalHours}h</span>
+                      </p>
                       <p className="text-sm text-gray-500">
-                        {volunteer.shiftsCount} {volunteer.shiftsCount === 1 ? 'turno' : 'turnos'}
+                        {volunteer.shiftsCount} {volunteer.shiftsCount === 1 ? 'turno' : 'turnos'} • 
+                        Média: {volunteer.averageHours}h por turno
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-lg text-blue-600">
+                    <div className="font-bold text-2xl text-blue-600">
                       {volunteer.totalHours}h
                     </div>
                     <div className="text-sm text-gray-500">
-                      Média: {volunteer.averageHours}h
+                      Total Acumulado
                     </div>
                   </div>
                 </div>
