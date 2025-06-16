@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { format, parseISO, isPast, addDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, getDoc, setDoc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { UserRoundCog, CalendarDays, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +12,6 @@ import { Input } from "./ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
-import supabase from "@/lib/supabaseClient";
 
 interface TimeSlot {
   id?: string;
@@ -39,6 +37,11 @@ const TimeSlotLimitControl = ({
   onUpdateLimit,
   userSlotCount = 0,
   isAdmin = false
+}: {
+  slotLimit: number;
+  onUpdateLimit: (limit: number) => void;
+  userSlotCount?: number;
+  isAdmin?: boolean;
 }) => {
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customLimit, setCustomLimit] = useState("");
@@ -228,50 +231,46 @@ const TimeSlotsList = () => {
   const fetchVolunteerHours = async () => {
     try {
       const currentMonth = format(new Date(), 'MMMM', { locale: ptBR }).toUpperCase();
-      type TableName = "JANEIRO" | "FEVEREIRO" | "MARCO" | "ABRIL" | "MAIO" | "JUNHO" | "JULHO" | "AGOSTO" | "SETEMBRO" | "OUTUBRO" | "NOVEMBRO" | "DEZEMBRO" | "ESCALA";
-      let tableName: TableName;
-      if (currentMonth === 'JANEIRO') tableName = "JANEIRO";
-      else if (currentMonth === 'FEVEREIRO') tableName = "FEVEREIRO";
-      else if (currentMonth === 'MARÇO') tableName = "MARCO";
-      else if (currentMonth === 'ABRIL') tableName = "ABRIL";
-      else if (currentMonth === 'MAIO') tableName = "MAIO";
-      else if (currentMonth === 'JUNHO') tableName = "JUNHO";
-      else if (currentMonth === 'JULHO') tableName = "JULHO";
-      else if (currentMonth === 'AGOSTO') tableName = "AGOSTO";
-      else if (currentMonth === 'SETEMBRO') tableName = "SETEMBRO";
-      else if (currentMonth === 'OUTUBRO') tableName = "OUTUBRO";
-      else if (currentMonth === 'NOVEMBRO') tableName = "NOVEMBRO";
-      else tableName = "DEZEMBRO";
-
-      console.log(`Fetching volunteer hours from table: ${tableName}`);
       
-      const { data, error } = await supabase.from(tableName).select('Nome, "Total Geral"');
-      
-      if (error) {
-        console.error('Error fetching volunteer hours:', error);
-        return;
-      }
+      // Map month names to Firebase collection names
+      let collectionName: string;
+      if (currentMonth === 'JANEIRO') collectionName = "hours_janeiro";
+      else if (currentMonth === 'FEVEREIRO') collectionName = "hours_fevereiro";
+      else if (currentMonth === 'MARÇO') collectionName = "hours_marco";
+      else if (currentMonth === 'ABRIL') collectionName = "hours_abril";
+      else if (currentMonth === 'MAIO') collectionName = "hours_maio";
+      else if (currentMonth === 'JUNHO') collectionName = "hours_junho";
+      else if (currentMonth === 'JULHO') collectionName = "hours_julho";
+      else if (currentMonth === 'AGOSTO') collectionName = "hours_agosto";
+      else if (currentMonth === 'SETEMBRO') collectionName = "hours_setembro";
+      else if (currentMonth === 'OUTUBRO') collectionName = "hours_outubro";
+      else if (currentMonth === 'NOVEMBRO') collectionName = "hours_novembro";
+      else collectionName = "hours_dezembro";
 
-      console.log('Volunteer hours data received:', data);
+      console.log(`Fetching volunteer hours from Firebase collection: ${collectionName}`);
+      
+      const hoursCollection = collection(db, collectionName);
+      const querySnapshot = await getDocs(hoursCollection);
+      
+      console.log('Firebase volunteer hours data received:', querySnapshot.size, 'documents');
 
       const hoursMap: { [key: string]: string } = {};
-      if (data) {
-        data.forEach(row => {
-          if (row && typeof row === 'object' && 'Nome' in row && 'Total Geral' in row) {
-            const nome = row.Nome as string;
-            const totalGeral = row['Total Geral'] as string;
-            if (nome && totalGeral) {
-              hoursMap[nome.trim()] = totalGeral;
-              console.log(`Mapped volunteer: ${nome.trim()} -> ${totalGeral}h`);
-            }
-          }
-        });
-      }
       
-      console.log('Final hours map:', hoursMap);
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const nome = data.nome || data.name || data.Nome;
+        const totalHours = data.totalHours || data.total_geral || data['Total Geral'] || data.hours;
+        
+        if (nome && totalHours) {
+          hoursMap[nome.trim()] = totalHours.toString();
+          console.log(`Mapped volunteer from Firebase: ${nome.trim()} -> ${totalHours}h`);
+        }
+      });
+      
+      console.log('Final Firebase hours map:', hoursMap);
       setVolunteerHours(hoursMap);
     } catch (error) {
-      console.error('Error in fetchVolunteerHours:', error);
+      console.error('Error fetching volunteer hours from Firebase:', error);
     }
   };
 
