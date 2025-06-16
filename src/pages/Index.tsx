@@ -30,6 +30,7 @@ import VersionDialog from "@/components/VersionDialog";
 import TCOProductivityRanking from "@/components/TCOProductivityRanking";
 import { useNotifications } from "@/components/notifications/NotificationsList";
 import VolunteersManager from "@/components/VolunteersManager";
+import VolunteerHoursDisplay from "@/components/VolunteerHoursDisplay";
 
 interface IndexProps {
   initialActiveTab?: string;
@@ -166,6 +167,7 @@ const Index = ({
                 <TabsList className={tabListClasses}>
                   <TabsTrigger value="extra" className={tabTriggerClasses}>Extra</TabsTrigger>
                   <TabsTrigger value="volunteers" className={tabTriggerClasses}>Voluntários</TabsTrigger>
+                  <TabsTrigger value="hours" className={tabTriggerClasses}>Horas</TabsTrigger>
                 </TabsList>
                 <TabsContent value="extra">
                   <div className="relative">
@@ -181,6 +183,9 @@ const Index = ({
                 </TabsContent>
                 <TabsContent value="volunteers">
                   <VolunteersManager />
+                </TabsContent>
+                <TabsContent value="hours">
+                  <VolunteerHoursDisplay />
                 </TabsContent>
               </Tabs>
             ) : (
