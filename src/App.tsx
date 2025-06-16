@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -14,7 +15,6 @@ import { useUserBlockListener } from "./hooks/useUserBlockListener";
 import { UserProvider, useUser } from "@/context/UserContext";
 import { useVersioning } from "./hooks/useVersioning";
 import ImprovementsDialog from "./components/ImprovementsDialog";
-import RgpmUpdateDialog from "./components/RgpmUpdateDialog";
 import NewNotificationDialog from "./components/NewNotificationDialog";
 import ReplyNotificationDialog from "./components/ReplyNotificationDialog";
 import { Notification } from "./components/notifications/NotificationsList";
@@ -54,17 +54,6 @@ const Layout = ({
     updateUserVersion,
     setShouldShowImprovements 
   } = useVersioning();
-  const [showRgpmDialog, setShowRgpmDialog] = useState(false);
-
-  useEffect(() => {
-    if (user && !user.rgpm) {
-      setShowRgpmDialog(true);
-    }
-  }, [user]);
-
-  const handleRgpmUpdateSuccess = () => {
-    setShowRgpmDialog(false);
-  };
 
   const handleImprovementsClose = () => {
     updateUserVersion();
@@ -84,11 +73,6 @@ const Layout = ({
         onOpenChange={handleImprovementsClose}
         version={currentSystemVersion}
         improvements={improvements}
-      />
-      
-      <RgpmUpdateDialog
-        open={showRgpmDialog}
-        onSuccess={handleRgpmUpdateSuccess}
       />
     </div>
   );
