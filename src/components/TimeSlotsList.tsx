@@ -718,8 +718,10 @@ const TimeSlotsList = () => {
   // Função para formatar as horas totais do voluntário
   const formatVolunteerWithHours = (volunteer: string) => {
     const totalHours = volunteerTotalHours[volunteer];
-    if (totalHours && totalHours > 0) {
-      return `${volunteer} - ${totalHours.toFixed(1)}h`;
+    if (isAdmin && totalHours && totalHours > 0) {
+      // Formatar sem casas decimais desnecessárias
+      const formattedHours = totalHours % 1 === 0 ? totalHours.toString() : totalHours.toFixed(1);
+      return `${volunteer} - ${formattedHours}h`;
     }
     return volunteer;
   };
