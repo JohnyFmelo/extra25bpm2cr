@@ -35,7 +35,7 @@ interface GroupedTimeSlots {
   };
 }
 
-// TimeSlotLimitControl Component (mantido como está no seu código)
+// TimeSlotLimitControl Component
 const TimeSlotLimitControl = ({ /* ...props... */ slotLimit, onUpdateLimit, userSlotCount = 0, isAdmin = false }: {
   slotLimit: number;
   onUpdateLimit: (limit: number) => void;
@@ -147,14 +147,13 @@ const TimeSlotLimitControl = ({ /* ...props... */ slotLimit, onUpdateLimit, user
   );
 };
 
-// Funções utilitárias (mantidas)
+// Utility functions
 const getMilitaryRankWeight = (rank: string): number => {
   const rankWeights: { [key: string]: number } = {
     "Cel": 12,"Cel PM": 12, "Ten Cel": 11, "Ten Cel PM": 11,"Maj": 10, "Maj PM": 10, "Cap": 9,"Cap PM": 9,
     "1° Ten": 8,"1° Ten PM": 8,"2° Ten": 7,"2° Ten PM": 7,"Sub Ten": 6,"Sub Ten PM": 6,"1° Sgt": 5,"1° Sgt PM": 5,
     "2° Sgt": 4,"2° Sgt PM": 4,"3° Sgt": 3,"3° Sgt PM": 3,"Cb": 2,"Cb PM": 2,"Sd": 1,"Sd PM": 1,"Estágio": 0,
   };
-  // Tenta encontrar o posto completo. Se não, tenta o primeiro token (ex: "Cel" de "Cel Medico")
   return rankWeights[rank] || rankWeights[rank.split(" ")[0]] || 0;
 };
 
@@ -180,23 +179,31 @@ const getRankCategory = (rank: string): { category: string; hourlyRate: number }
 
 const getVolunteerRank = (volunteerFullName: string): string => {
   const parts = volunteerFullName.split(" ");
-  // Heurística para postos compostos: se o segundo token for "Sgt" ou "Ten" ou "Cel" etc.
   if (parts.length >= 2) {
       if (["Sgt", "Ten", "Cel", "CB", "SD", "Maj", "Cap", "Sub"].some(p => parts[1].toUpperCase().startsWith(p))) {
-           return `${parts[0]} ${parts[1]}`; // Ex: "1° Sgt", "Ten Cel"
+           return `${parts[0]} ${parts[1]}`;
       }
   }
-  return parts[0]; // Retorna apenas o primeiro token como posto. Ex: "Cel", "Sd"
+  return parts[0];
 };
-
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(value); // Removido .replace("R$", "R$ ") para manter padrão
+  }).format(value);
 };
 
+// Function to sort volunteers by military rank (this was missing!)
+const sortVolunteers = (volunteers: string[]): string[] => {
+  return [...volunteers].sort((a, b) => {
+    const rankA = getVolunteerRank(a);
+    const rankB = getVolunteerRank(b);
+    const weightA = getMilitaryRankWeight(rankA);
+    const weightB = getMilitaryRankWeight(rankB);
+    return weightB - weightA; // Higher rank first
+  });
+};
 
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
