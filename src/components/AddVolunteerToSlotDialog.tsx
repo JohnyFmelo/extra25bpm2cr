@@ -91,12 +91,13 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         const data = doc.data() as FirebaseTimeSlot;
         let dateValue: Date;
         
-        // Add proper null checking for data.date
-        if (data.date != null && data.date !== undefined) {
-          if (typeof data.date === 'object' && data.date !== null && ('toDate' in data.date)) {
-            dateValue = (data.date as any).toDate();
-          } else if (typeof data.date === 'string') {
-            dateValue = parseISO(data.date);
+        // Improved null checking for data.date
+        if (data.date !== null && data.date !== undefined) {
+          const dateField = data.date;
+          if (typeof dateField === 'object' && dateField !== null && 'toDate' in dateField) {
+            dateValue = (dateField as any).toDate();
+          } else if (typeof dateField === 'string') {
+            dateValue = parseISO(dateField);
           } else {
             dateValue = new Date();
           }
