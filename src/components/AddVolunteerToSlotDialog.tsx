@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { collection, getDocs, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Search } from "lucide-react";
 import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
 
@@ -34,6 +33,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const [volunteers, setVolunteers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedVolunteer, setSelectedVolunteer] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [allTimeSlots, setAllTimeSlots] = useState<TimeSlot[]>([]);
@@ -50,12 +50,12 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetchVolunteers();
+      fetchAllUsers();
       fetchAllTimeSlots();
     }
   }, [isOpen]);
 
-  const fetchVolunteers = async () => {
+  const fetchAllUsers = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "users"));
       const usersData = querySnapshot.docs.map(doc => ({
@@ -64,14 +64,16 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         maxSlots: doc.data().maxSlots || 1
       }) as User);
       
+      // Separar voluntários de todos os usuários
       const volunteerUsers = usersData.filter(user => user.isVolunteer);
       setVolunteers(volunteerUsers);
+      setAllUsers(usersData); // Manter todos os usuários para exibição completa
     } catch (error) {
-      console.error("Error fetching volunteers:", error);
+      console.error("Error fetching users:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Não foi possível carregar a lista de voluntários."
+        description: "Não foi possível carregar a lista de usuários."
       });
     }
   };
@@ -108,7 +110,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   };
 
   const getVolunteerMaxSlots = (volunteerName: string): number => {
-    const volunteer = volunteers.find(v => {
+    const volunteer = allUsers.find(v => {
       const fullName = `${v.rank || ''} ${v.warName}`.trim();
       return fullName === volunteerName;
     });
@@ -184,13 +186,14 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     }
   };
 
-  // Filter volunteers based on search term
-  const filteredVolunteers = volunteers.filter(volunteer => {
-    const fullName = `${volunteer.rank || ''} ${volunteer.warName}`.trim();
+  // Filtrar todos os usuários baseado no termo de pesquisa
+  const filteredUsers = allUsers.filter(user => {
+    const fullName = `${user.rank || ''} ${user.warName}`.trim();
     const isNotInSlot = !isVolunteerAlreadyInSlot(fullName);
-    const matchesSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         volunteer.warName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (volunteer.rank && volunteer.rank.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch = searchTerm === "" || 
+                         fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.warName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (user.rank && user.rank.toLowerCase().includes(searchTerm.toLowerCase()));
     
     return isNotInSlot && matchesSearch;
   });
@@ -218,43 +221,56 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
           </div>
           
           {/* Search Input */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Pesquisar voluntário..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Buscar voluntário</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Digite para buscar por graduação ou nome..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
 
-          <div>
+          {/* Select Volunteer */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Selecionar voluntário</label>
             <Select value={selectedVolunteer} onValueChange={setSelectedVolunteer}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione um voluntário" />
               </SelectTrigger>
-              <SelectContent>
-                {filteredVolunteers.length === 0 ? (
+              <SelectContent className="max-h-[300px]">
+                {filteredUsers.length === 0 ? (
                   <div className="p-4 text-center text-gray-500">
-                    {searchTerm ? "Nenhum voluntário encontrado" : "Nenhum voluntário disponível"}
+                    {searchTerm ? "Nenhum usuário encontrado" : "Nenhum usuário disponível"}
                   </div>
                 ) : (
-                  filteredVolunteers.map((volunteer) => {
-                    const fullName = `${volunteer.rank || ''} ${volunteer.warName}`.trim();
+                  filteredUsers.map((user) => {
+                    const fullName = `${user.rank || ''} ${user.warName}`.trim();
                     const currentSlots = getVolunteerSlotCount(fullName);
-                    const maxSlots = volunteer.maxSlots || 1;
+                    const maxSlots = user.maxSlots || 1;
                     const atLimit = isVolunteerAtLimit(fullName);
+                    const isVolunteer = user.isVolunteer;
                     
                     return (
                       <SelectItem 
-                        key={volunteer.id} 
+                        key={user.id} 
                         value={fullName}
                         disabled={!isAdmin && atLimit}
                         className={(!isAdmin && atLimit) ? "opacity-50" : ""}
                       >
-                        <div className="flex flex-col">
-                          <span>{fullName}</span>
+                        <div className="flex flex-col w-full">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{fullName}</span>
+                            {isVolunteer && (
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">
+                                Voluntário
+                              </span>
+                            )}
+                          </div>
                           <span className="text-xs text-gray-500">
                             {currentSlots}/{maxSlots} serviços
                             {!isAdmin && atLimit && " (Limite atingido)"}
@@ -271,7 +287,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
 
           {isAdmin && (
             <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-              Como administrador, você pode adicionar voluntários mesmo que tenham atingido o limite de serviços.
+              Como administrador, você pode adicionar qualquer usuário mesmo que tenham atingido o limite de serviços.
             </div>
           )}
 
@@ -284,7 +300,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
               Cancelar
             </Button>
             <Button onClick={handleAddVolunteer} disabled={isLoading || !selectedVolunteer}>
-              {isLoading ? "Adicionando..." : "Adicionar"}
+              {isLoading ? "Adicionando..." : "Adicionar Voluntário"}
             </Button>
           </div>
         </div>
