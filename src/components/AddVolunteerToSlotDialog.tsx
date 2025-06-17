@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -95,14 +94,10 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         let dateValue: Date;
 
         const dateField = data.date;
-        if (dateField !== null && dateField !== undefined) {
-          if (typeof dateField === 'object' && dateField !== null && 'toDate' in dateField) {
-            dateValue = (dateField as any).toDate();
-          } else if (typeof dateField === 'string') {
-            dateValue = parseISO(dateField);
-          } else {
-            dateValue = new Date();
-          }
+        if (dateField && typeof dateField === 'object' && 'toDate' in dateField) {
+          dateValue = (dateField as any).toDate();
+        } else if (typeof dateField === 'string') {
+          dateValue = parseISO(dateField);
         } else {
           dateValue = new Date();
         }
