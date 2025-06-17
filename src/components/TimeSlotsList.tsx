@@ -4,11 +4,9 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { collection, query, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { UserRoundCog, CalendarDays, Clock, ChevronDown, ChevronUp } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "./ui/input";
+import { CalendarDays, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
@@ -26,122 +24,21 @@ interface TimeSlot {
   allowedMilitaryTypes?: string[];
 }
 
+interface User {
+  id: string;
+  email: string;
+  warName: string;
+  rank?: string;
+  isVolunteer?: boolean;
+  maxSlots?: number;
+}
+
 interface GroupedTimeSlots {
   [key: string]: {
     slots: TimeSlot[];
     dailyCost: number;
   };
 }
-
-const TimeSlotLimitControl = ({
-  slotLimit,
-  onUpdateLimit,
-  userSlotCount = 0,
-  isAdmin = false
-}: {
-  slotLimit: number;
-  onUpdateLimit: (limit: number) => void;
-  userSlotCount?: number;
-  isAdmin?: boolean;
-}) => {
-  const [showCustomInput, setShowCustomInput] = useState(false);
-  const [customLimit, setCustomLimit] = useState("");
-  const predefinedLimits = [1, 2, 3, 4];
-
-  const handleCustomLimitSubmit = () => {
-    const limit = parseInt(customLimit);
-    if (!isNaN(limit) && limit > 0) {
-      onUpdateLimit(limit);
-      setShowCustomInput(false);
-      setCustomLimit("");
-    }
-  };
-
-  return (
-    <div className="w-full space-y-4">
-      {!isAdmin && (
-        <div className="bg-white p-4 rounded-lg shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              {userSlotCount >= slotLimit ? (
-                <p className="text-orange-600 font-medium">Horários esgotados</p>
-              ) : (
-                <p className="text-gray-700">
-                  Escolha {slotLimit - userSlotCount}{" "}
-                  {slotLimit - userSlotCount === 1 ? "horário" : "horários"}
-                </p>
-              )}
-              <p className="text-sm text-gray-500">
-                {userSlotCount} de {slotLimit} horários preenchidos
-              </p>
-            </div>
-            <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
-              <span className="text-gray-700 font-medium">{userSlotCount}/{slotLimit}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isAdmin && (
-        <div className="bg-white p-4 rounded-lg shadow-sm">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium text-gray-900">Limite de horários por usuário</h3>
-              <UserRoundCog className="h-5 w-5 text-gray-500" />
-            </div>
-
-            <div className="flex gap-2">
-              {predefinedLimits.map(limit => (
-                <Button
-                  key={limit}
-                  onClick={() => onUpdateLimit(limit)}
-                  variant={slotLimit === limit ? "default" : "outline"}
-                  className="flex-1"
-                >
-                  {limit}
-                </Button>
-              ))}
-              <Button
-                onClick={() => setShowCustomInput(true)}
-                variant="outline"
-                className="flex-1"
-              >
-                +
-              </Button>
-            </div>
-          </div>
-
-          <Dialog open={showCustomInput} onOpenChange={setShowCustomInput}>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Definir limite personalizado</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Input
-                    type="number"
-                    min="1"
-                    value={customLimit}
-                    onChange={e => setCustomLimit(e.target.value)}
-                    placeholder="Digite o limite de horários"
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setShowCustomInput(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleCustomLimitSubmit}>
-                    Confirmar
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      )}
-    </div>
-  );
-};
 
 const getMilitaryRankWeight = (rank: string): number => {
   const rankWeights: { [key: string]: number } = {
@@ -203,8 +100,8 @@ const formatCurrency = (value: number): string => {
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [slotLimit, setSlotLimit] = useState<number>(0);
   const [volunteerHours, setVolunteerHours] = useState<{ [key: string]: string }>({});
+  const [users, setUsers] = useState<User[]>([]);
   const { toast } = useToast();
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
@@ -296,19 +193,28 @@ const TimeSlotsList = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchSlotLimit = async () => {
-      try {
-        const settingsDoc = await getDoc(doc(db, 'settings', 'slotLimit'));
-        if (settingsDoc.exists()) {
-          setSlotLimit(settingsDoc.data().value || 0);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar limite de slots:', error);
-      }
-    };
+  const fetchUsers = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const usersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        maxSlots: doc.data().maxSlots || 1
+      }) as User);
+      setUsers(usersData);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
 
-    fetchSlotLimit();
+  const getCurrentUserMaxSlots = (): number => {
+    if (!userData?.email) return 1;
+    const user = users.find(u => u.email === userData.email);
+    return user?.maxSlots || 1;
+  };
+
+  useEffect(() => {
+    fetchUsers();
     setIsLoading(true);
     const timeSlotsCollection = collection(db, 'timeSlots');
     const q = query(timeSlotsCollection);
@@ -371,15 +277,16 @@ const TimeSlotsList = () => {
       return;
     }
 
+    const userMaxSlots = getCurrentUserMaxSlots();
     const userSlotCount = timeSlots.reduce(
       (count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count,
       0
     );
 
-    if (userSlotCount >= slotLimit && !isAdmin) {
+    if (userSlotCount >= userMaxSlots && !isAdmin) {
       toast({
         title: "Limite atingido!🚫",
-        description: `Você atingiu o limite de ${slotLimit} horário${slotLimit === 1 ? '' : 's'} por usuário.`,
+        description: `Você atingiu o limite de ${userMaxSlots} horário${userMaxSlots === 1 ? '' : 's'} por usuário.`,
         variant: "destructive"
       });
       return;
@@ -466,33 +373,6 @@ const TimeSlotsList = () => {
     }
   };
 
-  const handleUpdateSlotLimit = async (limit: number) => {
-    if (isNaN(limit) || limit < 0) {
-      toast({
-        title: "Erro 😵‍💫",
-        description: "Por favor, insira um número válido.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      await setDoc(doc(db, 'settings', 'slotLimit'), { value: limit });
-      setSlotLimit(limit);
-      toast({
-        title: "Sucesso",
-        description: "Limite de horários atualizado com sucesso!"
-      });
-    } catch (error) {
-      console.error('Erro ao atualizar limite de slots:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o limite de horários.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
     return slots.reduce((groups: GroupedTimeSlots, slot) => {
       const date = slot.date;
@@ -525,11 +405,12 @@ const TimeSlotsList = () => {
     if (isSlotFull(slot)) {
       return true;
     }
+    const userMaxSlots = getCurrentUserMaxSlots();
     const userSlotCount = timeSlots.reduce(
       (count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count,
       0
     );
-    if (userSlotCount >= slotLimit && !isAdmin) {
+    if (userSlotCount >= userMaxSlots && !isAdmin) {
       return false;
     }
     const slotsForDate = timeSlots.filter(s => s.date === slot.date);
@@ -539,11 +420,12 @@ const TimeSlotsList = () => {
 
   const canVolunteerForSlot = (slot: TimeSlot) => {
     if (isAdmin) return true;
+    const userMaxSlots = getCurrentUserMaxSlots();
     const userSlotCount = timeSlots.reduce(
       (count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count,
       0
     );
-    return userSlotCount < slotLimit;
+    return userSlotCount < userMaxSlots;
   };
 
   const sortVolunteers = (volunteers: string[]) => {
@@ -610,6 +492,8 @@ const TimeSlotsList = () => {
     (count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count,
     0
   );
+
+  const userMaxSlots = getCurrentUserMaxSlots();
 
   const [volunteerToRemove, setVolunteerToRemove] = useState<{
     name: string;
@@ -728,12 +612,28 @@ const TimeSlotsList = () => {
 
   return (
     <div className="space-y-6 p-4 py-0 my-0 px-0">
-      <TimeSlotLimitControl
-        slotLimit={slotLimit}
-        onUpdateLimit={handleUpdateSlotLimit}
-        userSlotCount={userSlotCount}
-        isAdmin={isAdmin}
-      />
+      {!isAdmin && (
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              {userSlotCount >= userMaxSlots ? (
+                <p className="text-orange-600 font-medium">Horários esgotados</p>
+              ) : (
+                <p className="text-gray-700">
+                  Escolha {userMaxSlots - userSlotCount}{" "}
+                  {userMaxSlots - userSlotCount === 1 ? "horário" : "horários"}
+                </p>
+              )}
+              <p className="text-sm text-gray-500">
+                {userSlotCount} de {userMaxSlots} horários preenchidos
+              </p>
+            </div>
+            <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
+              <span className="text-gray-700 font-medium">{userSlotCount}/{userMaxSlots}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isAdmin && totalCostSummary["Total Geral"] > 0 && (
         <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
