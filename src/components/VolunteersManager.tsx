@@ -30,6 +30,7 @@ const VolunteersManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [showVolunteersOnly, setShowVolunteersOnly] = useState(false);
+  const [showNonVolunteersOnly, setShowNonVolunteersOnly] = useState(false);
   const [bulkSlotsValue, setBulkSlotsValue] = useState(1);
   const {
     toast
@@ -260,7 +261,17 @@ const VolunteersManager = () => {
     const warName = (user.warName || '').toLowerCase();
     const email = (user.email || '').toLowerCase();
     const matchesSearch = rank.includes(searchTerm) || warName.includes(searchTerm) || email.includes(searchTerm);
-    const matchesVolunteerFilter = showVolunteersOnly ? user.isVolunteer : true;
+    
+    let matchesVolunteerFilter = true;
+    if (showVolunteersOnly && showNonVolunteersOnly) {
+      // Se ambos estão marcados, mostra todos
+      matchesVolunteerFilter = true;
+    } else if (showVolunteersOnly) {
+      matchesVolunteerFilter = user.isVolunteer;
+    } else if (showNonVolunteersOnly) {
+      matchesVolunteerFilter = !user.isVolunteer;
+    }
+    
     return matchesSearch && matchesVolunteerFilter;
   });
   if (isLoading) {
@@ -303,16 +314,30 @@ const VolunteersManager = () => {
             </div>
             
             <div className="flex flex-wrap gap-2 items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Switch 
-                  id="volunteers-only" 
-                  checked={showVolunteersOnly} 
-                  onCheckedChange={setShowVolunteersOnly} 
-                  className="data-[state=checked]:bg-blue-600" 
-                />
-                <Label htmlFor="volunteers-only" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  Voluntários
-                </Label>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch 
+                    id="volunteers-only" 
+                    checked={showVolunteersOnly} 
+                    onCheckedChange={setShowVolunteersOnly} 
+                    className="data-[state=checked]:bg-blue-600" 
+                  />
+                  <Label htmlFor="volunteers-only" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                    Voluntários
+                  </Label>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Switch 
+                    id="non-volunteers-only" 
+                    checked={showNonVolunteersOnly} 
+                    onCheckedChange={setShowNonVolunteersOnly} 
+                    className="data-[state=checked]:bg-red-600" 
+                  />
+                  <Label htmlFor="non-volunteers-only" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                    Não Voluntários
+                  </Label>
+                </div>
               </div>
               
               <div className="flex flex-wrap gap-2 items-center">
@@ -407,7 +432,7 @@ const VolunteersManager = () => {
                               E-mail não informado
                             </p>
                           )}
-                          {totalHours > 0 && (
+                          {user.isVolunteer && totalHours > 0 && (
                             <p className="text-xs text-blue-600 font-medium">
                               Total: {formattedHours}h
                             </p>
@@ -418,16 +443,18 @@ const VolunteersManager = () => {
 
                     {/* Controles */}
                     <div className="flex items-center gap-4 ml-4">
-                      {/* Limite de serviços */}
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          value={user.maxSlots || 1}
-                          onChange={e => handleSlotsChange(user.id, parseInt(e.target.value) || 0)}
-                          className="w-16 h-8 text-center"
-                        />
-                      </div>
+                      {/* Limite de serviços - só exibe se for voluntário */}
+                      {user.isVolunteer && (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={user.maxSlots || 1}
+                            onChange={e => handleSlotsChange(user.id, parseInt(e.target.value) || 0)}
+                            className="w-16 h-8 text-center"
+                          />
+                        </div>
+                      )}
 
                       {/* Switch de voluntário */}
                       <div className="flex items-center gap-3">
