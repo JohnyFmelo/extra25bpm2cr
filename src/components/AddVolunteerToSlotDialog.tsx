@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -101,8 +102,8 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         } else if (typeof dateField === 'string') {
           dateValue = parseISO(dateField);
         } else {
-          // Handle other possible date formats
-          dateValue = new Date(dateField as any);
+          // Handle other possible date formats, ensuring dateField is not null
+          dateValue = new Date(dateField);
         }
         
         return {
