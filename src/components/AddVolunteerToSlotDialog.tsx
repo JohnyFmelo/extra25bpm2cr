@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -362,7 +361,10 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        
+        <Button variant="outline" className="ml-auto">
+          <UserPlus className="mr-2 h-4 w-4" />
+          Adicionar Voluntários
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden flex flex-col px-3 py-4 sm:px-4 sm:py-5">
         <DialogHeader className="px-1 sm:px-2">
