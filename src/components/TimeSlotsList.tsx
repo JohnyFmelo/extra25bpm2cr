@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
 import supabase from "@/lib/supabaseClient";
+
 interface TimeSlot {
   id?: string;
   date: string;
@@ -22,6 +23,7 @@ interface TimeSlot {
   description?: string;
   allowedMilitaryTypes?: string[];
 }
+
 interface User {
   id: string;
   email: string;
@@ -30,12 +32,14 @@ interface User {
   isVolunteer?: boolean;
   maxSlots?: number;
 }
+
 interface GroupedTimeSlots {
   [key: string]: {
     slots: TimeSlot[];
     dailyCost: number;
   };
 }
+
 const getMilitaryRankWeight = (rank: string): number => {
   const rankWeights: {
     [key: string]: number;
@@ -68,6 +72,7 @@ const getMilitaryRankWeight = (rank: string): number => {
   };
   return rankWeights[rank] || 0;
 };
+
 const getRankCategory = (rank: string): {
   category: string;
   hourlyRate: number;
@@ -75,6 +80,7 @@ const getRankCategory = (rank: string): {
   const cbSdRanks = ["Sd", "Sd PM", "Cb", "Cb PM"];
   const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM"];
   const oficiaisRanks = ["2° Ten", "2° Ten PM", "1° Ten", "1° Ten PM", "Cap", "Cap PM", "Maj", "Maj PM", "Ten Cel", "Ten Cel PM", "Cel", "Cel PM"];
+  
   if (cbSdRanks.includes(rank)) return {
     category: "Cb/Sd",
     hourlyRate: 41.13
@@ -92,6 +98,7 @@ const getRankCategory = (rank: string): {
     hourlyRate: 0
   };
 };
+
 const getVolunteerRank = (volunteerFullName: string): string => {
   const parts = volunteerFullName.split(" ");
   if (parts.length >= 2 && (parts[1] === "Sgt" || parts[1] === "Ten")) {
@@ -99,12 +106,14 @@ const getVolunteerRank = (volunteerFullName: string): string => {
   }
   return parts[0];
 };
+
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   }).format(value).replace("R$", "R$ ");
 };
+
 const TimeSlotsList = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -112,9 +121,7 @@ const TimeSlotsList = () => {
     [key: string]: string;
   }>({});
   const [users, setUsers] = useState<User[]>([]);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
@@ -123,44 +130,63 @@ const TimeSlotsList = () => {
   const [collapsedDates, setCollapsedDates] = useState<{
     [key: string]: boolean;
   }>({});
+
   const calculateTimeDifference = (startTime: string, endTime: string): string => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);
+    
     if (endHour < startHour || endHour === 0 && startHour > 0) {
       endHour += 24;
     }
+    
     let diffHours = endHour - startHour;
     let diffMinutes = endMinute - startMinute;
+    
     if (diffMinutes < 0) {
       diffHours -= 1;
       diffMinutes += 60;
     }
+    
     const totalHours = diffHours + diffMinutes / 60;
     return `${totalHours}`;
   };
 
-  // Calcular horas totais de cada voluntário progressivamente
-  const volunteerTotalHours = useMemo(() => {
-    const totalHours: {
-      [key: string]: number;
-    } = {};
-
+  // Calcular horas totais de cada voluntário progressivamente baseado na data
+  const calculateProgressiveVolunteerHours = useMemo(() => {
+    const progressiveHours: { [key: string]: { [date: string]: number } } = {};
+    
     // Ordenar time slots por data para calcular progressivamente
     const sortedSlots = [...timeSlots].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
     sortedSlots.forEach(slot => {
       if (slot.volunteers && slot.volunteers.length > 0) {
         const hours = calculateTimeDifference(slot.start_time, slot.end_time);
         const numericHours = parseFloat(hours);
+        
         slot.volunteers.forEach(volunteer => {
-          if (!totalHours[volunteer]) {
-            totalHours[volunteer] = 0;
+          if (!progressiveHours[volunteer]) {
+            progressiveHours[volunteer] = {};
           }
-          totalHours[volunteer] += numericHours;
+          
+          // Calcular o total acumulado até essa data
+          let accumulatedHours = 0;
+          sortedSlots.forEach(prevSlot => {
+            if (new Date(prevSlot.date) <= new Date(slot.date) && 
+                prevSlot.volunteers && 
+                prevSlot.volunteers.includes(volunteer)) {
+              const prevHours = parseFloat(calculateTimeDifference(prevSlot.start_time, prevSlot.end_time));
+              accumulatedHours += prevHours;
+            }
+          });
+          
+          progressiveHours[volunteer][slot.date] = accumulatedHours;
         });
       }
     });
-    return totalHours;
+    
+    return progressiveHours;
   }, [timeSlots]);
+
   const fetchVolunteerHours = async () => {
     if (!isAdmin) return;
     try {
@@ -197,6 +223,7 @@ const TimeSlotsList = () => {
       console.error('Error in fetchVolunteerHours:', error);
     }
   };
+
   const fetchUsers = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "users"));
@@ -210,11 +237,13 @@ const TimeSlotsList = () => {
       console.error("Error fetching users:", error);
     }
   };
+
   const getCurrentUserMaxSlots = (): number => {
     if (!userData?.email) return 1;
     const user = users.find(u => u.email === userData.email);
     return user?.maxSlots || 1;
   };
+
   useEffect(() => {
     fetchUsers();
     setIsLoading(true);
@@ -279,14 +308,17 @@ const TimeSlotsList = () => {
     }, error => {
       console.error('Erro ao ouvir usuários:', error);
     });
+    
     if (isAdmin) {
       fetchVolunteerHours();
     }
+    
     return () => {
       unsubscribeTimeSlots();
       unsubscribeUsers();
     };
   }, [toast, isAdmin]);
+
   const handleVolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
       toast({
@@ -343,6 +375,7 @@ const TimeSlotsList = () => {
       });
     }
   };
+
   const handleUnvolunteer = async (timeSlot: TimeSlot) => {
     if (!volunteerName) {
       toast({
@@ -379,6 +412,7 @@ const TimeSlotsList = () => {
       });
     }
   };
+
   const groupTimeSlotsByDate = (slots: TimeSlot[]): GroupedTimeSlots => {
     return slots.reduce((groups: GroupedTimeSlots, slot) => {
       const date = slot.date;
@@ -392,6 +426,7 @@ const TimeSlotsList = () => {
       return groups;
     }, {});
   };
+
   const isVolunteered = (timeSlot: TimeSlot) => timeSlot.volunteers?.includes(volunteerName);
   const isSlotFull = (timeSlot: TimeSlot) => timeSlot.slots_used === timeSlot.total_slots;
   const formatDateHeader = (date: string) => {
@@ -401,6 +436,7 @@ const TimeSlotsList = () => {
     const truncatedDay = dayOfWeek.substring(0, 3);
     return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}-${format(parseISO(date), "dd/MM/yy")}`;
   };
+
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
     const userDataString = localStorage.getItem('user');
     const userData = userDataString ? JSON.parse(userDataString) : null;
@@ -422,12 +458,14 @@ const TimeSlotsList = () => {
     const isVolunteeredForDate = slotsForDate.some(s => s.volunteers?.includes(volunteerName));
     return !isVolunteeredForDate;
   };
+
   const canVolunteerForSlot = (slot: TimeSlot) => {
     if (isAdmin) return true;
     const userMaxSlots = getCurrentUserMaxSlots();
     const userSlotCount = timeSlots.reduce((count, s) => s.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
     return userSlotCount < userMaxSlots;
   };
+
   const sortVolunteers = (volunteers: string[]) => {
     if (!volunteers) return [];
     return volunteers.sort((a, b) => {
@@ -436,6 +474,7 @@ const TimeSlotsList = () => {
       return getMilitaryRankWeight(rankB) - getMilitaryRankWeight(rankA);
     });
   };
+
   const [calculatedGroupedTimeSlots, setCalculatedGroupedTimeSlots] = useState<GroupedTimeSlots>({});
   const [totalCostSummary, setTotalCostSummary] = useState<{
     "Cb/Sd": number;
@@ -448,6 +487,7 @@ const TimeSlotsList = () => {
     "Oficiais": 0,
     "Total Geral": 0
   });
+
   useEffect(() => {
     const slotsToProcess = timeSlots.filter(slot => {
       if (isAdmin || !slot.allowedMilitaryTypes || slot.allowedMilitaryTypes.length === 0 || !userService) {
@@ -482,12 +522,14 @@ const TimeSlotsList = () => {
     setCalculatedGroupedTimeSlots(grouped);
     setTotalCostSummary(newTotalCostSummary);
   }, [timeSlots, isAdmin, userService]);
+
   const userSlotCount = timeSlots.reduce((count, slot) => slot.volunteers?.includes(volunteerName) ? count + 1 : count, 0);
   const userMaxSlots = getCurrentUserMaxSlots();
   const [volunteerToRemove, setVolunteerToRemove] = useState<{
     name: string;
     timeSlot: TimeSlot;
   } | null>(null);
+
   const handleRemoveVolunteer = async (timeSlot: TimeSlot, volunteerNameToRemove: string) => {
     try {
       const updatedSlot = {
@@ -516,6 +558,7 @@ const TimeSlotsList = () => {
       });
     }
   };
+
   const today = new Date();
   const tomorrow = addDays(today, 1);
   let weeklyCost = 0;
@@ -532,6 +575,7 @@ const TimeSlotsList = () => {
       weeklyCost += groupedData.dailyCost;
     });
   }
+
   const formatWeeklyDateRange = () => {
     if (weeklyCostDates.length === 0) return "";
     const sortedDates = weeklyCostDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
@@ -543,10 +587,13 @@ const TimeSlotsList = () => {
     }).substring(0, 3).toUpperCase();
     return `${startDate}-${endDate}`;
   };
+
   const weeklyDateRangeText = formatWeeklyDateRange();
+
   if (isLoading) {
     return <div className="p-4">Carregando horários...</div>;
   }
+
   const getVolunteerHours = (volunteerNameParam: string) => {
     if (volunteerHours[volunteerNameParam]) {
       return volunteerHours[volunteerNameParam];
@@ -560,6 +607,7 @@ const TimeSlotsList = () => {
     }
     return null;
   };
+
   const renderAllowedMilitaryTypes = (allowedMilitaryTypes?: string[]) => {
     if (!allowedMilitaryTypes || allowedMilitaryTypes.length === 0) {
       return <span className="text-xs text-gray-400 italic">Sem restrição de categoria</span>;
@@ -568,6 +616,7 @@ const TimeSlotsList = () => {
         PM's: {allowedMilitaryTypes.join(", ")}
       </span>;
   };
+
   const toggleDateCollapse = (date: string) => {
     if (isAdmin) {
       setCollapsedDates(prev => ({
@@ -577,16 +626,17 @@ const TimeSlotsList = () => {
     }
   };
 
-  // Função para formatar as horas totais do voluntário
-  const formatVolunteerWithHours = (volunteer: string) => {
-    const totalHours = volunteerTotalHours[volunteer];
-    if (isAdmin && totalHours && totalHours > 0) {
+  // Função para formatar as horas progressivas do voluntário para uma data específica
+  const formatVolunteerWithProgressiveHours = (volunteer: string, date: string) => {
+    const progressiveHours = calculateProgressiveVolunteerHours[volunteer]?.[date];
+    if (isAdmin && progressiveHours && progressiveHours > 0) {
       // Formatar sem casas decimais desnecessárias
-      const formattedHours = totalHours % 1 === 0 ? totalHours.toString() : totalHours.toFixed(1);
+      const formattedHours = progressiveHours % 1 === 0 ? progressiveHours.toString() : progressiveHours.toFixed(1);
       return `${volunteer} - ${formattedHours}h`;
     }
     return volunteer;
   };
+
   return <div className="space-y-6 p-4 py-0 my-0 px-0">
       {!isAdmin && <div className="bg-white p-4 rounded-lg shadow-sm">
           <div className="flex items-center justify-between">
@@ -681,7 +731,7 @@ const TimeSlotsList = () => {
                           <div className="space-y-1">
                             {sortVolunteers(slot.volunteers).map((volunteer, index) => <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
                                 <div className="flex items-center">
-                                  <span>{formatVolunteerWithHours(volunteer)}</span>
+                                  <span>{formatVolunteerWithProgressiveHours(volunteer, date)}</span>
                                   {isAdmin && getVolunteerHours(volunteer) && <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
                                       {getVolunteerHours(volunteer)}h
                                     </span>}
@@ -732,4 +782,5 @@ const TimeSlotsList = () => {
       </AlertDialog>
     </div>;
 };
+
 export default TimeSlotsList;
