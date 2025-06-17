@@ -298,11 +298,11 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
 
           {/* Volunteers List */}
           <div className="space-y-2 flex-1 overflow-hidden">
-            <div className="flex items-center justify-between py-[3px] my-[9px]">
+            <div className="flex items-center justify-between py-[3px] my-[9px] px-[9px]">
               <label className="text-sm font-medium">Selecionar voluntários</label>
               <div className="relative flex-1 ml-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input type="text" placeholder="Buscar por graduação ou nome..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-8" />
+                <Input type="text" placeholder="Buscar por graduação ou nome..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-8 px-[33px]" />
               </div>
             </div>
             
