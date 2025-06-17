@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,6 @@ import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format, parseISO } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
 interface User {
   id: string;
   email: string;
@@ -20,14 +18,12 @@ interface User {
   isVolunteer?: boolean;
   maxSlots?: number;
 }
-
 interface AddVolunteerToSlotDialogProps {
   timeSlot: TimeSlot;
   onVolunteerAdded: () => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
-
 const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   timeSlot,
   onVolunteerAdded,
@@ -41,22 +37,20 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [allTimeSlots, setAllTimeSlots] = useState<TimeSlot[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const isOpen = open !== undefined ? open : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
-
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const isAdmin = userData?.userType === 'admin';
-
   useEffect(() => {
     if (isOpen) {
       fetchAllUsers();
       fetchAllTimeSlots();
     }
   }, [isOpen]);
-
   useEffect(() => {
     if (isOpen && timeSlot) {
       const currentSlotVolunteers = timeSlot.volunteers || [];
@@ -82,17 +76,20 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       setAllUsers(usersData);
     } catch (error) {
       console.error("Error fetching users:", error);
-      toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar a lista de usuários." });
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível carregar a lista de usuários."
+      });
     }
   };
-
   const fetchAllTimeSlots = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "timeSlots"));
       const slots = querySnapshot.docs.map(doc => {
         const data = doc.data() as FirebaseTimeSlot;
         let dateValue: Date;
-        
+
         // Fixed null checking for data.date
         const dateField = data.date;
         if (dateField !== null && dateField !== undefined) {
@@ -106,7 +103,6 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         } else {
           dateValue = new Date();
         }
-        
         return {
           id: doc.id,
           date: dateValue,
@@ -123,11 +119,11 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       console.error("Error fetching time slots:", error);
     }
   };
-
   const calculateTimeDifference = (startTime: string, endTime: string): number => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);
-    if (endHour < startHour || (endHour === 0 && startHour > 0)) { // handles overnight shifts
+    if (endHour < startHour || endHour === 0 && startHour > 0) {
+      // handles overnight shifts
       endHour += 24;
     }
     let diffHours = endHour - startHour;
@@ -138,7 +134,6 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     }
     return diffHours + diffMinutes / 60;
   };
-
   const getVolunteerSlotCount = (volunteerName: string): number => {
     return allTimeSlots.reduce((count, slot) => {
       if (slot.volunteers && slot.volunteers.includes(volunteerName)) {
@@ -147,7 +142,6 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       return count;
     }, 0);
   };
-
   const getVolunteerTotalHours = (volunteerName: string): number => {
     return allTimeSlots.reduce((totalHours, slot) => {
       if (slot.volunteers && slot.volunteers.includes(volunteerName)) {
@@ -157,18 +151,15 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       return totalHours;
     }, 0);
   };
-
   const getVolunteerMaxSlots = (volunteerName: string): number => {
     const volunteer = allUsers.find(v => `${v.rank || ''} ${v.warName}`.trim() === volunteerName);
     return volunteer?.maxSlots || 1;
   };
-
   const isVolunteerAtLimit = (volunteerName: string): boolean => {
     const currentSlots = getVolunteerSlotCount(volunteerName);
     const maxSlots = getVolunteerMaxSlots(volunteerName);
     return currentSlots >= maxSlots;
   };
-
   const getHoursColor = (hours: number): string => {
     if (hours === 0) return 'text-gray-400';
     if (hours <= 18) return 'text-orange-600';
@@ -176,7 +167,6 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     if (hours <= 50) return 'text-green-600';
     return 'text-red-600';
   };
-
   const getHoursBadgeColor = (hours: number): string => {
     if (hours === 0) return 'bg-gray-100 text-gray-500';
     if (hours <= 18) return 'bg-orange-100 text-orange-700';
@@ -184,93 +174,92 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     if (hours <= 50) return 'bg-green-100 text-green-700';
     return 'bg-red-100 text-red-700';
   };
-
   const willExceedLimit = (volunteerName: string): boolean => {
     const currentHours = getVolunteerTotalHours(volunteerName);
     const slotHours = calculateTimeDifference(timeSlot.startTime, timeSlot.endTime);
-    return (currentHours + slotHours) > 50;
+    return currentHours + slotHours > 50;
   };
-
   const handleVolunteerToggle = (volunteerFullName: string) => {
     const isCurrentlySelected = selectedVolunteers.includes(volunteerFullName);
-    
     if (isCurrentlySelected) {
       setSelectedVolunteers(prev => prev.filter(name => name !== volunteerFullName));
     } else {
       const wasInitiallyInSlot = initialVolunteersInSlot.includes(volunteerFullName);
-      
+
       // Check if adding this volunteer will exceed 50h limit
       if (!wasInitiallyInSlot && willExceedLimit(volunteerFullName)) {
         const currentHours = getVolunteerTotalHours(volunteerFullName);
         const slotHours = calculateTimeDifference(timeSlot.startTime, timeSlot.endTime);
         const totalHours = currentHours + slotHours;
-        
         toast({
           variant: "warning",
           title: "Atenção - Limite de 50h",
-          description: `${volunteerFullName} ficará com ${totalHours.toFixed(1)}h se adicionado a este horário, ultrapassando o limite de 50h.`,
+          description: `${volunteerFullName} ficará com ${totalHours.toFixed(1)}h se adicionado a este horário, ultrapassando o limite de 50h.`
         });
       }
-      
       if (!isAdmin && !wasInitiallyInSlot && isVolunteerAtLimit(volunteerFullName)) {
         toast({
           variant: "destructive",
           title: "Limite atingido",
-          description: `${volunteerFullName} já atingiu o limite de serviços e não pode ser adicionado.`,
+          description: `${volunteerFullName} já atingiu o limite de serviços e não pode ser adicionado.`
         });
         return;
       }
       setSelectedVolunteers(prev => [...prev, volunteerFullName]);
     }
   };
-
   const handleSaveChanges = async () => {
     setIsLoading(true);
     const volunteersToAdd = selectedVolunteers.filter(name => !initialVolunteersInSlot.includes(name));
     const volunteersToRemove = initialVolunteersInSlot.filter(name => !selectedVolunteers.includes(name));
-
     if (volunteersToAdd.length === 0 && volunteersToRemove.length === 0) {
-      toast({ title: "Nenhuma alteração", description: "Nenhuma alteração pendente para salvar." });
+      toast({
+        title: "Nenhuma alteração",
+        description: "Nenhuma alteração pendente para salvar."
+      });
       setIsLoading(false);
       setOpen(false);
       return;
     }
-
     if (!isAdmin) {
       const newlyAddedAtLimit = volunteersToAdd.filter(name => isVolunteerAtLimit(name));
       if (newlyAddedAtLimit.length > 0) {
         toast({
           variant: "destructive",
           title: "Limite atingido",
-          description: `Os seguintes voluntários atingiram o limite e não podem ser adicionados: ${newlyAddedAtLimit.join(', ')}`,
+          description: `Os seguintes voluntários atingiram o limite e não podem ser adicionados: ${newlyAddedAtLimit.join(', ')}`
         });
         setIsLoading(false);
         return;
       }
     }
-
     try {
       const timeSlotRef = doc(db, "timeSlots", timeSlot.id!);
       await updateDoc(timeSlotRef, {
         volunteers: selectedVolunteers,
-        slots_used: selectedVolunteers.length,
+        slots_used: selectedVolunteers.length
       });
-
       let successMessage = "Alterações salvas com sucesso!";
       if (volunteersToAdd.length > 0 && volunteersToRemove.length === 0) {
         successMessage = `${volunteersToAdd.length} voluntário(s) adicionado(s).`;
       } else if (volunteersToRemove.length > 0 && volunteersToAdd.length === 0) {
         successMessage = `${volunteersToRemove.length} voluntário(s) removido(s).`;
       } else if (volunteersToAdd.length > 0 && volunteersToRemove.length > 0) {
-         successMessage = `${volunteersToAdd.length} adicionado(s), ${volunteersToRemove.length} removido(s).`;
+        successMessage = `${volunteersToAdd.length} adicionado(s), ${volunteersToRemove.length} removido(s).`;
       }
-
-      toast({ title: "Sucesso", description: successMessage });
+      toast({
+        title: "Sucesso",
+        description: successMessage
+      });
       onVolunteerAdded();
       setOpen(false);
     } catch (error) {
       console.error("Error saving changes to volunteers:", error);
-      toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar as alterações." });
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível salvar as alterações."
+      });
     } finally {
       setIsLoading(false);
     }
@@ -279,9 +268,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   // Função para extrair o nome (parte após a graduação)
   const extractName = (fullName: string): string => {
     // Remove graduações comuns e pega o que sobra
-    const cleanName = fullName
-      .replace(/^(Cel|Ten Cel|Maj|Cap|1° Ten|2° Ten|Sub Ten|1° Sgt|2° Sgt|3° Sgt|Cb|Sd)\s*(PM\s*)?/i, '')
-      .trim();
+    const cleanName = fullName.replace(/^(Cel|Ten Cel|Maj|Cap|1° Ten|2° Ten|Sub Ten|1° Sgt|2° Sgt|3° Sgt|Cb|Sd)\s*(PM\s*)?/i, '').trim();
     return cleanName || fullName;
   };
 
@@ -293,20 +280,13 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       return nameA.localeCompare(nameB);
     });
   };
-
   const filteredAndSortedUsers = useMemo(() => {
-    return sortUsersByName(
-      allUsers.filter(user => {
-        const fullName = `${user.rank || ''} ${user.warName}`.trim();
-        const matchesSearch = searchTerm === "" || 
-                              fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              user.warName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              (user.rank && user.rank.toLowerCase().includes(searchTerm.toLowerCase()));
-        return matchesSearch;
-      })
-    );
+    return sortUsersByName(allUsers.filter(user => {
+      const fullName = `${user.rank || ''} ${user.warName}`.trim();
+      const matchesSearch = searchTerm === "" || fullName.toLowerCase().includes(searchTerm.toLowerCase()) || user.warName.toLowerCase().includes(searchTerm.toLowerCase()) || user.rank && user.rank.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearch;
+    }));
   }, [allUsers, searchTerm]);
-
   const formatHours = (hours: number): string => {
     if (hours === 0) {
       return "0h";
@@ -316,13 +296,10 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     }
     return `${hours.toFixed(1)}h`;
   };
-
   const volunteersToAddCount = selectedVolunteers.filter(name => !initialVolunteersInSlot.includes(name)).length;
   const volunteersToRemoveCount = initialVolunteersInSlot.filter(name => !selectedVolunteers.includes(name)).length;
-  
   let actionButtonText = "Nenhuma Alteração";
   let canSubmit = false;
-
   if (volunteersToAddCount > 0 && volunteersToRemoveCount === 0) {
     actionButtonText = `Adicionar ${volunteersToAddCount} Voluntário${volunteersToAddCount > 1 ? 's' : ''}`;
     canSubmit = true;
@@ -335,12 +312,8 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   }
 
   // Verificar se algum voluntário selecionado excederá 50h
-  const volunteersExceedingLimit = selectedVolunteers.filter(name => 
-    !initialVolunteersInSlot.includes(name) && willExceedLimit(name)
-  );
-
-  return (
-    <Dialog open={isOpen} onOpenChange={setOpen}>
+  const volunteersExceedingLimit = selectedVolunteers.filter(name => !initialVolunteersInSlot.includes(name) && willExceedLimit(name));
+  return <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" className="gap-2">
           <UserPlus className="h-4 w-4" />
@@ -362,137 +335,96 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
             </p>
           </div>
 
-          {volunteersExceedingLimit.length > 0 && (
-            <Alert className="bg-red-50 border-red-200">
+          {volunteersExceedingLimit.length > 0 && <Alert className="bg-red-50 border-red-200">
               <AlertTriangle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">
                 <strong>Atenção:</strong> Os seguintes militares excederão 50h se adicionados: {volunteersExceedingLimit.join(', ')}
               </AlertDescription>
-            </Alert>
-          )}
+            </Alert>}
 
-          {selectedVolunteers.length > 0 && (
-            <div className="space-y-2 px-1 sm:px-2">
+          {selectedVolunteers.length > 0 && <div className="space-y-2 px-1 sm:px-2">
               <label className="text-sm font-medium">Voluntários Selecionados para este Horário ({selectedVolunteers.length})</label>
               <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 border rounded-md bg-gray-50">
                 {selectedVolunteers.map(name => {
-                  const willExceed = !initialVolunteersInSlot.includes(name) && willExceedLimit(name);
-                  return (
-                    <div key={name} className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                      willExceed ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                    }`}>
+              const willExceed = !initialVolunteersInSlot.includes(name) && willExceedLimit(name);
+              return <div key={name} className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${willExceed ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
                       <span>{name}</span>
-                      <button 
-                        onClick={() => setSelectedVolunteers(prev => prev.filter(n => n !== name))} 
-                        className="hover:bg-opacity-75 rounded-full p-0.5"
-                        aria-label={`Remover ${name} da seleção`}
-                      >
+                      <button onClick={() => setSelectedVolunteers(prev => prev.filter(n => n !== name))} className="hover:bg-opacity-75 rounded-full p-0.5" aria-label={`Remover ${name} da seleção`}>
                         <X className="h-3 w-3" />
                       </button>
-                    </div>
-                  );
-                })}
+                    </div>;
+            })}
               </div>
-            </div>
-          )}
+            </div>}
 
           <div className="space-y-2 flex-1 overflow-hidden flex flex-col min-h-[200px]">
             <div className="flex items-center justify-between py-1 my-1 px-1 sm:px-2">
               <label className="text-sm font-medium">Disponíveis para o horário</label>
               <div className="relative flex-1 ml-4 max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input 
-                  type="text" 
-                  placeholder="Buscar..." 
-                  value={searchTerm} 
-                  onChange={e => setSearchTerm(e.target.value)} 
-                  className="pl-10 h-8 text-xs sm:text-sm" 
-                />
+                <Input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-8 text-xs sm:text-sm" />
               </div>
             </div>
             
             <div className="border rounded-md flex-1 overflow-y-auto min-h-0">
-              {filteredAndSortedUsers.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">
+              {filteredAndSortedUsers.length === 0 ? <div className="p-4 text-center text-gray-500">
                   {searchTerm ? "Nenhum usuário encontrado" : "Nenhum usuário disponível"}
-                </div>
-              ) : (
-                <div className="p-1 sm:p-2 space-y-1">
+                </div> : <div className="p-1 sm:p-2 space-y-1">
                   {filteredAndSortedUsers.map(user => {
-                    const fullName = `${user.rank || ''} ${user.warName}`.trim();
-                    const currentSlots = getVolunteerSlotCount(fullName);
-                    const totalHours = getVolunteerTotalHours(fullName);
-                    const maxSlots = user.maxSlots || 1;
-                    const atLimit = isVolunteerAtLimit(fullName);
-                    const isSelectedNow = selectedVolunteers.includes(fullName);
-                    const wasInitiallyInSlot = initialVolunteersInSlot.includes(fullName);
-                    const willExceedHours = !wasInitiallyInSlot && willExceedLimit(fullName);
-                    
-                    // A non-admin cannot select a new user if that user is at their limit
-                    const isDisabledForSelection = !isAdmin && !isSelectedNow && !wasInitiallyInSlot && atLimit;
+                const fullName = `${user.rank || ''} ${user.warName}`.trim();
+                const currentSlots = getVolunteerSlotCount(fullName);
+                const totalHours = getVolunteerTotalHours(fullName);
+                const maxSlots = user.maxSlots || 1;
+                const atLimit = isVolunteerAtLimit(fullName);
+                const isSelectedNow = selectedVolunteers.includes(fullName);
+                const wasInitiallyInSlot = initialVolunteersInSlot.includes(fullName);
+                const willExceedHours = !wasInitiallyInSlot && willExceedLimit(fullName);
 
-                    // Não mostrar se não tem horas trabalhadas e não está selecionado
-                    if (totalHours === 0 && !isSelectedNow && !wasInitiallyInSlot) {
-                      return null;
-                    }
+                // A non-admin cannot select a new user if that user is at their limit
+                const isDisabledForSelection = !isAdmin && !isSelectedNow && !wasInitiallyInSlot && atLimit;
 
-                    return (
-                      <div 
-                        key={user.id} 
-                        className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 
+                // Não mostrar se não tem horas trabalhadas e não está selecionado
+                if (totalHours === 0 && !isSelectedNow && !wasInitiallyInSlot) {
+                  return null;
+                }
+                return <div key={user.id} className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 
                                     ${isDisabledForSelection ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} 
                                     ${isSelectedNow ? "bg-blue-50 border border-blue-200" : ""}
-                                    ${willExceedHours ? "border-red-200 bg-red-50" : ""}`}
-                        onClick={() => !isDisabledForSelection && handleVolunteerToggle(fullName)}
-                      >
-                        <Checkbox 
-                          checked={isSelectedNow} 
-                          disabled={isDisabledForSelection}
-                          onCheckedChange={() => !isDisabledForSelection && handleVolunteerToggle(fullName)}
-                          aria-label={`Selecionar ${fullName}`}
-                        />
+                                    ${willExceedHours ? "border-red-200 bg-red-50" : ""}`} onClick={() => !isDisabledForSelection && handleVolunteerToggle(fullName)}>
+                        <Checkbox checked={isSelectedNow} disabled={isDisabledForSelection} onCheckedChange={() => !isDisabledForSelection && handleVolunteerToggle(fullName)} aria-label={`Selecionar ${fullName}`} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className={`font-medium truncate ${
-                              willExceedHours ? "text-red-700" : 
-                              isSelectedNow ? "text-blue-700" : ""
-                            }`}>
+                            <span className={`font-medium truncate ${willExceedHours ? "text-red-700" : isSelectedNow ? "text-blue-700" : ""}`}>
                               {fullName}
                               {wasInitiallyInSlot && !isSelectedNow && <span className="text-xs text-gray-500 ml-1">(removido)</span>}
                               {wasInitiallyInSlot && isSelectedNow && <span className="text-xs text-blue-600 ml-1">(no horário)</span>}
                               {willExceedHours && <span className="text-xs text-red-600 ml-1">(>50h)</span>}
                             </span>
-                            {user.isVolunteer && (
-                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2 flex-shrink-0">
+                            {user.isVolunteer && <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2 flex-shrink-0">
                                 Voluntário
-                              </span>
-                            )}
+                              </span>}
                           </div>
                           <div className="text-xs text-gray-500 flex items-center justify-between">
                             <span>
                               {currentSlots}/{maxSlots} serviços
-                              {atLimit && !wasInitiallyInSlot && <span className="text-orange-600"> (Limite)</span>}
-                              {isAdmin && atLimit && <span className="text-purple-600"> (Admin Override)</span>}
+                              {atLimit && !wasInitiallyInSlot}
+                              {isAdmin && atLimit}
                             </span>
                             <span className={`font-medium text-xs px-2 py-1 rounded-full ${getHoursBadgeColor(totalHours)}`}>
                               {formatHours(totalHours)}
                             </span>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      </div>;
+              })}
+                </div>}
             </div>
           </div>
 
-          {isAdmin && (
-            <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded mt-2 mx-1 sm:mx-2">
+          {isAdmin && <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded mt-2 mx-1 sm:mx-2">
               Como administrador, você pode adicionar ou remover qualquer usuário, mesmo que tenham atingido o limite de serviços. 
               Os militares que estavam originalmente neste horário aparecem pré-selecionados. Desmarque-os para removê-los ou selecione novos para adicioná-los.
-            </div>
-          )}
+            </div>}
 
           <div className="flex justify-end gap-2 pt-4 border-t mt-auto px-1 sm:px-2 pb-1">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
@@ -504,8 +436,6 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
           </div>
         </div>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>;
 };
-
 export default AddVolunteerToSlotDialog;
