@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -5,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Search, X } from "lucide-react";
+import { UserPlus, Search, X, AlertTriangle } from "lucide-react";
 import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format, parseISO } from "date-fns";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface User {
   id: string;
@@ -91,9 +93,9 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         const data = doc.data() as FirebaseTimeSlot;
         let dateValue: Date;
         
-        // Improved null checking for data.date
-        if (data.date !== null && data.date !== undefined) {
-          const dateField = data.date;
+        // Fixed null checking for data.date
+        const dateField = data.date;
+        if (dateField !== null && dateField !== undefined) {
           if (typeof dateField === 'object' && dateField !== null && 'toDate' in dateField) {
             dateValue = (dateField as any).toDate();
           } else if (typeof dateField === 'string') {
@@ -162,11 +164,31 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   };
 
   const isVolunteerAtLimit = (volunteerName: string): boolean => {
-    // Admin bypasses limit checks for adding, but info is still useful
-    // if (isAdmin) return false; // This was here, but limit info is still useful for admin to see
     const currentSlots = getVolunteerSlotCount(volunteerName);
     const maxSlots = getVolunteerMaxSlots(volunteerName);
     return currentSlots >= maxSlots;
+  };
+
+  const getHoursColor = (hours: number): string => {
+    if (hours === 0) return 'text-gray-400';
+    if (hours <= 18) return 'text-orange-600';
+    if (hours <= 36) return 'text-blue-600';
+    if (hours <= 50) return 'text-green-600';
+    return 'text-red-600';
+  };
+
+  const getHoursBadgeColor = (hours: number): string => {
+    if (hours === 0) return 'bg-gray-100 text-gray-500';
+    if (hours <= 18) return 'bg-orange-100 text-orange-700';
+    if (hours <= 36) return 'bg-blue-100 text-blue-700';
+    if (hours <= 50) return 'bg-green-100 text-green-700';
+    return 'bg-red-100 text-red-700';
+  };
+
+  const willExceedLimit = (volunteerName: string): boolean => {
+    const currentHours = getVolunteerTotalHours(volunteerName);
+    const slotHours = calculateTimeDifference(timeSlot.startTime, timeSlot.endTime);
+    return (currentHours + slotHours) > 50;
   };
 
   const handleVolunteerToggle = (volunteerFullName: string) => {
@@ -176,6 +198,20 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       setSelectedVolunteers(prev => prev.filter(name => name !== volunteerFullName));
     } else {
       const wasInitiallyInSlot = initialVolunteersInSlot.includes(volunteerFullName);
+      
+      // Check if adding this volunteer will exceed 50h limit
+      if (!wasInitiallyInSlot && willExceedLimit(volunteerFullName)) {
+        const currentHours = getVolunteerTotalHours(volunteerFullName);
+        const slotHours = calculateTimeDifference(timeSlot.startTime, timeSlot.endTime);
+        const totalHours = currentHours + slotHours;
+        
+        toast({
+          variant: "warning",
+          title: "Atenção - Limite de 50h",
+          description: `${volunteerFullName} ficará com ${totalHours.toFixed(1)}h se adicionado a este horário, ultrapassando o limite de 50h.`,
+        });
+      }
+      
       if (!isAdmin && !wasInitiallyInSlot && isVolunteerAtLimit(volunteerFullName)) {
         toast({
           variant: "destructive",
@@ -231,7 +267,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
 
       toast({ title: "Sucesso", description: successMessage });
       onVolunteerAdded();
-      setOpen(false); // This will trigger useEffect to reset selections
+      setOpen(false);
     } catch (error) {
       console.error("Error saving changes to volunteers:", error);
       toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar as alterações." });
@@ -240,34 +276,26 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     }
   };
 
-  // Sort users by rank and then alphabetically by warName within each rank
-  const sortUsersByRankAndName = (users: User[]) => {
-    const rankOrder = [
-      "Cel", "Cel PM", "Ten Cel", "Ten Cel PM", "Maj", "Maj PM", 
-      "Cap", "Cap PM", "1° Ten", "1° Ten PM", "2° Ten", "2° Ten PM",
-      "Sub Ten", "Sub Ten PM", "1° Sgt", "1° Sgt PM", "2° Sgt", "2° Sgt PM",
-      "3° Sgt", "3° Sgt PM", "Cb", "Cb PM", "Sd", "Sd PM", "Estágio"
-    ];
+  // Função para extrair o nome (parte após a graduação)
+  const extractName = (fullName: string): string => {
+    // Remove graduações comuns e pega o que sobra
+    const cleanName = fullName
+      .replace(/^(Cel|Ten Cel|Maj|Cap|1° Ten|2° Ten|Sub Ten|1° Sgt|2° Sgt|3° Sgt|Cb|Sd)\s*(PM\s*)?/i, '')
+      .trim();
+    return cleanName || fullName;
+  };
 
+  // Organizar usuários por nome (não por graduação)
+  const sortUsersByName = (users: User[]) => {
     return users.sort((a, b) => {
-      const rankA = a.rank || '';
-      const rankB = b.rank || '';
-      
-      const rankIndexA = rankOrder.indexOf(rankA);
-      const rankIndexB = rankOrder.indexOf(rankB);
-      
-      // If ranks are different, sort by rank order
-      if (rankIndexA !== rankIndexB) {
-        return rankIndexA - rankIndexB;
-      }
-      
-      // If ranks are the same, sort alphabetically by warName
-      return a.warName.localeCompare(b.warName);
+      const nameA = extractName(`${a.rank || ''} ${a.warName}`.trim());
+      const nameB = extractName(`${b.rank || ''} ${b.warName}`.trim());
+      return nameA.localeCompare(nameB);
     });
   };
 
   const filteredAndSortedUsers = useMemo(() => {
-    return sortUsersByRankAndName(
+    return sortUsersByName(
       allUsers.filter(user => {
         const fullName = `${user.rank || ''} ${user.warName}`.trim();
         const matchesSearch = searchTerm === "" || 
@@ -306,6 +334,11 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     canSubmit = true;
   }
 
+  // Verificar se algum voluntário selecionado excederá 50h
+  const volunteersExceedingLimit = selectedVolunteers.filter(name => 
+    !initialVolunteersInSlot.includes(name) && willExceedLimit(name)
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -329,27 +362,41 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
             </p>
           </div>
 
+          {volunteersExceedingLimit.length > 0 && (
+            <Alert className="bg-red-50 border-red-200">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">
+                <strong>Atenção:</strong> Os seguintes militares excederão 50h se adicionados: {volunteersExceedingLimit.join(', ')}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {selectedVolunteers.length > 0 && (
             <div className="space-y-2 px-1 sm:px-2">
               <label className="text-sm font-medium">Voluntários Selecionados para este Horário ({selectedVolunteers.length})</label>
               <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 border rounded-md bg-gray-50">
-                {selectedVolunteers.map(name => (
-                  <div key={name} className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                    <span>{name}</span>
-                    <button 
-                      onClick={() => setSelectedVolunteers(prev => prev.filter(n => n !== name))} 
-                      className="hover:bg-blue-200 rounded-full p-0.5"
-                      aria-label={`Remover ${name} da seleção`}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
+                {selectedVolunteers.map(name => {
+                  const willExceed = !initialVolunteersInSlot.includes(name) && willExceedLimit(name);
+                  return (
+                    <div key={name} className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                      willExceed ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      <span>{name}</span>
+                      <button 
+                        onClick={() => setSelectedVolunteers(prev => prev.filter(n => n !== name))} 
+                        className="hover:bg-opacity-75 rounded-full p-0.5"
+                        aria-label={`Remover ${name} da seleção`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          <div className="space-y-2 flex-1 overflow-hidden flex flex-col min-h-[200px]"> {/* Ensure this container can flex grow */}
+          <div className="space-y-2 flex-1 overflow-hidden flex flex-col min-h-[200px]">
             <div className="flex items-center justify-between py-1 my-1 px-1 sm:px-2">
               <label className="text-sm font-medium">Disponíveis para o horário</label>
               <div className="relative flex-1 ml-4 max-w-xs">
@@ -364,7 +411,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
               </div>
             </div>
             
-            <div className="border rounded-md flex-1 overflow-y-auto min-h-0"> {/* This div will take remaining space and scroll */}
+            <div className="border rounded-md flex-1 overflow-y-auto min-h-0">
               {filteredAndSortedUsers.length === 0 ? (
                 <div className="p-4 text-center text-gray-500">
                   {searchTerm ? "Nenhum usuário encontrado" : "Nenhum usuário disponível"}
@@ -379,30 +426,41 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
                     const atLimit = isVolunteerAtLimit(fullName);
                     const isSelectedNow = selectedVolunteers.includes(fullName);
                     const wasInitiallyInSlot = initialVolunteersInSlot.includes(fullName);
+                    const willExceedHours = !wasInitiallyInSlot && willExceedLimit(fullName);
                     
                     // A non-admin cannot select a new user if that user is at their limit
                     const isDisabledForSelection = !isAdmin && !isSelectedNow && !wasInitiallyInSlot && atLimit;
+
+                    // Não mostrar se não tem horas trabalhadas e não está selecionado
+                    if (totalHours === 0 && !isSelectedNow && !wasInitiallyInSlot) {
+                      return null;
+                    }
 
                     return (
                       <div 
                         key={user.id} 
                         className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 
                                     ${isDisabledForSelection ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} 
-                                    ${isSelectedNow ? "bg-blue-50 border border-blue-200" : ""}`}
+                                    ${isSelectedNow ? "bg-blue-50 border border-blue-200" : ""}
+                                    ${willExceedHours ? "border-red-200 bg-red-50" : ""}`}
                         onClick={() => !isDisabledForSelection && handleVolunteerToggle(fullName)}
                       >
                         <Checkbox 
                           checked={isSelectedNow} 
                           disabled={isDisabledForSelection}
-                          onCheckedChange={() => !isDisabledForSelection && handleVolunteerToggle(fullName)} // Keep consistent with div click
+                          onCheckedChange={() => !isDisabledForSelection && handleVolunteerToggle(fullName)}
                           aria-label={`Selecionar ${fullName}`}
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className={`font-medium truncate ${isSelectedNow ? "text-blue-700" : ""}`}>
+                            <span className={`font-medium truncate ${
+                              willExceedHours ? "text-red-700" : 
+                              isSelectedNow ? "text-blue-700" : ""
+                            }`}>
                               {fullName}
                               {wasInitiallyInSlot && !isSelectedNow && <span className="text-xs text-gray-500 ml-1">(removido)</span>}
                               {wasInitiallyInSlot && isSelectedNow && <span className="text-xs text-blue-600 ml-1">(no horário)</span>}
+                              {willExceedHours && <span className="text-xs text-red-600 ml-1">(>50h)</span>}
                             </span>
                             {user.isVolunteer && (
                               <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2 flex-shrink-0">
@@ -416,8 +474,8 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
                               {atLimit && !wasInitiallyInSlot && <span className="text-orange-600"> (Limite)</span>}
                               {isAdmin && atLimit && <span className="text-purple-600"> (Admin Override)</span>}
                             </span>
-                            <span className={`font-medium ${totalHours >= 50 ? "text-red-600" : "text-blue-600"}`}>
-                              {formatHours(totalHours)} trabalhadas
+                            <span className={`font-medium text-xs px-2 py-1 rounded-full ${getHoursBadgeColor(totalHours)}`}>
+                              {formatHours(totalHours)}
                             </span>
                           </div>
                         </div>
@@ -436,7 +494,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-4 border-t mt-auto px-1 sm:px-2 pb-1"> {/* Ensure buttons are at bottom */}
+          <div className="flex justify-end gap-2 pt-4 border-t mt-auto px-1 sm:px-2 pb-1">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
               Cancelar
             </Button>
