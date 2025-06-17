@@ -295,19 +295,21 @@ const VolunteersManager = () => {
           </p>
         </CardHeader>
 
-        <CardContent className="space-y-6 px-[6px]">
-          {/* Seção de busca */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <CardContent className="space-y-6 px-6">
+          {/* Seção de busca - corrigida */}
+          <div className="relative flex items-center">
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10 pointer-events-none">
+              <Search className="h-4 w-4 text-gray-400" />
+            </div>
             <Input 
               placeholder="Pesquisar por nome, posto ou e-mail..." 
               value={searchQuery} 
               onChange={e => setSearchQuery(e.target.value)} 
-              className="pl-10 h-11" 
+              className="pl-10 h-11 w-full" 
             />
           </div>
 
-          {/* Estatísticas e ações em massa - Layout melhorado */}
+          {/* Estatísticas e ações em massa */}
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6 space-y-4">
             {/* Estatísticas */}
             <div className="flex flex-wrap gap-6 text-sm">
