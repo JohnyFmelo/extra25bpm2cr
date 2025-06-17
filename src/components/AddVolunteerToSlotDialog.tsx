@@ -1,13 +1,14 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { collection, getDocs, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Search } from "lucide-react";
+import { UserPlus, Search, X } from "lucide-react";
 import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface User {
   id: string;
@@ -32,9 +33,8 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   onOpenChange
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
-  const [volunteers, setVolunteers] = useState<User[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [selectedVolunteer, setSelectedVolunteer] = useState<string>("");
+  const [selectedVolunteers, setSelectedVolunteers] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [allTimeSlots, setAllTimeSlots] = useState<TimeSlot[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -64,10 +64,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         maxSlots: doc.data().maxSlots || 1
       }) as User);
       
-      // Separar voluntários de todos os usuários
-      const volunteerUsers = usersData.filter(user => user.isVolunteer);
-      setVolunteers(volunteerUsers);
-      setAllUsers(usersData); // Manter todos os usuários para exibição completa
+      setAllUsers(usersData);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({
@@ -128,65 +125,88 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     return timeSlot.volunteers?.includes(volunteerName) || false;
   };
 
-  const handleAddVolunteer = async () => {
-    if (!selectedVolunteer) {
+  const handleVolunteerToggle = (volunteerName: string) => {
+    setSelectedVolunteers(prev => {
+      if (prev.includes(volunteerName)) {
+        return prev.filter(name => name !== volunteerName);
+      } else {
+        return [...prev, volunteerName];
+      }
+    });
+  };
+
+  const handleAddVolunteers = async () => {
+    if (selectedVolunteers.length === 0) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Por favor, selecione um voluntário."
+        description: "Por favor, selecione pelo menos um voluntário."
       });
       return;
     }
 
-    if (isVolunteerAlreadyInSlot(selectedVolunteer)) {
+    // Check for volunteers already in slot
+    const alreadyInSlot = selectedVolunteers.filter(name => isVolunteerAlreadyInSlot(name));
+    if (alreadyInSlot.length > 0) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Este voluntário já está inscrito neste horário."
+        description: `Os seguintes voluntários já estão inscritos: ${alreadyInSlot.join(', ')}`
       });
       return;
     }
 
-    if (!isAdmin && isVolunteerAtLimit(selectedVolunteer)) {
-      const maxSlots = getVolunteerMaxSlots(selectedVolunteer);
-      toast({
-        variant: "destructive",
-        title: "Limite atingido",
-        description: `Este voluntário já atingiu o limite máximo de ${maxSlots} serviço(s).`
-      });
-      return;
+    // Check for volunteers at limit (only if not admin)
+    if (!isAdmin) {
+      const atLimit = selectedVolunteers.filter(name => isVolunteerAtLimit(name));
+      if (atLimit.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Limite atingido",
+          description: `Os seguintes voluntários atingiram o limite: ${atLimit.join(', ')}`
+        });
+        return;
+      }
     }
 
     setIsLoading(true);
     try {
       const timeSlotRef = doc(db, "timeSlots", timeSlot.id!);
+      
+      // Add all selected volunteers at once
+      for (const volunteerName of selectedVolunteers) {
+        await updateDoc(timeSlotRef, {
+          volunteers: arrayUnion(volunteerName),
+        });
+      }
+      
+      // Update slots used count
       await updateDoc(timeSlotRef, {
-        volunteers: arrayUnion(selectedVolunteer),
-        slots_used: (timeSlot.slotsUsed || 0) + 1
+        slots_used: (timeSlot.slotsUsed || 0) + selectedVolunteers.length
       });
 
       toast({
         title: "Sucesso",
-        description: "Voluntário adicionado com sucesso!"
+        description: `${selectedVolunteers.length} voluntário(s) adicionado(s) com sucesso!`
       });
 
-      setSelectedVolunteer("");
+      setSelectedVolunteers([]);
       setSearchTerm("");
       setOpen(false);
       onVolunteerAdded();
     } catch (error) {
-      console.error("Error adding volunteer:", error);
+      console.error("Error adding volunteers:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Não foi possível adicionar o voluntário."
+        description: "Não foi possível adicionar os voluntários."
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Filtrar todos os usuários baseado no termo de pesquisa
+  // Filter users based on search term and availability
   const filteredUsers = allUsers.filter(user => {
     const fullName = `${user.rank || ''} ${user.warName}`.trim();
     const isNotInSlot = !isVolunteerAlreadyInSlot(fullName);
@@ -206,11 +226,12 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
           Adicionar Voluntário
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Adicionar Voluntário ao Horário</DialogTitle>
+          <DialogTitle>Adicionar Voluntários ao Horário</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        
+        <div className="space-y-4 flex-1 overflow-hidden">
           <div>
             <p className="text-sm text-gray-600 mb-2">
               Horário: {timeSlot.startTime} - {timeSlot.endTime}
@@ -235,54 +256,83 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
             </div>
           </div>
 
-          {/* Select Volunteer */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Selecionar voluntário</label>
-            <Select value={selectedVolunteer} onValueChange={setSelectedVolunteer}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um voluntário" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {filteredUsers.length === 0 ? (
-                  <div className="p-4 text-center text-gray-500">
-                    {searchTerm ? "Nenhum usuário encontrado" : "Nenhum usuário disponível"}
+          {/* Selected Volunteers Display */}
+          {selectedVolunteers.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Voluntários selecionados ({selectedVolunteers.length})</label>
+              <div className="flex flex-wrap gap-2 max-h-20 overflow-y-auto">
+                {selectedVolunteers.map((name) => (
+                  <div key={name} className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                    <span>{name}</span>
+                    <button
+                      onClick={() => handleVolunteerToggle(name)}
+                      className="hover:bg-blue-200 rounded-full p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </div>
-                ) : (
-                  filteredUsers.map((user) => {
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Volunteers List */}
+          <div className="space-y-2 flex-1 overflow-hidden">
+            <label className="text-sm font-medium">Selecionar voluntários</label>
+            <div className="border rounded-md max-h-60 overflow-y-auto">
+              {filteredUsers.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">
+                  {searchTerm ? "Nenhum usuário encontrado" : "Nenhum usuário disponível"}
+                </div>
+              ) : (
+                <div className="p-2 space-y-1">
+                  {filteredUsers.map((user) => {
                     const fullName = `${user.rank || ''} ${user.warName}`.trim();
                     const currentSlots = getVolunteerSlotCount(fullName);
                     const maxSlots = user.maxSlots || 1;
                     const atLimit = isVolunteerAtLimit(fullName);
                     const isVolunteer = user.isVolunteer;
+                    const isSelected = selectedVolunteers.includes(fullName);
                     
                     return (
-                      <SelectItem 
+                      <div 
                         key={user.id} 
-                        value={fullName}
-                        disabled={!isAdmin && atLimit}
-                        className={(!isAdmin && atLimit) ? "opacity-50" : ""}
+                        className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50 cursor-pointer ${
+                          (!isAdmin && atLimit) ? "opacity-50" : ""
+                        }`}
+                        onClick={() => !(!isAdmin && atLimit) && handleVolunteerToggle(fullName)}
                       >
-                        <div className="flex flex-col w-full">
+                        <Checkbox
+                          checked={isSelected}
+                          disabled={!isAdmin && atLimit}
+                          onChange={() => handleVolunteerToggle(fullName)}
+                        />
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className="font-medium">{fullName}</span>
+                            <span className="font-medium truncate">{fullName}</span>
                             {isVolunteer && (
-                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2 flex-shrink-0">
                                 Voluntário
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-gray-500">
-                            {currentSlots}/{maxSlots} serviços
-                            {!isAdmin && atLimit && " (Limite atingido)"}
-                            {isAdmin && atLimit && " (Admin: pode exceder limite)"}
-                          </span>
+                          <div className="text-xs text-gray-500 flex items-center justify-between">
+                            <span>
+                              {currentSlots}/{maxSlots} serviços
+                              {!isAdmin && atLimit && " (Limite atingido)"}
+                              {isAdmin && atLimit && " (Admin: pode exceder limite)"}
+                            </span>
+                            <span className="text-blue-600 font-medium">
+                              {currentSlots * 12}h trabalhadas
+                            </span>
+                          </div>
                         </div>
-                      </SelectItem>
+                      </div>
                     );
-                  })
-                )}
-              </SelectContent>
-            </Select>
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {isAdmin && (
@@ -291,7 +341,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
             </div>
           )}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-4 border-t">
             <Button
               variant="outline"
               onClick={() => setOpen(false)}
@@ -299,8 +349,11 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
             >
               Cancelar
             </Button>
-            <Button onClick={handleAddVolunteer} disabled={isLoading || !selectedVolunteer}>
-              {isLoading ? "Adicionando..." : "Adicionar Voluntário"}
+            <Button 
+              onClick={handleAddVolunteers} 
+              disabled={isLoading || selectedVolunteers.length === 0}
+            >
+              {isLoading ? "Adicionando..." : `Adicionar ${selectedVolunteers.length} Voluntário(s)`}
             </Button>
           </div>
         </div>
