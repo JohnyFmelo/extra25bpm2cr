@@ -30,6 +30,7 @@ const VolunteersManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [showVolunteersOnly, setShowVolunteersOnly] = useState(false);
+  const [bulkSlotsValue, setBulkSlotsValue] = useState(1);
   const {
     toast
   } = useToast();
@@ -198,6 +199,61 @@ const VolunteersManager = () => {
       setIsBulkUpdating(false);
     }
   };
+  const handleBulkSlotsUpdate = async () => {
+    if (filteredUsers.length === 0) {
+      toast({
+        title: "Nenhum usuário visível",
+        description: "A busca atual não retornou resultados para atualizar."
+      });
+      return;
+    }
+
+    if (bulkSlotsValue < 0) {
+      toast({
+        variant: "destructive",
+        title: "Valor inválido",
+        description: "O limite deve ser um número maior ou igual a 0."
+      });
+      return;
+    }
+
+    setIsBulkUpdating(true);
+    try {
+      const batch = writeBatch(db);
+      const filteredUserIds = new Set(filteredUsers.map(u => u.id));
+      
+      filteredUserIds.forEach(userId => {
+        const userRef = doc(db, "users", userId);
+        batch.update(userRef, {
+          maxSlots: bulkSlotsValue
+        });
+      });
+      
+      await batch.commit();
+      
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          filteredUserIds.has(user.id) 
+            ? { ...user, maxSlots: bulkSlotsValue }
+            : user
+        )
+      );
+      
+      toast({
+        title: "Limites atualizados",
+        description: `${filteredUsers.length} usuários tiveram o limite atualizado para ${bulkSlotsValue}.`
+      });
+    } catch (error) {
+      console.error("Error during bulk slots update:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro na atualização em massa",
+        description: "Não foi possível atualizar os limites."
+      });
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
   const filteredUsers = users.filter(user => {
     const searchTerm = searchQuery.toLowerCase();
     const rank = (user.rank || '').toLowerCase();
@@ -231,46 +287,106 @@ const VolunteersManager = () => {
           {/* Seção de busca */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Pesquisar por nome, posto ou e-mail..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-11" />
+            <Input 
+              placeholder="Pesquisar por nome, posto ou e-mail..." 
+              value={searchQuery} 
+              onChange={e => setSearchQuery(e.target.value)} 
+              className="pl-10 h-11" 
+            />
           </div>
 
           {/* Estatísticas e ações em massa */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg bg-primary-dark">
+          <div className="flex flex-col gap-4 p-4 rounded-lg bg-primary-dark">
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
               <span>Total: {filteredUsers.length} usuários</span>
               <span>Voluntários: {filteredUsers.filter(u => u.isVolunteer).length}</span>
             </div>
             
-            <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex flex-wrap gap-2 items-center justify-between">
               <div className="flex items-center gap-2">
-                <Switch id="volunteers-only" checked={showVolunteersOnly} onCheckedChange={setShowVolunteersOnly} className="data-[state=checked]:bg-blue-600" />
-                <Label htmlFor="volunteers-only" className="text-sm font-medium text-muted-foreground whitespace-nowrap">Voluntários</Label>
+                <Switch 
+                  id="volunteers-only" 
+                  checked={showVolunteersOnly} 
+                  onCheckedChange={setShowVolunteersOnly} 
+                  className="data-[state=checked]:bg-blue-600" 
+                />
+                <Label htmlFor="volunteers-only" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                  Voluntários
+                </Label>
               </div>
-              <Button size="sm" onClick={() => handleToggleAllVolunteers(true)} disabled={isBulkUpdating || filteredUsers.length === 0} className="min-w-[140px]">
+              
+              <div className="flex flex-wrap gap-2 items-center">
+                <Button 
+                  size="sm" 
+                  onClick={() => handleToggleAllVolunteers(true)} 
+                  disabled={isBulkUpdating || filteredUsers.length === 0} 
+                  className="min-w-[140px]"
+                >
+                  {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Marcar Todos
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => handleToggleAllVolunteers(false)} 
+                  disabled={isBulkUpdating || filteredUsers.length === 0} 
+                  className="min-w-[140px]"
+                >
+                  {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Desmarcar Todos
+                </Button>
+              </div>
+            </div>
+
+            {/* Ajustador de limite em massa */}
+            <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
+              <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                Limite para todos:
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                value={bulkSlotsValue}
+                onChange={(e) => setBulkSlotsValue(parseInt(e.target.value) || 0)}
+                className="w-16 h-8 text-center"
+              />
+              <Button
+                size="sm"
+                onClick={handleBulkSlotsUpdate}
+                disabled={isBulkUpdating || filteredUsers.length === 0}
+                className="min-w-[100px]"
+              >
                 {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Marcar Todos
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => handleToggleAllVolunteers(false)} disabled={isBulkUpdating || filteredUsers.length === 0} className="min-w-[140px]">
-                {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Desmarcar Todos
+                Aplicar
               </Button>
             </div>
           </div>
           
           {/* Lista de usuários */}
-          {filteredUsers.length === 0 ? <div className="text-center py-12 text-muted-foreground">
+          {filteredUsers.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium">Nenhum usuário encontrado</p>
               <p className="text-sm">Tente ajustar os termos de busca</p>
-            </div> : <div className="space-y-2">
+            </div>
+          ) : (
+            <div className="space-y-2">
               {filteredUsers.map(user => {
-            const userFullName = `${user.rank || ''} ${user.warName}`.trim();
-            const totalHours = calculateUserTotalHours(userFullName);
-            const formattedHours = totalHours % 1 === 0 ? totalHours.toString() : totalHours.toFixed(1);
-            return <div key={user.id} className={`
-                    group flex items-center justify-between p-4 rounded-lg border transition-all duration-200
-                    ${user.isVolunteer ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'}
-                  `}>
+                const userFullName = `${user.rank || ''} ${user.warName}`.trim();
+                const totalHours = calculateUserTotalHours(userFullName);
+                const formattedHours = totalHours % 1 === 0 ? totalHours.toString() : totalHours.toFixed(1);
+                
+                return (
+                  <div
+                    key={user.id}
+                    className={`
+                      group flex items-center justify-between p-4 rounded-lg border transition-all duration-200
+                      ${user.isVolunteer 
+                        ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' 
+                        : 'bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'
+                      }
+                    `}
+                  >
                     {/* Informações do usuário */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3">
@@ -282,14 +398,20 @@ const VolunteersManager = () => {
                           <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">
                             {user.rank && `${user.rank} `}{user.warName}
                           </p>
-                          {user.email ? <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          {user.email ? (
+                            <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                               {user.email}
-                            </p> : <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+                            </p>
+                          ) : (
+                            <p className="text-sm text-gray-400 dark:text-gray-500 italic">
                               E-mail não informado
-                            </p>}
-                          {totalHours > 0 && <p className="text-xs text-blue-600 font-medium">
+                            </p>
+                          )}
+                          {totalHours > 0 && (
+                            <p className="text-xs text-blue-600 font-medium">
                               Total: {formattedHours}h
-                            </p>}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -298,18 +420,30 @@ const VolunteersManager = () => {
                     <div className="flex items-center gap-4 ml-4">
                       {/* Limite de serviços */}
                       <div className="flex items-center gap-2">
-                        
-                        <Input type="number" min="0" value={user.maxSlots || 1} onChange={e => handleSlotsChange(user.id, parseInt(e.target.value) || 0)} className="w-16 h-8 text-center" />
+                        <Input
+                          type="number"
+                          min="0"
+                          value={user.maxSlots || 1}
+                          onChange={e => handleSlotsChange(user.id, parseInt(e.target.value) || 0)}
+                          className="w-16 h-8 text-center"
+                        />
                       </div>
 
                       {/* Switch de voluntário */}
                       <div className="flex items-center gap-3">
-                        <Switch id={`volunteer-switch-${user.id}`} checked={!!user.isVolunteer} onCheckedChange={() => handleToggleVolunteer(user)} className="data-[state=checked]:bg-green-600" />
+                        <Switch
+                          id={`volunteer-switch-${user.id}`}
+                          checked={!!user.isVolunteer}
+                          onCheckedChange={() => handleToggleVolunteer(user)}
+                          className="data-[state=checked]:bg-green-600"
+                        />
                       </div>
                     </div>
-                  </div>;
-          })}
-            </div>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>;
