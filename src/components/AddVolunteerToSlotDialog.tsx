@@ -93,7 +93,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         
         // Add proper null checking for data.date
         if (data.date != null && data.date !== undefined) {
-          if (typeof data.date === 'object' && data.date !== null && 'toDate' in data.date) {
+          if (typeof data.date === 'object' && data.date !== null && ('toDate' in data.date)) {
             dateValue = (data.date as any).toDate();
           } else if (typeof data.date === 'string') {
             dateValue = parseISO(data.date);
@@ -304,7 +304,6 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     actionButtonText = "Salvar Alterações";
     canSubmit = true;
   }
-
 
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
