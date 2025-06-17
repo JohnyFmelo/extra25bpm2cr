@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Clock, Users as UsersIcon, Navigation } from "lucide-react";
+import { Map, Calendar, Clock, Users as UsersIcon, Navigation } from "lucide-react";
 
 interface Trip {
   id: string;
@@ -63,12 +63,12 @@ const ActiveTrips = ({ trips, onTravelClick }: ActiveTripsProps) => {
                 </h3>
                 <div className="space-y-3 text-gray-700">
                   <div className="flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-blue-500" />
+                    <Map className="h-5 w-5 text-green-500" />
                     <p>{trip.destination}</p>
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-blue-500" />
+                    <Calendar className="h-5 w-5 text-green-500" />
                     <p>{isInTransit ? 'Período: ' : 'Início: '} 
                       {travelStart.toLocaleDateString()}
                       {isInTransit && ` até ${travelEnd.toLocaleDateString()}`}
@@ -77,13 +77,13 @@ const ActiveTrips = ({ trips, onTravelClick }: ActiveTripsProps) => {
                   
                   {!isInTransit && (
                     <div className="flex items-center gap-3">
-                      <UsersIcon className="h-5 w-5 text-blue-500" />
+                      <UsersIcon className="h-5 w-5 text-green-500" />
                       <p>Vagas: {trip.slots}</p>
                     </div>
                   )}
                   
                   <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-blue-500" />
+                    <Clock className="h-5 w-5 text-green-500" />
                     <p>{dailyCount.toLocaleString("pt-BR", {
                       minimumFractionDigits: dailyCount % 1 !== 0 ? 1 : 0,
                       maximumFractionDigits: 1
@@ -107,7 +107,7 @@ const ActiveTrips = ({ trips, onTravelClick }: ActiveTripsProps) => {
                 {isOpen && (
                   <Button 
                     onClick={onTravelClick}
-                    className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                    className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white transition-colors"
                   >
                     <Navigation className="h-5 w-5 mr-2" />
                     Ver detalhes
