@@ -6,12 +6,11 @@ import { Input } from "@/components/ui/input";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Search, X, AlertTriangle, UserX } from "lucide-react";
+import { UserPlus, Search, X, AlertTriangle } from "lucide-react";
 import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format, parseISO } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { supabase } from "@/integrations/supabase/client";
 
 interface User {
   id: string;
@@ -98,12 +97,13 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         
         if (!dateField) {
           dateValue = new Date();
-        } else if (dateField && typeof dateField === 'object' && 'toDate' in dateField) {
+        } else if (typeof dateField === 'object' && dateField !== null && 'toDate' in dateField) {
           dateValue = (dateField as any).toDate();
         } else if (typeof dateField === 'string') {
           dateValue = parseISO(dateField);
         } else {
-          dateValue = new Date(dateField || new Date());
+          // Handle other possible date formats, ensuring dateField is not null
+          dateValue = new Date(dateField);
         }
         
         return {
@@ -120,42 +120,6 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       setAllTimeSlots(slots);
     } catch (error) {
       console.error("Error fetching time slots:", error);
-    }
-  };
-
-  const markAbsence = async (volunteerName: string) => {
-    try {
-      const hours = calculateTimeDifference(timeSlot.startTime, timeSlot.endTime);
-      
-      const { error } = await supabase
-        .from('military_absences')
-        .insert({
-          time_slot_id: timeSlot.id,
-          volunteer_name: volunteerName,
-          date: format(timeSlot.date, 'yyyy-MM-dd'),
-          hours: hours,
-          start_time: timeSlot.startTime,
-          end_time: timeSlot.endTime,
-          marked_by: userData?.warName || 'Admin'
-        });
-
-      if (error) throw error;
-
-      // Remove volunteer from the slot
-      const updatedVolunteers = selectedVolunteers.filter(name => name !== volunteerName);
-      setSelectedVolunteers(updatedVolunteers);
-
-      toast({
-        title: "Falta registrada",
-        description: `Falta de ${volunteerName} foi registrada com sucesso.`
-      });
-    } catch (error) {
-      console.error("Error marking absence:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível registrar a falta."
-      });
     }
   };
 
@@ -225,8 +189,10 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     const isCurrentlySelected = selectedVolunteers.includes(volunteerFullName);
     
     if (isCurrentlySelected) {
+      // Remove volunteer
       setSelectedVolunteers(prev => prev.filter(name => name !== volunteerFullName));
     } else {
+      // Check if adding this volunteer would exceed the slot limit
       const currentCount = selectedVolunteers.length;
       if (currentCount >= timeSlot.slots) {
         toast({
@@ -259,9 +225,10 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         return;
       }
 
+      // Add volunteer (avoiding duplicates)
       setSelectedVolunteers(prev => {
         if (prev.includes(volunteerFullName)) {
-          return prev;
+          return prev; // Already exists, don't add duplicate
         }
         return [...prev, volunteerFullName];
       });
@@ -284,6 +251,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       return;
     }
 
+    // Check slot limit
     if (selectedVolunteers.length > timeSlot.slots) {
       toast({
         variant: "destructive",
@@ -437,7 +405,6 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
               <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 border rounded-md bg-gray-50">
                 {selectedVolunteers.map(name => {
                   const willExceed = !initialVolunteersInSlot.includes(name) && willExceedLimit(name);
-                  const wasInitiallyInSlot = initialVolunteersInSlot.includes(name);
                   return (
                     <div 
                       key={name} 
@@ -453,15 +420,6 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
                       >
                         <X className="h-3 w-3" />
                       </button>
-                      {isAdmin && wasInitiallyInSlot && (
-                        <button
-                          onClick={() => markAbsence(name)}
-                          className="hover:bg-red-200 rounded-full p-0.5 ml-1"
-                          title={`Marcar falta para ${name}`}
-                        >
-                          <UserX className="h-3 w-3 text-red-600" />
-                        </button>
-                      )}
                     </div>
                   );
                 })}
@@ -565,7 +523,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
           {isAdmin && (
             <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded mt-2 mx-1 sm:mx-2">
               Como administrador, você pode adicionar ou remover qualquer usuário, mesmo que tenham atingido o limite de serviços. 
-              Use o ícone <UserX className="inline h-3 w-3" /> para marcar faltas dos militares escalados.
+              Os militares que estavam originalmente neste horário aparecem pré-selecionados. Desmarque-os para removê-los ou selecione novos para adicioná-los.
             </div>
           )}
 
