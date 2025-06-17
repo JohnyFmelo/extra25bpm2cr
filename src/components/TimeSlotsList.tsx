@@ -216,9 +216,11 @@ const TimeSlotsList = () => {
   useEffect(() => {
     fetchUsers();
     setIsLoading(true);
+    
+    // Listen to timeSlots in real-time
     const timeSlotsCollection = collection(db, 'timeSlots');
-    const q = query(timeSlotsCollection);
-    const unsubscribe = onSnapshot(q, snapshot => {
+    const timeSlotsQuery = query(timeSlotsCollection);
+    const unsubscribeTimeSlots = onSnapshot(timeSlotsQuery, snapshot => {
       const formattedSlots: TimeSlot[] = snapshot.docs.map(docSnap => {
         const data = docSnap.data();
         let slotDateStr: string;
@@ -260,11 +262,28 @@ const TimeSlotsList = () => {
       setIsLoading(false);
     });
 
+    // Listen to users in real-time for volunteer status and maxSlots changes
+    const usersCollection = collection(db, 'users');
+    const usersQuery = query(usersCollection);
+    const unsubscribeUsers = onSnapshot(usersQuery, snapshot => {
+      const usersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        maxSlots: doc.data().maxSlots || 1
+      }) as User);
+      setUsers(usersData);
+    }, error => {
+      console.error('Erro ao ouvir usuários:', error);
+    });
+
     if (isAdmin) {
       fetchVolunteerHours();
     }
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeTimeSlots();
+      unsubscribeUsers();
+    };
   }, [toast, isAdmin]);
 
   const handleVolunteer = async (timeSlot: TimeSlot) => {
