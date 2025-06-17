@@ -282,7 +282,8 @@ const VolunteersManager = () => {
         </div>
       </div>;
   }
-  return <div className="w-full max-w-6xl mx-auto p-6 px-0">
+  return (
+    <div className="w-full max-w-6xl mx-auto p-6 px-0">
       <Card className="shadow-lg">
         <CardHeader className="pb-6">
           <CardTitle className="flex items-center gap-3 text-2xl">
@@ -297,7 +298,7 @@ const VolunteersManager = () => {
         <CardContent className="space-y-6 px-[6px]">
           {/* Seção de busca */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
             <Input 
               placeholder="Pesquisar por nome, posto ou e-mail..." 
               value={searchQuery} 
@@ -306,46 +307,59 @@ const VolunteersManager = () => {
             />
           </div>
 
-          {/* Estatísticas e ações em massa */}
-          <div className="flex flex-col gap-4 p-4 rounded-lg bg-primary-dark">
-            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-              <span>Total: {filteredUsers.length} usuários</span>
-              <span>Voluntários: {filteredUsers.filter(u => u.isVolunteer).length}</span>
+          {/* Estatísticas e ações em massa - Layout melhorado */}
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6 space-y-4">
+            {/* Estatísticas */}
+            <div className="flex flex-wrap gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className="font-medium text-blue-800">Total: {filteredUsers.length} usuários</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="font-medium text-green-700">Voluntários: {filteredUsers.filter(u => u.isVolunteer).length}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                <span className="font-medium text-gray-600">Não Voluntários: {filteredUsers.filter(u => !u.isVolunteer).length}</span>
+              </div>
             </div>
             
-            <div className="flex flex-wrap gap-2 items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Switch 
-                    id="volunteers-only" 
-                    checked={showVolunteersOnly} 
-                    onCheckedChange={setShowVolunteersOnly} 
-                    className="data-[state=checked]:bg-blue-600" 
-                  />
-                  <Label htmlFor="volunteers-only" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    Voluntários
-                  </Label>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Switch 
-                    id="non-volunteers-only" 
-                    checked={showNonVolunteersOnly} 
-                    onCheckedChange={setShowNonVolunteersOnly} 
-                    className="data-[state=checked]:bg-red-600" 
-                  />
-                  <Label htmlFor="non-volunteers-only" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    Não Voluntários
-                  </Label>
-                </div>
+            {/* Filtros */}
+            <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-blue-200">
+              <div className="flex items-center gap-2">
+                <Switch 
+                  id="volunteers-only" 
+                  checked={showVolunteersOnly} 
+                  onCheckedChange={setShowVolunteersOnly} 
+                  className="data-[state=checked]:bg-blue-600" 
+                />
+                <Label htmlFor="volunteers-only" className="text-sm font-medium text-blue-700 whitespace-nowrap">
+                  Apenas Voluntários
+                </Label>
               </div>
               
-              <div className="flex flex-wrap gap-2 items-center">
+              <div className="flex items-center gap-2">
+                <Switch 
+                  id="non-volunteers-only" 
+                  checked={showNonVolunteersOnly} 
+                  onCheckedChange={setShowNonVolunteersOnly} 
+                  className="data-[state=checked]:bg-orange-600" 
+                />
+                <Label htmlFor="non-volunteers-only" className="text-sm font-medium text-orange-700 whitespace-nowrap">
+                  Apenas Não Voluntários
+                </Label>
+              </div>
+            </div>
+
+            {/* Ações em massa */}
+            <div className="flex flex-wrap gap-3 items-center justify-between pt-2 border-t border-blue-200">
+              <div className="flex flex-wrap gap-2">
                 <Button 
                   size="sm" 
                   onClick={() => handleToggleAllVolunteers(true)} 
                   disabled={isBulkUpdating || filteredUsers.length === 0} 
-                  className="min-w-[140px]"
+                  className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]"
                 >
                   {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Marcar Todos
@@ -355,35 +369,35 @@ const VolunteersManager = () => {
                   variant="outline" 
                   onClick={() => handleToggleAllVolunteers(false)} 
                   disabled={isBulkUpdating || filteredUsers.length === 0} 
-                  className="min-w-[140px]"
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50 min-w-[120px]"
                 >
                   {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Desmarcar Todos
                 </Button>
               </div>
-            </div>
 
-            {/* Ajustador de limite em massa */}
-            <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
-              <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                Limite para todos:
-              </Label>
-              <Input
-                type="number"
-                min="0"
-                value={bulkSlotsValue}
-                onChange={(e) => setBulkSlotsValue(parseInt(e.target.value) || 0)}
-                className="w-16 h-8 text-center"
-              />
-              <Button
-                size="sm"
-                onClick={handleBulkSlotsUpdate}
-                disabled={isBulkUpdating || filteredUsers.length === 0}
-                className="min-w-[100px]"
-              >
-                {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Aplicar
-              </Button>
+              {/* Ajustador de limite em massa */}
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium text-blue-700 whitespace-nowrap">
+                  Limite para todos:
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={bulkSlotsValue}
+                  onChange={(e) => setBulkSlotsValue(parseInt(e.target.value) || 0)}
+                  className="w-16 h-8 text-center border-blue-300 focus:border-blue-500"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleBulkSlotsUpdate}
+                  disabled={isBulkUpdating || filteredUsers.length === 0}
+                  className="bg-blue-600 hover:bg-blue-700 text-white min-w-[80px]"
+                >
+                  {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Aplicar
+                </Button>
+              </div>
             </div>
           </div>
           
@@ -473,6 +487,8 @@ const VolunteersManager = () => {
           )}
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  );
 };
+
 export default VolunteersManager;
