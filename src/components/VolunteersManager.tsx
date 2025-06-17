@@ -203,10 +203,8 @@ const VolunteersManager = () => {
     const rank = (user.rank || '').toLowerCase();
     const warName = (user.warName || '').toLowerCase();
     const email = (user.email || '').toLowerCase();
-    
     const matchesSearch = rank.includes(searchTerm) || warName.includes(searchTerm) || email.includes(searchTerm);
     const matchesVolunteerFilter = showVolunteersOnly ? user.isVolunteer : true;
-    
     return matchesSearch && matchesVolunteerFilter;
   });
   if (isLoading) {
@@ -245,15 +243,8 @@ const VolunteersManager = () => {
             
             <div className="flex flex-wrap gap-2 items-center">
               <div className="flex items-center gap-2">
-                <Switch 
-                  id="volunteers-only" 
-                  checked={showVolunteersOnly} 
-                  onCheckedChange={setShowVolunteersOnly}
-                  className="data-[state=checked]:bg-blue-600"
-                />
-                <Label htmlFor="volunteers-only" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  Exibir só voluntários
-                </Label>
+                <Switch id="volunteers-only" checked={showVolunteersOnly} onCheckedChange={setShowVolunteersOnly} className="data-[state=checked]:bg-blue-600" />
+                <Label htmlFor="volunteers-only" className="text-sm font-medium text-muted-foreground whitespace-nowrap">Voluntários</Label>
               </div>
               <Button size="sm" onClick={() => handleToggleAllVolunteers(true)} disabled={isBulkUpdating || filteredUsers.length === 0} className="min-w-[140px]">
                 {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
