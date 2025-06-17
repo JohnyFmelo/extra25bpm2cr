@@ -471,6 +471,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_slot_limits: {
+        Row: {
+          created_at: string | null
+          id: string
+          max_slots: number
+          updated_at: string | null
+          user_email: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          max_slots?: number
+          updated_at?: string | null
+          user_email: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          max_slots?: number
+          updated_at?: string | null
+          user_email?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
