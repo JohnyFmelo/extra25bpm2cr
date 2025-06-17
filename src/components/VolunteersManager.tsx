@@ -298,7 +298,7 @@ const VolunteersManager = () => {
         <CardContent className="space-y-6 px-[6px]">
           {/* Seção de busca */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Pesquisar por nome, posto ou e-mail..." 
               value={searchQuery} 
