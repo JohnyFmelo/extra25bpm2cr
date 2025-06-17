@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -91,7 +90,9 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       const slots = querySnapshot.docs.map(doc => {
         const data = doc.data() as FirebaseTimeSlot;
         let dateValue: Date;
-        if (data.date != null) {
+        
+        // Add proper null checking for data.date
+        if (data.date != null && data.date !== undefined) {
           if (typeof data.date === 'object' && 'toDate' in data.date) {
             dateValue = (data.date as any).toDate();
           } else if (typeof data.date === 'string') {
@@ -102,6 +103,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         } else {
           dateValue = new Date();
         }
+        
         return {
           id: doc.id,
           date: dateValue,
