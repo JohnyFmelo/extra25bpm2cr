@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { format, parseISO, isPast, addDays, isAfter, startOfDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -12,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
 import supabase from "@/lib/supabaseClient";
+import CostSummaryCard from "./CostSummaryCard";
 
 interface TimeSlot {
   id?: string;
@@ -660,16 +660,9 @@ const TimeSlotsList = () => {
           </div>
         </div>}
 
-      {isAdmin && totalCostSummary["Total Geral"] > 0 && <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Resumo de Custos Totais</h2>
-          <div className="space-y-2">
-            <p><strong>Cb/Sd:</strong> {formatCurrency(totalCostSummary["Cb/Sd"])}</p>
-            <p><strong>St/Sgt:</strong> {formatCurrency(totalCostSummary["St/Sgt"])}</p>
-            <p><strong>Oficiais:</strong> {formatCurrency(totalCostSummary["Oficiais"])}</p>
-            <p className="font-semibold text-green-500"><strong>Total Geral:</strong> {formatCurrency(totalCostSummary["Total Geral"])}</p>
-            {weeklyCost > 0}
-          </div>
-        </div>}
+      {isAdmin && totalCostSummary["Total Geral"] > 0 && 
+        <CostSummaryCard totalCostSummary={totalCostSummary} />
+      }
 
       {Object.entries(calculatedGroupedTimeSlots).sort().map(([date, groupedData]) => {
       const {

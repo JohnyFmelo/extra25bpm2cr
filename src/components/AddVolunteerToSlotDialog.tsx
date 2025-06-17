@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -235,7 +234,22 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     }
   };
 
-  const handleSaveChanges = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const dateField = document.getElementById('volunteer-date') as HTMLInputElement;
+    const startTimeField = document.getElementById('volunteer-start-time') as HTMLInputElement;
+    const endTimeField = document.getElementById('volunteer-end-time') as HTMLInputElement;
+    
+    if (!dateField?.value || !startTimeField?.value || !endTimeField?.value) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     const volunteersToAdd = selectedVolunteers.filter(name => !initialVolunteersInSlot.includes(name));
@@ -531,7 +545,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
             <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
               Cancelar
             </Button>
-            <Button onClick={handleSaveChanges} disabled={isLoading || !canSubmit}>
+            <Button onClick={handleSubmit} disabled={isLoading || !canSubmit}>
               {isLoading ? "Processando..." : actionButtonText}
             </Button>
           </div>
