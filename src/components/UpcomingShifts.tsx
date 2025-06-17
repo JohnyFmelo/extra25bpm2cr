@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format, parseISO, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -16,27 +15,21 @@ interface TimeSlot {
   volunteers?: string[];
   description?: string;
 }
-
 const UpcomingShifts = () => {
   const [shifts, setShifts] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
-  
   useEffect(() => {
     if (!volunteerName) {
       setIsLoading(false);
       return;
     }
-    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
     const timeSlotsCollection = collection(db, 'timeSlots');
     const q = query(timeSlotsCollection);
-    
     const unsubscribe = onSnapshot(q, snapshot => {
       const upcomingShifts = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -60,16 +53,13 @@ const UpcomingShifts = () => {
       setShifts(upcomingShifts.slice(0, 5) as TimeSlot[]);
       setIsLoading(false);
     });
-    
     return () => unsubscribe();
   }, [volunteerName]);
-  
   const formatDateLabel = (dateString: string) => {
     const date = parseISO(dateString);
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
-    
     if (format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')) {
       return 'Hoje';
     } else if (format(date, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd')) {
@@ -82,10 +72,8 @@ const UpcomingShifts = () => {
       }).slice(1);
     }
   };
-  
   if (isLoading) {
-    return (
-      <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">
+    return <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">
         <CardContent className="p-6">
           <div className="animate-pulse">
             <div className="h-4 bg-white/20 rounded mb-2"></div>
@@ -96,16 +84,12 @@ const UpcomingShifts = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
-    );
+      </Card>;
   }
-  
   if (shifts.length === 0) {
     return null;
   }
-  
-  return (
-    <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg hover:shadow-xl transition-shadow">
+  return <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg hover:shadow-xl transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
@@ -115,26 +99,22 @@ const UpcomingShifts = () => {
             </h3>
             <p className="text-emerald-100 text-sm">Seus próximos serviços extras</p>
           </div>
-          <div className="bg-white/20 rounded-full p-2">
-            <TrendingUp className="h-6 w-6" />
-          </div>
+          
         </div>
       </CardHeader>
       
       <CardContent className="pt-0 pb-6">
         <div className="space-y-3">
-          {shifts.map(shift => (
-            <div
-              key={shift.id}
-              className="bg-white/15 backdrop-blur-sm rounded-lg p-4 border border-white/20 hover:bg-white/20 transition-colors"
-            >
+          {shifts.map(shift => <div key={shift.id} className="bg-white/15 backdrop-blur-sm rounded-lg p-4 border border-white/20 hover:bg-white/20 transition-colors">
               <div className="flex items-start gap-4">
                 <div className="bg-white/25 rounded-lg p-3 text-center min-w-[60px]">
                   <div className="text-lg font-bold leading-none">
                     {format(parseISO(shift.date), 'dd')}
                   </div>
                   <div className="text-xs text-emerald-100 mt-1">
-                    {format(parseISO(shift.date), 'MMM', { locale: ptBR })}
+                    {format(parseISO(shift.date), 'MMM', {
+                  locale: ptBR
+                })}
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -147,19 +127,14 @@ const UpcomingShifts = () => {
                       {shift.start_time.slice(0, 5)} às {shift.end_time.slice(0, 5)}
                     </span>
                   </div>
-                  {shift.description && (
-                    <div className="text-sm text-emerald-100 italic leading-relaxed">
+                  {shift.description && <div className="text-sm text-emerald-100 italic leading-relaxed">
                       {shift.description}
-                    </div>
-                  )}
+                    </div>}
                 </div>
               </div>
-            </div>
-          ))}
+            </div>)}
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
-
 export default UpcomingShifts;
