@@ -28,6 +28,7 @@ import RankingChart from "@/components/RankingChart";
 import ManualUserRegistration from "@/components/ManualUserRegistration";
 import VersionDialog from "@/components/VersionDialog";
 import TCOProductivityRanking from "@/components/TCOProductivityRanking";
+import TCONatureRanking from "@/components/TCONatureRanking";
 import { useNotifications } from "@/components/notifications/NotificationsList";
 import VolunteersManager from "@/components/VolunteersManager";
 
@@ -153,6 +154,7 @@ const Index = ({
           <TabsContent value="main" className="flex-grow">
             <div className="space-y-8">
               <TCOProductivityRanking />
+              <TCONatureRanking />
               <MonthlyHoursSummary />
               <MonthlyExtraCalendar />
               <UpcomingShifts />

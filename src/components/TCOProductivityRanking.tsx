@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
-import { Trophy, TrendingUp } from "lucide-react";
+import { Trophy, TrendingUp, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 
 interface TCOStats {
   total: number;
@@ -136,6 +137,7 @@ const TCOProductivityRanking: React.FC = () => {
   });
   const [ranking, setRanking] = useState<OfficerRanking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -341,6 +343,9 @@ const TCOProductivityRanking: React.FC = () => {
   const currentUserRank = currentUserRgpm ? ranking.findIndex(r => r.rgpm === currentUserRgpm) + 1 : 0;
   const currentUserData = currentUserRgpm ? ranking.find(r => r.rgpm === currentUserRgpm) : null;
 
+  // Top 3 for initial display
+  const top3Ranking = ranking.slice(0, 3);
+
   return (
     <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg">
       <CardHeader className="pb-2">
@@ -399,41 +404,75 @@ const TCOProductivityRanking: React.FC = () => {
           </div>
         )}
 
-        {/* Full Ranking */}
+        {/* Top 3 + Expandable Full Ranking */}
         {ranking.length > 0 && (
           <div className="bg-white/10 rounded-lg p-4">
-            <h4 className="text-sm font-semibold mb-3 text-center">🏆 RANKING COMPLETO</h4>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {ranking.map((officer, index) => (
-                <div
-                  key={officer.rgpm}
-                  className="flex items-center gap-3"
-                >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                    index === 0 ? 'bg-yellow-400 text-blue-600' :
-                    index === 1 ? 'bg-gray-300 text-gray-600' :
-                    index === 2 ? 'bg-orange-400 text-white' :
-                    'bg-white/20 text-white'
-                  }`}>
-                    {index + 1}
+            <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+              {/* Top 3 - Always Visible */}
+              <div className="space-y-3 mb-4">
+                {top3Ranking.map((officer, index) => (
+                  <div
+                    key={officer.rgpm}
+                    className="flex items-center gap-3"
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                      index === 0 ? 'bg-yellow-400 text-blue-600' :
+                      index === 1 ? 'bg-gray-300 text-gray-600' :
+                      index === 2 ? 'bg-orange-400 text-white' :
+                      'bg-white/20 text-white'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-xs text-white/80 font-medium break-words">
+                        {officer.graduacao}
+                      </span>
+                      <span className="text-sm font-medium break-words whitespace-pre-line leading-tight">
+                        {officer.officerName}
+                      </span>
+                      <span className="text-xs text-white/80 mt-1">{officer.tcoCount} TCOs</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <span className="text-xs text-white/80 font-medium break-words">
-                      {officer.graduacao}
-                    </span>
-                    <span className="text-sm font-medium break-words whitespace-pre-line leading-tight">
-                      {officer.officerName}
-                    </span>
-                    <span className="text-xs text-white/80 mt-1">{officer.tcoCount} TCOs</span>
-                  </div>
+                ))}
+              </div>
+
+              {/* Expandable Trigger */}
+              {ranking.length > 3 && (
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-center gap-2 bg-yellow-400 text-blue-600 py-2 px-4 rounded-lg font-semibold text-sm mb-4 hover:bg-yellow-300 transition-colors">
+                    <span>🏆 RANKING COMPLETO</span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                </CollapsibleTrigger>
+              )}
+              
+              {/* Full Ranking - Collapsible */}
+              <CollapsibleContent>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {ranking.slice(3).map((officer, index) => (
+                    <div
+                      key={officer.rgpm}
+                      className="flex items-center gap-3"
+                    >
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 bg-white/20 text-white">
+                        {index + 4}
+                      </div>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="text-xs text-white/80 font-medium break-words">
+                          {officer.graduacao}
+                        </span>
+                        <span className="text-sm font-medium break-words whitespace-pre-line leading-tight">
+                          {officer.officerName}
+                        </span>
+                        <span className="text-xs text-white/80 mt-1">{officer.tcoCount} TCOs</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         )}
-        
-        {/* Last Update removido conforme pedido do usuário */}
-
       </CardContent>
     </Card>
   );
