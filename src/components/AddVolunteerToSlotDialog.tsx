@@ -3,10 +3,11 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { collection, getDocs, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/components/ui/use-toast";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Search } from "lucide-react";
 import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
 
 interface User {
@@ -36,10 +37,16 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   const [selectedVolunteer, setSelectedVolunteer] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [allTimeSlots, setAllTimeSlots] = useState<TimeSlot[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   const isOpen = open !== undefined ? open : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
+
+  // Get current user data to check if they're admin
+  const userDataString = localStorage.getItem('user');
+  const userData = userDataString ? JSON.parse(userDataString) : null;
+  const isAdmin = userData?.userType === 'admin';
 
   useEffect(() => {
     if (isOpen) {
@@ -109,6 +116,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   };
 
   const isVolunteerAtLimit = (volunteerName: string): boolean => {
+    if (isAdmin) return false; // Admins can bypass limits
     const currentSlots = getVolunteerSlotCount(volunteerName);
     const maxSlots = getVolunteerMaxSlots(volunteerName);
     return currentSlots >= maxSlots;
@@ -137,7 +145,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       return;
     }
 
-    if (isVolunteerAtLimit(selectedVolunteer)) {
+    if (!isAdmin && isVolunteerAtLimit(selectedVolunteer)) {
       const maxSlots = getVolunteerMaxSlots(selectedVolunteer);
       toast({
         variant: "destructive",
@@ -161,6 +169,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       });
 
       setSelectedVolunteer("");
+      setSearchTerm("");
       setOpen(false);
       onVolunteerAdded();
     } catch (error) {
@@ -175,9 +184,15 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     }
   };
 
-  const availableVolunteers = volunteers.filter(volunteer => {
+  // Filter volunteers based on search term
+  const filteredVolunteers = volunteers.filter(volunteer => {
     const fullName = `${volunteer.rank || ''} ${volunteer.warName}`.trim();
-    return !isVolunteerAlreadyInSlot(fullName);
+    const isNotInSlot = !isVolunteerAlreadyInSlot(fullName);
+    const matchesSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         volunteer.warName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (volunteer.rank && volunteer.rank.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    return isNotInSlot && matchesSearch;
   });
 
   return (
@@ -202,38 +217,63 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
             </p>
           </div>
           
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Pesquisar voluntário..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
           <div>
             <Select value={selectedVolunteer} onValueChange={setSelectedVolunteer}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione um voluntário" />
               </SelectTrigger>
               <SelectContent>
-                {availableVolunteers.map((volunteer) => {
-                  const fullName = `${volunteer.rank || ''} ${volunteer.warName}`.trim();
-                  const currentSlots = getVolunteerSlotCount(fullName);
-                  const maxSlots = volunteer.maxSlots || 1;
-                  const atLimit = isVolunteerAtLimit(fullName);
-                  
-                  return (
-                    <SelectItem 
-                      key={volunteer.id} 
-                      value={fullName}
-                      disabled={atLimit}
-                      className={atLimit ? "opacity-50" : ""}
-                    >
-                      <div className="flex flex-col">
-                        <span>{fullName}</span>
-                        <span className="text-xs text-gray-500">
-                          {currentSlots}/{maxSlots} serviços
-                          {atLimit && " (Limite atingido)"}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  );
-                })}
+                {filteredVolunteers.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">
+                    {searchTerm ? "Nenhum voluntário encontrado" : "Nenhum voluntário disponível"}
+                  </div>
+                ) : (
+                  filteredVolunteers.map((volunteer) => {
+                    const fullName = `${volunteer.rank || ''} ${volunteer.warName}`.trim();
+                    const currentSlots = getVolunteerSlotCount(fullName);
+                    const maxSlots = volunteer.maxSlots || 1;
+                    const atLimit = isVolunteerAtLimit(fullName);
+                    
+                    return (
+                      <SelectItem 
+                        key={volunteer.id} 
+                        value={fullName}
+                        disabled={!isAdmin && atLimit}
+                        className={(!isAdmin && atLimit) ? "opacity-50" : ""}
+                      >
+                        <div className="flex flex-col">
+                          <span>{fullName}</span>
+                          <span className="text-xs text-gray-500">
+                            {currentSlots}/{maxSlots} serviços
+                            {!isAdmin && atLimit && " (Limite atingido)"}
+                            {isAdmin && atLimit && " (Admin: pode exceder limite)"}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })
+                )}
               </SelectContent>
             </Select>
           </div>
+
+          {isAdmin && (
+            <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+              Como administrador, você pode adicionar voluntários mesmo que tenham atingido o limite de serviços.
+            </div>
+          )}
 
           <div className="flex justify-end gap-2">
             <Button
