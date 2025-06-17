@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -83,12 +84,13 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         const data = doc.data() as FirebaseTimeSlot;
         
         let dateValue: Date;
-        // Handle both Firebase Timestamp and string dates with null check
+        // Handle both Firebase Timestamp and string dates with proper null check
         if (data.date && typeof data.date === 'object' && 'toDate' in data.date) {
           dateValue = (data.date as any).toDate();
         } else if (data.date && typeof data.date === 'string') {
           dateValue = parseISO(data.date);
         } else {
+          // Fallback to current date if data.date is null or invalid
           dateValue = new Date();
         }
 
