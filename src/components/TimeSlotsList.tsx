@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { format, parseISO, isPast, addDays, isAfter, startOfDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -6,10 +7,10 @@ import { dataOperations } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, onSnapshot, doc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { CalendarDays, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { CalendarDays, Clock, ChevronDown, ChevronUp, MoreHorizontal, AlertTriangle, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { X } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import supabase from "@/lib/supabaseClient";
 import CostSummaryCard from "./CostSummaryCard";
 
