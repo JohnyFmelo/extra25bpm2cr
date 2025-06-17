@@ -268,7 +268,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
           Adicionar Voluntário
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col px-[9px]">
         <DialogHeader>
           <DialogTitle>Gerenciar Voluntários no Horário</DialogTitle>
         </DialogHeader>
