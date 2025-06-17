@@ -107,6 +107,16 @@ const VolunteersManager = () => {
       return totalHours;
     }, 0);
   };
+
+  const calculateUserServiceCount = (userFullName: string): number => {
+    return timeSlots.reduce((count, slot) => {
+      if (slot.volunteers && slot.volunteers.includes(userFullName)) {
+        return count + 1;
+      }
+      return count;
+    }, 0);
+  };
+
   const handleToggleVolunteer = async (user: User) => {
     try {
       const userRef = doc(db, "users", user.id);
@@ -246,6 +256,7 @@ const VolunteersManager = () => {
       setIsBulkUpdating(false);
     }
   };
+  
   const filteredUsers = users.filter(user => {
     const searchTerm = searchQuery.toLowerCase();
     const rank = (user.rank || '').toLowerCase();
@@ -263,6 +274,7 @@ const VolunteersManager = () => {
     }
     return matchesSearch && matchesVolunteerFilter;
   });
+  
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
@@ -359,6 +371,7 @@ const VolunteersManager = () => {
               {filteredUsers.map(user => {
             const userFullName = `${user.rank || ''} ${user.warName}`.trim();
             const totalHours = calculateUserTotalHours(userFullName);
+            const serviceCount = calculateUserServiceCount(userFullName);
             const formattedHours = totalHours % 1 === 0 ? totalHours.toString() : totalHours.toFixed(1);
             return <div key={user.id} className={`
                       group flex items-center justify-between p-4 rounded-lg border transition-all duration-200
@@ -380,9 +393,18 @@ const VolunteersManager = () => {
                             </p> : <p className="text-sm text-gray-400 dark:text-gray-500 italic">
                               E-mail não informado
                             </p>}
-                          {user.isVolunteer && totalHours > 0 && <p className="text-xs text-blue-600 font-medium">
-                              Total: {formattedHours}h
-                            </p>}
+                          <div className="flex items-center gap-4 mt-1">
+                            {serviceCount > 0 && (
+                              <p className="text-xs text-blue-600 font-medium">
+                                {serviceCount} serviço{serviceCount !== 1 ? 's' : ''}
+                              </p>
+                            )}
+                            {user.isVolunteer && totalHours > 0 && (
+                              <p className="text-xs text-blue-600 font-medium">
+                                Total: {formattedHours}h
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
