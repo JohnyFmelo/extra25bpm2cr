@@ -681,7 +681,7 @@ const WeeklyCalendar = ({
           open={showAddVolunteerDialog}
           onOpenChange={setShowAddVolunteerDialog}
           timeSlot={selectedTimeSlotForVolunteer}
-          onSuccess={handleAddVolunteerSuccess}
+          onVolunteerAdded={handleAddVolunteerSuccess}
         />
       )}
     </div>

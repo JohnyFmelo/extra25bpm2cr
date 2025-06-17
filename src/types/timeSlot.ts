@@ -9,7 +9,7 @@ export interface TimeSlot {
   isWeekly?: boolean;
   description?: string;
   allowedMilitaryTypes?: string[];
-  volunteers?: any[];
+  volunteers?: string[];
 }
 
 export interface FirebaseTimeSlot {
@@ -20,6 +20,7 @@ export interface FirebaseTimeSlot {
   slots_used: number;
   id?: string;
   description?: string;
+  volunteers?: string[];
 }
 
 export type MilitaryType = 'Inteligência' | 'Administrativo' | 'Operacional';

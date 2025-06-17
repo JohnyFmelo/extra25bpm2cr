@@ -3,10 +3,11 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { collection, getDocs, doc, updateDoc, arrayUnion, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/components/ui/use-toast";
 import { UserPlus } from "lucide-react";
+import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
 
 interface User {
   id: string;
@@ -17,38 +18,35 @@ interface User {
   maxSlots?: number;
 }
 
-interface TimeSlot {
-  id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  total_slots: number;
-  slots_used: number;
-  volunteers?: string[];
-}
-
 interface AddVolunteerToSlotDialogProps {
   timeSlot: TimeSlot;
   onVolunteerAdded: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   timeSlot,
-  onVolunteerAdded
+  onVolunteerAdded,
+  open,
+  onOpenChange
 }) => {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [volunteers, setVolunteers] = useState<User[]>([]);
   const [selectedVolunteer, setSelectedVolunteer] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [allTimeSlots, setAllTimeSlots] = useState<TimeSlot[]>([]);
   const { toast } = useToast();
 
+  const isOpen = open !== undefined ? open : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
+
   useEffect(() => {
-    if (open) {
+    if (isOpen) {
       fetchVolunteers();
       fetchAllTimeSlots();
     }
-  }, [open]);
+  }, [isOpen]);
 
   const fetchVolunteers = async () => {
     try {
@@ -74,10 +72,19 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   const fetchAllTimeSlots = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "timeSlots"));
-      const slots = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }) as TimeSlot);
+      const slots = querySnapshot.docs.map(doc => {
+        const data = doc.data() as FirebaseTimeSlot;
+        return {
+          id: doc.id,
+          date: new Date(data.date),
+          startTime: data.start_time ? data.start_time.slice(0, 5) : "00:00",
+          endTime: data.end_time ? data.end_time.slice(0, 5) : "00:00",
+          slots: data.total_slots || 0,
+          slotsUsed: data.slots_used || 0,
+          description: data.description || "",
+          volunteers: data.volunteers || []
+        } as TimeSlot;
+      });
       setAllTimeSlots(slots);
     } catch (error) {
       console.error("Error fetching time slots:", error);
@@ -142,10 +149,10 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
 
     setIsLoading(true);
     try {
-      const timeSlotRef = doc(db, "timeSlots", timeSlot.id);
+      const timeSlotRef = doc(db, "timeSlots", timeSlot.id!);
       await updateDoc(timeSlotRef, {
         volunteers: arrayUnion(selectedVolunteer),
-        slots_used: (timeSlot.slots_used || 0) + 1
+        slots_used: (timeSlot.slotsUsed || 0) + 1
       });
 
       toast({
@@ -174,7 +181,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" className="gap-2">
           <UserPlus className="h-4 w-4" />
@@ -188,7 +195,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         <div className="space-y-4">
           <div>
             <p className="text-sm text-gray-600 mb-2">
-              Horário: {timeSlot.start_time} - {timeSlot.end_time}
+              Horário: {timeSlot.startTime} - {timeSlot.endTime}
             </p>
             <p className="text-sm text-gray-600 mb-4">
               Data: {new Date(timeSlot.date).toLocaleDateString('pt-BR')}
