@@ -1,4 +1,3 @@
---- START OF FILE AddVolunteerToSlotDialog.tsx ---
 
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -238,9 +237,35 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     }
   };
 
+  // Sort users by rank and then alphabetically by warName within each rank
+  const sortUsersByRankAndName = (users: User[]) => {
+    const rankOrder = [
+      "Cel", "Cel PM", "Ten Cel", "Ten Cel PM", "Maj", "Maj PM", 
+      "Cap", "Cap PM", "1° Ten", "1° Ten PM", "2° Ten", "2° Ten PM",
+      "Sub Ten", "Sub Ten PM", "1° Sgt", "1° Sgt PM", "2° Sgt", "2° Sgt PM",
+      "3° Sgt", "3° Sgt PM", "Cb", "Cb PM", "Sd", "Sd PM", "Estágio"
+    ];
+
+    return users.sort((a, b) => {
+      const rankA = a.rank || '';
+      const rankB = b.rank || '';
+      
+      const rankIndexA = rankOrder.indexOf(rankA);
+      const rankIndexB = rankOrder.indexOf(rankB);
+      
+      // If ranks are different, sort by rank order
+      if (rankIndexA !== rankIndexB) {
+        return rankIndexA - rankIndexB;
+      }
+      
+      // If ranks are the same, sort alphabetically by warName
+      return a.warName.localeCompare(b.warName);
+    });
+  };
+
   const filteredAndSortedUsers = useMemo(() => {
-    return allUsers
-      .filter(user => {
+    return sortUsersByRankAndName(
+      allUsers.filter(user => {
         const fullName = `${user.rank || ''} ${user.warName}`.trim();
         const matchesSearch = searchTerm === "" || 
                               fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -248,16 +273,13 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
                               (user.rank && user.rank.toLowerCase().includes(searchTerm.toLowerCase()));
         return matchesSearch;
       })
-      .sort((a, b) => {
-        const rankA = a.rank || '';
-        const rankB = b.rank || '';
-        const rankCompare = rankA.localeCompare(rankB);
-        if (rankCompare !== 0) return rankCompare;
-        return a.warName.localeCompare(b.warName);
-      });
+    );
   }, [allUsers, searchTerm]);
 
   const formatHours = (hours: number): string => {
+    if (hours === 0) {
+      return "0h";
+    }
     if (hours % 1 === 0) {
       return `${hours}h`;
     }
@@ -296,11 +318,11 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         </DialogHeader>
         
         <div className="space-y-4 flex-1 overflow-hidden flex flex-col pt-2">
-          <div className="px-1 sm:px-2">
-            <p className="text-base font-bold text-gray-700">
+          <div className="px-1 sm:px-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
+            <p className="text-lg font-bold text-blue-900">
               Horário: {timeSlot.startTime} - {timeSlot.endTime}
             </p>
-            <p className="text-base font-bold text-gray-700 mb-3">
+            <p className="text-lg font-bold text-blue-900">
               Data: {format(timeSlot.date, 'dd/MM/yyyy')}
             </p>
           </div>
@@ -427,4 +449,3 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
 };
 
 export default AddVolunteerToSlotDialog;
---- END OF FILE AddVolunteerToSlotDialog.tsx ---
