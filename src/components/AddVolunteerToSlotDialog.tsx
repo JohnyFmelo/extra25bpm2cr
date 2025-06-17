@@ -9,6 +9,7 @@ import { UserPlus, Search, X } from "lucide-react";
 import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format, parseISO } from "date-fns";
+
 interface User {
   id: string;
   email: string;
@@ -75,9 +76,10 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       const slots = querySnapshot.docs.map(doc => {
         const data = doc.data() as FirebaseTimeSlot;
         let dateValue: Date;
+        
         // Handle both Firebase Timestamp and string dates with proper null check
-        if (data.date != null) {
-          if (typeof data.date === 'object' && 'toDate' in data.date) {
+        if (data.date !== null && data.date !== undefined) {
+          if (typeof data.date === 'object' && data.date && 'toDate' in data.date) {
             dateValue = (data.date as any).toDate();
           } else if (typeof data.date === 'string') {
             dateValue = parseISO(data.date);
@@ -86,9 +88,10 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
             dateValue = new Date();
           }
         } else {
-          // Fallback to current date if data.date is null
+          // Fallback to current date if data.date is null or undefined
           dateValue = new Date();
         }
+        
         return {
           id: doc.id,
           date: dateValue,
