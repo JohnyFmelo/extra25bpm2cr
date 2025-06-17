@@ -10,6 +10,7 @@ import { TimeSlot, FirebaseTimeSlot } from "@/types/timeSlot";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format, parseISO } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
 interface User {
   id: string;
   email: string;
@@ -89,7 +90,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         const dateField = data.date;
         if (dateField && typeof dateField === 'object' && 'toDate' in dateField) {
           dateValue = (dateField as any).toDate();
-        } else if (typeof dateField === 'string') {
+        } else if (dateField && typeof dateField === 'string') {
           dateValue = parseISO(dateField);
         } else {
           dateValue = new Date();
