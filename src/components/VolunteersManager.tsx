@@ -208,7 +208,6 @@ const VolunteersManager = () => {
       });
       return;
     }
-
     if (bulkSlotsValue < 0) {
       toast({
         variant: "destructive",
@@ -217,29 +216,21 @@ const VolunteersManager = () => {
       });
       return;
     }
-
     setIsBulkUpdating(true);
     try {
       const batch = writeBatch(db);
       const filteredUserIds = new Set(filteredUsers.map(u => u.id));
-      
       filteredUserIds.forEach(userId => {
         const userRef = doc(db, "users", userId);
         batch.update(userRef, {
           maxSlots: bulkSlotsValue
         });
       });
-      
       await batch.commit();
-      
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          filteredUserIds.has(user.id) 
-            ? { ...user, maxSlots: bulkSlotsValue }
-            : user
-        )
-      );
-      
+      setUsers(prevUsers => prevUsers.map(user => filteredUserIds.has(user.id) ? {
+        ...user,
+        maxSlots: bulkSlotsValue
+      } : user));
       toast({
         title: "Limites atualizados",
         description: `${filteredUsers.length} usuários tiveram o limite atualizado para ${bulkSlotsValue}.`
@@ -261,7 +252,6 @@ const VolunteersManager = () => {
     const warName = (user.warName || '').toLowerCase();
     const email = (user.email || '').toLowerCase();
     const matchesSearch = rank.includes(searchTerm) || warName.includes(searchTerm) || email.includes(searchTerm);
-    
     let matchesVolunteerFilter = true;
     if (showVolunteersOnly && showNonVolunteersOnly) {
       // Se ambos estão marcados, mostra todos
@@ -271,7 +261,6 @@ const VolunteersManager = () => {
     } else if (showNonVolunteersOnly) {
       matchesVolunteerFilter = !user.isVolunteer;
     }
-    
     return matchesSearch && matchesVolunteerFilter;
   });
   if (isLoading) {
@@ -282,8 +271,7 @@ const VolunteersManager = () => {
         </div>
       </div>;
   }
-  return (
-    <div className="w-full max-w-6xl mx-auto p-6 px-0">
+  return <div className="w-full max-w-6xl mx-auto p-6 px-0">
       <Card className="shadow-lg">
         <CardHeader className="pb-6">
           <CardTitle className="flex items-center gap-3 text-2xl">
@@ -301,12 +289,7 @@ const VolunteersManager = () => {
             <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10 pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" />
             </div>
-            <Input 
-              placeholder="Pesquisar por nome, posto ou e-mail..." 
-              value={searchQuery} 
-              onChange={e => setSearchQuery(e.target.value)} 
-              className="pl-10 h-11 w-full" 
-            />
+            <Input placeholder="Pesquisar por nome, posto ou e-mail..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-11 w-full" />
           </div>
 
           {/* Estatísticas e ações em massa */}
@@ -330,49 +313,24 @@ const VolunteersManager = () => {
             {/* Filtros */}
             <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-blue-200">
               <div className="flex items-center gap-2">
-                <Switch 
-                  id="volunteers-only" 
-                  checked={showVolunteersOnly} 
-                  onCheckedChange={setShowVolunteersOnly} 
-                  className="data-[state=checked]:bg-blue-600" 
-                />
-                <Label htmlFor="volunteers-only" className="text-sm font-medium text-blue-700 whitespace-nowrap">
-                  Apenas Voluntários
-                </Label>
+                <Switch id="volunteers-only" checked={showVolunteersOnly} onCheckedChange={setShowVolunteersOnly} className="data-[state=checked]:bg-blue-600" />
+                <Label htmlFor="volunteers-only" className="text-sm font-medium text-blue-700 whitespace-nowrap">Voluntários</Label>
               </div>
               
               <div className="flex items-center gap-2">
-                <Switch 
-                  id="non-volunteers-only" 
-                  checked={showNonVolunteersOnly} 
-                  onCheckedChange={setShowNonVolunteersOnly} 
-                  className="data-[state=checked]:bg-orange-600" 
-                />
-                <Label htmlFor="non-volunteers-only" className="text-sm font-medium text-orange-700 whitespace-nowrap">
-                  Apenas Não Voluntários
-                </Label>
+                <Switch id="non-volunteers-only" checked={showNonVolunteersOnly} onCheckedChange={setShowNonVolunteersOnly} className="data-[state=checked]:bg-orange-600" />
+                <Label htmlFor="non-volunteers-only" className="text-sm font-medium text-orange-700 whitespace-nowrap">Não Voluntários</Label>
               </div>
             </div>
 
             {/* Ações em massa */}
             <div className="flex flex-wrap gap-3 items-center justify-between pt-2 border-t border-blue-200">
               <div className="flex flex-wrap gap-2">
-                <Button 
-                  size="sm" 
-                  onClick={() => handleToggleAllVolunteers(true)} 
-                  disabled={isBulkUpdating || filteredUsers.length === 0} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]"
-                >
+                <Button size="sm" onClick={() => handleToggleAllVolunteers(true)} disabled={isBulkUpdating || filteredUsers.length === 0} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]">
                   {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Marcar Todos
                 </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => handleToggleAllVolunteers(false)} 
-                  disabled={isBulkUpdating || filteredUsers.length === 0} 
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50 min-w-[120px]"
-                >
+                <Button size="sm" variant="outline" onClick={() => handleToggleAllVolunteers(false)} disabled={isBulkUpdating || filteredUsers.length === 0} className="border-blue-600 text-blue-600 hover:bg-blue-50 min-w-[120px]">
                   {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Desmarcar Todos
                 </Button>
@@ -383,19 +341,8 @@ const VolunteersManager = () => {
                 <Label className="text-sm font-medium text-blue-700 whitespace-nowrap">
                   Limite para todos:
                 </Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={bulkSlotsValue}
-                  onChange={(e) => setBulkSlotsValue(parseInt(e.target.value) || 0)}
-                  className="w-16 h-8 text-center border-blue-300 focus:border-blue-500"
-                />
-                <Button
-                  size="sm"
-                  onClick={handleBulkSlotsUpdate}
-                  disabled={isBulkUpdating || filteredUsers.length === 0}
-                  className="bg-blue-600 hover:bg-blue-700 text-white min-w-[80px]"
-                >
+                <Input type="number" min="0" value={bulkSlotsValue} onChange={e => setBulkSlotsValue(parseInt(e.target.value) || 0)} className="w-16 h-8 text-center border-blue-300 focus:border-blue-500" />
+                <Button size="sm" onClick={handleBulkSlotsUpdate} disabled={isBulkUpdating || filteredUsers.length === 0} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[80px]">
                   {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Aplicar
                 </Button>
@@ -404,30 +351,19 @@ const VolunteersManager = () => {
           </div>
           
           {/* Lista de usuários */}
-          {filteredUsers.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+          {filteredUsers.length === 0 ? <div className="text-center py-12 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium">Nenhum usuário encontrado</p>
               <p className="text-sm">Tente ajustar os termos de busca</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
+            </div> : <div className="space-y-2">
               {filteredUsers.map(user => {
-                const userFullName = `${user.rank || ''} ${user.warName}`.trim();
-                const totalHours = calculateUserTotalHours(userFullName);
-                const formattedHours = totalHours % 1 === 0 ? totalHours.toString() : totalHours.toFixed(1);
-                
-                return (
-                  <div
-                    key={user.id}
-                    className={`
+            const userFullName = `${user.rank || ''} ${user.warName}`.trim();
+            const totalHours = calculateUserTotalHours(userFullName);
+            const formattedHours = totalHours % 1 === 0 ? totalHours.toString() : totalHours.toFixed(1);
+            return <div key={user.id} className={`
                       group flex items-center justify-between p-4 rounded-lg border transition-all duration-200
-                      ${user.isVolunteer 
-                        ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' 
-                        : 'bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'
-                      }
-                    `}
-                  >
+                      ${user.isVolunteer ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'}
+                    `}>
                     {/* Informações do usuário */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3">
@@ -439,20 +375,14 @@ const VolunteersManager = () => {
                           <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">
                             {user.rank && `${user.rank} `}{user.warName}
                           </p>
-                          {user.email ? (
-                            <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          {user.email ? <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                               {user.email}
-                            </p>
-                          ) : (
-                            <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+                            </p> : <p className="text-sm text-gray-400 dark:text-gray-500 italic">
                               E-mail não informado
-                            </p>
-                          )}
-                          {user.isVolunteer && totalHours > 0 && (
-                            <p className="text-xs text-blue-600 font-medium">
+                            </p>}
+                          {user.isVolunteer && totalHours > 0 && <p className="text-xs text-blue-600 font-medium">
                               Total: {formattedHours}h
-                            </p>
-                          )}
+                            </p>}
                         </div>
                       </div>
                     </div>
@@ -460,37 +390,20 @@ const VolunteersManager = () => {
                     {/* Controles */}
                     <div className="flex items-center gap-4 ml-4">
                       {/* Limite de serviços - só exibe se for voluntário */}
-                      {user.isVolunteer && (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            min="0"
-                            value={user.maxSlots || 1}
-                            onChange={e => handleSlotsChange(user.id, parseInt(e.target.value) || 0)}
-                            className="w-16 h-8 text-center"
-                          />
-                        </div>
-                      )}
+                      {user.isVolunteer && <div className="flex items-center gap-2">
+                          <Input type="number" min="0" value={user.maxSlots || 1} onChange={e => handleSlotsChange(user.id, parseInt(e.target.value) || 0)} className="w-16 h-8 text-center" />
+                        </div>}
 
                       {/* Switch de voluntário */}
                       <div className="flex items-center gap-3">
-                        <Switch
-                          id={`volunteer-switch-${user.id}`}
-                          checked={!!user.isVolunteer}
-                          onCheckedChange={() => handleToggleVolunteer(user)}
-                          className="data-[state=checked]:bg-green-600"
-                        />
+                        <Switch id={`volunteer-switch-${user.id}`} checked={!!user.isVolunteer} onCheckedChange={() => handleToggleVolunteer(user)} className="data-[state=checked]:bg-green-600" />
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  </div>;
+          })}
+            </div>}
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default VolunteersManager;
