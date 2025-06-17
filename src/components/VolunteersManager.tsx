@@ -29,6 +29,7 @@ const VolunteersManager = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [showVolunteersOnly, setShowVolunteersOnly] = useState(false);
   const {
     toast
   } = useToast();
@@ -202,7 +203,11 @@ const VolunteersManager = () => {
     const rank = (user.rank || '').toLowerCase();
     const warName = (user.warName || '').toLowerCase();
     const email = (user.email || '').toLowerCase();
-    return rank.includes(searchTerm) || warName.includes(searchTerm) || email.includes(searchTerm);
+    
+    const matchesSearch = rank.includes(searchTerm) || warName.includes(searchTerm) || email.includes(searchTerm);
+    const matchesVolunteerFilter = showVolunteersOnly ? user.isVolunteer : true;
+    
+    return matchesSearch && matchesVolunteerFilter;
   });
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-[400px]">
@@ -238,7 +243,18 @@ const VolunteersManager = () => {
               <span>Voluntários: {filteredUsers.filter(u => u.isVolunteer).length}</span>
             </div>
             
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="flex items-center gap-2">
+                <Switch 
+                  id="volunteers-only" 
+                  checked={showVolunteersOnly} 
+                  onCheckedChange={setShowVolunteersOnly}
+                  className="data-[state=checked]:bg-blue-600"
+                />
+                <Label htmlFor="volunteers-only" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                  Exibir só voluntários
+                </Label>
+              </div>
               <Button size="sm" onClick={() => handleToggleAllVolunteers(true)} disabled={isBulkUpdating || filteredUsers.length === 0} className="min-w-[140px]">
                 {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Marcar Todos
@@ -281,7 +297,7 @@ const VolunteersManager = () => {
                               E-mail não informado
                             </p>}
                           {totalHours > 0 && <p className="text-xs text-blue-600 font-medium">
-                              Total: {formattedHours}h em timeSlots
+                              Total: {formattedHours}h
                             </p>}
                         </div>
                       </div>
