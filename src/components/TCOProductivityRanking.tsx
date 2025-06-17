@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
-import { Trophy, TrendingUp } from "lucide-react";
+import { Trophy, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 interface TCOStats {
@@ -136,6 +137,7 @@ const TCOProductivityRanking: React.FC = () => {
   });
   const [ranking, setRanking] = useState<OfficerRanking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showFullRanking, setShowFullRanking] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -341,6 +343,8 @@ const TCOProductivityRanking: React.FC = () => {
   const currentUserRank = currentUserRgpm ? ranking.findIndex(r => r.rgpm === currentUserRgpm) + 1 : 0;
   const currentUserData = currentUserRgpm ? ranking.find(r => r.rgpm === currentUserRgpm) : null;
 
+  const displayedRanking = showFullRanking ? ranking : ranking.slice(0, 4);
+
   return (
     <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg">
       <CardHeader className="pb-2">
@@ -399,12 +403,12 @@ const TCOProductivityRanking: React.FC = () => {
           </div>
         )}
 
-        {/* Full Ranking */}
+        {/* Ranking Display */}
         {ranking.length > 0 && (
           <div className="bg-white/10 rounded-lg p-4">
             <h4 className="text-sm font-semibold mb-3 text-center">🏆 RANKING COMPLETO</h4>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {ranking.map((officer, index) => (
+            <div className="space-y-3">
+              {displayedRanking.map((officer, index) => (
                 <div
                   key={officer.rgpm}
                   className="flex items-center gap-3"
@@ -429,11 +433,30 @@ const TCOProductivityRanking: React.FC = () => {
                 </div>
               ))}
             </div>
+            
+            {/* Expand/Collapse Button */}
+            {ranking.length > 4 && (
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => setShowFullRanking(!showFullRanking)}
+                  className="flex items-center justify-center gap-2 mx-auto px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium"
+                >
+                  {showFullRanking ? (
+                    <>
+                      Mostrar menos
+                      <ChevronUp className="h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      Ver ranking completo ({ranking.length} militares)
+                      <ChevronDown className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
-        
-        {/* Last Update removido conforme pedido do usuário */}
-
       </CardContent>
     </Card>
   );
