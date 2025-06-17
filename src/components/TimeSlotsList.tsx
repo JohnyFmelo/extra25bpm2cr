@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useMemo } from "react";
-import { format, parseISO, isPast, addDays, isAfter } from "date-fns";
+import { format, parseISO, isPast, addDays, isAfter, startOfDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { dataOperations } from "@/lib/firebase";
@@ -273,12 +274,15 @@ const TimeSlotsList = () => {
         };
       });
 
-      // Initialize collapsed state for past dates
+      // Initialize collapsed state - past dates (including today) should be collapsed
       const newCollapsedDates: {
         [key: string]: boolean;
       } = {};
       formattedSlots.forEach(slot => {
-        if (isPast(parseISO(slot.date)) && !isAdmin) {
+        const slotDate = parseISO(slot.date);
+        const isDatePastOrToday = isPast(startOfDay(slotDate)) || isToday(slotDate);
+        
+        if (isDatePastOrToday) {
           newCollapsedDates[slot.date] = true;
         }
       });
@@ -618,6 +622,7 @@ const TimeSlotsList = () => {
   };
 
   const toggleDateCollapse = (date: string) => {
+    // Only admins can toggle collapsed state
     if (isAdmin) {
       setCollapsedDates(prev => ({
         ...prev,
@@ -672,25 +677,34 @@ const TimeSlotsList = () => {
         dailyCost
       } = groupedData;
       if (slots.length === 0) return null;
-      const isDatePast = isPast(parseISO(date));
-      const isCollapsed = collapsedDates[date] ?? (isDatePast && !isAdmin);
+      
+      const slotDate = parseISO(date);
+      const isDatePastOrToday = isPast(startOfDay(slotDate)) || isToday(slotDate);
+      
+      // Hide past dates completely for non-admin users
+      if (!isAdmin && isDatePastOrToday) {
+        return null;
+      }
+      
+      const isCollapsed = collapsedDates[date] ?? isDatePastOrToday;
       const sortedSlots = [...slots].sort((a, b) => a.start_time.localeCompare(b.start_time));
+      
       return <div key={date} className="bg-white rounded-lg shadow-sm" onDoubleClick={() => toggleDateCollapse(date)}>
             <div className="p-4 md:p-5 px-[5px]">
               <div className="flex flex-col items-center">
                 <div className="flex items-center justify-between w-full mb-2">
                   <div className="flex items-center gap-2">
-                    <CalendarDays className={`h-5 w-5 ${isDatePast ? 'text-gray-500' : 'text-blue-500'}`} />
+                    <CalendarDays className={`h-5 w-5 ${isDatePastOrToday ? 'text-gray-500' : 'text-blue-500'}`} />
                     <h3 className="font-medium text-lg text-gray-800">{formatDateHeader(date)}</h3>
                     {isAdmin && dailyCost > 0 && <span className="text-green-600 font-semibold text-base">
                         {formatCurrency(dailyCost)}
                       </span>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={isDatePast ? "outline" : "secondary"} className={`${isDatePast ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
-                      {isDatePast ? "Extra" : "Extra"}
+                    <Badge variant={isDatePastOrToday ? "outline" : "secondary"} className={`${isDatePastOrToday ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
+                      {isDatePastOrToday ? "Extra" : "Extra"}
                     </Badge>
-                    {isAdmin && <button className="focus:outline-none">
+                    {isAdmin && <button className="focus:outline-none" onClick={() => toggleDateCollapse(date)}>
                         {isCollapsed ? <ChevronDown className="h-5 w-5 text-gray-500" /> : <ChevronUp className="h-5 w-5 text-gray-500" />}
                       </button>}
                   </div>
