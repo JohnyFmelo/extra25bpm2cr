@@ -33,21 +33,25 @@ const ActiveTrips = ({ trips, onTravelClick }: ActiveTripsProps) => {
 
   return (
     <div className="mb-8">
-      <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-lg shadow-lg">
+      <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl shadow-lg overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 text-white">
+        <div className="flex items-center justify-between px-6 py-4 bg-teal-600">
           <div className="flex items-center gap-3">
-            <MapPin className="h-6 w-6" />
+            <div className="bg-white/20 p-2 rounded-lg">
+              <MapPin className="h-5 w-5 text-white" />
+            </div>
             <div>
-              <h2 className="text-lg font-semibold">Viagens Ativas</h2>
+              <h2 className="text-lg font-semibold text-white">Viagens Ativas</h2>
               <p className="text-sm text-teal-100">Deslocamentos em andamento</p>
             </div>
           </div>
-          <Shield className="h-6 w-6 text-teal-200" />
+          <div className="bg-white/20 p-2 rounded-lg">
+            <Shield className="h-5 w-5 text-white" />
+          </div>
         </div>
 
         {/* Trips List */}
-        <div className="space-y-0">
+        <div className="p-4 space-y-4">
           {trips.map((trip, index) => {
             const travelStart = new Date(trip.startDate + "T00:00:00");
             const travelEnd = new Date(trip.endDate + "T00:00:00");
@@ -60,42 +64,49 @@ const ActiveTrips = ({ trips, onTravelClick }: ActiveTripsProps) => {
             return (
               <div 
                 key={trip.id}
-                className={`bg-teal-400 mx-4 rounded-lg p-4 text-white relative ${
-                  index === trips.length - 1 ? 'mb-4' : 'mb-3'
-                }`}
+                className="bg-teal-500/90 rounded-lg p-4 text-white relative"
               >
                 {/* Status Badge */}
                 <div className="absolute top-3 right-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    isInTransit ? 'bg-green-500 text-white' : 'bg-yellow-500 text-black'
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    isInTransit 
+                      ? 'bg-green-500 text-white' 
+                      : 'bg-yellow-400 text-teal-800'
                   }`}>
                     {isInTransit ? 'Em Trânsito' : 'Em Aberto'}
                   </span>
                 </div>
 
                 {/* Trip Title */}
-                <h3 className="text-lg font-semibold mb-3 pr-20">
+                <h3 className="text-xl font-semibold mb-4 pr-24">
                   {trip.destination}
                 </h3>
 
-                {/* Trip Details */}
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 flex-shrink-0" />
-                    <span>{trip.destination}</span>
+                {/* Trip Details Grid */}
+                <div className="grid grid-cols-1 gap-3 text-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/20 p-1.5 rounded">
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <span className="font-medium">{trip.destination}</span>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 flex-shrink-0" />
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/20 p-1.5 rounded">
+                      <Calendar className="h-4 w-4" />
+                    </div>
                     <span>
-                      {isInTransit ? 'Período: ' : 'Início: '}
-                      {travelStart.toLocaleDateString('pt-BR')}
-                      {isInTransit && ` até ${travelEnd.toLocaleDateString('pt-BR')}`}
+                      {isInTransit 
+                        ? `${travelStart.toLocaleDateString('pt-BR')} até ${travelEnd.toLocaleDateString('pt-BR')}`
+                        : `Início: ${travelStart.toLocaleDateString('pt-BR')}`
+                      }
                     </span>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 flex-shrink-0" />
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/20 p-1.5 rounded">
+                      <Clock className="h-4 w-4" />
+                    </div>
                     <span>
                       {dailyCount.toLocaleString("pt-BR", {
                         minimumFractionDigits: dailyCount % 1 !== 0 ? 1 : 0,
@@ -107,8 +118,10 @@ const ActiveTrips = ({ trips, onTravelClick }: ActiveTripsProps) => {
 
                 {/* Travelers Info for In-Transit */}
                 {isInTransit && trip.selectedVolunteers && trip.selectedVolunteers.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-teal-300/30">
-                    <p className="font-medium text-sm mb-2">Viajante: {trip.selectedVolunteers[0]}</p>
+                  <div className="mt-4 pt-3 border-t border-white/20">
+                    <p className="font-medium text-sm">
+                      <span className="text-teal-100">Viajante:</span> {trip.selectedVolunteers[0]}
+                    </p>
                   </div>
                 )}
               </div>
