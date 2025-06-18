@@ -216,14 +216,14 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       anexos.push("TERMO DE DEPÓSITO");
     }
 
-    if (apreensoes && apreensoes.trim() !== "") {
-      anexos.push("TERMO DE APREENSÃO");
-    }
-    
-    // CORREÇÃO: Adiciona termos de droga sempre que houver drogas cadastradas
+    // CORREÇÃO: Se houver drogas cadastradas, adiciona SEMPRE os termos de droga
     if (hasDrugs) {
+      anexos.push("TERMO DE APREENSÃO");
       anexos.push(`TERMO DE CONSTATAÇÃO PRELIMINAR DE DROGA LACRE Nº ${lacreNumero || "N/A"}`);
       anexos.push("REQUISIÇÃO DE EXAME EM DROGAS DE ABUSO");
+    } else if (apreensoes && apreensoes.trim() !== "") {
+      // Se não for droga, mas tiver apreensão, adiciona apenas termo de apreensão
+      anexos.push("TERMO DE APREENSÃO");
     }
     
     if (solicitarCorpoDelito === "Sim") {
