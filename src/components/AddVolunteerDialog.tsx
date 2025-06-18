@@ -42,14 +42,12 @@ const AddVolunteerDialog = ({
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [isAdding, setIsAdding] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (open) {
       fetchUsers();
       setSelectedUsers([]);
-      setSearchQuery("");
     }
   }, [open]);
 
@@ -62,15 +60,8 @@ const AddVolunteerDialog = ({
         ...doc.data()
       })) as User[];
 
-      // Filter out users without rank or warName and sort alphabetically
-      const filteredUsers = usersData
-        .filter(user => user.rank && user.warName)
-        .sort((a, b) => {
-          const nameA = `${a.rank} ${a.warName}`.toLowerCase();
-          const nameB = `${b.rank} ${b.warName}`.toLowerCase();
-          return nameA.localeCompare(nameB);
-        });
-      
+      // Filter out users without rank or warName
+      const filteredUsers = usersData.filter(user => user.rank && user.warName);
       setUsers(filteredUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -85,17 +76,17 @@ const AddVolunteerDialog = ({
   };
 
   const handleAddVolunteers = async () => {
-    if (selectedUsers.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Nenhum voluntário selecionado",
-        description: "Por favor, selecione pelo menos um voluntário para adicionar."
-      });
-      return;
-    }
-
-    setIsAdding(true);
     try {
+      if (selectedUsers.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Nenhum voluntário selecionado",
+          description: "Por favor, selecione pelo menos um voluntário para adicionar."
+        });
+        return;
+      }
+
+      // Get current travel data
       const travelRef = doc(db, "travels", travelId);
       const travelSnap = await getDoc(travelRef);
       
@@ -129,11 +120,9 @@ const AddVolunteerDialog = ({
         volunteers: updatedVolunteers
       });
 
-      const addedCount = updatedVolunteers.length - currentVolunteersArray.length;
-      
       toast({
         title: "Sucesso",
-        description: `${addedCount} voluntário(s) adicionado(s) com sucesso!`
+        description: "Voluntários adicionados com sucesso!"
       });
       
       onVolunteersAdded();
@@ -145,8 +134,6 @@ const AddVolunteerDialog = ({
         title: "Erro ao adicionar voluntários",
         description: "Ocorreu um erro ao adicionar os voluntários."
       });
-    } finally {
-      setIsAdding(false);
     }
   };
 
@@ -179,21 +166,9 @@ const AddVolunteerDialog = ({
     return currentVolunteers.includes(formattedName);
   };
 
-  const selectAll = () => {
-    const availableUsers = filteredUsers.filter(user => !isVolunteerAlreadyAdded(user.id));
-    const availableUserIds = availableUsers.map(user => user.id);
-    setSelectedUsers(availableUserIds);
-  };
-
-  const clearSelection = () => {
-    setSelectedUsers([]);
-  };
-
-  const availableUsersCount = filteredUsers.filter(user => !isVolunteerAlreadyAdded(user.id)).length;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Adicionar Voluntários</DialogTitle>
           <DialogDescription>
@@ -201,53 +176,23 @@ const AddVolunteerDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col flex-1 min-h-0 py-4 space-y-4">
-          {/* Search Input */}
-          <div className="relative">
+        <div className="py-4">
+          <div className="relative mb-4">
             <Input
               placeholder="Buscar por nome, graduação ou email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-8"
             />
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
           </div>
 
-          {/* Bulk Actions */}
-          {!loading && availableUsersCount > 0 && (
-            <div className="flex items-center justify-between text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
-              <span>{selectedUsers.length} de {availableUsersCount} selecionados</span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={selectAll}
-                  disabled={selectedUsers.length === availableUsersCount}
-                >
-                  Selecionar Todos
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearSelection}
-                  disabled={selectedUsers.length === 0}
-                >
-                  Limpar
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Users List */}
           {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="text-center space-y-2">
-                <Loader2 className="h-6 w-6 animate-spin text-gray-400 mx-auto" />
-                <p className="text-sm text-gray-500">Carregando usuários...</p>
-              </div>
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
             </div>
           ) : (
-            <ScrollArea className="flex-1 pr-2">
+            <ScrollArea className="h-[300px] pr-4">
               {filteredUsers.length > 0 ? (
                 <div className="space-y-2">
                   {filteredUsers.map((user) => {
@@ -258,78 +203,48 @@ const AddVolunteerDialog = ({
                       <div
                         key={user.id}
                         onClick={() => !isAlreadyAdded && toggleUserSelection(user.id)}
-                        className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
-                          isAlreadyAdded 
-                            ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed' 
-                            : isSelected 
-                              ? 'bg-blue-50 border-blue-300 hover:bg-blue-100' 
-                              : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                        className={`flex items-center justify-between p-3 rounded-md cursor-pointer ${
+                          isAlreadyAdded ? 'bg-gray-100 text-gray-500' : 
+                          isSelected ? 'bg-blue-50 border border-blue-200' : 
+                          'hover:bg-gray-50 border border-gray-100'
                         }`}
                       >
-                        <div className="flex flex-col min-w-0 flex-1">
-                          <span className={`font-medium truncate ${isAlreadyAdded ? 'text-gray-500' : 'text-gray-900'}`}>
-                            {user.rank} {user.warName}
-                          </span>
-                          <span className={`text-sm truncate ${isAlreadyAdded ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {user.email}
-                          </span>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{user.rank} {user.warName}</span>
+                          <span className="text-xs text-gray-500">{user.email}</span>
                         </div>
-                        <div className="flex-shrink-0 ml-3">
+                        <div>
                           {isAlreadyAdded ? (
-                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">
-                              Já adicionado
-                            </span>
+                            <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">Já adicionado</span>
                           ) : isSelected ? (
-                            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                              <Check className="h-3 w-3 text-white" />
-                            </div>
-                          ) : (
-                            <div className="w-5 h-5 border-2 border-gray-300 rounded-full"></div>
-                          )}
+                            <Check className="h-5 w-5 text-blue-500" />
+                          ) : null}
                         </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <div className="space-y-2">
-                    <p className="font-medium">Nenhum usuário encontrado</p>
-                    {searchQuery ? (
-                      <p className="text-sm">Tente ajustar os termos de busca</p>
-                    ) : (
-                      <p className="text-sm">Não há usuários disponíveis</p>
-                    )}
-                  </div>
+                <div className="text-center py-8 text-gray-500">
+                  Nenhum usuário encontrado com "{searchQuery}"
                 </div>
               )}
             </ScrollArea>
           )}
         </div>
 
-        <DialogFooter className="flex-shrink-0 pt-4 border-t">
+        <DialogFooter className="flex justify-between sm:justify-between">
           <Button 
             variant="outline" 
             onClick={() => onOpenChange(false)}
-            disabled={isAdding}
           >
             Cancelar
           </Button>
           <Button 
             onClick={handleAddVolunteers}
-            disabled={selectedUsers.length === 0 || isAdding}
-            className="min-w-[120px]"
+            disabled={selectedUsers.length === 0}
           >
-            {isAdding ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Adicionando...
-              </>
-            ) : (
-              <>
-                Adicionar {selectedUsers.length > 0 && `(${selectedUsers.length})`}
-              </>
-            )}
+            Adicionar {selectedUsers.length > 0 && `(${selectedUsers.length})`}
           </Button>
         </DialogFooter>
       </DialogContent>
