@@ -53,16 +53,12 @@ const Index = ({
     toast
   } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  useNotifications();
+  useNotifications(); // This hook now handles global notification count updates.
   const navigate = useNavigate();
 
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
-
-  useEffect(() => {
-    console.log('Index activeTab changed:', activeTab);
-  }, [activeTab]);
 
   useEffect(() => {
     const today = new Date();
@@ -91,14 +87,12 @@ const Index = ({
     });
   };
   const handleEditorClick = () => {
-    console.log('Editor button clicked, setting activeTab to editor');
     setActiveTab("editor");
   };
   const handleExtraClick = () => {
     setActiveTab("extra");
   };
   const handleBackClick = () => {
-    console.log('Back button clicked from tab:', activeTab);
     if (activeTab === "editor") {
       setActiveTab("extra");
     } else if (activeTab === "register") {
@@ -122,7 +116,6 @@ const Index = ({
     setShowLogoutDialog(false);
   };
   const handleTabChange = (tab: string) => {
-    console.log('handleTabChange called with:', tab);
     if (tab === 'hours') {
       navigate('/hours');
     } else if (tab === 'extra') {
@@ -136,7 +129,6 @@ const Index = ({
   useEffect(() => {
     // Update activeTab when initialActiveTab prop changes
     if (initialActiveTab && initialActiveTab !== activeTab) {
-      console.log('Updating activeTab from initialActiveTab:', initialActiveTab);
       setActiveTab(initialActiveTab);
     }
   }, [initialActiveTab]);
@@ -173,20 +165,19 @@ const Index = ({
           <TabsContent value="extra">
             {user.userType === "admin" ? (
               <Tabs value={extraSubTab} onValueChange={setExtraSubTab} className="w-full">
-                <TabsList className="w-full flex gap-1 rounded-lg p-1 bg-slate-200 mb-4">
-                  <TabsTrigger value="extra" className="flex-1 text-center py-2.5 px-4 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-700 hover:bg-slate-300/70 data-[state=active]:hover:bg-blue-700/90">Extra</TabsTrigger>
-                  <TabsTrigger value="volunteers" className="flex-1 text-center py-2.5 px-4 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-700 hover:bg-slate-300/70 data-[state=active]:hover:bg-blue-700/90">Voluntários</TabsTrigger>
+                <TabsList className={tabListClasses}>
+                  <TabsTrigger value="extra" className={tabTriggerClasses}>Extra</TabsTrigger>
+                  <TabsTrigger value="volunteers" className={tabTriggerClasses}>Voluntários</TabsTrigger>
                 </TabsList>
                 <TabsContent value="extra">
                   <div className="relative">
-                    <div className="fixed bottom-8 right-8 z-10">
-                      <Button 
-                        onClick={handleEditorClick} 
-                        className="fixed bottom-6 right-6 rounded-full p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] py-[26px] bg-green-500 hover:bg-green-400"
-                      >
-                        <Plus className="h-8 w-8" />
-                      </Button>
+                    <div className="absolute right-0 -top-14">
                     </div>
+                      <div className="fixed bottom-8 right-8 z-10">
+                        <Button onClick={handleEditorClick} className="fixed bottom-6 right-6 rounded-full p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] py-[26px] bg-green-500 hover:bg-green-400">
+                          <Plus className="h-8 w-8" />
+                        </Button>
+                      </div>
                     <TimeSlotsList />
                   </div>
                 </TabsContent>
@@ -196,6 +187,8 @@ const Index = ({
               </Tabs>
             ) : (
               <div className="relative">
+                <div className="absolute right-0 -top-14">
+                </div>
                 <TimeSlotsList />
               </div>
             )}
@@ -272,21 +265,11 @@ const Index = ({
           <TabsContent value="editor">
             <div className="relative">
               <div className="absolute left-0 -top-14">
-                <button 
-                  onClick={handleBackClick} 
-                  className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" 
-                  aria-label="Voltar para aba extra"
-                >
+                <button onClick={() => setActiveTab("extra")} className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-700" aria-label="Voltar para aba extra">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
               </div>
-              <WeeklyCalendar 
-                isLocked={isLocked} 
-                onLockChange={setIsLocked} 
-                currentDate={currentDate} 
-                onDateChange={setCurrentDate} 
-                showControls={true} 
-              />
+              <WeeklyCalendar isLocked={isLocked} onLockChange={setIsLocked} currentDate={currentDate} onDateChange={setCurrentDate} showControls={true} />
             </div>
           </TabsContent>
 

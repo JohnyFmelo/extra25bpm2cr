@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, Trash, Calendar, Info, AlertTriangle, UserPlus } from "lucide-react";
-import { format, addWeeks, subWeeks, parseISO, addDays } from "date-fns";
+import { format, addWeeks, subWeeks, parseISO, addDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
@@ -55,8 +55,24 @@ const WeeklyCalendar = ({
   }, []);
 
   const hasTimeSlotsForDate = (date: Date) => {
+    if (!isValid(date)) {
+      console.warn('Invalid date passed to hasTimeSlotsForDate:', date);
+      return false;
+    }
+    
     const formattedDate = format(date, 'yyyy-MM-dd');
-    return timeSlots.some(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
+    return timeSlots.some(slot => {
+      if (!slot.date || !isValid(slot.date)) {
+        console.warn('Invalid slot date found:', slot);
+        return false;
+      }
+      try {
+        return format(slot.date, 'yyyy-MM-dd') === formattedDate;
+      } catch (error) {
+        console.warn('Error formatting slot date:', slot.date, error);
+        return false;
+      }
+    });
   };
 
   const formatTimeForDB = (time: string) => {
@@ -64,9 +80,23 @@ const WeeklyCalendar = ({
   };
 
   const getTimeSlotsForDate = (date: Date) => {
+    if (!isValid(date)) {
+      console.warn('Invalid date passed to getTimeSlotsForDate:', date);
+      return [];
+    }
+    
     const formattedDate = format(date, 'yyyy-MM-dd');
-    return timeSlots.filter(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime)); // Ordenar por hora de início
+    return timeSlots.filter(slot => {
+      if (!slot.date || !isValid(slot.date)) {
+        return false;
+      }
+      try {
+        return format(slot.date, 'yyyy-MM-dd') === formattedDate;
+      } catch (error) {
+        console.warn('Error formatting slot date in getTimeSlotsForDate:', slot.date, error);
+        return false;
+      }
+    }).sort((a, b) => a.startTime.localeCompare(b.startTime)); // Ordenar por hora de início
   };
 
   const getCurrentWeekTimeSlots = () => {
@@ -190,17 +220,32 @@ const WeeklyCalendar = ({
         setTimeSlots([]);
         return;
       }
-      const formattedSlots = data.map((slot: any) => ({
-        id: slot.id,
-        date: parseISO(slot.date),
-        startTime: slot.start_time ? slot.start_time.slice(0, 5) : "00:00",
-        endTime: slot.end_time ? slot.end_time.slice(0, 5) : "00:00",
-        slots: slot.total_slots || slot.slots || 0,
-        slotsUsed: slot.slots_used || 0,
-        description: slot.description || "",
-        allowedMilitaryTypes: slot.allowedMilitaryTypes || [],
-        volunteers: slot.volunteers || []
-      }));
+      const formattedSlots = data.map((slot: any) => {
+        let parsedDate;
+        try {
+          parsedDate = parseISO(slot.date);
+          if (!isValid(parsedDate)) {
+            console.warn('Invalid date found in slot:', slot.date);
+            return null;
+          }
+        } catch (error) {
+          console.warn('Error parsing date:', slot.date, error);
+          return null;
+        }
+
+        return {
+          id: slot.id,
+          date: parsedDate,
+          startTime: slot.start_time ? slot.start_time.slice(0, 5) : "00:00",
+          endTime: slot.end_time ? slot.end_time.slice(0, 5) : "00:00",
+          slots: slot.total_slots || slot.slots || 0,
+          slotsUsed: slot.slots_used || 0,
+          description: slot.description || "",
+          allowedMilitaryTypes: slot.allowedMilitaryTypes || [],
+          volunteers: slot.volunteers || []
+        };
+      }).filter(Boolean); // Remove null values
+      
       setTimeSlots(formattedSlots);
     } catch (error) {
       console.error('Erro ao carregar horários:', error);
