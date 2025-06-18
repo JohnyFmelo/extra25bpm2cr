@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { FileText, Image as ImageIcon, Video as VideoIcon, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { useCuiabaDateTime } from "@/hooks/useCuiabaDateTime";
 import BasicInformationTab from "./tco/BasicInformationTab";
 import GeneralInformationTab from "./tco/GeneralInformationTab";
 import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
@@ -215,14 +214,12 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const [representacao, setRepresentacao] = useState("");
   const [tipificacao, setTipificacao] = useState("");
   const [penaDescricao, setPenaDescricao] = useState("");
-  
-  // Inicialização com horário de Cuiabá
-  const [dataFato, setDataFato] = useState("");
-  const [horaFato, setHoraFato] = useState("");
-  const [dataInicioRegistro, setDataInicioRegistro] = useState("");
-  const [horaInicioRegistro, setHoraInicioRegistro] = useState("");
-  const [dataTerminoRegistro, setDataTerminoRegistro] = useState("");
-  const [horaTerminoRegistro, setHoraTerminoRegistro] = useState("");
+  const [dataFato, setDataFato] = useState(formattedDate);
+  const [horaFato, setHoraFato] = useState(formattedTime);
+  const [dataInicioRegistro, setDataInicioRegistro] = useState(formattedDate);
+  const [horaInicioRegistro, setHoraInicioRegistro] = useState(formattedTime);
+  const [dataTerminoRegistro, setDataTerminoRegistro] = useState(formattedDate);
+  const [horaTerminoRegistro, setHoraTerminoRegistro] = useState(formattedTime);
   const [localFato, setLocalFato] = useState("");
   const [endereco, setEndereco] = useState("");
   const [municipio] = useState("Várzea Grande");
@@ -1175,114 +1172,30 @@ const TCOForm: React.FC<TCOFormProps> = ({
   };
   const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Conduzir veículo sem CNH gerando perigo de dano", "Entregar veículo automotor a pessoa não habilitada", "Trafegar em velocidade incompatível com segurança", "Omissão de socorro", "Rixa", "Invasão de domicílio", "Fraude em comércio", "Ato obsceno", "Falsa identidade", "Resistência", "Desobediência", "Desacato", "Exercício arbitrário das próprias razões", "Outros"];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
-  
-  // Efeito para atualizar as datas quando o horário de Cuiabá for carregado
-  useEffect(() => {
-    if (!cuiabaDateTime.isLoading && cuiabaDateTime.date && cuiabaDateTime.time) {
-      if (!dataFato) setDataFato(cuiabaDateTime.date);
-      if (!horaFato) setHoraFato(cuiabaDateTime.time);
-      if (!dataInicioRegistro) setDataInicioRegistro(cuiabaDateTime.date);
-      if (!horaInicioRegistro) setHoraInicioRegistro(cuiabaDateTime.time);
-      if (!dataTerminoRegistro) setDataTerminoRegistro(cuiabaDateTime.date);
-      if (!horaTerminoRegistro) setHoraTerminoRegistro(cuiabaDateTime.time);
-    }
-  }, [cuiabaDateTime]);
-
   return <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
-        {/* Mostrar aviso sobre carregamento de horário */}
-        {cuiabaDateTime.isLoading && (
-          <div className="bg-blue-100 border-l-4 border-blue-600 text-blue-700 p-4 rounded-md mb-6">
-            <p className="font-semibold">Carregando horário de Cuiabá...</p>
-            <p className="text-sm">Aguarde enquanto sincronizamos com o horário oficial.</p>
-          </div>
-        )}
-
-        {cuiabaDateTime.error && (
-          <div className="bg-yellow-100 border-l-4 border-yellow-600 text-yellow-700 p-4 rounded-md mb-6">
-            <p className="font-semibold">Aviso</p>
-            <p className="text-sm">{cuiabaDateTime.error}</p>
-          </div>
-        )}
-
-        {hasMinorAuthor.isMinor && hasMinorAuthor.details && (
-          <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
+        {hasMinorAuthor.isMinor && hasMinorAuthor.details && <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
             <p className="font-semibold">Atenção: Autor Menor de Idade Detectado</p>
             <p>
               O autor {autores[hasMinorAuthor.details.index].nome || 'sem nome'} possui {hasMinorAuthor.details.years} anos,{' '}
               {hasMinorAuthor.details.months} meses e {hasMinorAuthor.details.days} dias. Não é permitido registrar TCO para menores de 18 anos.
             </p>
-          </div>
-        )}
+          </div>}
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Básicas</h2>
-          <BasicInformationTab 
-            tcoNumber={tcoNumber} 
-            setTcoNumber={setTcoNumber} 
-            natureza={natureza} 
-            setNatureza={setNatureza} 
-            autor={autor} 
-            setAutor={setAutor} 
-            penaDescricao={penaDescricao} 
-            naturezaOptions={naturezaOptions} 
-            customNatureza={customNatureza} 
-            setCustomNatureza={setCustomNatureza} 
-            startTime={startTime} 
-            isTimerRunning={isTimerRunning} 
-            juizadoEspecialData={juizadoEspecialData} 
-            setJuizadoEspecialData={setJuizadoEspecialData} 
-            juizadoEspecialHora={juizadoEspecialHora} 
-            setJuizadoEspecialHora={setJuizadoEspecialHora} 
-          />
+          <BasicInformationTab tcoNumber={tcoNumber} setTcoNumber={setTcoNumber} natureza={natureza} setNatureza={setNatureza} autor={autor} setAutor={setAutor} penaDescricao={penaDescricao} naturezaOptions={naturezaOptions} customNatureza={customNatureza} setCustomNatureza={setCustomNatureza} startTime={startTime} isTimerRunning={isTimerRunning} juizadoEspecialData={juizadoEspecialData} setJuizadoEspecialData={setJuizadoEspecialData} juizadoEspecialHora={juizadoEspecialHora} setJuizadoEspecialHora={setJuizadoEspecialHora} />
         </div>
 
-        {isPrimaryDrugCase && (
-          <div className="mb-8">
-            <DrugVerificationTab 
-              novaDroga={novaDroga} 
-              onNovaDrogaChange={handleNovaDrogaChange} 
-              onAdicionarDroga={handleAdicionarDroga} 
-              drogasAdicionadas={drogas} 
-              onRemoverDroga={handleRemoverDroga} 
-              lacreNumero={lacreNumero} 
-              setLacreNumero={setLacreNumero} 
-            />
-          </div>
-        )}
+        {isPrimaryDrugCase && <div className="mb-8">
+            {/* << CORREÇÃO: As props do DrugVerificationTab foram completamente alteradas para refletir o novo modelo de dados. >> */}
+            <DrugVerificationTab novaDroga={novaDroga} onNovaDrogaChange={handleNovaDrogaChange} onAdicionarDroga={handleAdicionarDroga} drogasAdicionadas={drogas} onRemoverDroga={handleRemoverDroga} lacreNumero={lacreNumero} setLacreNumero={setLacreNumero} />
+          </div>}
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Gerais da Ocorrência</h2>
-          <GeneralInformationTab 
-            natureza={natureza} 
-            tipificacao={tipificacao} 
-            setTipificacao={setTipificacao} 
-            isCustomNatureza={natureza.split(' + ')[0] === "Outros"} 
-            customNatureza={customNatureza} 
-            dataFato={dataFato} 
-            setDataFato={setDataFato} 
-            horaFato={horaFato} 
-            setHoraFato={setHoraFato} 
-            dataInicioRegistro={dataInicioRegistro} 
-            horaInicioRegistro={horaInicioRegistro} 
-            setHoraInicioRegistro={setHoraInicioRegistro} 
-            dataTerminoRegistro={dataTerminoRegistro} 
-            horaTerminoRegistro={horaTerminoRegistro} 
-            localFato={localFato} 
-            setLocalFato={setLocalFato} 
-            endereco={endereco} 
-            setEndereco={setEndereco} 
-            municipio={municipio} 
-            comunicante={comunicante} 
-            setComunicante={setComunicante} 
-            guarnicao={guarnicao} 
-            setGuarnicao={setGuarnicao} 
-            operacao={operacao} 
-            setOperacao={setOperacao} 
-            condutorNome={condutorParaDisplay?.nome || ""} 
-            condutorPosto={condutorParaDisplay?.posto || ""} 
-            condutorRg={condutorParaDisplay?.rg || ""} 
-          />
+          {/* << CORREÇÃO: Passando os setters de data/hora de registro para o componente filho >> */}
+          <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza.split(' + ')[0] === "Outros"} customNatureza={customNatureza} dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} setDataInicioRegistro={setDataInicioRegistro} horaInicioRegistro={horaInicioRegistro} setHoraInicioRegistro={setHoraInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} setDataTerminoRegistro={setDataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} setHoraTerminoRegistro={setHoraTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
