@@ -138,6 +138,9 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   setAutorRelato,
 }) => {
   const isDrugCase = natureza === "Porte de drogas para consumo";
+  // Nova verificação: se há drogas cadastradas independente da natureza
+  const hasDrugsRegistered = internalDrugs && internalDrugs.length > 0;
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<{
     file: File;
@@ -201,7 +204,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   useEffect(() => {
     let anexos = ["TERMO DE COMPROMISSO"];
     
-    if (!isDrugCase) {
+    // Só adiciona TERMO DE MANIFESTAÇÃO se não for caso de droga E tiver vítimas válidas
+    if (!isDrugCase && validVitimas.length > 0) {
       anexos.push("TERMO DE MANIFESTAÇÃO");
     }
     
@@ -214,7 +218,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       anexos.push("TERMO DE APREENSÃO");
     }
     
-    if (isDrugCase) {
+    // MUDANÇA PRINCIPAL: Agora verifica se há drogas cadastradas ao invés da natureza
+    if (hasDrugsRegistered) {
       anexos.push(`TERMO DE CONSTATAÇÃO PRELIMINAR DE DROGA LACRE Nº ${lacreNumero || "N/A"}`);
       anexos.push("REQUISIÇÃO DE EXAME EM DROGAS DE ABUSO");
     }
@@ -225,13 +230,11 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     }
     
     setDocumentosAnexos(anexos.join("\n"));
-  }, [isDrugCase, apreensoes, solicitarCorpoDelito, autorSexo, setDocumentosAnexos, lacreNumero, autores]);
+  }, [hasDrugsRegistered, apreensoes, solicitarCorpoDelito, autorSexo, setDocumentosAnexos, lacreNumero, autores, isDrugCase, validVitimas.length]);
 
   useEffect(() => {
-    if (isDrugCase && internalDrugs && internalDrugs.length > 0) {
-      // Debug: Log internalDrugs to verify contents
+    if (hasDrugsRegistered && internalDrugs && internalDrugs.length > 0) {
       console.log("internalDrugs in HistoricoTab:", internalDrugs);
-      // Only update apreensoes if it's empty or not user-modified
       if (!apreensoes || apreensoes === "Não informado.") {
         const drugDescriptions = internalDrugs
           .map(drug => `- ${drug.indicios}`)
@@ -239,7 +242,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
         setApreensoes(drugDescriptions);
       }
     }
-  }, [isDrugCase, internalDrugs, apreensoes, setApreensoes]);
+  }, [hasDrugsRegistered, internalDrugs, apreensoes, setApreensoes]);
 
   useEffect(() => {
     if (conclusaoPolicial) {
@@ -403,7 +406,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <Label htmlFor="apreensoes">OBJETOS/DOCUMENTOS APREENDIDOS</Label>
           <Textarea id="apreensoes" placeholder="Descreva os objetos ou documentos apreendidos, se houver" value={apreensoes} onChange={e => setApreensoes(e.target.value)} className="min-h-[100px]" />
           <p className="text-xs text-muted-foreground mt-1">
-            {!isDrugCase ? "Se houver apreensões, o Termo de Apreensão será gerado automaticamente no PDF." : "Para casos de drogas, o texto será adaptado automaticamente baseado nos tipos de drogas adicionados. Use um lacre único para todas as drogas."}
+            {!hasDrugsRegistered ? "Se houver apreensões, o Termo de Apreensão será gerado automaticamente no PDF." : "Para casos de drogas, o texto será adaptado automaticamente baseado nos tipos de drogas adicionados. Use um lacre único para todas as drogas."}
           </p>
         </div>
         
