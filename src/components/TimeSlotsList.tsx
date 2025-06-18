@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import supabase from "@/lib/supabaseClient";
 import CostSummaryCard from "./CostSummaryCard";
+import PresenceControl from "./PresenceControl";
 
 interface TimeSlot {
   id?: string;
@@ -716,10 +717,9 @@ const TimeSlotsList = () => {
         isDatePastOrToday = isPast(startOfDay(slotDate)) || isToday(slotDate);
       } catch (error) {
         console.error('Error parsing date in render:', date, error);
-        return null; // Skip this date if it can't be parsed
+        return null;
       }
       
-      // Hide past dates completely for non-admin users
       if (!isAdmin && isDatePastOrToday) {
         return null;
       }
@@ -788,12 +788,24 @@ const TimeSlotsList = () => {
                                       {getVolunteerHours(volunteer)}h
                                     </span>}
                                 </div>
-                                {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({
+                                <div className="flex items-center gap-2">
+                                  {isAdmin && (
+                                    <PresenceControl
+                                      volunteerName={volunteer}
+                                      timeSlotId={slot.id || ''}
+                                      date={date}
+                                      startTime={slot.start_time}
+                                      endTime={slot.end_time}
+                                      hours={parseFloat(calculateTimeDifference(slot.start_time, slot.end_time))}
+                                    />
+                                  )}
+                                  {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({
                       name: volunteer,
                       timeSlot: slot
                     })}>
-                                    <X className="h-4 w-4" />
-                                  </Button>}
+                                      <X className="h-4 w-4" />
+                                    </Button>}
+                                </div>
                               </div>)}
                           </div>
                         </div>}
