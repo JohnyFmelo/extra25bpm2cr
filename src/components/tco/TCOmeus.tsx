@@ -12,9 +12,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { deleteTCO } from "@/lib/supabaseStorage";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import * as pdfParse from 'pdf-parse';
+import * as pdfjsLib from 'pdfjs-dist';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
+
+// Set worker path for pdfjs
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 // Interfaces e Constantes exportadas para serem usadas por outros componentes
 export interface TCOmeusProps {
@@ -365,14 +368,26 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         throw new Error('Erro ao baixar o PDF do Supabase');
       }
 
-      // Converter Blob para ArrayBuffer para o pdf-parse
+      // Converter Blob para ArrayBuffer para o pdfjs
       const arrayBuffer = await pdfData.arrayBuffer();
       
-      // Extrair texto do PDF
-      const pdfBuffer = Buffer.from(arrayBuffer);
-      const pdfText = await pdfParse(pdfBuffer);
+      // Extrair texto do PDF usando pdfjs-dist
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdfDoc = await loadingTask.promise;
+      
+      let fullText = '';
+      
+      // Extrair texto de todas as páginas
+      for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+        const page = await pdfDoc.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        fullText += pageText + '\n';
+      }
 
-      if (!pdfText.text || pdfText.text.trim().length === 0) {
+      if (!fullText || fullText.trim().length === 0) {
         throw new Error('Não foi possível extrair texto do PDF');
       }
 
@@ -417,7 +432,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
               ]
             }),
             new Paragraph({ text: "" }), // Linha em branco
-            ...pdfText.text.split('\n').map(line => 
+            ...fullText.split('\n').map(line => 
               new Paragraph({
                 children: [
                   new TextRun({
