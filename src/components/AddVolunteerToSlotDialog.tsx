@@ -66,6 +66,9 @@ const AddVolunteerToSlotDialog = ({ open, onOpenChange, timeSlot }: AddVolunteer
         setMilitaryType("Operacional");
         setExtraHours("");
         onOpenChange(false);
+        
+        // Trigger a page reload to refresh the data
+        window.location.reload();
       } else {
         throw new Error("Falha ao adicionar voluntário");
       }
