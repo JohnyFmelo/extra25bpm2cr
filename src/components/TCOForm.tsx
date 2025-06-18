@@ -1179,10 +1179,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
         {hasMinorAuthor.isMinor && hasMinorAuthor.details && <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
             <p className="font-semibold">Atenção: Autor Menor de Idade Detectado</p>
-            <p>
-              O autor {autores[hasMinorAuthor.details.index].nome || 'sem nome'} possui {hasMinorAuthor.details.years} anos,{' '}
-              {hasMinorAuthor.details.months} meses e {hasMinorAuthor.details.days} dias. Não é permitido registrar TCO para menores de 18 anos.
-            </p>
+            <p className="text-sm">{hasMinorAuthor.details}</p>
           </div>}
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
@@ -1197,7 +1194,37 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Gerais da Ocorrência</h2>
-          <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza.split(' + ')[0] === "Outros"} customNatureza={customNatureza} dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} setDataInicioRegistro={setDataInicioRegistro} horaInicioRegistro={horaInicioRegistro} setHoraInicioRegistro={setHoraInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} setDataTerminoRegistro={setDataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} setHoraTerminoRegistro={setHoraTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
+          <GeneralInformationTab 
+            natureza={natureza} 
+            tipificacao={tipificacao} 
+            setTipificacao={setTipificacao} 
+            isCustomNatureza={natureza.split(' + ')[0] === "Outros"} 
+            customNatureza={customNatureza} 
+            dataFato={dataFato} 
+            setDataFato={setDataFato} 
+            horaFato={horaFato} 
+            setHoraFato={setHoraFato} 
+            dataInicioRegistro={dataInicioRegistro} 
+            horaInicioRegistro={horaInicioRegistro} 
+            setHoraInicioRegistro={setHoraInicioRegistro} 
+            dataTerminoRegistro={dataTerminoRegistro} 
+            horaTerminoRegistro={horaTerminoRegistro} 
+            setHoraTerminoRegistro={setHoraTerminoRegistro} 
+            localFato={localFato} 
+            setLocalFato={setLocalFato} 
+            endereco={endereco} 
+            setEndereco={setEndereco} 
+            municipio={municipio} 
+            comunicante={comunicante} 
+            setComunicante={setComunicante} 
+            guarnicao={guarnicao} 
+            setGuarnicao={setGuarnicao} 
+            operacao={operacao} 
+            setOperacao={setOperacao} 
+            condutorNome={condutorParaDisplay?.nome || ""} 
+            condutorPosto={condutorParaDisplay?.posto || ""} 
+            condutorRg={condutorParaDisplay?.rg || ""} 
+          />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
