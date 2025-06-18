@@ -16,21 +16,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
 
-// Configure PDF.js worker - use a more reliable approach for Vite
-const initializePdfWorker = async () => {
-  try {
-    // Try to use the worker from the installed package
-    const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.min.js?url');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker.default;
-  } catch (error) {
-    console.warn('Failed to load local PDF worker, falling back to CDN');
-    // Fallback to a different CDN
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-  }
-};
-
-// Initialize the worker immediately
-initializePdfWorker();
+// Configure PDF.js worker with a direct CDN approach that works with Vite
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
 // Interfaces e Constantes exportadas para serem usadas por outros componentes
 export interface TCOmeusProps {
@@ -384,13 +371,9 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       // Converter Blob para ArrayBuffer para o pdfjs
       const arrayBuffer = await pdfData.arrayBuffer();
       
-      // Extrair texto do PDF usando pdfjs-dist com configuração mais robusta
+      // Extrair texto do PDF usando pdfjs-dist
       const loadingTask = pdfjsLib.getDocument({ 
         data: arrayBuffer,
-        useSystemFonts: false,
-        disableFontFace: false,
-        disableAutoFetch: false,
-        disableStream: false,
         verbosity: 0 // Reduce console noise
       });
       
