@@ -157,9 +157,14 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     autor.nome !== "Não informado."
   );
 
+  // Verifica se há drogas cadastradas independente da natureza
+  const hasDrugs = Array.isArray(internalDrugs) && internalDrugs.length > 0;
+
   console.log("Autores array completo:", autores);
   console.log("Valid autores encontrados:", validAutores);
   console.log("Número de autores válidos:", validAutores.length);
+  console.log("Has drugs:", hasDrugs);
+  console.log("Valid victims:", validVitimas.length);
 
   const handleVitimaRelatoChange = (index: number, value: string) => {
     if (setVitimaRelato) {
@@ -201,7 +206,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
   useEffect(() => {
     let anexos = ["TERMO DE COMPROMISSO"];
     
-    if (!isDrugCase) {
+    // Só adiciona termo de manifestação se houver vítimas válidas E não for caso de droga
+    if (!isDrugCase && validVitimas.length > 0) {
       anexos.push("TERMO DE MANIFESTAÇÃO");
     }
     
@@ -210,13 +216,14 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       anexos.push("TERMO DE DEPÓSITO");
     }
 
-    if (apreensoes && apreensoes.trim() !== "") {
+    // Para drogas: verifica se há drogas cadastradas (independente da natureza)
+    if (hasDrugs) {
       anexos.push("TERMO DE APREENSÃO");
-    }
-    
-    if (isDrugCase) {
       anexos.push(`TERMO DE CONSTATAÇÃO PRELIMINAR DE DROGA LACRE Nº ${lacreNumero || "N/A"}`);
       anexos.push("REQUISIÇÃO DE EXAME EM DROGAS DE ABUSO");
+    } else if (apreensoes && apreensoes.trim() !== "") {
+      // Se não for droga mas tiver outras apreensões
+      anexos.push("TERMO DE APREENSÃO");
     }
     
     if (solicitarCorpoDelito === "Sim") {
@@ -225,7 +232,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
     }
     
     setDocumentosAnexos(anexos.join("\n"));
-  }, [isDrugCase, apreensoes, solicitarCorpoDelito, autorSexo, setDocumentosAnexos, lacreNumero, autores]);
+  }, [hasDrugs, validVitimas.length, isDrugCase, apreensoes, solicitarCorpoDelito, autorSexo, setDocumentosAnexos, lacreNumero, autores]);
 
   useEffect(() => {
     if (isDrugCase && internalDrugs && internalDrugs.length > 0) {
@@ -353,7 +360,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
                 <Textarea 
                   id={`relatoVitima-${index}`} 
                   placeholder={`Descreva o relato da vítima ${vitima.nome}`} 
-                  value={vitima.relato || "RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO."} 
+                  value={vitima.relato || "RELATOU A VÍTIMA, ABAIXO ASSINADA, JÁ QUALIFICADA NOS AUTOS, QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO."} 
                   onChange={e => handleVitimaRelatoChange(index, e.target.value)} 
                   className="min-h-[150px]" 
                 />
