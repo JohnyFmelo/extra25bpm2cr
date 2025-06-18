@@ -12,6 +12,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { deleteTCO } from "@/lib/supabaseStorage";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import * as pdfParse from 'pdf-parse';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { saveAs } from 'file-saver';
 
 // Interfaces e Constantes exportadas para serem usadas por outros componentes
 export interface TCOmeusProps {
@@ -134,6 +137,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const [gupmDetailsCache, setGupmDetailsCache] = useState<Record<string, StructuredGupm | null>>({});
   const [isGupmDetailModalOpen, setIsGupmDetailModalOpen] = useState(false);
   const [currentGupmToDisplay, setCurrentGupmToDisplay] = useState<StructuredGupm | null>(null);
+  const [isConverting, setIsConverting] = useState<string | null>(null);
 
   const fetchAndStructureGupmForTco = useCallback(async (rgpms: ExtractedRgpms): Promise<StructuredGupm | null> => {
     if (rgpms.main.length === 0 && rgpms.support.length === 0) return null;
@@ -344,6 +348,115 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     }
   };
 
+  const handleConvertToWord = async (tco: TcoData) => {
+    setIsConverting(tco.id);
+    try {
+      toast({
+        title: "Iniciando Conversão",
+        description: "Baixando e convertendo o PDF para Word..."
+      });
+
+      // Baixar o PDF do Supabase
+      const { data: pdfData, error: downloadError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .download(tco.pdfPath);
+
+      if (downloadError || !pdfData) {
+        throw new Error('Erro ao baixar o PDF do Supabase');
+      }
+
+      // Converter Blob para ArrayBuffer para o pdf-parse
+      const arrayBuffer = await pdfData.arrayBuffer();
+      
+      // Extrair texto do PDF
+      const pdfBuffer = Buffer.from(arrayBuffer);
+      const pdfText = await pdfParse(pdfBuffer);
+
+      if (!pdfText.text || pdfText.text.trim().length === 0) {
+        throw new Error('Não foi possível extrair texto do PDF');
+      }
+
+      // Criar documento Word
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `TCO ${extractTcoDisplayNumber(tco.tcoNumber)}`,
+                  bold: true,
+                  size: 32
+                })
+              ]
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Data: ${tco.createdAt ? format(tco.createdAt, "dd/MM/yyyy - HH:mm") : "-"}`,
+                  size: 24
+                })
+              ]
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Natureza: ${tco.natureza || "Não especificada"}`,
+                  size: 24
+                })
+              ]
+            }),
+            new Paragraph({ text: "" }), // Linha em branco
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "CONTEÚDO DO TCO:",
+                  bold: true,
+                  size: 28
+                })
+              ]
+            }),
+            new Paragraph({ text: "" }), // Linha em branco
+            ...pdfText.text.split('\n').map(line => 
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: line || " ", // Linha vazia se não há texto
+                    size: 22
+                  })
+                ]
+              })
+            )
+          ]
+        }]
+      });
+
+      // Gerar e baixar o arquivo Word
+      const buffer = await Packer.toBuffer(doc);
+      const blob = new Blob([buffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+      });
+      
+      const fileName = `TCO_${extractTcoDisplayNumber(tco.tcoNumber)}.docx`;
+      saveAs(blob, fileName);
+
+      toast({
+        title: "Conversão Concluída",
+        description: `TCO convertido para Word com sucesso: ${fileName}`
+      });
+
+    } catch (error) {
+      console.error("Erro ao converter PDF para Word:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro na Conversão",
+        description: `Falha ao converter o PDF para Word: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
+      });
+    } finally {
+      setIsConverting(null);
+    }
+  };
+
   const openGupmDetailsModal = (tcoId: string) => {
     const details = gupmDetailsCache[tcoId];
     if (details !== undefined) {
@@ -354,7 +467,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     }
   };
 
-  // O JSX restante é idêntico ao que você enviou, sem nenhuma supressão.
+  // O JSX restante é idêntico ao que você enviou, com modificações nos dropdowns
   return (
     <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 flex-grow overflow-hidden flex flex-col py-0 px-[6px] my-[12px]">
     {isLoading && tcoList.length === 0 ? <div className="space-y-4 animate-pulse p-2">
@@ -390,6 +503,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
               }
               const hasAnyOfficerForModal = gupmInfo && (gupmInfo.conductor || gupmInfo.mainTeam.length > 0 || gupmInfo.supportTeam.length > 0);
               const canDelete = tco.userId === user.id || user.userType === 'admin';
+              const isConvertingThis = isConverting === tco.id;
               return <TableRow key={tco.id} aria-selected={selectedTco?.id === tco.id} className={`cursor-pointer transition-colors duration-150 ease-in-out hover:bg-slate-50 ${selectedTco?.id === tco.id ? "bg-primary/10 hover:bg-primary/20" : ""}`} onClick={() => setSelectedTco(tco)}>
                     <TableCell className="px-4 py-3 whitespace-nowrap">
                       <Badge variant="outline" className="text-sm font-medium bg-blue-50 text-blue-700 border-blue-300">
@@ -439,6 +553,23 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                           <DropdownMenuItem onClick={() => handleDownloadPdf(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md">
                             <Download className="h-4 w-4 text-green-500" /> Baixar PDF
                           </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleConvertToWord(tco)} 
+                            disabled={isConvertingThis}
+                            className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md"
+                          >
+                            {isConvertingThis ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 text-purple-500 animate-spin" />
+                                Convertendo...
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="h-4 w-4 text-purple-500" />
+                                Converter para Word
+                              </>
+                            )}
+                          </DropdownMenuItem>
                           {canDelete && <DropdownMenuItem onClick={() => confirmDelete(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md mt-1">
                               <Trash2 className="h-4 w-4" /> Excluir TCO
                             </DropdownMenuItem>}
@@ -463,6 +594,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           }
           const hasAnyOfficerForModal = gupmInfo && (gupmInfo.conductor || gupmInfo.mainTeam.length > 0 || gupmInfo.supportTeam.length > 0);
           const canDelete = tco.userId === user.id || user.userType === 'admin';
+          const isConvertingThis = isConverting === tco.id;
           return <div key={`card-${tco.id}`} onClick={() => setSelectedTco(tco)} aria-selected={selectedTco?.id === tco.id} className={`bg-white p-4 rounded-lg border border-gray-200 shadow-sm cursor-pointer transition-all duration-150 ease-in-out ${selectedTco?.id === tco.id ? "ring-2 ring-primary ring-offset-1" : "hover:shadow-md"}`}>
                 <div className="flex justify-between items-start mb-2">
                   <Badge variant="outline" className="text-base font-semibold bg-blue-50 text-blue-700 border-blue-300 px-2.5 py-1">
@@ -480,6 +612,23 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDownloadPdf(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md">
                         <Download className="h-4 w-4 text-green-500" /> Baixar PDF
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleConvertToWord(tco)} 
+                        disabled={isConvertingThis}
+                        className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md"
+                      >
+                        {isConvertingThis ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 text-purple-500 animate-spin" />
+                            Convertendo...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4 text-purple-500" />
+                            Converter para Word
+                          </>
+                        )}
                       </DropdownMenuItem>
                       {canDelete && <DropdownMenuItem onClick={() => confirmDelete(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md mt-1">
                           <Trash2 className="h-4 w-4" /> Excluir TCO
