@@ -117,49 +117,49 @@ const App = () => {
       }
     }
   });
+  
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
   };
+
   return (
-    <React.StrictMode>
-      <UserProvider>
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/" element={<ProtectedRoute>
-                      <Layout activeTab={activeTab} onTabChange={handleTabChange}>
-                        <Index initialActiveTab={activeTab} />
-                      </Layout>
-                    </ProtectedRoute>} />
-                <Route path="/hours" element={<ProtectedRoute>
-                      <Layout activeTab="hours" onTabChange={handleTabChange}>
-                        <Hours />
-                      </Layout>
-                    </ProtectedRoute>} />
-                {/* Redirect any unknown routes to login */}
-                <Route path="*" element={<Navigate to="/login" replace />} />
-              </Routes>
-              
-              <NewNotificationDialog
-                open={!!newNotification}
-                onClose={() => setNewNotification(null)}
-                notification={newNotification}
-                onReply={handleReply}
-              />
-              <ReplyNotificationDialog
-                open={!!replyToNotification}
-                onClose={() => setReplyToNotification(null)}
-                originalNotification={replyToNotification}
-              />
-            </TooltipProvider>
-          </BrowserRouter>
-        </QueryClientProvider>
-      </UserProvider>
-    </React.StrictMode>
+    <UserProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<ProtectedRoute>
+                    <Layout activeTab={activeTab} onTabChange={handleTabChange}>
+                      <Index initialActiveTab={activeTab} />
+                    </Layout>
+                  </ProtectedRoute>} />
+              <Route path="/hours" element={<ProtectedRoute>
+                    <Layout activeTab="hours" onTabChange={handleTabChange}>
+                      <Hours />
+                    </Layout>
+                  </ProtectedRoute>} />
+              {/* Redirect any unknown routes to login */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+            
+            <NewNotificationDialog
+              open={!!newNotification}
+              onClose={() => setNewNotification(null)}
+              notification={newNotification}
+              onReply={handleReply}
+            />
+            <ReplyNotificationDialog
+              open={!!replyToNotification}
+              onClose={() => setReplyToNotification(null)}
+              originalNotification={replyToNotification}
+            />
+          </TooltipProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </UserProvider>
   );
 };
 
