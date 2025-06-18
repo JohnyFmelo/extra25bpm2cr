@@ -16,8 +16,11 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
 
-// Set worker path for pdfjs
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure PDF.js worker for Vite environment
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.js',
+  import.meta.url
+).toString();
 
 // Interfaces e Constantes exportadas para serem usadas por outros componentes
 export interface TCOmeusProps {
@@ -372,7 +375,12 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
       const arrayBuffer = await pdfData.arrayBuffer();
       
       // Extrair texto do PDF usando pdfjs-dist
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const loadingTask = pdfjsLib.getDocument({ 
+        data: arrayBuffer,
+        useSystemFonts: true,
+        disableFontFace: true
+      });
+      
       const pdfDoc = await loadingTask.promise;
       
       let fullText = '';
