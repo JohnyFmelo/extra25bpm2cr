@@ -145,7 +145,7 @@ const formatarRelatoAutor = (autores: Pessoa[]): string => {
   const todosFemininos = autoresValidos.every(a => a.sexo.toLowerCase() === "feminino");
   const pronomePlural = todosFemininos ? "AS AUTORAS" : "OS AUTORES";
   
-  return `${pronomePlural} DOS FATOS ABAIXO ASSINADOS, JÁ QUALIFICADOS NOS AUTOS, CIENTIFICADOS DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLARAM QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.`;
+  return `${pronomePlural} DOS FATOS ABAIXO ASSINADOS, JÁ QUALIFICADOS NOS AUTOS, CIENTIFICADOS DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLARARAM QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.`;
 };
 const numberToText = (num: number): string => {
   const numbers = ["ZERO", "UMA", "DUAS", "TRÊS", "QUATRO", "CINCO", "SEIS", "SETE", "OITO", "NOVE", "DEZ"];
@@ -1195,36 +1195,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Gerais da Ocorrência</h2>
           {/* << CORREÇÃO: Passando os setters de data/hora de registro para o componente filho >> */}
-          <GeneralInformationTab
-            natureza={natureza}
-            tipificacao={tipificacao}
-            setTipificacao={setTipificacao}
-            isCustomNatureza={isPrimaryDrugCase}
-            customNatureza={customNatureza}
-            dataFato={dataFato}
-            setDataFato={setDataFato}
-            horaFato={horaFato}
-            setHoraFato={setHoraFato}
-            dataInicioRegistro={dataInicioRegistro}
-            horaInicioRegistro={horaInicioRegistro}
-            setHoraInicioRegistro={setHoraInicioRegistro}
-            dataTerminoRegistro={dataTerminoRegistro}
-            horaTerminoRegistro={horaTerminoRegistro}
-            localFato={localFato}
-            setLocalFato={setLocalFato}
-            endereco={endereco}
-            setEndereco={setEndereco}
-            municipio={municipio}
-            comunicante={comunicante}
-            setComunicante={setComunicante}
-            guarnicao={guarnicao}
-            setGuarnicao={setGuarnicao}
-            operacao={operacao}
-            setOperacao={setOperacao}
-            condutorNome={condutorParaDisplay?.nome || ""}
-            condutorPosto={condutorParaDisplay?.posto || ""}
-            condutorRg={condutorParaDisplay?.rg || ""}
-          />
+          <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza.split(' + ')[0] === "Outros"} customNatureza={customNatureza} dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} setDataInicioRegistro={setDataInicioRegistro} horaInicioRegistro={horaInicioRegistro} setHoraInicioRegistro={setHoraInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} setDataTerminoRegistro={setDataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} setHoraTerminoRegistro={setHoraTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
