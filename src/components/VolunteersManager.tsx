@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Users, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import VolunteerServicesDialog from "./VolunteerServicesDialog";
+
 interface User {
   id: string;
   email: string;
@@ -16,6 +18,7 @@ interface User {
   isVolunteer?: boolean;
   maxSlots?: number;
 }
+
 interface TimeSlot {
   id?: string;
   date: string;
@@ -23,6 +26,7 @@ interface TimeSlot {
   end_time: string;
   volunteers?: string[];
 }
+
 const VolunteersManager = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -32,9 +36,10 @@ const VolunteersManager = () => {
   const [showVolunteersOnly, setShowVolunteersOnly] = useState(false);
   const [showNonVolunteersOnly, setShowNonVolunteersOnly] = useState(false);
   const [bulkSlotsValue, setBulkSlotsValue] = useState(1);
-  const {
-    toast
-  } = useToast();
+  const [selectedVolunteer, setSelectedVolunteer] = useState<string | null>(null);
+  const [showServicesDialog, setShowServicesDialog] = useState(false);
+  const { toast } = useToast();
+
   useEffect(() => {
     fetchUsers();
 
@@ -62,6 +67,7 @@ const VolunteersManager = () => {
     });
     return () => unsubscribe();
   }, []);
+
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
@@ -84,6 +90,7 @@ const VolunteersManager = () => {
       setIsLoading(false);
     }
   };
+
   const calculateTimeDifference = (startTime: string, endTime: string): number => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);
@@ -98,6 +105,7 @@ const VolunteersManager = () => {
     }
     return diffHours + diffMinutes / 60;
   };
+
   const calculateUserTotalHours = (userFullName: string): number => {
     return timeSlots.reduce((totalHours, slot) => {
       if (slot.volunteers && slot.volunteers.includes(userFullName)) {
@@ -141,6 +149,7 @@ const VolunteersManager = () => {
       });
     }
   };
+
   const handleSlotsChange = async (userId: string, newSlots: number) => {
     if (newSlots < 0) {
       toast({
@@ -172,6 +181,7 @@ const VolunteersManager = () => {
       });
     }
   };
+
   const handleToggleAllVolunteers = async (makeVolunteer: boolean) => {
     if (filteredUsers.length === 0) {
       toast({
@@ -210,6 +220,7 @@ const VolunteersManager = () => {
       setIsBulkUpdating(false);
     }
   };
+
   const handleBulkSlotsUpdate = async () => {
     if (filteredUsers.length === 0) {
       toast({
@@ -256,6 +267,11 @@ const VolunteersManager = () => {
       setIsBulkUpdating(false);
     }
   };
+
+  const handleServiceCountClick = (userFullName: string) => {
+    setSelectedVolunteer(userFullName);
+    setShowServicesDialog(true);
+  };
   
   const filteredUsers = users.filter(user => {
     const searchTerm = searchQuery.toLowerCase();
@@ -265,7 +281,6 @@ const VolunteersManager = () => {
     const matchesSearch = rank.includes(searchTerm) || warName.includes(searchTerm) || email.includes(searchTerm);
     let matchesVolunteerFilter = true;
     if (showVolunteersOnly && showNonVolunteersOnly) {
-      // Se ambos estão marcados, mostra todos
       matchesVolunteerFilter = true;
     } else if (showVolunteersOnly) {
       matchesVolunteerFilter = user.isVolunteer;
@@ -283,6 +298,7 @@ const VolunteersManager = () => {
         </div>
       </div>;
   }
+
   return <div className="w-full max-w-6xl mx-auto p-6 px-0">
       <Card className="shadow-lg">
         <CardHeader className="pb-6">
@@ -296,7 +312,7 @@ const VolunteersManager = () => {
         </CardHeader>
 
         <CardContent className="space-y-6 px-6">
-          {/* Seção de busca - corrigida */}
+          {/* Seção de busca */}
           <div className="relative flex items-center">
             <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10 pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" />
@@ -395,9 +411,12 @@ const VolunteersManager = () => {
                             </p>}
                           <div className="flex items-center gap-4 mt-1">
                             {serviceCount > 0 && (
-                              <p className="text-xs text-blue-600 font-medium">
+                              <button 
+                                onClick={() => handleServiceCountClick(userFullName)}
+                                className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                              >
                                 {serviceCount} serviço{serviceCount !== 1 ? 's' : ''}
-                              </p>
+                              </button>
                             )}
                             {user.isVolunteer && totalHours > 0 && (
                               <p className="text-xs text-blue-600 font-medium">
@@ -426,6 +445,13 @@ const VolunteersManager = () => {
             </div>}
         </CardContent>
       </Card>
+
+      <VolunteerServicesDialog 
+        open={showServicesDialog}
+        onOpenChange={setShowServicesDialog}
+        volunteerName={selectedVolunteer || ""}
+      />
     </div>;
 };
+
 export default VolunteersManager;
