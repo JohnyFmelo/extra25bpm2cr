@@ -12,7 +12,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import supabase from "@/lib/supabaseClient";
 import CostSummaryCard from "./CostSummaryCard";
-import PresenceControl from "./PresenceControl";
 
 interface TimeSlot {
   id?: string;
@@ -123,9 +122,6 @@ const TimeSlotsList = () => {
     [key: string]: string;
   }>({});
   const [users, setUsers] = useState<User[]>([]);
-  const [presenceData, setPresenceData] = useState<{
-    [key: string]: { [volunteer: string]: boolean }
-  }>({});
   const { toast } = useToast();
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
@@ -683,20 +679,6 @@ const TimeSlotsList = () => {
     return volunteer;
   };
 
-  const handlePresenceChange = (timeSlotId: string, volunteerName: string, isPresent: boolean) => {
-    setPresenceData(prev => ({
-      ...prev,
-      [timeSlotId]: {
-        ...prev[timeSlotId],
-        [volunteerName]: isPresent
-      }
-    }));
-  };
-
-  const getVolunteerPresenceStatus = (timeSlotId: string, volunteerName: string): boolean | null => {
-    return presenceData[timeSlotId]?.[volunteerName] ?? null;
-  };
-
   return <div className="space-y-6 p-4 py-0 my-0 px-0">
       {!isAdmin && <div className="bg-white p-4 rounded-lg shadow-sm">
           <div className="flex items-center justify-between">
@@ -737,6 +719,7 @@ const TimeSlotsList = () => {
         return null; // Skip this date if it can't be parsed
       }
       
+      // Hide past dates completely for non-admin users
       if (!isAdmin && isDatePastOrToday) {
         return null;
       }
@@ -767,15 +750,7 @@ const TimeSlotsList = () => {
               </div>
 
               {!isCollapsed && <div className="space-y-3 mt-4">
-                  {sortedSlots.map((slot, idx) => {
-                    const hasAbsentVolunteers = slot.volunteers?.some(volunteer => 
-                      getVolunteerPresenceStatus(slot.id!, volunteer) === false
-                    );
-                    
-                    return <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${
-                      hasAbsentVolunteers ? 'bg-red-50 border-red-200' :
-                      isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'
-                    }`}>
+                  {sortedSlots.map((slot, idx) => <div key={slot.id || idx} className={`border rounded-lg p-4 space-y-3 transition-all ${isSlotFull(slot) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
                       {isAdmin && <div className="mb-1">
                           {renderAllowedMilitaryTypes(slot.allowedMilitaryTypes)}
                         </div>}
@@ -804,49 +779,22 @@ const TimeSlotsList = () => {
                       </div>
 
                       {slot.volunteers && slot.volunteers.length > 0 && <div className="pt-3 border-t border-gray-200">
-                          <p className="text-sm font-medium mb-3 text-gray-700">Voluntários:</p>
-                          <div className="space-y-3">
-                            {sortVolunteers(slot.volunteers).map((volunteer, index) => {
-                              const presenceStatus = getVolunteerPresenceStatus(slot.id!, volunteer);
-                              
-                              return <div key={index} className={`p-3 rounded-lg border-l-4 transition-all ${
-                                presenceStatus === false ? 'bg-red-50 border-red-400' :
-                                presenceStatus === true ? 'bg-green-50 border-green-400' :
-                                'bg-gray-50 border-gray-300'
-                              }`}>
-                                <div className="flex justify-between items-center gap-3">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <span className="text-sm font-medium text-gray-900">
-                                        {formatVolunteerWithProgressiveHours(volunteer, date)}
-                                      </span>
-                                      {isAdmin && getVolunteerHours(volunteer) && <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
-                                          {getVolunteerHours(volunteer)}h
-                                        </span>}
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="flex items-center gap-2">
-                                    {isAdmin && (
-                                      <PresenceControl
-                                        volunteerName={volunteer}
-                                        timeSlotId={slot.id!}
-                                        date={date}
-                                        onPresenceChange={(name, isPresent) => handlePresenceChange(slot.id!, name, isPresent)}
-                                        initialStatus={presenceStatus}
-                                      />
-                                    )}
-                                    
-                                    {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500 flex-shrink-0" onClick={() => setVolunteerToRemove({
-                            name: volunteer,
-                            timeSlot: slot
-                          })}>
-                                        <X className="h-4 w-4" />
-                                      </Button>}
-                                  </div>
+                          <p className="text-sm font-medium mb-2 text-gray-700">Voluntários:</p>
+                          <div className="space-y-1">
+                            {sortVolunteers(slot.volunteers).map((volunteer, index) => <div key={index} className="text-sm text-gray-600 pl-2 border-l-2 border-gray-300 flex justify-between items-center">
+                                <div className="flex items-center">
+                                  <span>{formatVolunteerWithProgressiveHours(volunteer, date)}</span>
+                                  {isAdmin && getVolunteerHours(volunteer) && <span className="ml-2 text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                                      {getVolunteerHours(volunteer)}h
+                                    </span>}
                                 </div>
-                              </div>
-                            })}
+                                {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={() => setVolunteerToRemove({
+                      name: volunteer,
+                      timeSlot: slot
+                    })}>
+                                    <X className="h-4 w-4" />
+                                  </Button>}
+                              </div>)}
                           </div>
                         </div>}
 
@@ -857,8 +805,7 @@ const TimeSlotsList = () => {
                                 Voluntário
                               </Button>)}
                       </div>
-                    </div>
-                  })}
+                    </div>)}
                 </div>}
             </div>
           </div>;
