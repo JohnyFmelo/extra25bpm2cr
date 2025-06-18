@@ -814,7 +814,7 @@ const TimeSlotsList = () => {
                                 presenceStatus === true ? 'bg-green-50 border-green-400' :
                                 'bg-gray-50 border-gray-300'
                               }`}>
-                                <div className="flex justify-between items-start gap-3">
+                                <div className="flex justify-between items-center gap-3">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-2">
                                       <span className="text-sm font-medium text-gray-900">
@@ -824,7 +824,9 @@ const TimeSlotsList = () => {
                                           {getVolunteerHours(volunteer)}h
                                         </span>}
                                     </div>
-                                    
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2">
                                     {isAdmin && (
                                       <PresenceControl
                                         volunteerName={volunteer}
@@ -834,14 +836,14 @@ const TimeSlotsList = () => {
                                         initialStatus={presenceStatus}
                                       />
                                     )}
+                                    
+                                    {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500 flex-shrink-0" onClick={() => setVolunteerToRemove({
+                            name: volunteer,
+                            timeSlot: slot
+                          })}>
+                                        <X className="h-4 w-4" />
+                                      </Button>}
                                   </div>
-                                  
-                                  {isAdmin && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500 flex-shrink-0" onClick={() => setVolunteerToRemove({
-                          name: volunteer,
-                          timeSlot: slot
-                        })}>
-                                      <X className="h-4 w-4" />
-                                    </Button>}
                                 </div>
                               </div>
                             })}
