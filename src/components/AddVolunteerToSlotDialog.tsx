@@ -100,9 +100,11 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
           dateValue = (dateField as any).toDate();
         } else if (typeof dateField === 'string') {
           dateValue = parseISO(dateField);
-        } else {
+        } else if (dateField !== null) {
           // Handle other possible date formats, ensuring dateField is not null
           dateValue = new Date(dateField as string | number);
+        } else {
+          dateValue = new Date();
         }
         
         return {
