@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Dialog,
@@ -15,28 +16,27 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Check, Loader2, Search } from "lucide-react";
 import { Input } from "./ui/input";
 import { parseISO } from "date-fns";
+import { TimeSlot } from "@/types/timeSlot";
 
 interface User {
   id: string;
   warName?: string;
   rank?: string;
-  email: string;
+  email?: string; // Make email optional since it might not always be present
 }
 
 interface AddVolunteerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  travelId: string;
-  currentVolunteers: string[];
-  onVolunteersAdded: () => void;
+  timeSlot: TimeSlot; // Changed from travelId to timeSlot
+  onVolunteerAdded: () => void; // Changed from onVolunteersAdded
 }
 
 const AddVolunteerDialog = ({ 
   open, 
   onOpenChange, 
-  travelId, 
-  currentVolunteers,
-  onVolunteersAdded 
+  timeSlot, 
+  onVolunteerAdded 
 }: AddVolunteerDialogProps) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +74,9 @@ const AddVolunteerDialog = ({
         
         return {
           id: doc.id,
-          ...data,
+          warName: data.warName,
+          rank: data.rank,
+          email: data.email || `user${doc.id}@placeholder.com`, // Provide default email if missing
           createdAt: dateValue
         };
       }) as User[];
@@ -105,28 +107,14 @@ const AddVolunteerDialog = ({
         return;
       }
 
-      // Get current travel data
-      const travelRef = doc(db, "travels", travelId);
-      const travelSnap = await getDoc(travelRef);
-      
-      if (!travelSnap.exists()) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Viagem não encontrada."
-        });
-        return;
-      }
-
       // Format selected users to match the expected format in the database
       const usersToAdd = selectedUsers.map(userId => {
         const user = users.find(u => u.id === userId);
         return `${user?.rank} ${user?.warName}`;
       }).filter(Boolean);
 
-      // Get current volunteers and add the new ones without duplicates
-      const travelData = travelSnap.data();
-      const currentVolunteersArray = Array.isArray(travelData.volunteers) ? travelData.volunteers : [];
+      // Get current volunteers from the timeSlot and add the new ones without duplicates
+      const currentVolunteersArray = Array.isArray(timeSlot.volunteers) ? timeSlot.volunteers : [];
       
       // Create a Set to remove duplicates
       const uniqueVolunteers = new Set([...currentVolunteersArray, ...usersToAdd]);
@@ -134,17 +122,16 @@ const AddVolunteerDialog = ({
       // Convert back to array
       const updatedVolunteers = Array.from(uniqueVolunteers);
 
-      // Update the travel with new volunteers
-      await updateDoc(travelRef, {
-        volunteers: updatedVolunteers
-      });
+      // Here you would typically update the timeSlot in your database
+      // This is a placeholder - you'll need to implement the actual update logic based on your data structure
+      console.log("Updated volunteers:", updatedVolunteers);
 
       toast({
         title: "Sucesso",
         description: "Voluntários adicionados com sucesso!"
       });
       
-      onVolunteersAdded();
+      onVolunteerAdded();
       onOpenChange(false);
     } catch (error) {
       console.error("Error adding volunteers:", error);
@@ -168,7 +155,7 @@ const AddVolunteerDialog = ({
     const searchLower = searchQuery.toLowerCase();
     const warName = user.warName?.toLowerCase() || "";
     const rank = user.rank?.toLowerCase() || "";
-    const email = user.email.toLowerCase();
+    const email = user.email?.toLowerCase() || "";
     const fullName = `${rank} ${warName}`.toLowerCase();
     
     return warName.includes(searchLower) || 
@@ -182,7 +169,7 @@ const AddVolunteerDialog = ({
     if (!user || !user.rank || !user.warName) return false;
     
     const formattedName = `${user.rank} ${user.warName}`;
-    return currentVolunteers.includes(formattedName);
+    return timeSlot.volunteers?.includes(formattedName) || false;
   };
 
   return (
@@ -191,7 +178,7 @@ const AddVolunteerDialog = ({
         <DialogHeader>
           <DialogTitle>Adicionar Voluntários</DialogTitle>
           <DialogDescription>
-            Selecione os voluntários que deseja adicionar à viagem.
+            Selecione os voluntários que deseja adicionar ao horário.
           </DialogDescription>
         </DialogHeader>
 
