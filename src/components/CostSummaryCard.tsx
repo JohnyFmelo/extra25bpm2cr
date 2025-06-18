@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { AlertTriangle, Zap } from "lucide-react";
 import BudgetConfigDialog from "./BudgetConfigDialog";
-import { dataOperations } from "@/lib/firebase";
 
 interface CostSummaryCardProps {
   totalCostSummary: {
@@ -23,46 +22,17 @@ const formatCurrency = (value: number): string => {
 
 const CostSummaryCard: React.FC<CostSummaryCardProps> = ({ totalCostSummary }) => {
   const [budget, setBudget] = useState<number>(60000); // Valor padrão
-  const [isLoading, setIsLoading] = useState(true);
   
-  // Carregar orçamento do Firebase
+  // Carregar orçamento do localStorage
   useEffect(() => {
-    const loadBudgetFromFirebase = async () => {
-      try {
-        const data = await dataOperations.fetch();
-        
-        // Procurar pelo último registro de orçamento
-        const budgetRecords = data
-          .filter(item => item.type === 'budget_config')
-          .sort((a, b) => new Date(b.updatedAt || '').getTime() - new Date(a.updatedAt || '').getTime());
-        
-        if (budgetRecords.length > 0) {
-          setBudget(budgetRecords[0].budget || 60000);
-        } else {
-          // Se não encontrar no Firebase, tentar localStorage como fallback
-          const savedBudget = localStorage.getItem('extrasBudget');
-          if (savedBudget) {
-            setBudget(parseFloat(savedBudget));
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao carregar orçamento do Firebase:', error);
-        // Fallback para localStorage
-        const savedBudget = localStorage.getItem('extrasBudget');
-        if (savedBudget) {
-          setBudget(parseFloat(savedBudget));
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadBudgetFromFirebase();
+    const savedBudget = localStorage.getItem('extrasBudget');
+    if (savedBudget) {
+      setBudget(parseFloat(savedBudget));
+    }
   }, []);
 
   const handleBudgetUpdate = (newBudget: number) => {
     setBudget(newBudget);
-    // Manter no localStorage como backup
     localStorage.setItem('extrasBudget', newBudget.toString());
   };
 
@@ -71,26 +41,6 @@ const CostSummaryCard: React.FC<CostSummaryCardProps> = ({ totalCostSummary }) =
   const remaining = budget - totalSpent;
   const isOverBudget = totalSpent > budget;
   const isNearLimit = progressPercentage >= 95 && !isOverBudget;
-
-  if (isLoading) {
-    return (
-      <Card className="bg-white rounded-lg shadow-sm">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">Resumo de Custos</h2>
-            <div className="h-8 w-8 animate-pulse bg-gray-200 rounded"></div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="animate-pulse space-y-2">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="bg-white rounded-lg shadow-sm">
