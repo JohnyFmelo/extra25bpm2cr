@@ -257,7 +257,7 @@ const AddVolunteerDialog = ({
                     return (
                       <div
                         key={user.id}
-                        onClick={() => !isAlreadyAdded && toggleUserSelection(user.id)}
+                        onClick={() => !isAlReadyAdded && toggleUserSelection(user.id)}
                         className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
                           isAlreadyAdded 
                             ? 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed' 
