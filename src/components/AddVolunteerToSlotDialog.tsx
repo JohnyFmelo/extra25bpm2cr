@@ -13,9 +13,10 @@ interface AddVolunteerToSlotDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   timeSlot: TimeSlot;
+  onVolunteerAdded?: () => void;
 }
 
-const AddVolunteerToSlotDialog = ({ open, onOpenChange, timeSlot }: AddVolunteerToSlotDialogProps) => {
+const AddVolunteerToSlotDialog = ({ open, onOpenChange, timeSlot, onVolunteerAdded }: AddVolunteerToSlotDialogProps) => {
   const [volunteerName, setVolunteerName] = useState("");
   const [volunteerRank, setVolunteerRank] = useState("");
   const [militaryType, setMilitaryType] = useState<MilitaryType>("Operacional");
@@ -38,8 +39,10 @@ const AddVolunteerToSlotDialog = ({ open, onOpenChange, timeSlot }: AddVolunteer
     try {
       const fullName = `${volunteerRank} ${volunteerName}`.trim();
       
+      const dateField = timeSlot.date instanceof Date ? timeSlot.date.toISOString().split('T')[0] : timeSlot.date;
+      
       const updatedSlot = {
-        date: timeSlot.date instanceof Date ? timeSlot.date.toISOString().split('T')[0] : timeSlot.date,
+        date: dateField,
         start_time: timeSlot.startTime,
         end_time: timeSlot.endTime,
         total_slots: timeSlot.slots,
@@ -50,7 +53,7 @@ const AddVolunteerToSlotDialog = ({ open, onOpenChange, timeSlot }: AddVolunteer
       };
 
       const result = await dataOperations.update(updatedSlot, {
-        date: timeSlot.date instanceof Date ? timeSlot.date.toISOString().split('T')[0] : timeSlot.date,
+        date: dateField,
         start_time: timeSlot.startTime,
         end_time: timeSlot.endTime
       });
@@ -66,6 +69,11 @@ const AddVolunteerToSlotDialog = ({ open, onOpenChange, timeSlot }: AddVolunteer
         setMilitaryType("Operacional");
         setExtraHours("");
         onOpenChange(false);
+        
+        // Chama o callback se fornecido
+        if (onVolunteerAdded) {
+          onVolunteerAdded();
+        }
       } else {
         throw new Error("Falha ao adicionar voluntário");
       }
