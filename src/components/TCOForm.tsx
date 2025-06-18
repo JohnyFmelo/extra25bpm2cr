@@ -114,28 +114,37 @@ const formatPhone = (phone: string): string => {
 };
 const formatarGuarnicao = (componentes: ComponenteGuarnicao[]): string => {
   if (!componentes || componentes.length === 0) return "[GUPM PENDENTE]";
+  
   const principais = componentes.filter(c => c && c.nome && c.posto && !c.apoio);
   const apoio = componentes.filter(c => c && c.nome && c.posto && c.apoio);
+  
   const nomesPrincipais = principais.map(c => `${c.posto} PM ${c.nome}`);
   const nomesApoio = apoio.map(c => `${c.posto} PM ${c.nome} (APOIO)`);
+  
   const nomesFormatados = [...nomesPrincipais, ...nomesApoio];
+  
   if (nomesFormatados.length === 0) return "[GUPM PENDENTE]";
   if (nomesFormatados.length === 1) return nomesFormatados[0].toUpperCase();
   if (nomesFormatados.length === 2) return `${nomesFormatados[0]} E ${nomesFormatados[1]}`.toUpperCase();
+  
   return `${nomesFormatados.slice(0, -1).join(", ")} E ${nomesFormatados[nomesFormatados.length - 1]}`.toUpperCase();
 };
 const formatarRelatoAutor = (autores: Pessoa[]): string => {
   if (autores.length === 0 || !autores.some(a => a.nome.trim() !== "")) {
     return "O AUTOR DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.";
   }
+  
   const autoresValidos = autores.filter(a => a.nome.trim() !== "");
+  
   if (autoresValidos.length === 1) {
     const sexo = autoresValidos[0].sexo.toLowerCase();
     const pronome = sexo === "feminino" ? "A AUTORA" : "O AUTOR";
     return `${pronome} DOS FATOS ABAIXO ASSINADO, JÁ QUALIFICADO NOS AUTOS, CIENTIFICADO DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLAROU QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSE E NEM LHE FOI PERGUNTADO.`;
   }
+  
   const todosFemininos = autoresValidos.every(a => a.sexo.toLowerCase() === "feminino");
   const pronomePlural = todosFemininos ? "AS AUTORAS" : "OS AUTORES";
+  
   return `${pronomePlural} DOS FATOS ABAIXO ASSINADOS, JÁ QUALIFICADOS NOS AUTOS, CIENTIFICADOS DE SEUS DIREITOS CONSTITUCIONAIS INCLUSIVE O DE PERMANECER EM SILÊNCIO, DECLARARAM QUE [INSIRA DECLARAÇÃO]. LIDO E ACHADO CONFORME. NADA MAIS DISSERAM E NEM LHE FOI PERGUNTADO.`;
 };
 const numberToText = (num: number): string => {
@@ -154,19 +163,18 @@ const calculateAge = (birthDate: Date, referenceDate: Date) => {
   let years = referenceDate.getFullYear() - birthDate.getFullYear();
   let months = referenceDate.getMonth() - birthDate.getMonth();
   let days = referenceDate.getDate() - birthDate.getDate();
+
   if (days < 0) {
     months -= 1;
     days += new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 0).getDate();
   }
+  
   if (months < 0) {
     years -= 1;
     months += 12;
   }
-  return {
-    years,
-    months,
-    days
-  };
+
+  return { years, months, days };
 };
 const TCOForm: React.FC<TCOFormProps> = ({
   selectedTco,
@@ -190,9 +198,15 @@ const TCOForm: React.FC<TCOFormProps> = ({
   });
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  
+  // << CORREÇÃO: Lógica ajustada para capturar a data local, evitando o erro de fuso horário. >>
   const now = new Date();
-  const formattedDate = now.toISOString().split('T')[0];
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const formattedDate = `${year}-${month}-${day}`; // Formato YYYY-MM-DD
   const formattedTime = now.toTimeString().slice(0, 5);
+
   const [tcoNumber, setTcoNumber] = useState("");
   const [natureza, setNatureza] = useState(""); // Removido valor padrão
   const [customNatureza, setCustomNatureza] = useState("");
@@ -265,6 +279,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
       } = updatedDroga;
       let indicios = "";
       let isUnknownMaterial = false;
+
       if (substancia === "Vegetal" && cor !== "Verde") {
         isUnknownMaterial = true;
         indicios = "Material desconhecido";
@@ -273,7 +288,10 @@ const TCOForm: React.FC<TCOFormProps> = ({
         indicios = "Material desconhecido";
       } else {
         isUnknownMaterial = false;
-        if (substancia === "Vegetal" && cor === "Verde") indicios = "Maconha";else if (substancia === "Artificial" && cor === "Amarelada") indicios = "Pasta-Base";else if (substancia === "Artificial" && cor === "Branca") indicios = "Cocaína";else indicios = "";
+        if (substancia === "Vegetal" && cor === "Verde") indicios = "Maconha";
+        else if (substancia === "Artificial" && cor === "Amarelada") indicios = "Pasta-Base";
+        else if (substancia === "Artificial" && cor === "Branca") indicios = "Cocaína";
+        else indicios = "";
       }
       return {
         ...updatedDroga,
@@ -878,6 +896,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
   };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (hasMinorAuthor.isMinor) {
       toast({
         title: "Submissão Bloqueada",
@@ -887,9 +906,15 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
       return;
     }
+    
+    // << CORREÇÃO: Lógica ajustada para capturar a data e hora locais no momento da submissão. >>
     const completionNow = new Date();
-    const completionDate = completionNow.toISOString().split('T')[0];
+    const completionYear = completionNow.getFullYear();
+    const completionMonth = String(completionNow.getMonth() + 1).padStart(2, '0');
+    const completionDay = String(completionNow.getDate()).padStart(2, '0');
+    const completionDate = `${completionYear}-${completionMonth}-${completionDay}`;
     const completionTime = completionNow.toTimeString().slice(0, 5);
+    
     const autoresValidos = autores.filter(a => a.nome?.trim());
     if (!tcoNumber.trim()) {
       toast({
@@ -979,7 +1004,10 @@ const TCOForm: React.FC<TCOFormProps> = ({
           });
         }
       }
-      const relatoAutorConsolidado = autoresValidos.filter(a => a.relato && a.relato.trim() !== "").map(a => a.relato).join('\n\n') || relatoAutor;
+      const relatoAutorConsolidado = autoresValidos
+        .filter(a => a.relato && a.relato.trim() !== "")
+        .map(a => a.relato)
+        .join('\n\n') || relatoAutor;
 
       // << CORREÇÃO: O objeto enviado para o PDF agora contém o array 'drogas' em vez de campos individuais. >>
       const tcoDataParaPDF: any = {
@@ -1011,8 +1039,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
         apreensoes: apreensoes.trim(),
         conclusaoPolicial: conclusaoPolicial.trim(),
         lacreNumero: isPrimaryDrugCase ? lacreNumero.trim() : undefined,
-        drogas: isPrimaryDrugCase ? drogas : undefined,
-        // << CAMPO NOVO COM O ARRAY DE DROGAS >>
+        drogas: isPrimaryDrugCase ? drogas : undefined, // << CAMPO NOVO COM O ARRAY DE DROGAS >>
         startTime: startTime?.toISOString(),
         endTime: completionNow.toISOString(),
         userRegistration: userRegistration,
@@ -1026,32 +1053,39 @@ const TCOForm: React.FC<TCOFormProps> = ({
         providencias: providencias,
         documentosAnexos: documentosAnexos
       };
-      Object.keys(tcoDataParaPDF).forEach(key => tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]);
+      Object.keys(tcoDataParaPDF).forEach(key => 
+        tcoDataParaPDF[key] === undefined && delete tcoDataParaPDF[key]
+      );
       console.log("Dados para gerar PDF:", tcoDataParaPDF);
       const pdfGenerationPromise = generatePDF(tcoDataParaPDF);
       const timeoutPromise = new Promise<Blob>((_, reject) => {
         setTimeout(() => reject(new Error("Tempo limite excedido ao gerar o PDF.")), 90000);
       });
       const pdfBlob = await Promise.race([pdfGenerationPromise, timeoutPromise]);
-      if (!pdfBlob || pdfBlob.size === 0) throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
+      if (!pdfBlob || pdfBlob.size === 0) 
+        throw new Error("Falha ao gerar o PDF. O arquivo está vazio.");
+
       console.log("PDF gerado, tamanho:", pdfBlob.size, "tipo:", pdfBlob.type);
+
       const desiredFileName = generateTCOFilename(tcoDataParaPDF);
       const filePath = `tcos/${userId || 'anonimo'}/${desiredFileName}`;
+
       const bucketExists = await ensureBucketExists();
       if (!bucketExists) {
         throw new Error("Não foi possível criar ou verificar o bucket de armazenamento.");
       }
-      const {
-        url: downloadURL,
-        error: uploadError
-      } = await uploadPDF(filePath, pdfBlob, {
+
+      const { url: downloadURL, error: uploadError } = await uploadPDF(filePath, pdfBlob, {
         tcoNumber: tcoNumber.trim(),
         natureza: displayNaturezaRealSubmit,
         createdBy: userId || 'anonimo'
       });
+
       if (uploadError) throw new Error(`Erro ao fazer upload do PDF: ${uploadError.message}`);
       if (!downloadURL) throw new Error("URL do arquivo não disponível após o upload.");
+
       console.log('URL pública do arquivo:', downloadURL);
+
       const tcoMetadata = {
         tconumber: tcoNumber.trim(),
         natureza: displayNaturezaRealSubmit,
@@ -1066,17 +1100,20 @@ const TCOForm: React.FC<TCOFormProps> = ({
         createdby: userId,
         createdat: new Date().toISOString()
       };
+
       console.log("Metadados para salvar no DB:", tcoMetadata);
+
       let attempt = 0;
       let metadataSuccess = false;
       let lastError: any = null;
+
       while (attempt < 3 && !metadataSuccess) {
         try {
           attempt++;
-          console.log(`Tentativa ${attempt} de salvar metadados...`);
-          const {
-            error: metadataError
-          } = await saveTCOMetadata(tcoMetadata);
+          console.log(`Tentativa ${attempt}de salvar metadados...`);
+          
+          const { error: metadataError } = await saveTCOMetadata(tcoMetadata);
+          
           if (metadataError) {
             console.error(`Erro na tentativa ${attempt} ao salvar metadados:`, metadataError);
             lastError = metadataError;
@@ -1095,20 +1132,25 @@ const TCOForm: React.FC<TCOFormProps> = ({
           }
         }
       }
+
       if (!metadataSuccess) {
         const errorMessage = lastError instanceof Error ? lastError.message : String(lastError || 'Erro desconhecido');
         throw new Error(`Falha ao salvar metadados após ${attempt} tentativas: ${errorMessage}`);
       }
+
       toast({
         title: "TCO Registrado com Sucesso!",
         description: "PDF enviado e informações salvas no sistema.",
         className: "bg-green-600 text-white border-green-700",
         duration: 5000
       });
+
       navigate("/?tab=tco");
+
     } catch (error: any) {
       console.error("Erro geral no processo de submissão do TCO:", error);
       const errorMessage = error instanceof Error ? error.message : String(error || 'Erro desconhecido.');
+      
       toast({
         title: "Erro ao Finalizar TCO",
         description: `Ocorreu um erro: ${errorMessage}`,
@@ -1152,7 +1194,8 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Gerais da Ocorrência</h2>
-          <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza.split(' + ')[0] === "Outros"} customNatureza={customNatureza} dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro} setHoraInicioRegistro={setHoraInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
+          {/* << CORREÇÃO: Passando os setters de data/hora de registro para o componente filho >> */}
+          <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza.split(' + ')[0] === "Outros"} customNatureza={customNatureza} dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} setDataInicioRegistro={setDataInicioRegistro} horaInicioRegistro={horaInicioRegistro} setHoraInicioRegistro={setHoraInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} setDataTerminoRegistro={setDataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} setHoraTerminoRegistro={setHoraTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
@@ -1244,17 +1287,26 @@ const TCOForm: React.FC<TCOFormProps> = ({
         </Card>
 
         <div className="flex justify-end mt-8 pt-6 border-t border-gray-300">
-          <Button type="submit" disabled={isSubmitting || hasMinorAuthor.isMinor} size="lg" className="min-w-[200px]">
-            {isSubmitting ? <>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting || hasMinorAuthor.isMinor} 
+            size="lg" 
+            className="min-w-[200px]"
+          >
+            {isSubmitting ? (
+              <>
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Processando...
-              </> : <>
+              </>
+            ) : (
+              <>
                 <FileText className="mr-2 h-5 w-5" />
                 Finalizar e Salvar TCO
-              </>}
+              </>
+            )}
           </Button>
         </div>
       </form>
