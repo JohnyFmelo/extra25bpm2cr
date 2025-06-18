@@ -1,3 +1,5 @@
+--- START OF FILE TCOForm (23).tsx ---
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -190,9 +192,15 @@ const TCOForm: React.FC<TCOFormProps> = ({
   });
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  
+  // << CORREÇÃO: Lógica ajustada para capturar a data local, evitando o erro de fuso horário. >>
   const now = new Date();
-  const formattedDate = now.toISOString().split('T')[0];
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const formattedDate = `${year}-${month}-${day}`; // Formato YYYY-MM-DD
   const formattedTime = now.toTimeString().slice(0, 5);
+
   const [tcoNumber, setTcoNumber] = useState("");
   const [natureza, setNatureza] = useState(""); // Removido valor padrão
   const [customNatureza, setCustomNatureza] = useState("");
@@ -887,9 +895,15 @@ const TCOForm: React.FC<TCOFormProps> = ({
       });
       return;
     }
+    
+    // << CORREÇÃO: Lógica ajustada para capturar a data e hora locais no momento da submissão. >>
     const completionNow = new Date();
-    const completionDate = completionNow.toISOString().split('T')[0];
+    const completionYear = completionNow.getFullYear();
+    const completionMonth = String(completionNow.getMonth() + 1).padStart(2, '0');
+    const completionDay = String(completionNow.getDate()).padStart(2, '0');
+    const completionDate = `${completionYear}-${completionMonth}-${completionDay}`;
     const completionTime = completionNow.toTimeString().slice(0, 5);
+    
     const autoresValidos = autores.filter(a => a.nome?.trim());
     if (!tcoNumber.trim()) {
       toast({
@@ -1152,7 +1166,8 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
           <h2 className="text-xl font-semibold mb-4">Informações Gerais da Ocorrência</h2>
-          <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza.split(' + ')[0] === "Outros"} customNatureza={customNatureza} dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} horaInicioRegistro={horaInicioRegistro} setHoraInicioRegistro={setHoraInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
+          {/* << CORREÇÃO: Passando os setters de data/hora de registro para o componente filho >> */}
+          <GeneralInformationTab natureza={natureza} tipificacao={tipificacao} setTipificacao={setTipificacao} isCustomNatureza={natureza.split(' + ')[0] === "Outros"} customNatureza={customNatureza} dataFato={dataFato} setDataFato={setDataFato} horaFato={horaFato} setHoraFato={setHoraFato} dataInicioRegistro={dataInicioRegistro} setDataInicioRegistro={setDataInicioRegistro} horaInicioRegistro={horaInicioRegistro} setHoraInicioRegistro={setHoraInicioRegistro} dataTerminoRegistro={dataTerminoRegistro} setDataTerminoRegistro={setDataTerminoRegistro} horaTerminoRegistro={horaTerminoRegistro} setHoraTerminoRegistro={setHoraTerminoRegistro} localFato={localFato} setLocalFato={setLocalFato} endereco={endereco} setEndereco={setEndereco} municipio={municipio} comunicante={comunicante} setComunicante={setComunicante} guarnicao={guarnicao} setGuarnicao={setGuarnicao} operacao={operacao} setOperacao={setOperacao} condutorNome={condutorParaDisplay?.nome || ""} condutorPosto={condutorParaDisplay?.posto || ""} condutorRg={condutorParaDisplay?.rg || ""} />
         </div>
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
