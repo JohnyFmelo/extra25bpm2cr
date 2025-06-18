@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { format, parseISO, isPast, addDays, isAfter, startOfDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -253,43 +254,25 @@ const TimeSlotsList = () => {
     const timeSlotsCollection = collection(db, 'timeSlots');
     const timeSlotsQuery = query(timeSlotsCollection);
     const unsubscribeTimeSlots = onSnapshot(timeSlotsQuery, snapshot => {
-      const formattedSlots: TimeSlot[] = [];
-      
-      snapshot.docs.forEach(docSnap => {
-        try {
-          const data = docSnap.data();
-          let slotDateStr: string;
-          
-          // Verificar se o campo date existe e é válido
-          if (data.date && typeof data.date.toDate === 'function') {
-            slotDateStr = format(data.date.toDate(), 'yyyy-MM-dd');
-          } else if (data.date && typeof data.date === 'string') {
-            slotDateStr = data.date;
-          } else {
-            console.warn('Document with invalid or missing date:', docSnap.id, data);
-            return; // Pular este documento
-          }
-          
-          // Verificar se os campos obrigatórios existem
-          if (!data.start_time || !data.end_time) {
-            console.warn('Document with missing time fields:', docSnap.id, data);
-            return; // Pular este documento
-          }
-          
-          formattedSlots.push({
-            id: docSnap.id,
-            date: slotDateStr,
-            start_time: data.start_time,
-            end_time: data.end_time,
-            volunteers: data.volunteers || [],
-            slots_used: data.slots_used || 0,
-            total_slots: data.total_slots || data.slots || 0,
-            description: data.description || "",
-            allowedMilitaryTypes: data.allowedMilitaryTypes || []
-          });
-        } catch (error) {
-          console.error('Error processing document:', docSnap.id, error);
+      const formattedSlots: TimeSlot[] = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        let slotDateStr: string;
+        if (data.date && typeof data.date.toDate === 'function') {
+          slotDateStr = format(data.date.toDate(), 'yyyy-MM-dd');
+        } else {
+          slotDateStr = data.date as string;
         }
+        return {
+          id: docSnap.id,
+          date: slotDateStr,
+          start_time: data.start_time,
+          end_time: data.end_time,
+          volunteers: data.volunteers || [],
+          slots_used: data.slots_used || 0,
+          total_slots: data.total_slots || data.slots || 0,
+          description: data.description || "",
+          allowedMilitaryTypes: data.allowedMilitaryTypes || []
+        };
       });
 
       // Initialize collapsed state - past dates (including today) should be collapsed
@@ -297,15 +280,11 @@ const TimeSlotsList = () => {
         [key: string]: boolean;
       } = {};
       formattedSlots.forEach(slot => {
-        try {
-          const slotDate = parseISO(slot.date);
-          const isDatePastOrToday = isPast(startOfDay(slotDate)) || isToday(slotDate);
-          
-          if (isDatePastOrToday) {
-            newCollapsedDates[slot.date] = true;
-          }
-        } catch (error) {
-          console.error('Error parsing date for collapsed state:', slot.date, error);
+        const slotDate = parseISO(slot.date);
+        const isDatePastOrToday = isPast(startOfDay(slotDate)) || isToday(slotDate);
+        
+        if (isDatePastOrToday) {
+          newCollapsedDates[slot.date] = true;
         }
       });
       setCollapsedDates(newCollapsedDates);
@@ -456,16 +435,11 @@ const TimeSlotsList = () => {
   const isVolunteered = (timeSlot: TimeSlot) => timeSlot.volunteers?.includes(volunteerName);
   const isSlotFull = (timeSlot: TimeSlot) => timeSlot.slots_used === timeSlot.total_slots;
   const formatDateHeader = (date: string) => {
-    try {
-      const dayOfWeek = format(parseISO(date), "eee", {
-        locale: ptBR
-      });
-      const truncatedDay = dayOfWeek.substring(0, 3);
-      return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}-${format(parseISO(date), "dd/MM/yy")}`;
-    } catch (error) {
-      console.error('Error formatting date header:', date, error);
-      return date; // Fallback to raw date string
-    }
+    const dayOfWeek = format(parseISO(date), "eee", {
+      locale: ptBR
+    });
+    const truncatedDay = dayOfWeek.substring(0, 3);
+    return `${truncatedDay.charAt(0).toUpperCase()}${truncatedDay.slice(1)}-${format(parseISO(date), "dd/MM/yy")}`;
   };
 
   const shouldShowVolunteerButton = (slot: TimeSlot) => {
@@ -596,17 +570,12 @@ const TimeSlotsList = () => {
   let weeklyCostDates: string[] = [];
   if (calculatedGroupedTimeSlots) {
     Object.entries(calculatedGroupedTimeSlots).filter(([date]) => {
-      try {
-        const slotDate = parseISO(date);
-        const isWeeklyDate = isAfter(slotDate, tomorrow) || format(slotDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
-        if (isWeeklyDate) {
-          weeklyCostDates.push(date);
-        }
-        return isWeeklyDate;
-      } catch (error) {
-        console.error('Error processing weekly cost date:', date, error);
-        return false;
+      const slotDate = parseISO(date);
+      const isWeeklyDate = isAfter(slotDate, tomorrow) || format(slotDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
+      if (isWeeklyDate) {
+        weeklyCostDates.push(date);
       }
+      return isWeeklyDate;
     }).forEach(([, groupedData]) => {
       weeklyCost += groupedData.dailyCost;
     });
@@ -615,18 +584,13 @@ const TimeSlotsList = () => {
   const formatWeeklyDateRange = () => {
     if (weeklyCostDates.length === 0) return "";
     const sortedDates = weeklyCostDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-    try {
-      const startDate = format(parseISO(sortedDates[0]), "eee", {
-        locale: ptBR
-      }).substring(0, 3).toUpperCase();
-      const endDate = format(parseISO(sortedDates[sortedDates.length - 1]), "eee", {
-        locale: ptBR
-      }).substring(0, 3).toUpperCase();
-      return `${startDate}-${endDate}`;
-    } catch (error) {
-      console.error('Error formatting weekly date range:', error);
-      return "";
-    }
+    const startDate = format(parseISO(sortedDates[0]), "eee", {
+      locale: ptBR
+    }).substring(0, 3).toUpperCase();
+    const endDate = format(parseISO(sortedDates[sortedDates.length - 1]), "eee", {
+      locale: ptBR
+    }).substring(0, 3).toUpperCase();
+    return `${startDate}-${endDate}`;
   };
 
   const weeklyDateRangeText = formatWeeklyDateRange();
@@ -708,16 +672,8 @@ const TimeSlotsList = () => {
       } = groupedData;
       if (slots.length === 0) return null;
       
-      let slotDate;
-      let isDatePastOrToday = false;
-      
-      try {
-        slotDate = parseISO(date);
-        isDatePastOrToday = isPast(startOfDay(slotDate)) || isToday(slotDate);
-      } catch (error) {
-        console.error('Error parsing date in render:', date, error);
-        return null; // Skip this date if it can't be parsed
-      }
+      const slotDate = parseISO(date);
+      const isDatePastOrToday = isPast(startOfDay(slotDate)) || isToday(slotDate);
       
       // Hide past dates completely for non-admin users
       if (!isAdmin && isDatePastOrToday) {
