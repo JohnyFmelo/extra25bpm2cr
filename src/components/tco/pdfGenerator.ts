@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 
 // Importa funções auxiliares e de página da subpasta PDF
@@ -132,13 +131,8 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
             yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
             yPosition = addNewPage(doc, data);
 
-            // CORREÇÃO 1: Lógica para verificar se há drogas cadastradas independente da natureza
-            const hasDrugs = Array.isArray(data.drogas) && data.drogas.length > 0;
-            
-            // CORREÇÃO 2: Verificar se há vítimas válidas (com nome preenchido) 
-            const validVitimas = data.vitimas?.filter(v => v?.nome && v.nome.trim() !== "" && v.nome !== "O ESTADO") || [];
-            const hasValidVitimas = validVitimas.length > 0;
-
+            // << CORREÇÃO: Lógica para preparar a lista de anexos agora usa o array 'data.drogas' >>
+            const isDrugCase = Array.isArray(data.drogas) && data.drogas.length > 0;
             const documentosAnexosList = [];
 
             if (data.autores && data.autores.length > 0) {
@@ -149,10 +143,11 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                 });
             }
 
-            // CORREÇÃO: Só adiciona termo de manifestação se não for caso de droga E houver vítimas válidas
-            if (!hasDrugs && hasValidVitimas) {
-                validVitimas.forEach((vitima: any) => {
-                    documentosAnexosList.push(`TERMO DE MANIFESTAÇÃO DA VÍTIMA ${vitima.nome.toUpperCase()}`);
+            if (!isDrugCase && data.vitimas && data.vitimas.length > 0) {
+                data.vitimas.forEach((vitima: any) => {
+                    if (vitima.nome && vitima.nome.trim()) {
+                        documentosAnexosList.push(`TERMO DE MANIFESTAÇÃO DA VÍTIMA ${vitima.nome.toUpperCase()}`);
+                    }
                 });
             }
 
@@ -175,18 +170,19 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
                     }
                     
-                    // CORREÇÃO: Só adiciona termo de manifestação se não for caso de droga E houver vítimas válidas
-                    if (!hasDrugs && hasValidVitimas) {
+                    if (!isDrugCase && updatedData.vitimas && updatedData.vitimas.length > 0) {
                         console.log("Adicionando Termo de Manifestação da Vítima");
                         addTermoManifestacao(doc, updatedData);
                     } else {
-                        console.log("Pulando Termo de Manifestação da Vítima: caso de droga ou sem vítimas válidas.");
+                        console.log("Pulando Termo de Manifestação da Vítima: natureza incompatível, caso de droga ou sem vítimas.");
                     }
 
-                    // CORREÇÃO: Gera termos de droga sempre que houver drogas cadastradas
-                    if (hasDrugs) {
+                    // << CORREÇÃO: A chamada para os termos relacionados a drogas agora usa a flag 'isDrugCase' >>
+                    if (isDrugCase) {
                         console.log("Adicionando Termos de Droga (Apreensão, Constatação, Requisição)");
+                        // O Termo de Apreensão agora é chamado para cada caso de droga
                         addTermoApreensao(doc, updatedData);
+                        // As outras funções já devem ser capazes de iterar sobre `updatedData.drogas`
                         addTermoConstatacaoDroga(doc, updatedData);
                         addRequisicaoExameDrogas(doc, updatedData);
                     } else if (updatedData.apreensoes && updatedData.apreensoes.trim() !== '') {
@@ -194,6 +190,7 @@ export const generatePDF = async (inputData: any): Promise<Blob> => {
                         console.log("Adicionando Termo de Apreensão para outros objetos");
                         addTermoApreensao(doc, updatedData);
                     }
+
 
                     if (pessoasComLaudo.length > 0) {
                         pessoasComLaudo.forEach((pessoa: any) => {

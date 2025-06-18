@@ -1,245 +1,539 @@
-import jsPDF from "jspdf";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { collection, addDoc, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { format, differenceInYears, differenceInMonths, differenceInDays, parseISO } from "date-fns";
+import { AlertTriangle, Save, FileText, Clock, Users, Eye, EyeOff } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import GeneralInformationTab from "./tco/GeneralInformationTab";
+import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
+import GuarnicaoTab from "./tco/GuarnicaoTab";
+import HistoricoTab from "./tco/HistoricoTab";
+import DrugVerificationTab from "./tco/DrugVerificationTab";
+import TCOTimer from "./tco/TCOTimer";
 
-// Importa funções auxiliares e de página da subpasta PDF
-import {
-    MARGIN_TOP, MARGIN_BOTTOM, MARGIN_RIGHT, getPageConstants,
-    addNewPage,
-    addStandardFooterContent
-} from './PDF/pdfUtils.js';
+interface Autor {
+  nome: string;
+  sexo: string;
+  estadoCivil: string;
+  profissao: string;
+  endereco: string;
+  dataNascimento: string;
+  naturalidade: string;
+  filiacaoMae: string;
+  filiacaoPai: string;
+  rg: string;
+  cpf: string;
+  celular: string;
+  email: string;
+  laudoPericial: string;
+}
 
-// Importa geradores de conteúdo da subpasta PDF
-import { generateAutuacaoPage } from './PDF/PDFautuacao.js';
-import { generateHistoricoContent } from './PDF/PDFhistorico.js';
-import { addTermoCompromisso } from './PDF/PDFTermoCompromisso.js';
-import { addTermoManifestacao } from './PDF/PDFTermoManifestacao.js';
-import { addTermoApreensao } from './PDF/PDFTermoApreensao.js';
-import { addTermoConstatacaoDroga } from './PDF/PDFTermoConstatacaoDroga.js';
-import { addRequisicaoExameDrogas } from './PDF/PDFpericiadrogas.js';
-import { addRequisicaoExameLesao } from './PDF/PDFTermoRequisicaoExameLesao.js';
-import { addTermoEncerramentoRemessa } from './PDF/PDFTermoEncerramentoRemessa.js';
+interface Vitima {
+  nome: string;
+  sexo: string;
+  estadoCivil: string;
+  profissao: string;
+  endereco: string;
+  dataNascimento: string;
+  naturalidade: string;
+  filiacaoMae: string;
+  filiacaoPai: string;
+  rg: string;
+  cpf: string;
+  celular: string;
+  email: string;
+  laudoPericial: string;
+}
 
-/**
- * Remove acentos e caracteres especiais de uma string
- */
-const removeAccents = (str: string): string => {
-    if (!str) return "";
-    return str
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
-        .replace(/[^a-zA-Z0-9_-]/g, '_') // Substitui caracteres especiais por underscore
-        .replace(/_+/g, '_') // Remove underscores consecutivos
-        .replace(/^_|_$/g, ''); // Remove underscores no início e fim
-};
+interface Testemunha {
+  nome: string;
+  sexo: string;
+  estadoCivil: string;
+  profissao: string;
+  endereco: string;
+  dataNascimento: string;
+  naturalidade: string;
+  filiacaoMae: string;
+  filiacaoPai: string;
+  rg: string;
+  cpf: string;
+  celular: string;
+  email: string;
+  laudoPericial: string;
+}
 
-/**
- * Gera o nome do arquivo TCO no formato específico pedido
- * TCO_[número]_[data]_[natureza]_[RGPM condutor][RGPMs outros].[RGPMs apoio]
- */
-export const generateTCOFilename = (data: any): string => {
-    console.log("Gerando nome do arquivo TCO", data);
+interface Condutor {
+  nome: string;
+  posto: string;
+  rg: string;
+}
 
-    const tcoNum = data.tcoNumber?.trim() || 'SEM_NUMERO';
+interface ComponenteGuarnicao {
+  nome: string;
+  posto: string;
+  rg: string;
+}
 
-    const eventDate = data.dataFato ? data.dataFato.split('-') : [];
-    const formattedDate = eventDate.length === 3 ?
-        `${eventDate[2]}-${eventDate[1]}-${eventDate[0]}` :
-        new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+interface PreenchimentoAutomatico {
+  guarnicao: string;
+  componentesGuarnicao: ComponenteGuarnicao[];
+  condutor: Condutor;
+}
 
-    let natureza = (data.originalNatureza === "Outros" && data.customNatureza) ?
-        data.customNatureza.trim() :
-        data.natureza || 'Sem_Natureza';
+const naturezasDisponiveis = [
+  "Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia",
+  "Perturbação do Sossego", "Porte de drogas para consumo", 
+  "Conduzir veículo sem CNH gerando perigo de dano", "Entregar veículo automotor a pessoa não habilitada",
+  "Trafegar em velocidade incompatível com segurança", "Omissão de socorro", "Rixa",
+  "Invasão de domicílio", "Fraude em comércio", "Ato obsceno", "Falsa identidade",
+  "Resistência", "Desobediência", "Desacato", "Exercício arbitrário das próprias razões",
+  "Outros"
+];
 
-    natureza = removeAccents(natureza);
-    console.log("Natureza formatada para o nome do arquivo:", natureza);
+const estadosCivil = ["Solteiro(a)", "Casado(a)", "Divorciado(a)", "Viúvo(a)", "União Estável"];
+const estadosNaturalidade = [
+  "Acre", "Alagoas", "Amapá", "Amazonas", "Bahia", "Ceará", "Distrito Federal", "Espírito Santo",
+  "Goiás", "Maranhão", "Mato Grosso", "Mato Grosso do Sul", "Minas Gerais", "Pará", "Paraíba",
+  "Paraná", "Pernambuco", "Piauí", "Rio de Janeiro", "Rio Grande do Norte", "Rio Grande do Sul",
+  "Rondônia", "Roraima", "Santa Catarina", "São Paulo", "Sergipe", "Tocantins"
+];
 
-    const componentes = Array.isArray(data.componentesGuarnicao) ? data.componentesGuarnicao : [];
+const TCOForm: React.FC = () => {
+  // Form state
+  const [natureza, setNatureza] = useState("");
+  const [customNatureza, setCustomNatureza] = useState("");
+  const [tipificacao, setTipificacao] = useState("");
+  const [dataFato, setDataFato] = useState("");
+  const [horaFato, setHoraFato] = useState("");
+  const [dataInicioRegistro, setDataInicioRegistro] = useState("");
+  const [horaInicioRegistro, setHoraInicioRegistro] = useState("");
+  const [dataTerminoRegistro, setDataTerminoRegistro] = useState("");
+  const [horaTerminoRegistro, setHoraTerminoRegistro] = useState("");
+  const [localFato, setLocalFato] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [municipio, setMunicipio] = useState("Sonora-MS");
+  const [comunicante, setComunicante] = useState("");
+  const [guarnicao, setGuarnicao] = useState("");
+  const [operacao, setOperacao] = useState("");
 
-    const principais = componentes.filter(c => c && c.rg && !c.apoio);
-    const apoio = componentes.filter(c => c && c.rg && c.apoio);
+  // People involved
+  const [autores, setAutores] = useState<Autor[]>([{
+    nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "",
+    naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "", laudoPericial: "Não"
+  }]);
+  const [vitimas, setVitimas] = useState<Vitima[]>([{
+    nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "",
+    naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "", laudoPericial: "Não"
+  }]);
+  const [testemunhas, setTestemunhas] = useState<Testemunha[]>([{
+    nome: "", sexo: "", estadoCivil: "", profissao: "", endereco: "", dataNascimento: "",
+    naturalidade: "", filiacaoMae: "", filiacaoPai: "", rg: "", cpf: "", celular: "", email: "", laudoPericial: "Não"
+  }]);
+  const [componentesGuarnicao, setComponentesGuarnicao] = useState<ComponenteGuarnicao[]>([
+    { nome: "", posto: "", rg: "" }
+  ]);
+  const [condutorSelecionado, setCondutorSelecionado] = useState("");
+  const [condutor, setCondutor] = useState<Condutor>({ nome: "", posto: "", rg: "" });
 
-    if (principais.length === 0 && apoio.length > 0) {
-        principais.push({ ...apoio.shift(), apoio: false });
-    }
+  // History and drug verification
+  const [historico, setHistorico] = useState("");
+  const [isDrugRelated, setIsDrugRelated] = useState(false);
+  const [drugDetails, setDrugDetails] = useState({
+    tipo: "",
+    quantidade: "",
+    apresentacao: "",
+    cor: "",
+    odor: "",
+    origem: "",
+    destinatario: "",
+    localApreensao: ""
+  });
 
-    const rgsPrincipais = principais.map(p => p.rg.replace(/\D/g, ''));
-    const rgsApoio = apoio.map(p => p.rg.replace(/\D/g, ''));
+  // UI state
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("general");
+  const [showPersonalFields, setShowPersonalFields] = useState(false);
+  const [preenchimentoAutomatico, setPreenchimentoAutomatico] = useState<PreenchimentoAutomatico | null>(null);
 
-    console.log("RGs Principais:", rgsPrincipais);
-    console.log("RGs Apoio:", rgsApoio);
+  const { toast } = useToast();
 
-    let rgCode = rgsPrincipais.length > 0 ? rgsPrincipais.join('') : 'RG_INDISPONIVEL';
+  useEffect(() => {
+    const initializeData = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      
+      const formattedDate = `${year}-${month}-${day}`;
+      const formattedTime = `${hours}:${minutes}`;
+      
+      setDataInicioRegistro(formattedDate);
+      setHoraInicioRegistro(formattedTime);
+      
+      if (!dataFato) setDataFato(formattedDate);
+      if (!horaFato) setHoraFato(formattedTime);
+    };
 
-    if (rgsApoio.length > 0) {
-        rgCode += '-' + rgsApoio.join('');
-    }
+    initializeData();
+  }, []);
 
-    const fileName = `TCO_${tcoNum}_${formattedDate}_${natureza}_${rgCode}.pdf`;
-    console.log("Nome do arquivo TCO gerado:", fileName);
-    return fileName;
-};
+  useEffect(() => {
+    const loadPreenchimentoAutomatico = async () => {
+      try {
+        const userDataString = localStorage.getItem('user');
+        if (!userDataString) return;
 
-// --- Função Principal de Geração ---
-export const generatePDF = async (inputData: any): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-            reject(new Error("Tempo limite excedido ao gerar PDF. Por favor, tente novamente."));
-        }, 60000);
+        const userData = JSON.parse(userDataString);
+        if (!userData.email) return;
 
-        try {
-            if (!inputData || typeof inputData !== 'object' || Object.keys(inputData).length === 0) {
-                clearTimeout(timeout);
-                reject(new Error("Dados inválidos para gerar o PDF."));
-                return;
-            }
+        const q = query(
+          collection(db, "preenchimento_automatico"),
+          where("email", "==", userData.email)
+        );
+        const querySnapshot = await getDocs(q);
 
-            const juizadoData = inputData.juizadoEspecialData || inputData.dataAudiencia;
-            const juizadoHora = inputData.juizadoEspecialHora || inputData.horaAudiencia;
-
-            if (!juizadoData || !juizadoHora) {
-                clearTimeout(timeout);
-                reject(new Error("É necessário informar a data e hora de apresentação no Juizado Especial."));
-                return;
-            }
-
-            const doc = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4",
-            });
-
-            let processedVideoLinks = inputData.videoLinks;
-            if (processedVideoLinks && Array.isArray(processedVideoLinks)) {
-                processedVideoLinks = processedVideoLinks.map((link, index) => {
-                    if (typeof link === 'string') {
-                        return { url: link, descricao: `Vídeo ${index + 1}` };
-                    }
-                    return link;
-                });
-            }
-
-            const data = {
-                ...inputData,
-                juizadoEspecialData: juizadoData,
-                juizadoEspecialHora: juizadoHora,
-                videoLinks: processedVideoLinks,
-                hidePagination: true
-            };
-
-            const { PAGE_WIDTH, PAGE_HEIGHT } = getPageConstants(doc);
-            let yPosition;
-
-            yPosition = generateAutuacaoPage(doc, MARGIN_TOP, data);
-            yPosition = addNewPage(doc, data);
-
-            // CORREÇÃO 1: Lógica para verificar se há drogas cadastradas independente da natureza
-            const hasDrugs = Array.isArray(data.drogas) && data.drogas.length > 0;
-            
-            // CORREÇÃO 2: Verificar se há vítimas válidas (com nome preenchido) 
-            const validVitimas = data.vitimas?.filter(v => v?.nome && v.nome.trim() !== "" && v.nome !== "O ESTADO") || [];
-            const hasValidVitimas = validVitimas.length > 0;
-
-            const documentosAnexosList = [];
-
-            if (data.autores && data.autores.length > 0) {
-                data.autores.forEach((autor: any) => {
-                    if (autor.nome && autor.nome.trim()) {
-                        documentosAnexosList.push(`TERMO DE COMPROMISSO DE ${autor.nome.toUpperCase()}`);
-                    }
-                });
-            }
-
-            // CORREÇÃO: Só adiciona termo de manifestação se não for caso de droga E houver vítimas válidas
-            if (!hasDrugs && hasValidVitimas) {
-                validVitimas.forEach((vitima: any) => {
-                    documentosAnexosList.push(`TERMO DE MANIFESTAÇÃO DA VÍTIMA ${vitima.nome.toUpperCase()}`);
-                });
-            }
-
-            const pessoasComLaudo = [
-                ...(data.autores || []).filter((a: any) => a.laudoPericial === "Sim").map((a: any) => ({ nome: a.nome, sexo: a.sexo, tipo: "Autor" })),
-                ...(data.vitimas || []).filter((v: any) => v.laudoPericial === "Sim").map((v: any) => ({ nome: v.nome, sexo: v.sexo, tipo: "Vítima" }))
-            ].filter((p: any) => p.nome && p.nome.trim());
-
-            const updatedData = {
-                ...data,
-                documentosAnexos: documentosAnexosList.join('\n')
-            };
-
-            generateHistoricoContent(doc, yPosition, updatedData)
-                .then(() => {
-                    // --- ADIÇÃO DOS TERMOS ---
-                    if (updatedData.autores && updatedData.autores.length > 0) {
-                        addTermoCompromisso(doc, updatedData);
-                    } else {
-                        console.warn("Nenhum autor informado, pulando Termo de Compromisso.");
-                    }
-                    
-                    // CORREÇÃO: Só adiciona termo de manifestação se não for caso de droga E houver vítimas válidas
-                    if (!hasDrugs && hasValidVitimas) {
-                        console.log("Adicionando Termo de Manifestação da Vítima");
-                        addTermoManifestacao(doc, updatedData);
-                    } else {
-                        console.log("Pulando Termo de Manifestação da Vítima: caso de droga ou sem vítimas válidas.");
-                    }
-
-                    // CORREÇÃO: Gera termos de droga sempre que houver drogas cadastradas
-                    if (hasDrugs) {
-                        console.log("Adicionando Termos de Droga (Apreensão, Constatação, Requisição)");
-                        addTermoApreensao(doc, updatedData);
-                        addTermoConstatacaoDroga(doc, updatedData);
-                        addRequisicaoExameDrogas(doc, updatedData);
-                    } else if (updatedData.apreensoes && updatedData.apreensoes.trim() !== '') {
-                        // Se não for droga, mas tiver apreensão, adiciona o termo
-                        console.log("Adicionando Termo de Apreensão para outros objetos");
-                        addTermoApreensao(doc, updatedData);
-                    }
-
-                    if (pessoasComLaudo.length > 0) {
-                        pessoasComLaudo.forEach((pessoa: any) => {
-                            console.log(`Gerando Requisição de Exame de Lesão para: ${pessoa.nome}`);
-                            addRequisicaoExameLesao(doc, { ...updatedData, periciadoNome: pessoa.nome, sexo: pessoa.sexo });
-                        });
-                    }
-
-                    addTermoEncerramentoRemessa(doc, updatedData);
-
-                    const pageCount = doc.internal.pages.length - 1;
-                    if (!updatedData.hidePagination) {
-                        for (let i = 1; i <= pageCount; i++) {
-                            doc.setPage(i);
-                            doc.setFont("helvetica", "normal");
-                            doc.setFontSize(8);
-                            doc.text(`Página ${i} de ${pageCount}`, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - MARGIN_BOTTOM + 5, { align: "right" });
-
-                            if (i > 1) {
-                                addStandardFooterContent(doc);
-                            }
-                        }
-                    }
-
-                    if (updatedData.downloadLocal) {
-                        try {
-                            const fileName = generateTCOFilename(updatedData);
-                            doc.save(fileName);
-                            console.log(`PDF salvo localmente: ${fileName}`);
-                        } catch (downloadError) {
-                            console.error("Erro ao salvar o PDF localmente:", downloadError);
-                        }
-                    }
-
-                    const pdfBlob = doc.output('blob');
-                    clearTimeout(timeout);
-                    resolve(pdfBlob);
-                })
-                .catch(histError => {
-                    clearTimeout(timeout);
-                    const message = histError instanceof Error ? histError.message : String(histError);
-                    reject(new Error(`Erro ao gerar histórico do PDF: ${message}`));
-                });
-        } catch (error) {
-            clearTimeout(timeout);
-            const message = error instanceof Error ? error.message : String(error);
-            reject(new Error(`Erro na geração do PDF: ${message}`));
+        if (!querySnapshot.empty) {
+          const data = querySnapshot.docs[0].data() as PreenchimentoAutomatico;
+          setPreenchimentoAutomatico(data);
+          
+          if (data.guarnicao) {
+            setGuarnicao(data.guarnicao);
+          }
+          if (data.componentesGuarnicao && data.componentesGuarnicao.length > 0) {
+            setComponentesGuarnicao(data.componentesGuarnicao);
+          }
+          if (data.condutor) {
+            setCondutor(data.condutor);
+          }
         }
-    });
+      } catch (error) {
+        console.error("Erro ao carregar preenchimento automático:", error);
+      }
+    };
+
+    loadPreenchimentoAutomatico();
+  }, []);
+
+  const hasMinorAuthor = useMemo(() => {
+    const today = new Date();
+    
+    for (let i = 0; i < autores.length; i++) {
+      const autor = autores[i];
+      if (autor.dataNascimento && autor.nome) {
+        try {
+          const birthDate = parseISO(autor.dataNascimento);
+          const years = differenceInYears(today, birthDate);
+          const months = differenceInMonths(today, birthDate) % 12;
+          const days = differenceInDays(today, new Date(today.getFullYear(), today.getMonth(), birthDate.getDate()));
+          
+          if (years < 18) {
+            return {
+              isMinor: true,
+              details: `O autor ${autor.nome} possui ${years} anos, ${months} meses e ${days} dias. Não é permitido registrar TCO para menores de 18 anos.`
+            };
+          }
+        } catch (error) {
+          console.error("Erro ao calcular idade:", error);
+        }
+      }
+    }
+    
+    return { isMinor: false, details: null };
+  }, [autores]);
+
+  const handleFormKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      handleSubmit(e as any);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (hasMinorAuthor.isMinor) {
+      toast({
+        variant: "destructive",
+        title: "Erro de Validação",
+        description: "Não é possível registrar TCO com autor menor de idade."
+      });
+      return;
+    }
+
+    if (!natureza || !dataFato || !horaFato || !localFato || !endereco || !comunicante || !guarnicao) {
+      toast({
+        variant: "destructive",
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos obrigatórios marcados com *"
+      });
+      return;
+    }
+
+    if (!historico.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Histórico obrigatório",
+        description: "Por favor, preencha o histórico da ocorrência."
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const userDataString = localStorage.getItem('user');
+      const userData = userDataString ? JSON.parse(userDataString) : null;
+      
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      
+      const completionDate = `${year}-${month}-${day}`;
+      const completionTime = `${hours}:${minutes}`;
+
+      const validAutores = autores.filter(autor => autor.nome.trim() !== '');
+      const validVitimas = vitimas.filter(vitima => vitima.nome.trim() !== '');
+      const validTestemunhas = testemunhas.filter(testemunha => testemunha.nome.trim() !== '');
+
+      console.log("Autores array completo:", autores);
+      console.log("Valid autores encontrados:", validAutores);
+      console.log("Número de autores válidos:", validAutores.length);
+
+      const tcoData = {
+        natureza: natureza.split(' + ')[0] === "Outros" ? customNatureza : natureza,
+        tipificacao,
+        dataFato,
+        horaFato,
+        dataInicioRegistro,
+        horaInicioRegistro,
+        dataTerminoRegistro: completionDate,
+        horaTerminoRegistro: completionTime,
+        localFato,
+        endereco,
+        municipio,
+        comunicante,
+        guarnicao,
+        operacao,
+        autores: validAutores,
+        vitimas: validVitimas,
+        testemunhas: validTestemunhas,
+        componentesGuarnicao,
+        condutor,
+        historico,
+        isDrugRelated,
+        drugDetails: isDrugRelated ? drugDetails : null,
+        registradoPor: userData?.warName || userData?.email || 'Usuário não identificado',
+        emailRegistrador: userData?.email || '',
+        criadoEm: new Date(),
+        status: 'ativo'
+      };
+
+      await addDoc(collection(db, "tcos"), tcoData);
+
+      toast({
+        title: "TCO registrado com sucesso!",
+        description: "O Termo Circunstanciado de Ocorrência foi salvo no sistema."
+      });
+
+      // Reset form
+      window.location.reload();
+
+    } catch (error) {
+      console.error("Erro ao salvar TCO:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar o TCO. Tente novamente."
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const condutorParaDisplay = useMemo(() => {
+    if (condutorSelecionado && condutorSelecionado !== "Outro") {
+      const componenteSelecionado = componentesGuarnicao.find(
+        comp => `${comp.posto} ${comp.nome}` === condutorSelecionado
+      );
+      if (componenteSelecionado) {
+        return componenteSelecionado;
+      }
+    }
+    return condutor;
+  }, [condutorSelecionado, componentesGuarnicao, condutor]);
+
+  return (
+    <div className="container mx-auto p-4 max-w-4xl">
+      <Card className="mb-6">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl font-bold text-blue-900">
+                Registro de TCO - Termo Circunstanciado de Ocorrência
+              </CardTitle>
+              <CardDescription className="text-gray-600 mt-2">
+                Preencha todos os campos obrigatórios (*) para registrar a ocorrência
+              </CardDescription>
+            </div>
+            <TCOTimer />
+          </div>
+        </CardHeader>
+      </Card>
+
+      <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>
+        {hasMinorAuthor.isMinor && hasMinorAuthor.details && (
+          <div className="bg-red-100 border-l-4 border-red-600 text-red-700 p-4 rounded-md mb-6 shadow-md">
+            <p className="font-semibold">Atenção: Autor Menor de Idade Detectado</p>
+            <p className="text-sm">{hasMinorAuthor.details}</p>
+          </div>
+        )}
+
+        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
+          <h2 className="text-xl font-semibold mb-4">Seleção de Natureza</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {naturezasDisponiveis.map((nat) => (
+              <label key={nat} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                <Checkbox
+                  checked={natureza.includes(nat)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setNatureza(prev => prev ? `${prev} + ${nat}` : nat);
+                    } else {
+                      setNatureza(prev => prev.split(' + ').filter(n => n !== nat).join(' + '));
+                    }
+                  }}
+                />
+                <span className="text-sm font-medium">{nat}</span>
+              </label>
+            ))}
+          </div>
+          {natureza.includes("Outros") && (
+            <div className="mt-4">
+              <Label htmlFor="customNatureza">Especifique a natureza *</Label>
+              <Input
+                id="customNatureza"
+                placeholder="Digite a natureza específica da ocorrência"
+                value={customNatureza}
+                onChange={(e) => setCustomNatureza(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
+          <h2 className="text-xl font-semibold mb-4">Informações Gerais da Ocorrência</h2>
+          <GeneralInformationTab 
+            natureza={natureza} 
+            tipificacao={tipificacao} 
+            setTipificacao={setTipificacao} 
+            isCustomNatureza={natureza.split(' + ')[0] === "Outros"} 
+            customNatureza={customNatureza} 
+            dataFato={dataFato} 
+            setDataFato={setDataFato} 
+            horaFato={horaFato} 
+            setHoraFato={setHoraFato} 
+            dataInicioRegistro={dataInicioRegistro} 
+            horaInicioRegistro={horaInicioRegistro} 
+            setHoraInicioRegistro={setHoraInicioRegistro} 
+            dataTerminoRegistro={dataTerminoRegistro} 
+            horaTerminoRegistro={horaTerminoRegistro} 
+            localFato={localFato} 
+            setLocalFato={setLocalFato} 
+            endereco={endereco} 
+            setEndereco={setEndereco} 
+            municipio={municipio} 
+            comunicante={comunicante} 
+            setComunicante={setComunicante} 
+            guarnicao={guarnicao} 
+            setGuarnicao={setGuarnicao} 
+            operacao={operacao} 
+            setOperacao={setOperacao} 
+            condutorNome={condutorParaDisplay?.nome || ""} 
+            condutorPosto={condutorParaDisplay?.posto || ""} 
+            condutorRg={condutorParaDisplay?.rg || ""} 
+          />
+        </div>
+
+        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
+          <PessoasEnvolvidasTab
+            autores={autores}
+            setAutores={setAutores}
+            vitimas={vitimas}
+            setVitimas={setVitimas}
+            testemunhas={testemunhas}
+            setTestemunhas={setTestemunhas}
+            estadosCivil={estadosCivil}
+            estadosNaturalidade={estadosNaturalidade}
+            showPersonalFields={showPersonalFields}
+            setShowPersonalFields={setShowPersonalFields}
+          />
+        </div>
+
+        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
+          <GuarnicaoTab
+            componentesGuarnicao={componentesGuarnicao}
+            setComponentesGuarnicao={setComponentesGuarnicao}
+            condutorSelecionado={condutorSelecionado}
+            setCondutorSelecionado={setCondutorSelecionado}
+            condutor={condutor}
+            setCondutor={setCondutor}
+          />
+        </div>
+
+        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
+          <DrugVerificationTab
+            isDrugRelated={isDrugRelated}
+            setIsDrugRelated={setIsDrugRelated}
+            drugDetails={drugDetails}
+            setDrugDetails={setDrugDetails}
+          />
+        </div>
+
+        <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
+          <HistoricoTab
+            historico={historico}
+            setHistorico={setHistorico}
+          />
+        </div>
+
+        <div className="flex justify-end space-x-4 pt-6 border-t">
+          <Button
+            type="submit"
+            disabled={isLoading || hasMinorAuthor.isMinor}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 flex items-center space-x-2"
+          >
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Salvando...</span>
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                <span>Registrar TCO</span>
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
 };
+
+export default TCOForm;
