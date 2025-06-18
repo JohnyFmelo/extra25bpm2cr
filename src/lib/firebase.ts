@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -12,8 +11,7 @@ import {
   updateDoc,
   Firestore,
   DocumentData,
-  QuerySnapshot,
-  orderBy
+  QuerySnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { TimeSlot } from '@/types/user';
@@ -65,7 +63,7 @@ const safeClone = (data: DocumentData): Record<string, any> => {
 };
 
 // Helper function to safely get documents from a query snapshot
-const getDocsFromSnapshot = (snapshot: QuerySnapshot): any[] => {
+const getDocsFromSnapshot = (snapshot: QuerySnapshot): TimeSlot[] => {
   return snapshot.docs.map(doc => ({
     id: doc.id,
     title: doc.data().title || '',
@@ -89,7 +87,7 @@ const handleFirestoreOperation = async <T>(
 };
 
 export const dataOperations = {
-  async fetch(): Promise<any[]> {
+  async fetch(): Promise<TimeSlot[]> {
     return handleFirestoreOperation(async (db) => {
       const timeSlotCollection = collection(db, 'timeSlots');
       const querySnapshot = await getDocs(timeSlotCollection);
@@ -171,28 +169,6 @@ export const dataOperations = {
     }).catch(error => {
       console.error('Error clearing data:', error);
       return { success: false };
-    });
-  },
-
-  // New method specifically for budget operations
-  async getBudget() {
-    return handleFirestoreOperation(async (db) => {
-      const timeSlotCollection = collection(db, 'timeSlots');
-      const q = query(
-        timeSlotCollection,
-        where('type', '==', 'budget_config'),
-        orderBy('updatedAt', 'desc')
-      );
-      
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const budgetDoc = querySnapshot.docs[0];
-        return { success: true, budget: budgetDoc.data().budget };
-      }
-      return { success: false, budget: null };
-    }).catch(error => {
-      console.error('Error fetching budget:', error);
-      return { success: false, budget: null };
     });
   }
 };

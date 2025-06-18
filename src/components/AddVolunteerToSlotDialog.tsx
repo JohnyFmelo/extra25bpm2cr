@@ -1,294 +1,274 @@
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
+
+import { useState, useEffect } from "react";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Textarea } from "./ui/textarea";
-import { Calendar } from "./ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Calendar as CalendarIcon, Users, Clock, FileText } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { TimeSlot, Volunteer, MilitaryType, MILITARY_TYPES } from "@/types/timeSlot";
+import { collection, getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Check, Loader2, Search } from "lucide-react";
+import { Input } from "./ui/input";
+
+interface User {
+  id: string;
+  warName?: string;
+  rank?: string;
+  email: string;
+}
 
 interface AddVolunteerToSlotDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  timeSlot: TimeSlot | null;
-  onAddVolunteer: (volunteer: Volunteer) => void;
-  existingVolunteers?: Volunteer[];
+  travelId: string;
+  dateField: string | null;
+  timeSlot: string;
+  currentVolunteers: string[];
+  onVolunteerAdded: () => void;
 }
 
-const AddVolunteerToSlotDialog = ({
-  open,
-  onOpenChange,
-  timeSlot,
-  onAddVolunteer,
-  existingVolunteers = []
+const AddVolunteerToSlotDialog = ({ 
+  open, 
+  onOpenChange, 
+  travelId, 
+  dateField, 
+  timeSlot, 
+  currentVolunteers,
+  onVolunteerAdded 
 }: AddVolunteerToSlotDialogProps) => {
-  const [name, setName] = useState("");
-  const [warName, setWarName] = useState("");
-  const [militaryType, setMilitaryType] = useState<MilitaryType>("Cb/Sd");
-  const [selectedDate, setSelectedDate] = useState<Date>();
-  const [extraHours, setExtraHours] = useState("");
-  const [observations, setObservations] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUser, setSelectedUser] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
-    if (timeSlot) {
-      setSelectedDate(timeSlot.date);
+    if (open) {
+      fetchUsers();
+      setSelectedUser("");
     }
-  }, [timeSlot]);
+  }, [open]);
 
-  const resetForm = () => {
-    setName("");
-    setWarName("");
-    setMilitaryType("Cb/Sd");
-    setSelectedDate(undefined);
-    setExtraHours("");
-    setObservations("");
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const usersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as User[];
+
+      // Filter out users without rank or warName
+      const filteredUsers = usersData.filter(user => user.rank && user.warName);
+      setUsers(filteredUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar usuários",
+        description: "Não foi possível carregar a lista de usuários."
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = async () => {
-    if (!name.trim() || !warName.trim() || !selectedDate || !extraHours.trim()) {
+  const handleAddVolunteer = async () => {
+    if (!dateField) {
       toast({
+        variant: "destructive",
         title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive"
+        description: "Campo de data não encontrado."
       });
       return;
     }
-
-    const hours = parseFloat(extraHours);
-    if (isNaN(hours) || hours <= 0) {
-      toast({
-        title: "Erro", 
-        description: "Por favor, insira um número válido de horas.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (timeSlot && !timeSlot.allowedMilitaryTypes.includes(militaryType)) {
-      toast({
-        title: "Erro",
-        description: `O tipo militar ${militaryType} não é permitido para este horário.`,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const duplicateVolunteer = existingVolunteers.find(v => 
-      v.name.toLowerCase() === name.trim().toLowerCase() && 
-      v.warName.toLowerCase() === warName.trim().toLowerCase()
-    );
-
-    if (duplicateVolunteer) {
-      toast({
-        title: "Erro",
-        description: "Este militar já está cadastrado neste horário.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
 
     try {
-      const newVolunteer: Volunteer = {
-        id: Date.now().toString(),
-        name: name.trim(),
-        warName: warName.trim(),
-        militaryType,
-        date: selectedDate,
-        extraHours: hours,
-        observations: observations.trim()
+      if (!selectedUser) {
+        toast({
+          variant: "destructive",
+          title: "Nenhum voluntário selecionado",
+          description: "Por favor, selecione um voluntário para adicionar."
+        });
+        return;
+      }
+
+      // Get current travel data
+      const travelRef = doc(db, "travels", travelId);
+      const travelSnap = await getDoc(travelRef);
+      
+      if (!travelSnap.exists()) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Viagem não encontrada."
+        });
+        return;
+      }
+
+      // Format selected user to match the expected format in the database
+      const user = users.find(u => u.id === selectedUser);
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Usuário não encontrado."
+        });
+        return;
+      }
+
+      const formattedVolunteer = `${user.rank} ${user.warName}`;
+
+      // Get current travel data
+      const travelData = travelSnap.data();
+      const currentTimeSlots = travelData[dateField] || {};
+      const currentSlotVolunteers = currentTimeSlots[timeSlot] || [];
+
+      // Check if volunteer is already in this slot
+      if (currentSlotVolunteers.includes(formattedVolunteer)) {
+        toast({
+          variant: "destructive",
+          title: "Voluntário já adicionado",
+          description: "Este voluntário já está neste horário."
+        });
+        return;
+      }
+
+      // Add volunteer to the slot
+      const updatedSlotVolunteers = [...currentSlotVolunteers, formattedVolunteer];
+      const updatedTimeSlots = {
+        ...currentTimeSlots,
+        [timeSlot]: updatedSlotVolunteers
       };
 
-      onAddVolunteer(newVolunteer);
-      resetForm();
-      onOpenChange(false);
+      // Update the travel with new volunteer in the specific slot
+      await updateDoc(travelRef, {
+        [dateField]: updatedTimeSlots
+      });
 
       toast({
         title: "Sucesso",
-        description: "Militar adicionado com sucesso!",
+        description: "Voluntário adicionado com sucesso!"
       });
+      
+      onVolunteerAdded();
+      onOpenChange(false);
     } catch (error) {
-      console.error("Erro ao adicionar militar:", error);
+      console.error("Error adding volunteer:", error);
       toast({
-        title: "Erro",
-        description: "Erro ao adicionar militar. Tente novamente.",
-        variant: "destructive"
+        variant: "destructive",
+        title: "Erro ao adicionar voluntário",
+        description: "Ocorreu um erro ao adicionar o voluntário."
       });
-    } finally {
-      setIsLoading(false);
     }
+  };
+
+  const filteredUsers = users.filter(user => {
+    const searchLower = searchQuery.toLowerCase();
+    const warName = user.warName?.toLowerCase() || "";
+    const rank = user.rank?.toLowerCase() || "";
+    const email = user.email.toLowerCase();
+    const fullName = `${rank} ${warName}`.toLowerCase();
+    
+    return warName.includes(searchLower) || 
+           rank.includes(searchLower) || 
+           email.includes(searchLower) ||
+           fullName.includes(searchLower);
+  });
+
+  const isVolunteerAlreadyInSlot = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user || !user.rank || !user.warName) return false;
+    
+    const formattedName = `${user.rank} ${user.warName}`;
+    return currentVolunteers.includes(formattedName);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 -mx-6 -mt-6 p-6 mb-4 rounded-t-lg text-white">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Users className="h-5 w-5" />
-              <DialogTitle className="font-bold text-lg">
-                Adicionar Militar
-              </DialogTitle>
-            </div>
-            {timeSlot && (
-              <p className="text-center text-white/80 text-sm">
-                {format(timeSlot.date, "EEEE, dd 'de' MMMM", { locale: ptBR })} • {timeSlot.startTime} - {timeSlot.endTime}
-              </p>
-            )}
-          </div>
+          <DialogTitle>Adicionar Voluntário ao Horário</DialogTitle>
+          <DialogDescription>
+            Selecione o voluntário que deseja adicionar ao horário {timeSlot}.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome Completo *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: João Silva"
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="warName">Nome de Guerra *</Label>
-              <Input
-                id="warName" 
-                value={warName}
-                onChange={(e) => setWarName(e.target.value)}
-                placeholder="Ex: Silva"
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Tipo Militar *</Label>
-            <Select value={militaryType} onValueChange={(value: MilitaryType) => setMilitaryType(value)} disabled={isLoading}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MILITARY_TYPES.map((type) => (
-                  <SelectItem 
-                    key={type} 
-                    value={type}
-                    disabled={timeSlot && !timeSlot.allowedMilitaryTypes.includes(type)}
-                  >
-                    {type}
-                    {timeSlot && !timeSlot.allowedMilitaryTypes.includes(type) && " (Não permitido)"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4 text-blue-500" />
-              Data do Extra *
-            </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                  disabled={isLoading}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP", { locale: ptBR }) : "Selecione a data"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  locale={ptBR}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2" htmlFor="extraHours">
-              <Clock className="h-4 w-4 text-blue-500" />
-              Horas Extras *
-            </Label>
+        <div className="py-4">
+          <div className="relative mb-4">
             <Input
-              id="extraHours"
-              type="number"
-              step="0.5"
-              min="0"
-              value={extraHours}
-              onChange={(e) => {
-                const dateField = document.getElementById('extraHours');
-                if (dateField) {
-                  setExtraHours(e.target.value);
-                }
-              }}
-              placeholder="Ex: 6"
-              disabled={isLoading}
+              placeholder="Buscar por nome, graduação ou email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8"
             />
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
           </div>
 
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2" htmlFor="observations">
-              <FileText className="h-4 w-4 text-blue-500" />
-              Observações
-            </Label>
-            <Textarea
-              id="observations"
-              value={observations}
-              onChange={(e) => setObservations(e.target.value)}
-              placeholder="Observações adicionais (opcional)"
-              className="min-h-[80px] resize-none"
-              disabled={isLoading}
-            />
-          </div>
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            </div>
+          ) : (
+            <ScrollArea className="h-[300px] pr-4">
+              {filteredUsers.length > 0 ? (
+                <div className="space-y-2">
+                  {filteredUsers.map((user) => {
+                    const isAlreadyInSlot = isVolunteerAlreadyInSlot(user.id);
+                    const isSelected = selectedUser === user.id;
+                    
+                    return (
+                      <div
+                        key={user.id}
+                        onClick={() => !isAlreadyInSlot && setSelectedUser(user.id)}
+                        className={`flex items-center justify-between p-3 rounded-md cursor-pointer ${
+                          isAlreadyInSlot ? 'bg-gray-100 text-gray-500' : 
+                          isSelected ? 'bg-blue-50 border border-blue-200' : 
+                          'hover:bg-gray-50 border border-gray-100'
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium">{user.rank} {user.warName}</span>
+                          <span className="text-xs text-gray-500">{user.email}</span>
+                        </div>
+                        <div>
+                          {isAlreadyInSlot ? (
+                            <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">Já no horário</span>
+                          ) : isSelected ? (
+                            <Check className="h-5 w-5 text-blue-500" />
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Nenhum usuário encontrado com "{searchQuery}"
+                </div>
+              )}
+            </ScrollArea>
+          )}
         </div>
 
-        <DialogFooter className="flex justify-end gap-2 pt-4 border-t">
+        <DialogFooter className="flex justify-between sm:justify-between">
           <Button 
             variant="outline" 
-            onClick={() => {
-              resetForm();
-              onOpenChange(false);
-            }}
-            disabled={isLoading}
+            onClick={() => onOpenChange(false)}
           >
             Cancelar
           </Button>
           <Button 
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="bg-blue-500 hover:bg-blue-600 text-white"
+            onClick={handleAddVolunteer}
+            disabled={!selectedUser}
           >
-            {isLoading ? (
-              <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Adicionando...
-              </span>
-            ) : (
-              "Adicionar Militar"
-            )}
+            Adicionar Voluntário
           </Button>
         </DialogFooter>
       </DialogContent>
