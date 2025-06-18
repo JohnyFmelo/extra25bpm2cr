@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 interface GeneralInformationTabProps {
   natureza: string;
   tipificacao: string;
@@ -29,7 +30,6 @@ interface GeneralInformationTabProps {
   setGuarnicao: (value: string) => void;
   operacao: string;
   setOperacao: (value: string) => void;
-  // << NOTA: As props do condutor permanecem, mas os campos serão ocultos >>
   condutorNome: string;
   condutorPosto: string;
   condutorRg: string;
@@ -60,6 +60,7 @@ const naturezaTipificacoes: Record<string, string> = {
   "Desacato": "ART. 331 DO CÓDIGO PENAL",
   "Exercício arbitrário das próprias razões": "ART. 345 DO CÓDIGO PENAL"
 };
+
 const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   natureza,
   tipificacao,
@@ -228,4 +229,5 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
       </CardContent>
     </Card>;
 };
+
 export default GeneralInformationTab;
