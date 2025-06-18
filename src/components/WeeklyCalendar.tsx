@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, Trash, Calendar, Info, AlertTriangle, UserPlus } from "lucide-react";
-import { format, addWeeks, subWeeks, parseISO, addDays, isValid } from "date-fns";
+import { format, addWeeks, subWeeks, parseISO, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
@@ -56,14 +56,7 @@ const WeeklyCalendar = ({
 
   const hasTimeSlotsForDate = (date: Date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
-    return timeSlots.some(slot => {
-      // Add validation to ensure slot.date is valid before formatting
-      if (!slot.date || !isValid(slot.date)) {
-        console.warn('Invalid date found in timeSlot:', slot);
-        return false;
-      }
-      return format(slot.date, 'yyyy-MM-dd') === formattedDate;
-    });
+    return timeSlots.some(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
   };
 
   const formatTimeForDB = (time: string) => {
@@ -72,14 +65,8 @@ const WeeklyCalendar = ({
 
   const getTimeSlotsForDate = (date: Date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
-    return timeSlots.filter(slot => {
-      // Add validation to ensure slot.date is valid before formatting
-      if (!slot.date || !isValid(slot.date)) {
-        console.warn('Invalid date found in timeSlot:', slot);
-        return false;
-      }
-      return format(slot.date, 'yyyy-MM-dd') === formattedDate;
-    }).sort((a, b) => a.startTime.localeCompare(b.startTime)); // Ordenar por hora de início
+    return timeSlots.filter(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime)); // Ordenar por hora de início
   };
 
   const getCurrentWeekTimeSlots = () => {
@@ -203,32 +190,17 @@ const WeeklyCalendar = ({
         setTimeSlots([]);
         return;
       }
-      const formattedSlots = data.map((slot: any) => {
-        // Add validation for date parsing
-        let parsedDate;
-        try {
-          parsedDate = parseISO(slot.date);
-          if (!isValid(parsedDate)) {
-            console.warn('Invalid date found:', slot.date);
-            parsedDate = new Date(); // Fallback to current date
-          }
-        } catch (error) {
-          console.warn('Error parsing date:', slot.date, error);
-          parsedDate = new Date(); // Fallback to current date
-        }
-
-        return {
-          id: slot.id,
-          date: parsedDate,
-          startTime: slot.start_time ? slot.start_time.slice(0, 5) : "00:00",
-          endTime: slot.end_time ? slot.end_time.slice(0, 5) : "00:00",
-          slots: slot.total_slots || slot.slots || 0,
-          slotsUsed: slot.slots_used || 0,
-          description: slot.description || "",
-          allowedMilitaryTypes: slot.allowedMilitaryTypes || [],
-          volunteers: slot.volunteers || []
-        };
-      });
+      const formattedSlots = data.map((slot: any) => ({
+        id: slot.id,
+        date: parseISO(slot.date),
+        startTime: slot.start_time ? slot.start_time.slice(0, 5) : "00:00",
+        endTime: slot.end_time ? slot.end_time.slice(0, 5) : "00:00",
+        slots: slot.total_slots || slot.slots || 0,
+        slotsUsed: slot.slots_used || 0,
+        description: slot.description || "",
+        allowedMilitaryTypes: slot.allowedMilitaryTypes || [],
+        volunteers: slot.volunteers || []
+      }));
       setTimeSlots(formattedSlots);
     } catch (error) {
       console.error('Erro ao carregar horários:', error);
@@ -709,6 +681,7 @@ const WeeklyCalendar = ({
           open={showAddVolunteerDialog}
           onOpenChange={setShowAddVolunteerDialog}
           timeSlot={selectedTimeSlotForVolunteer}
+          onVolunteerAdded={handleAddVolunteerSuccess}
         />
       )}
     </div>
