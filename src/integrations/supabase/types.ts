@@ -339,45 +339,6 @@ export type Database = {
         }
         Relationships: []
       }
-      military_absences: {
-        Row: {
-          created_at: string
-          date: string
-          end_time: string
-          hours: number
-          id: string
-          marked_by: string | null
-          start_time: string
-          time_slot_id: string
-          updated_at: string
-          volunteer_name: string
-        }
-        Insert: {
-          created_at?: string
-          date: string
-          end_time: string
-          hours: number
-          id?: string
-          marked_by?: string | null
-          start_time: string
-          time_slot_id: string
-          updated_at?: string
-          volunteer_name: string
-        }
-        Update: {
-          created_at?: string
-          date?: string
-          end_time?: string
-          hours?: number
-          id?: string
-          marked_by?: string | null
-          start_time?: string
-          time_slot_id?: string
-          updated_at?: string
-          volunteer_name?: string
-        }
-        Relationships: []
-      }
       NOVEMBRO: {
         Row: {
           "Horas 25° BPM": string | null

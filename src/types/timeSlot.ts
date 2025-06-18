@@ -26,10 +26,3 @@ export interface FirebaseTimeSlot {
 export type MilitaryType = 'Inteligência' | 'Administrativo' | 'Operacional';
 
 export const MILITARY_TYPES: MilitaryType[] = ['Inteligência', 'Administrativo', 'Operacional'];
-
-export interface Volunteer {
-  id: string;
-  name: string;
-  rank: string;
-  service: MilitaryType;
-}

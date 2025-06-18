@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 interface GeneralInformationTabProps {
   natureza: string;
   tipificacao: string;
@@ -15,13 +14,10 @@ interface GeneralInformationTabProps {
   horaFato: string;
   setHoraFato: (value: string) => void;
   dataInicioRegistro: string;
-  setDataInicioRegistro: (value: string) => void;
   horaInicioRegistro: string;
   setHoraInicioRegistro: (value: string) => void;
   dataTerminoRegistro: string;
-  setDataTerminoRegistro: (value: string) => void;
   horaTerminoRegistro: string;
-  setHoraTerminoRegistro: (value: string) => void;
   localFato: string;
   setLocalFato: (value: string) => void;
   endereco: string;
@@ -75,13 +71,10 @@ const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   horaFato,
   setHoraFato,
   dataInicioRegistro,
-  setDataInicioRegistro,
   horaInicioRegistro,
   setHoraInicioRegistro,
   dataTerminoRegistro,
-  setDataTerminoRegistro,
   horaTerminoRegistro,
-  setHoraTerminoRegistro,
   localFato,
   setLocalFato,
   endereco,
