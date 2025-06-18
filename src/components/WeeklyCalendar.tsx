@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Eye, Trash, Calendar, Info, AlertTriangle, UserPlus } from "lucide-react";
-import { format, addWeeks, subWeeks, parseISO, addDays, isValid } from "date-fns";
+import { format, addWeeks, subWeeks, parseISO, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
@@ -55,27 +55,8 @@ const WeeklyCalendar = ({
   }, []);
 
   const hasTimeSlotsForDate = (date: Date) => {
-    try {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      return timeSlots.some(slot => {
-        // Add validation to ensure slot.date is valid
-        if (!slot.date || !isValid(slot.date)) {
-          console.warn('Invalid date found in time slot:', slot);
-          return false;
-        }
-        
-        try {
-          const slotFormattedDate = format(slot.date, 'yyyy-MM-dd');
-          return slotFormattedDate === formattedDate;
-        } catch (error) {
-          console.error('Error formatting slot date:', slot.date, error);
-          return false;
-        }
-      });
-    } catch (error) {
-      console.error('Error in hasTimeSlotsForDate:', error);
-      return false;
-    }
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    return timeSlots.some(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate);
   };
 
   const formatTimeForDB = (time: string) => {
@@ -83,26 +64,9 @@ const WeeklyCalendar = ({
   };
 
   const getTimeSlotsForDate = (date: Date) => {
-    try {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      return timeSlots.filter(slot => {
-        // Add validation to ensure slot.date is valid
-        if (!slot.date || !isValid(slot.date)) {
-          return false;
-        }
-        
-        try {
-          const slotFormattedDate = format(slot.date, 'yyyy-MM-dd');
-          return slotFormattedDate === formattedDate;
-        } catch (error) {
-          console.error('Error formatting slot date:', slot.date, error);
-          return false;
-        }
-      }).sort((a, b) => a.startTime.localeCompare(b.startTime)); // Ordenar por hora de início
-    } catch (error) {
-      console.error('Error in getTimeSlotsForDate:', error);
-      return [];
-    }
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    return timeSlots.filter(slot => format(slot.date, 'yyyy-MM-dd') === formattedDate)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime)); // Ordenar por hora de início
   };
 
   const getCurrentWeekTimeSlots = () => {
@@ -226,39 +190,17 @@ const WeeklyCalendar = ({
         setTimeSlots([]);
         return;
       }
-      const formattedSlots = data.map((slot: any) => {
-        // Validate and parse the date
-        let parsedDate: Date;
-        
-        if (!slot.date) {
-          console.warn('Time slot missing date field:', slot);
-          return null;
-        }
-        
-        try {
-          parsedDate = parseISO(slot.date);
-          if (!isValid(parsedDate)) {
-            console.warn('Invalid date in time slot:', slot.date);
-            return null;
-          }
-        } catch (error) {
-          console.error('Error parsing date:', slot.date, error);
-          return null;
-        }
-        
-        return {
-          id: slot.id,
-          date: parsedDate,
-          startTime: slot.start_time ? slot.start_time.slice(0, 5) : "00:00",
-          endTime: slot.end_time ? slot.end_time.slice(0, 5) : "00:00",
-          slots: slot.total_slots || slot.slots || 0,
-          slotsUsed: slot.slots_used || 0,
-          description: slot.description || "",
-          allowedMilitaryTypes: slot.allowedMilitaryTypes || [],
-          volunteers: slot.volunteers || []
-        };
-      }).filter(slot => slot !== null); // Remove null entries from invalid dates
-      
+      const formattedSlots = data.map((slot: any) => ({
+        id: slot.id,
+        date: parseISO(slot.date),
+        startTime: slot.start_time ? slot.start_time.slice(0, 5) : "00:00",
+        endTime: slot.end_time ? slot.end_time.slice(0, 5) : "00:00",
+        slots: slot.total_slots || slot.slots || 0,
+        slotsUsed: slot.slots_used || 0,
+        description: slot.description || "",
+        allowedMilitaryTypes: slot.allowedMilitaryTypes || [],
+        volunteers: slot.volunteers || []
+      }));
       setTimeSlots(formattedSlots);
     } catch (error) {
       console.error('Erro ao carregar horários:', error);
@@ -646,7 +588,7 @@ const WeeklyCalendar = ({
             {weekTimeSlots.length > 0 ? (
               weekTimeSlots.map(({ date, slots }) => (
                 <div key={format(date, 'yyyy-MM-dd')} className="space-y-2">
-                  <h3 className="font-semibol text-md text-green-700 bg-green-50 p-2.5 rounded-md sticky top-0 z-10 shadow-sm">
+                  <h3 className="font-semibold text-md text-green-700 bg-green-50 p-2.5 rounded-md sticky top-0 z-10 shadow-sm">
                     {format(date, "EEEE, dd 'de' MMMM", { locale: ptBR })}
                   </h3>
                   <div className="space-y-2 pt-1">
