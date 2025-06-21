@@ -66,14 +66,21 @@ serve(async (req) => {
 
     if (!startResponse.ok) {
       const errorText = await startResponse.text();
-      throw new Error(`Failed to start ILovePDF task: ${errorText}`);
+      console.error('ILovePDF start task error:', errorText);
+      throw new Error(`Failed to start ILovePDF task: ${startResponse.status} - ${errorText}`);
     }
 
     const startData = await startResponse.json();
+    console.log('ILovePDF start response:', startData);
+    
+    if (!startData.task) {
+      throw new Error('ILovePDF API did not return a task ID. Response: ' + JSON.stringify(startData));
+    }
+
     const taskId = startData.task;
     const serverUrl = startData.server;
 
-    console.log('ILovePDF task started:', taskId);
+    console.log('ILovePDF task started:', taskId, 'Server:', serverUrl);
 
     // Step 2: Upload the PDF file
     const formData = new FormData();
@@ -90,12 +97,18 @@ serve(async (req) => {
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      throw new Error(`Failed to upload PDF: ${errorText}`);
+      console.error('ILovePDF upload error:', errorText);
+      throw new Error(`Failed to upload PDF: ${uploadResponse.status} - ${errorText}`);
     }
 
     const uploadData = await uploadResponse.json();
-    const serverFilename = uploadData.server_filename;
+    console.log('Upload response:', uploadData);
+    
+    if (!uploadData.server_filename) {
+      throw new Error('ILovePDF API did not return server_filename. Response: ' + JSON.stringify(uploadData));
+    }
 
+    const serverFilename = uploadData.server_filename;
     console.log('PDF uploaded to ILovePDF:', serverFilename);
 
     // Step 3: Process the conversion
@@ -114,10 +127,12 @@ serve(async (req) => {
 
     if (!processResponse.ok) {
       const errorText = await processResponse.text();
-      throw new Error(`Failed to process conversion: ${errorText}`);
+      console.error('ILovePDF process error:', errorText);
+      throw new Error(`Failed to process conversion: ${processResponse.status} - ${errorText}`);
     }
 
     const processData = await processResponse.json();
+    console.log('Process response:', processData);
     console.log('Conversion processed successfully');
 
     // Step 4: Download the converted file
@@ -130,7 +145,8 @@ serve(async (req) => {
 
     if (!downloadResponse.ok) {
       const errorText = await downloadResponse.text();
-      throw new Error(`Failed to download converted file: ${errorText}`);
+      console.error('ILovePDF download error:', errorText);
+      throw new Error(`Failed to download converted file: ${downloadResponse.status} - ${errorText}`);
     }
 
     const convertedData = await downloadResponse.arrayBuffer();
