@@ -1,19 +1,24 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
+// Headers para permitir requisições de outros domínios (CORS)
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Interface para a requisição que a função espera receber
 interface ConvertRequest {
   pdfPath: string;
   fileName: string;
 }
 
+// Função de utilidade para criar pausas entre as chamadas de API
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+// Função principal do servidor Deno
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Lida com a requisição CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -22,137 +27,145 @@ serve(async (req) => {
     const { pdfPath, fileName }: ConvertRequest = await req.json();
     
     if (!pdfPath || !fileName) {
-      throw new Error('PDF path and filename are required');
+      throw new Error('O caminho do PDF (pdfPath) e o nome do arquivo (fileName) são obrigatórios.');
     }
 
-    // Initialize Supabase client
+    // Inicializa o cliente do Supabase
     const supabaseUrl = 'https://evsfhznfnifmqlpktbdr.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2c2Zoem5mbmlmbXFscGt0YmRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcwNDY1MjMsImV4cCI6MjA1MjYyMjUyM30.5Khm1eXEsm8SCuN7VYEVRYSbKc0A-T_Xo4hUUvibkgM';
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('Starting PDF to Word conversion for:', fileName);
+    console.log('Iniciando conversão de PDF para Word para:', fileName);
 
-    // Download PDF from Supabase Storage
+    // Baixa o PDF do Supabase Storage
     const { data: pdfData, error: downloadError } = await supabase.storage
-      .from('tco-pdfs')
+      .from('tco-pdfs') // Seu bucket
       .download(pdfPath);
 
     if (downloadError || !pdfData) {
-      throw new Error(`Failed to download PDF: ${downloadError?.message}`);
+      throw new Error(`Falha ao baixar o PDF: ${downloadError?.message}`);
     }
 
-    console.log('PDF downloaded successfully, size:', pdfData.size);
+    console.log('PDF baixado com sucesso, tamanho:', pdfData.size);
 
-    // Get ILovePDF API key
-    const ilovePdfApiKey = Deno.env.get('ILOVEPDF_API_KEY');
-    if (!ilovePdfApiKey) {
-      throw new Error('ILovePDF API key not configured');
+    // --- Início da Lógica da CloudConvert ---
+
+    // Pega a chave da API da CloudConvert das variáveis de ambiente
+    const cloudConvertApiKey = Deno.env.get('CLOUDCONVERT_API_KEY');
+    if (!cloudConvertApiKey) {
+      throw new Error('A chave da API da CloudConvert (CLOUDCONVERT_API_KEY) não está configurada.');
     }
+    
+    const apiBaseUrl = 'https://api.cloudconvert.com/v2';
 
-    // Convert PDF to ArrayBuffer for upload
-    const pdfArrayBuffer = await pdfData.arrayBuffer();
-    const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
+    const headers = {
+      'Authorization': `Bearer ${cloudConvertApiKey}`,
+      'Content-Type': 'application/json',
+    };
 
-    console.log('Starting ILovePDF conversion process...');
-
-    // Step 1: Start a new task
-    const startResponse = await fetch('https://api.ilovepdf.com/v1/start/office', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${ilovePdfApiKey}`,
-        'Content-Type': 'application/json',
+    // Passo 1: Criar o "Job" com o corpo da solicitação que você montou no Job Builder
+    console.log('CloudConvert: Criando o Job...');
+    const jobPayload = {
+      "tasks": {
+        // Sua Tarefa de Upload
+        "converter-para-word": {
+          "operation": "import/upload"
+        },
+        // Sua Tarefa de Conversão
+        "task-1": {
+          "operation": "convert",
+          "output_format": "docx",
+          "input": "converter-para-word", // Ligada à tarefa de upload
+          "engine": "office" // Motor recomendado para melhor qualidade
+        },
+        // Sua Tarefa de Exportação
+        "export-1": {
+          "operation": "export/url",
+          "input": "task-1", // Ligada à tarefa de conversão
+          "inline": false,
+          "archive_multiple_files": false
+        }
       },
+      "tag": "jobbuilder" // A tag que o Job Builder adiciona
+    };
+
+    const createJobResponse = await fetch(`${apiBaseUrl}/jobs`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(jobPayload),
     });
 
-    if (!startResponse.ok) {
-      const errorText = await startResponse.text();
-      console.error('ILovePDF start task error:', errorText);
-      throw new Error(`Failed to start ILovePDF task: ${startResponse.status} - ${errorText}`);
+    if (!createJobResponse.ok) {
+      const errorText = await createJobResponse.text();
+      throw new Error(`Falha ao criar o Job na CloudConvert: ${errorText}`);
     }
-
-    const startData = await startResponse.json();
-    console.log('ILovePDF start response:', startData);
     
-    if (!startData.task) {
-      throw new Error('ILovePDF API did not return a task ID. Response: ' + JSON.stringify(startData));
-    }
+    const jobData = (await createJobResponse.json()).data;
+    const jobId = jobData.id;
+    const uploadTask = jobData.tasks.find(task => task.operation === 'import/upload');
+    
+    console.log(`CloudConvert: Job criado com sucesso! ID: ${jobId}`);
 
-    const taskId = startData.task;
-    const serverUrl = startData.server;
-
-    console.log('ILovePDF task started:', taskId, 'Server:', serverUrl);
-
-    // Step 2: Upload the PDF file
+    // Passo 2: Fazer o upload do arquivo PDF para a URL fornecida pela CloudConvert
+    const uploadForm = uploadTask.result.form;
     const formData = new FormData();
-    formData.append('task', taskId);
-    formData.append('file', pdfBlob, fileName);
+    Object.entries(uploadForm.parameters).forEach(([key, value]) => {
+      formData.append(key, value as string);
+    });
+    formData.append('file', pdfData, fileName);
 
-    const uploadResponse = await fetch(`${serverUrl}/v1/upload`, {
+    console.log('CloudConvert: Fazendo upload do arquivo...');
+    const uploadResponse = await fetch(uploadForm.url, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${ilovePdfApiKey}`,
-      },
       body: formData,
     });
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      console.error('ILovePDF upload error:', errorText);
-      throw new Error(`Failed to upload PDF: ${uploadResponse.status} - ${errorText}`);
+      throw new Error(`Falha no upload para a CloudConvert: ${errorText}`);
     }
+    console.log('CloudConvert: Upload concluído.');
 
-    const uploadData = await uploadResponse.json();
-    console.log('Upload response:', uploadData);
+    // Passo 3: Aguardar a finalização do Job (polling)
+    console.log('CloudConvert: Aguardando a conclusão do Job...');
+    let currentJobData;
+    let jobStatus = '';
+    const maxAttempts = 30; // Limite para evitar loop infinito (30 * 2s = 1 min)
     
-    if (!uploadData.server_filename) {
-      throw new Error('ILovePDF API did not return server_filename. Response: ' + JSON.stringify(uploadData));
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const checkJobResponse = await fetch(`${apiBaseUrl}/jobs/${jobId}`, { headers });
+        currentJobData = (await checkJobResponse.json()).data;
+        jobStatus = currentJobData.status;
+
+        console.log(`CloudConvert: Status do Job: ${jobStatus}`);
+        
+        if (jobStatus === 'finished') {
+            break;
+        }
+        if (jobStatus === 'error') {
+            throw new Error('O Job da CloudConvert falhou durante o processamento.');
+        }
+        
+        await delay(2000); // Espera 2 segundos antes de verificar novamente
+    }
+    
+    if (jobStatus !== 'finished') {
+        throw new Error('O Job da CloudConvert excedeu o tempo limite.');
     }
 
-    const serverFilename = uploadData.server_filename;
-    console.log('PDF uploaded to ILovePDF:', serverFilename);
+    // Passo 4: Obter a URL de download do arquivo convertido
+    console.log('CloudConvert: Job finalizado. Obtendo o link de download...');
+    const exportTask = currentJobData.tasks.find(task => task.operation === 'export/url');
+    const downloadUrl = exportTask.result.files[0].url;
 
-    // Step 3: Process the conversion
-    const processResponse = await fetch(`${serverUrl}/v1/process`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${ilovePdfApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        task: taskId,
-        tool: 'office',
-        files: [{ server_filename: serverFilename, filename: fileName }],
-      }),
-    });
-
-    if (!processResponse.ok) {
-      const errorText = await processResponse.text();
-      console.error('ILovePDF process error:', errorText);
-      throw new Error(`Failed to process conversion: ${processResponse.status} - ${errorText}`);
-    }
-
-    const processData = await processResponse.json();
-    console.log('Process response:', processData);
-    console.log('Conversion processed successfully');
-
-    // Step 4: Download the converted file
-    const downloadResponse = await fetch(`${serverUrl}/v1/download/${taskId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${ilovePdfApiKey}`,
-      },
-    });
-
-    if (!downloadResponse.ok) {
-      const errorText = await downloadResponse.text();
-      console.error('ILovePDF download error:', errorText);
-      throw new Error(`Failed to download converted file: ${downloadResponse.status} - ${errorText}`);
-    }
-
+    // Passo 5: Baixar o arquivo .docx final
+    const downloadResponse = await fetch(downloadUrl);
     const convertedData = await downloadResponse.arrayBuffer();
-    console.log('Converted file downloaded, size:', convertedData.byteLength);
+    console.log('Arquivo convertido baixado, tamanho:', convertedData.byteLength);
 
-    // Return the converted Word document
+    // --- Fim da Lógica da CloudConvert ---
+
+    // Retorna o documento Word convertido
     const wordFileName = fileName.replace(/\.pdf$/i, '.docx');
     
     return new Response(convertedData, {
@@ -165,10 +178,10 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in pdf-to-word-converter:', error);
+    console.error('Erro na função pdf-to-word-converter:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Failed to convert PDF to Word',
+        error: error.message || 'Falha ao converter PDF para Word',
         details: error.toString()
       }),
       {
