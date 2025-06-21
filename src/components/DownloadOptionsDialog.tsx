@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FileText, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { generateRTF } from "./tco/rtfGenerator";
+import { generateDOCX } from "./tco/docxGenerator";
 
 interface DownloadOptionsDialogProps {
   isOpen: boolean;
@@ -30,7 +30,7 @@ const DownloadOptionsDialog: React.FC<DownloadOptionsDialogProps> = ({
   tcoNumber
 }) => {
   const { toast } = useToast();
-  const [isGeneratingRTF, setIsGeneratingRTF] = useState(false);
+  const [isGeneratingDOCX, setIsGeneratingDOCX] = useState(false);
 
   const handlePdfDownload = () => {
     if (pdfBlob) {
@@ -53,15 +53,14 @@ const DownloadOptionsDialog: React.FC<DownloadOptionsDialogProps> = ({
     onClose();
   };
 
-  const handleRtfDownload = async () => {
-    setIsGeneratingRTF(true);
+  const handleDocxDownload = async () => {
+    setIsGeneratingDOCX(true);
     try {
-      const rtfContent = await generateRTF(tcoData);
-      const blob = new Blob([rtfContent], { type: 'application/rtf' });
-      const url = URL.createObjectURL(blob);
+      const docxBlob = await generateDOCX(tcoData);
+      const url = URL.createObjectURL(docxBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `TCO_${tcoNumber.replace(/\//g, '_')}.rtf`;
+      link.download = `TCO_${tcoNumber.replace(/\//g, '_')}.docx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -69,20 +68,20 @@ const DownloadOptionsDialog: React.FC<DownloadOptionsDialogProps> = ({
       
       toast({
         title: "Download Iniciado",
-        description: "O arquivo RTF está sendo baixado.",
+        description: "O arquivo Word está sendo baixado.",
         className: "bg-green-600 text-white border-green-700",
         duration: 3000
       });
     } catch (error) {
-      console.error('Erro ao gerar RTF:', error);
+      console.error('Erro ao gerar DOCX:', error);
       toast({
-        title: "Erro ao Gerar RTF",
-        description: "Não foi possível gerar o arquivo RTF.",
+        title: "Erro ao Gerar Word",
+        description: "Não foi possível gerar o arquivo Word.",
         className: "bg-red-600 text-white border-red-700",
         duration: 5000
       });
     } finally {
-      setIsGeneratingRTF(false);
+      setIsGeneratingDOCX(false);
       onClose();
     }
   };
@@ -114,17 +113,17 @@ const DownloadOptionsDialog: React.FC<DownloadOptionsDialogProps> = ({
           </Button>
           
           <Button
-            onClick={handleRtfDownload}
-            disabled={isGeneratingRTF}
+            onClick={handleDocxDownload}
+            disabled={isGeneratingDOCX}
             className="flex items-center justify-start gap-3 h-auto p-4 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
             variant="outline"
           >
             <FileText className="h-6 w-6" />
             <div className="text-left">
               <div className="font-semibold">
-                {isGeneratingRTF ? "Gerando RTF..." : "Baixar RTF"}
+                {isGeneratingDOCX ? "Gerando Word..." : "Baixar Word"}
               </div>
-              <div className="text-xs opacity-75">Formato editável, compatível com Word</div>
+              <div className="text-xs opacity-75">Formato nativo Word, totalmente editável</div>
             </div>
           </Button>
         </div>
