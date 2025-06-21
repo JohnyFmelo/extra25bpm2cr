@@ -13,7 +13,6 @@ import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
 import { generatePDF, generateTCOFilename } from "./tco/pdfGenerator";
 import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
-import DownloadOptionsDialog from "./DownloadOptionsDialog";
 
 // << CORREÇÃO: Interface para a estrutura de uma única droga. Essencial para o novo modelo de dados. >>
 interface Droga {
@@ -895,12 +894,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
       duration: 5000
     });
   };
-
-  // Adicionar novos estados para o modal de download
-  const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [generatedPdfBlob, setGeneratedPdfBlob] = useState<Blob | null>(null);
-  const [tcoDataForDownload, setTcoDataForDownload] = useState<any>(null);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -1145,17 +1138,14 @@ const TCOForm: React.FC<TCOFormProps> = ({
         throw new Error(`Falha ao salvar metadados após ${attempt} tentativas: ${errorMessage}`);
       }
 
-      // Ao invés de mostrar o toast de sucesso e navegar, abrir o modal
-      setGeneratedPdfBlob(pdfBlob);
-      setTcoDataForDownload(tcoDataParaPDF);
-      setShowDownloadModal(true);
-
       toast({
         title: "TCO Registrado com Sucesso!",
-        description: "Escolha o formato para download.",
+        description: "PDF enviado e informações salvas no sistema.",
         className: "bg-green-600 text-white border-green-700",
         duration: 5000
       });
+
+      navigate("/?tab=tco");
 
     } catch (error: any) {
       console.error("Erro geral no processo de submissão do TCO:", error);
@@ -1171,14 +1161,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
       setIsSubmitting(false);
     }
   };
-
-  const handleDownloadModalClose = () => {
-    setShowDownloadModal(false);
-    setGeneratedPdfBlob(null);
-    setTcoDataForDownload(null);
-    navigate("/?tab=tco");
-  };
-
   const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
     if (e.key === 'Enter') {
       const target = e.target as HTMLElement;
@@ -1328,15 +1310,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
           </Button>
         </div>
       </form>
-
-      {/* Adicionar o modal de download antes do fechamento da div */}
-      <DownloadOptionsDialog
-        isOpen={showDownloadModal}
-        onClose={handleDownloadModalClose}
-        tcoData={tcoDataForDownload}
-        pdfBlob={generatedPdfBlob}
-        tcoNumber={tcoNumber}
-      />
     </div>;
 };
 export default TCOForm;
