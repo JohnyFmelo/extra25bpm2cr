@@ -40,7 +40,7 @@ serve(async (req) => {
 
     // Baixa o PDF do Supabase Storage
     const { data: pdfData, error: downloadError } = await supabase.storage
-      .from('tco-pdfs') // Seu bucket
+      .from('tco-pdfs')
       .download(pdfPath);
 
     if (downloadError || !pdfData) {
@@ -49,122 +49,161 @@ serve(async (req) => {
 
     console.log('PDF baixado com sucesso, tamanho:', pdfData.size);
 
-    // --- Início da Lógica da CloudConvert ---
+    // --- Início da Lógica da Adobe PDF Services ---
 
-    // Pega a chave da API da CloudConvert das variáveis de ambiente
-    const cloudConvertApiKey = Deno.env.get('CLOUDCONVERT_API_KEY');
-    if (!cloudConvertApiKey) {
-      throw new Error('A chave da API da CloudConvert (CLOUDCONVERT_API_KEY) não está configurada.');
-    }
+    // Pega as credenciais da Adobe das variáveis de ambiente
+    const adobeClientId = Deno.env.get('ADOBE_CLIENT_ID');
+    const adobeClientSecret = Deno.env.get('ADOBE_CLIENT_SECRET');
     
-    const apiBaseUrl = 'https://api.cloudconvert.com/v2';
+    if (!adobeClientId || !adobeClientSecret) {
+      throw new Error('As credenciais da Adobe (ADOBE_CLIENT_ID e ADOBE_CLIENT_SECRET) não estão configuradas.');
+    }
 
-    const headers = {
-      'Authorization': `Bearer ${cloudConvertApiKey}`,
-      'Content-Type': 'application/json',
-    };
-
-    // Passo 1: Criar o "Job" com o corpo da solicitação que você montou no Job Builder
-    console.log('CloudConvert: Criando o Job...');
-    const jobPayload = {
-      "tasks": {
-        // Sua Tarefa de Upload
-        "converter-para-word": {
-          "operation": "import/upload"
-        },
-        // Sua Tarefa de Conversão
-        "task-1": {
-          "operation": "convert",
-          "output_format": "docx",
-          "input": "converter-para-word", // Ligada à tarefa de upload
-          "engine": "office" // Motor recomendado para melhor qualidade
-        },
-        // Sua Tarefa de Exportação
-        "export-1": {
-          "operation": "export/url",
-          "input": "task-1", // Ligada à tarefa de conversão
-          "inline": false,
-          "archive_multiple_files": false
-        }
+    // Passo 1: Obter token de acesso
+    console.log('Adobe: Obtendo token de acesso...');
+    const tokenResponse = await fetch('https://ims-na1.adobelogin.com/ims/token/v1', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      "tag": "jobbuilder" // A tag que o Job Builder adiciona
-    };
-
-    const createJobResponse = await fetch(`${apiBaseUrl}/jobs`, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(jobPayload),
+      body: new URLSearchParams({
+        'client_id': adobeClientId,
+        'client_secret': adobeClientSecret,
+        'grant_type': 'client_credentials',
+        'scope': 'openid,AdobeID,read_organizations,additional_info.projectedProductContext,additional_info.job_function'
+      }),
     });
 
-    if (!createJobResponse.ok) {
-      const errorText = await createJobResponse.text();
-      throw new Error(`Falha ao criar o Job na CloudConvert: ${errorText}`);
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      throw new Error(`Falha ao obter token da Adobe: ${errorText}`);
     }
-    
-    const jobData = (await createJobResponse.json()).data;
-    const jobId = jobData.id;
-    const uploadTask = jobData.tasks.find(task => task.operation === 'import/upload');
-    
-    console.log(`CloudConvert: Job criado com sucesso! ID: ${jobId}`);
 
-    // Passo 2: Fazer o upload do arquivo PDF para a URL fornecida pela CloudConvert
-    const uploadForm = uploadTask.result.form;
-    const formData = new FormData();
-    Object.entries(uploadForm.parameters).forEach(([key, value]) => {
-      formData.append(key, value as string);
-    });
-    formData.append('file', pdfData, fileName);
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+    console.log('Adobe: Token obtido com sucesso');
 
-    console.log('CloudConvert: Fazendo upload do arquivo...');
-    const uploadResponse = await fetch(uploadForm.url, {
+    // Passo 2: Converter PDF para base64
+    const pdfArrayBuffer = await pdfData.arrayBuffer();
+    const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfArrayBuffer)));
+
+    // Passo 3: Criar job de conversão
+    console.log('Adobe: Criando job de conversão...');
+    const convertResponse = await fetch('https://cpf-ue1.adobe.io/ops/:create?respondWith=%7B%22reltype%22%3A%22http%3A//ns.adobe.com/rel/primary%22%7D', {
       method: 'POST',
-      body: formData,
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'x-api-key': adobeClientId,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        'assetID': 'urn:aaid:AS:UE1:' + crypto.randomUUID(),
+        'input': {
+          'cpf:inputs': {
+            'documentIn': {
+              'cpf:location': 'InputFile0',
+              'dc:format': 'application/pdf'
+            }
+          },
+          'cpf:engine': {
+            'repo:assetId': 'urn:aaid:cpf:Service-1538ece812254acaac2a07799503a430'
+          },
+          'cpf:outputs': {
+            'documentOut': {
+              'cpf:location': 'multipartLabel',
+              'dc:format': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            }
+          }
+        },
+        'contentAnalyzerRequests': {
+          'cpf:inputs': {
+            'documentIn': {
+              'cpf:location': 'InputFile0'
+            }
+          }
+        }
+      }),
+    });
+
+    if (!convertResponse.ok) {
+      const errorText = await convertResponse.text();
+      throw new Error(`Falha ao criar job na Adobe: ${errorText}`);
+    }
+
+    const jobData = await convertResponse.json();
+    console.log('Adobe: Job criado com sucesso');
+
+    // Passo 4: Upload do PDF
+    console.log('Adobe: Fazendo upload do PDF...');
+    const uploadResponse = await fetch(jobData.uploadUri, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Authorization': `Bearer ${accessToken}`,
+        'x-api-key': adobeClientId,
+      },
+      body: pdfData,
     });
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      throw new Error(`Falha no upload para a CloudConvert: ${errorText}`);
+      throw new Error(`Falha no upload para Adobe: ${errorText}`);
     }
-    console.log('CloudConvert: Upload concluído.');
 
-    // Passo 3: Aguardar a finalização do Job (polling)
-    console.log('CloudConvert: Aguardando a conclusão do Job...');
-    let currentJobData;
-    let jobStatus = '';
-    const maxAttempts = 30; // Limite para evitar loop infinito (30 * 2s = 1 min)
-    
+    console.log('Adobe: Upload concluído');
+
+    // Passo 5: Aguardar conclusão e baixar resultado
+    console.log('Adobe: Aguardando conclusão da conversão...');
+    let downloadUrl: string | null = null;
+    const maxAttempts = 30;
+
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const checkJobResponse = await fetch(`${apiBaseUrl}/jobs/${jobId}`, { headers });
-        currentJobData = (await checkJobResponse.json()).data;
-        jobStatus = currentJobData.status;
+      const statusResponse = await fetch(jobData.downloadUri, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'x-api-key': adobeClientId,
+        },
+      });
 
-        console.log(`CloudConvert: Status do Job: ${jobStatus}`);
-        
-        if (jobStatus === 'finished') {
-            break;
-        }
-        if (jobStatus === 'error') {
-            throw new Error('O Job da CloudConvert falhou durante o processamento.');
-        }
-        
-        await delay(2000); // Espera 2 segundos antes de verificar novamente
+      if (statusResponse.ok) {
+        downloadUrl = jobData.downloadUri;
+        break;
+      }
+
+      if (statusResponse.status === 202) {
+        console.log('Adobe: Conversão ainda em andamento...');
+        await delay(2000);
+        continue;
+      }
+
+      if (attempt === maxAttempts - 1) {
+        throw new Error('Adobe: Tempo limite excedido na conversão');
+      }
+
+      await delay(2000);
     }
-    
-    if (jobStatus !== 'finished') {
-        throw new Error('O Job da CloudConvert excedeu o tempo limite.');
+
+    if (!downloadUrl) {
+      throw new Error('Adobe: Não foi possível obter URL de download');
     }
 
-    // Passo 4: Obter a URL de download do arquivo convertido
-    console.log('CloudConvert: Job finalizado. Obtendo o link de download...');
-    const exportTask = currentJobData.tasks.find(task => task.operation === 'export/url');
-    const downloadUrl = exportTask.result.files[0].url;
+    // Passo 6: Baixar o arquivo convertido
+    console.log('Adobe: Baixando arquivo convertido...');
+    const downloadResponse = await fetch(downloadUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'x-api-key': adobeClientId,
+      },
+    });
 
-    // Passo 5: Baixar o arquivo .docx final
-    const downloadResponse = await fetch(downloadUrl);
+    if (!downloadResponse.ok) {
+      throw new Error('Adobe: Falha ao baixar arquivo convertido');
+    }
+
     const convertedData = await downloadResponse.arrayBuffer();
-    console.log('Arquivo convertido baixado, tamanho:', convertedData.byteLength);
+    console.log('Adobe: Arquivo convertido baixado, tamanho:', convertedData.byteLength);
 
-    // --- Fim da Lógica da CloudConvert ---
+    // --- Fim da Lógica da Adobe PDF Services ---
 
     // Retorna o documento Word convertido
     const wordFileName = fileName.replace(/\.pdf$/i, '.docx');
