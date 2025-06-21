@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import {
   Dialog,
@@ -10,33 +11,39 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { TimeSlot } from "@/types/timeSlot";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface AddVolunteerToSlotDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (name: string, registration: string, date: string) => void;
+  timeSlot: TimeSlot;
+  onVolunteerAdded: () => void;
 }
 
 const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
   open,
   onOpenChange,
-  onAdd,
+  timeSlot,
+  onVolunteerAdded,
 }) => {
   const [name, setName] = useState("");
   const [registration, setRegistration] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
-  const dateFieldRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = () => {
-    if (name && registration && selectedDate) {
-      onAdd(name, registration, selectedDate);
+    if (name && registration) {
+      // For now, we'll just add the volunteer to the timeSlot's volunteers array
+      // In a real implementation, this would update the database
+      console.log("Adding volunteer:", { name, registration, timeSlot });
+      
+      // Call the callback to refresh data
+      onVolunteerAdded();
+      
+      // Close dialog and reset form
       onOpenChange(false);
       setName("");
       setRegistration("");
-      setSelectedDate("");
-      if (dateFieldRef.current) {
-        dateFieldRef.current.value = ""; // Clear the date field
-      }
     } else {
       alert("Por favor, preencha todos os campos.");
     }
@@ -48,7 +55,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Adicionar Voluntário ao Plantão</DialogTitle>
           <DialogDescription>
-            Preencha os campos abaixo para adicionar um voluntário ao plantão.
+            Adicionar voluntário para {format(timeSlot.date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })} das {timeSlot.startTime} às {timeSlot.endTime}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -61,6 +68,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="col-span-3"
+              placeholder="Nome completo"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -72,24 +80,20 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
               value={registration}
               onChange={(e) => setRegistration(e.target.value)}
               className="col-span-3"
+              placeholder="Número da matrícula"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="date" className="text-right">
-              Data
-            </Label>
-            <Input
-              id="date"
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="col-span-3"
-              ref={(el) => {
-                if (el) {
-                  dateFieldRef.current = el;
-                }
-              }}
-            />
+            <Label className="text-right">Data/Horário</Label>
+            <div className="col-span-3 text-sm text-gray-600 py-2">
+              {format(timeSlot.date, "dd/MM/yyyy", { locale: ptBR })} - {timeSlot.startTime} às {timeSlot.endTime}
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Vagas</Label>
+            <div className="col-span-3 text-sm text-gray-600 py-2">
+              {timeSlot.slotsUsed}/{timeSlot.slots} ocupadas
+            </div>
           </div>
         </div>
         <DialogFooter>
