@@ -11,6 +11,7 @@ import PessoasEnvolvidasTab from "./tco/PessoasEnvolvidasTab";
 import GuarnicaoTab from "./tco/GuarnicaoTab";
 import HistoricoTab from "./tco/HistoricoTab";
 import DrugVerificationTab from "./tco/DrugVerificationTab";
+import PdfToWordConversionDialog from "./tco/PdfToWordConversionDialog";
 import { generatePDF, generateTCOFilename } from "./tco/pdfGenerator";
 import { uploadPDF, saveTCOMetadata, ensureBucketExists } from '@/lib/supabaseStorage';
 
@@ -185,6 +186,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
   } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConversionDialog, setShowConversionDialog] = useState(false);
   const [hasMinorAuthor, setHasMinorAuthor] = useState<{
     isMinor: boolean;
     details?: {
@@ -1145,7 +1147,15 @@ const TCOForm: React.FC<TCOFormProps> = ({
         duration: 5000
       });
 
-      navigate("/?tab=tco");
+      // Mostrar diálogo de conversão após sucesso
+      setShowConversionDialog(true);
+
+      // Navegar após um pequeno delay para permitir que o usuário veja o diálogo
+      setTimeout(() => {
+        if (!showConversionDialog) {
+          navigate("/?tab=tco");
+        }
+      }, 1000);
 
     } catch (error: any) {
       console.error("Erro geral no processo de submissão do TCO:", error);
@@ -1170,6 +1180,16 @@ const TCOForm: React.FC<TCOFormProps> = ({
       }
     }
   };
+  const handleCloseConversionDialog = () => {
+    setShowConversionDialog(false);
+  };
+
+  const handleConfirmConversion = () => {
+    setShowConversionDialog(false);
+    // Abrir iLovePDF em nova aba
+    window.open('https://www.ilovepdf.com/pt/pdf_para_word', '_blank');
+  };
+
   const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Conduzir veículo sem CNH gerando perigo de dano", "Entregar veículo automotor a pessoa não habilitada", "Trafegar em velocidade incompatível com segurança", "Omissão de socorro", "Rixa", "Invasão de domicílio", "Fraude em comércio", "Ato obsceno", "Falsa identidade", "Resistência", "Desobediência", "Desacato", "Exercício arbitrário das próprias razões", "Outros"];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
   return <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
@@ -1310,6 +1330,16 @@ const TCOForm: React.FC<TCOFormProps> = ({
           </Button>
         </div>
       </form>
+
+      {/* Diálogo de Conversão PDF para Word */}
+      <PdfToWordConversionDialog
+        isOpen={showConversionDialog}
+        onClose={() => {
+          handleCloseConversionDialog();
+          navigate("/?tab=tco");
+        }}
+        onConfirm={handleConfirmConversion}
+      />
     </div>;
 };
 export default TCOForm;
