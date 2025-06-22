@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Trophy, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
@@ -376,15 +377,6 @@ const TCOProductivityRanking: React.FC = () => {
           </div>
         </div>
 
-        {/* Ranking Completo Badge */}
-        {ranking.length > 0 && (
-          <div className="mb-4">
-            <div className="inline-flex items-center bg-yellow-400 text-blue-900 px-3 py-1 rounded-full text-sm font-semibold">
-              🏆 RANKING COMPLETO
-            </div>
-          </div>
-        )}
-
         {/* Current User Position */}
         {currentUserData && (
           <div className="bg-white/10 rounded-lg p-4 mb-3">
@@ -414,6 +406,7 @@ const TCOProductivityRanking: React.FC = () => {
         {/* Ranking Display */}
         {ranking.length > 0 && (
           <div className="bg-white/10 rounded-lg p-4">
+            <h4 className="text-sm font-semibold mb-3 text-center">🏆 RANKING COMPLETO</h4>
             <div className="space-y-3">
               {displayedRanking.map((officer, index) => (
                 <div
