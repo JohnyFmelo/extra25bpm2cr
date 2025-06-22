@@ -7,48 +7,74 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 interface AddVolunteerToSlotDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onAddVolunteer: (volunteerName: string, volunteerDate: Date, volunteerTimeSlot: string) => void;
-  selectedDate: Date | null;
-  selectedTimeSlot: string | null;
+  open?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onClose?: () => void;
+  onAddVolunteer?: (volunteerName: string, volunteerDate: Date, volunteerTimeSlot: string) => void;
+  onVolunteerAdded?: () => void;
+  selectedDate?: Date | null;
+  selectedTimeSlot?: string | null;
+  timeSlot?: any;
 }
 
 const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
+  open,
   isOpen,
+  onOpenChange,
   onClose,
   onAddVolunteer,
+  onVolunteerAdded,
   selectedDate,
   selectedTimeSlot,
+  timeSlot,
 }) => {
   const [volunteerName, setVolunteerName] = useState('');
+  
+  const dialogOpen = open ?? isOpen ?? false;
+  const handleClose = () => {
+    if (onOpenChange) onOpenChange(false);
+    if (onClose) onClose();
+  };
 
   const handleAdd = () => {
-    if (volunteerName && selectedDate && selectedTimeSlot) {
-      onAddVolunteer(volunteerName, selectedDate, selectedTimeSlot);
-      onClose();
+    const date = selectedDate || (timeSlot?.date ? new Date(timeSlot.date) : null);
+    const slot = selectedTimeSlot || timeSlot?.time;
+    
+    if (volunteerName && date && slot) {
+      if (onAddVolunteer) {
+        onAddVolunteer(volunteerName, date, slot);
+      }
+      if (onVolunteerAdded) {
+        onVolunteerAdded();
+      }
+      handleClose();
     } else {
       alert('Please fill in all fields.');
     }
   };
 
   useEffect(() => {
-    if (isOpen && selectedDate && selectedTimeSlot) {
+    if (dialogOpen && (selectedDate || timeSlot?.date) && (selectedTimeSlot || timeSlot?.time)) {
       const dateField = document.getElementById('volunteer-date') as HTMLInputElement;
       if (dateField) {
-        dateField.value = format(selectedDate, 'yyyy-MM-dd');
+        const date = selectedDate || (timeSlot?.date ? new Date(timeSlot.date) : new Date());
+        dateField.value = format(date, 'yyyy-MM-dd');
       }
       setVolunteerName('');
     }
-  }, [isOpen, selectedDate, selectedTimeSlot]);
+  }, [dialogOpen, selectedDate, selectedTimeSlot, timeSlot]);
+
+  const displayDate = selectedDate || (timeSlot?.date ? new Date(timeSlot.date) : null);
+  const displayTimeSlot = selectedTimeSlot || timeSlot?.time;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={dialogOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add Volunteer</DialogTitle>
           <DialogDescription>
-            Enter the volunteer's name for {selectedTimeSlot} on {selectedDate ? format(selectedDate, 'MMMM dd, yyyy') : 'N/A'}.
+            Enter the volunteer's name for {displayTimeSlot} on {displayDate ? format(displayDate, 'MMMM dd, yyyy') : 'N/A'}.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -83,13 +109,13 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
               type="text"
               id="volunteer-time"
               disabled
-              value={selectedTimeSlot || ''}
+              value={displayTimeSlot || ''}
               className="col-span-3"
             />
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={handleClose}>
             Cancel
           </Button>
           <Button type="submit" onClick={handleAdd}>Add Volunteer</Button>

@@ -26,7 +26,7 @@ const PdfToWordConversionDialog: React.FC<PdfToWordConversionDialogProps> = ({
                 <span className="text-xs font-bold text-red-600 absolute -mt-1 ml-6">PDF</span>
               </div>
               <div className="text-gray-400">→</div>
-              <div className="bg-blue-100 p-3 rounded-lg">
+              <div className="bg-blue-100 p-3 rounded-lg relative">
                 <FileEdit className="h-6 w-6 text-blue-600" />
                 <span className="text-xs font-bold text-blue-600 absolute -mt-1 ml-6">DOC</span>
               </div>
