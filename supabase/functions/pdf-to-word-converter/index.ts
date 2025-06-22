@@ -67,7 +67,7 @@ serve(async (req) => {
         'client_id': adobeClientId,
         'client_secret': adobeClientSecret,
         'grant_type': 'client_credentials',
-        'scope': 'openid,AdobeID,DCAPI' // <-- CORRIGIDO!
+        'scope': 'openid,AdobeID,DCAPI'
       }),
     });
     if (!tokenResponse.ok) throw new Error(`Falha na autenticação com Adobe: ${await tokenResponse.text()}`);
@@ -75,7 +75,7 @@ serve(async (req) => {
     const accessToken = tokenData.access_token;
     console.log('Token da Adobe obtido com sucesso.');
 
-    // --- INÍCIO DA LÓGICA DE CONVERSÃO ADOBE (AGORA COMPLETA) ---
+    // --- INÍCIO DA LÓGICA DE CONVERSÃO ADOBE PARA DOC ---
 
     // Passo 1: Criar Asset para obter uma URL de upload
     console.log('Adobe Passo 1: Criando asset...');
@@ -103,7 +103,7 @@ serve(async (req) => {
     if (!uploadResponse.ok) throw new Error(`Falha no upload para Adobe: ${await uploadResponse.text()}`);
     console.log('Adobe Passo 2: Upload concluído.');
 
-    // Passo 3: Iniciar o job de conversão (ALTERADO PARA DOC)
+    // Passo 3: Iniciar o job de conversão para DOC (formato legado do Microsoft Word)
     console.log('Adobe Passo 3: Iniciando job de conversão para DOC...');
     const exportJobResponse = await fetch('https://pdf-services.adobe.io/operation/exportpdf', {
       method: 'POST',
