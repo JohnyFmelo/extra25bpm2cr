@@ -67,7 +67,7 @@ serve(async (req) => {
         'client_id': adobeClientId,
         'client_secret': adobeClientSecret,
         'grant_type': 'client_credentials',
-        'scope': 'openid,AdobeID,DCAPI' // <-- CORRIGIDO!
+        'scope': 'openid,AdobeID,DCAPI'
       }),
     });
     if (!tokenResponse.ok) throw new Error(`Falha na autenticação com Adobe: ${await tokenResponse.text()}`);
@@ -75,7 +75,7 @@ serve(async (req) => {
     const accessToken = tokenData.access_token;
     console.log('Token da Adobe obtido com sucesso.');
 
-    // --- INÍCIO DA LÓGICA DE CONVERSÃO ADOBE (AGORA COMPLETA) ---
+    // --- INÍCIO DA LÓGICA DE CONVERSÃO ADOBE CORRIGIDA ---
 
     // Passo 1: Criar Asset para obter uma URL de upload
     console.log('Adobe Passo 1: Criando asset...');
@@ -139,31 +139,44 @@ serve(async (req) => {
     }
     if (!downloadUri) throw new Error('Tempo limite excedido esperando a conversão da Adobe.');
 
-    // Passo 5: Baixar o arquivo convertido
+    // Passo 5: Baixar o arquivo convertido COM MANUSEIO CORRETO DOS DADOS BINÁRIOS
     console.log('Adobe Passo 5: Baixando arquivo convertido...');
     const downloadResponse = await fetch(downloadUri);
     if (!downloadResponse.ok) throw new Error('Falha ao baixar o arquivo convertido da Adobe.');
-    const convertedData = await downloadResponse.arrayBuffer();
-    console.log('Adobe Passo 5: Arquivo convertido baixado, tamanho:', convertedData.byteLength);
+    
+    // *** CORREÇÃO CRÍTICA: Tratar dados como ArrayBuffer ***
+    const convertedArrayBuffer = await downloadResponse.arrayBuffer();
+    console.log('Adobe Passo 5: Arquivo convertido baixado, tamanho:', convertedArrayBuffer.byteLength, 'bytes');
+
+    // Verificar se o arquivo tem tamanho válido
+    if (convertedArrayBuffer.byteLength === 0) {
+      throw new Error('Arquivo convertido está vazio - possível falha na conversão da Adobe');
+    }
 
     // --- FIM DA LÓGICA DE CONVERSÃO ADOBE ---
 
-    // Retorno do documento Word convertido
+    // Preparar nome do arquivo para download
     const wordFileName = fileName.replace(/\.pdf$/i, '.docx');
     console.log('=== CONVERSÃO CONCLUÍDA COM SUCESSO ===');
-    console.log('Retornando o arquivo:', wordFileName);
+    console.log('Retornando arquivo:', wordFileName, 'com tamanho:', convertedArrayBuffer.byteLength, 'bytes');
     
-    return new Response(convertedData, {
+    // *** CORREÇÃO CRÍTICA: Headers corretos e dados binários adequados ***
+    return new Response(convertedArrayBuffer, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="${wordFileName}"`,
+        'Content-Length': convertedArrayBuffer.byteLength.toString(),
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       },
     });
 
   } catch (error) {
     console.error('=== ERRO GERAL NA FUNÇÃO ===');
     console.error('Mensagem do erro:', error.message);
+    console.error('Stack trace:', error.stack);
     
     return new Response(
       JSON.stringify({ 
