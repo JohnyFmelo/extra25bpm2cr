@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { deleteTCO } from "@/lib/supabaseStorage";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import PdfToWordConversionDialog from "./PdfToWordConversionDialog";
 
 // Interfaces e Constantes exportadas para serem usadas por outros componentes
 export interface TCOmeusProps {
@@ -135,6 +136,8 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const [isGupmDetailModalOpen, setIsGupmDetailModalOpen] = useState(false);
   const [currentGupmToDisplay, setCurrentGupmToDisplay] = useState<StructuredGupm | null>(null);
   const [isConverting, setIsConverting] = useState<string | null>(null);
+  const [isConversionDialogOpen, setIsConversionDialogOpen] = useState(false);
+  const [pendingTcoForConversion, setPendingTcoForConversion] = useState<TcoData | null>(null);
 
   const fetchAndStructureGupmForTco = useCallback(async (rgpms: ExtractedRgpms): Promise<StructuredGupm | null> => {
     if (rgpms.main.length === 0 && rgpms.support.length === 0) return null;
@@ -336,6 +339,10 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         a.click();
         window.URL.revokeObjectURL(url);
         a.remove();
+        
+        // Após o download, perguntar se deseja converter para Word
+        setPendingTcoForConversion(tco);
+        setIsConversionDialogOpen(true);
       } else {
         throw new Error("Arquivo não encontrado para download.");
       }
@@ -700,7 +707,15 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* PDF to Word Conversion Confirmation Dialog */}
+    <PdfToWordConversionDialog
+      isOpen={isConversionDialogOpen}
+      onClose={handleCloseConversionDialog}
+      onConfirm={handleConfirmConversion}
+    />
   </div>
   );
 };
+
 export default TCOmeus;
