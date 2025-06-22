@@ -1,27 +1,20 @@
-
 import React from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X } from "lucide-react";
-
 interface PdfToWordConversionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
 }
-
 const PdfToWordConversionDialog: React.FC<PdfToWordConversionDialogProps> = ({
   isOpen,
   onClose,
   onConfirm
 }) => {
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+  return <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[450px] w-[90%] rounded-xl bg-white p-8 shadow-2xl border-0 animate-in zoom-in-95 duration-300">
         {/* Close button */}
-        <button 
-          onClick={onClose} 
-          className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors"
-        >
+        <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors">
           <X size={20} />
         </button>
 
@@ -45,29 +38,19 @@ const PdfToWordConversionDialog: React.FC<PdfToWordConversionDialogProps> = ({
           </div>
 
           {/* Description */}
-          <div className="text-gray-600 leading-relaxed mb-6">
-            Deseja usar o IlovePDF para converter seu arquivo baixado em Word?
-          </div>
+          <div className="text-gray-600 leading-relaxed mb-6">Deseja usar o ilovePDF para converter seu arquivo baixado em Word?</div>
 
           {/* Buttons */}
           <div className="flex gap-3 w-full mt-5">
-            <button 
-              onClick={onConfirm}
-              className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-5 rounded-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-green-500/30"
-            >
+            <button onClick={onConfirm} className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-5 rounded-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-green-500/30">
               Sim, Converter
             </button>
-            <button 
-              onClick={onClose}
-              className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 font-semibold py-3 px-5 rounded-lg border-2 border-gray-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-200/50"
-            >
+            <button onClick={onClose} className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 font-semibold py-3 px-5 rounded-lg border-2 border-gray-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-200/50">
               Não, Obrigado
             </button>
           </div>
         </div>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>;
 };
-
 export default PdfToWordConversionDialog;
