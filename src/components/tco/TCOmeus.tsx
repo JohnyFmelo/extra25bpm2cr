@@ -346,6 +346,17 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   };
 
   const handleConvertToWord = async (tco: TcoData) => {
+    // Se não for admin, redireciona para iLovePDF
+    if (user.userType !== 'admin') {
+      window.open('https://www.ilovepdf.com/pt/pdf_para_word', '_blank');
+      toast({ 
+        title: "Redirecionamento", 
+        description: "Você foi redirecionado para o iLovePDF para converter seu documento." 
+      });
+      return;
+    }
+
+    // Código original para administradores
     setIsConverting(tco.id);
     try {
       console.log('Starting conversion for TCO:', tco.fileName);
