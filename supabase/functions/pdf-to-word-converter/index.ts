@@ -109,7 +109,7 @@ serve(async (req) => {
           'client_id': adobeClientId,
           'client_secret': adobeClientSecret,
           'grant_type': 'client_credentials',
-          'scope': 'openid,AdobeID,read_organizations,additional_info.projectedProductContext,additional_info.job_function'
+          'scope': 'openid,AdobeID,DCAPI'
         }),
       });
 
