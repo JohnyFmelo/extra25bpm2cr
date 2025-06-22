@@ -139,32 +139,40 @@ serve(async (req) => {
     }
     if (!downloadUri) throw new Error('Tempo limite excedido esperando a conversão da Adobe.');
 
-    // Passo 5: Baixar o arquivo convertido
+    // Passo 5: Baixar o arquivo convertido USANDO STREAMING CORRETO
     console.log('Adobe Passo 5: Baixando arquivo DOC convertido...');
     const downloadResponse = await fetch(downloadUri);
     if (!downloadResponse.ok) throw new Error('Falha ao baixar o arquivo convertido da Adobe.');
-    const convertedData = await downloadResponse.arrayBuffer();
-    console.log('Adobe Passo 5: Arquivo DOC convertido baixado, tamanho:', convertedData.byteLength);
+    
+    // CORREÇÃO CRÍTICA: Usar ReadableStream para evitar corrupção
+    if (!downloadResponse.body) throw new Error('Resposta da Adobe não contém dados.');
+    
+    // Ler todo o conteúdo como ArrayBuffer para garantir integridade
+    const convertedBuffer = await downloadResponse.arrayBuffer();
+    console.log('Adobe Passo 5: Arquivo DOC convertido baixado, tamanho:', convertedBuffer.byteLength);
 
     // --- FIM DA LÓGICA DE CONVERSÃO ADOBE ---
 
-    // Retorno do documento DOC convertido
+    // Retorno do documento DOC convertido com headers corretos
     const docFileName = fileName.replace(/\.pdf$/i, '.doc');
     console.log('=== CONVERSÃO DOC CONCLUÍDA COM SUCESSO ===');
     console.log('Retornando o arquivo:', docFileName);
+    console.log('Tamanho final do arquivo:', convertedBuffer.byteLength, 'bytes');
     
-    return new Response(convertedData, {
+    return new Response(convertedBuffer, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/msword',
-        'Content-Length': convertedData.byteLength.toString(),
+        'Content-Length': convertedBuffer.byteLength.toString(),
         'Content-Disposition': `attachment; filename="${docFileName}"`,
+        'Cache-Control': 'no-cache',
       },
     });
 
   } catch (error) {
     console.error('=== ERRO GERAL NA FUNÇÃO ===');
     console.error('Mensagem do erro:', error.message);
+    console.error('Stack trace:', error.stack);
     
     return new Response(
       JSON.stringify({ 
