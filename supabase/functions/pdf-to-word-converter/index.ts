@@ -17,6 +17,20 @@ interface ConvertRequest {
 // Função de utilidade para criar pausas entre as chamadas de API
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
+// Função para converter ArrayBuffer para base64 sem stack overflow
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 8192; // Process in chunks to avoid stack overflow
+  
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.slice(i, i + chunkSize);
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+  
+  return btoa(binary);
+}
+
 // Função principal do servidor Deno
 serve(async (req) => {
   // Lida com a requisição CORS preflight
@@ -83,11 +97,7 @@ serve(async (req) => {
     const accessToken = tokenData.access_token;
     console.log('Adobe: Token obtido com sucesso');
 
-    // Passo 2: Converter PDF para base64
-    const pdfArrayBuffer = await pdfData.arrayBuffer();
-    const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfArrayBuffer)));
-
-    // Passo 3: Criar job de conversão
+    // Passo 2: Criar job de conversão
     console.log('Adobe: Criando job de conversão...');
     const convertResponse = await fetch('https://cpf-ue1.adobe.io/ops/:create?respondWith=%7B%22reltype%22%3A%22http%3A//ns.adobe.com/rel/primary%22%7D', {
       method: 'POST',
@@ -133,7 +143,7 @@ serve(async (req) => {
     const jobData = await convertResponse.json();
     console.log('Adobe: Job criado com sucesso');
 
-    // Passo 4: Upload do PDF
+    // Passo 3: Upload do PDF
     console.log('Adobe: Fazendo upload do PDF...');
     const uploadResponse = await fetch(jobData.uploadUri, {
       method: 'PUT',
@@ -152,7 +162,7 @@ serve(async (req) => {
 
     console.log('Adobe: Upload concluído');
 
-    // Passo 5: Aguardar conclusão e baixar resultado
+    // Passo 4: Aguardar conclusão e baixar resultado
     console.log('Adobe: Aguardando conclusão da conversão...');
     let downloadUrl: string | null = null;
     const maxAttempts = 30;
@@ -187,7 +197,7 @@ serve(async (req) => {
       throw new Error('Adobe: Não foi possível obter URL de download');
     }
 
-    // Passo 6: Baixar o arquivo convertido
+    // Passo 5: Baixar o arquivo convertido
     console.log('Adobe: Baixando arquivo convertido...');
     const downloadResponse = await fetch(downloadUrl, {
       headers: {
