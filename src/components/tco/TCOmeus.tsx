@@ -411,6 +411,22 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     }
   };
 
+  const handleCloseConversionDialog = () => {
+    setIsConversionDialogOpen(false);
+    setPendingTcoForConversion(null);
+  };
+
+  const handleConfirmConversion = () => {
+    if (pendingTcoForConversion) {
+      window.open('https://www.ilovepdf.com/pt/pdf_para_word', '_blank');
+      toast({ 
+        title: "Redirecionamento", 
+        description: "Você foi redirecionado para o iLovePDF para converter seu documento." 
+      });
+    }
+    handleCloseConversionDialog();
+  };
+
   const openGupmDetailsModal = (tcoId: string) => {
     const details = gupmDetailsCache[tcoId];
     if (details !== undefined) {
