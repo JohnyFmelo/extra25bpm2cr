@@ -157,6 +157,7 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/msword',
+        'Content-Length': convertedData.byteLength.toString(),
         'Content-Disposition': `attachment; filename="${docFileName}"`,
       },
     });
