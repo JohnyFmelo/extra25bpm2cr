@@ -1,4 +1,4 @@
-//
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
@@ -143,7 +143,7 @@ serve(async (req) => {
     console.log('Adobe Passo 5: Baixando arquivo convertido...');
     const downloadResponse = await fetch(downloadUri);
     if (!downloadResponse.ok) throw new Error('Falha ao baixar o arquivo convertido da Adobe.');
-    const convertedData = await downloadResponse.arrayBuffer(); // <-- A variável 'convertedData' é criada aqui!
+    const convertedData = await downloadResponse.arrayBuffer();
     console.log('Adobe Passo 5: Arquivo convertido baixado, tamanho:', convertedData.byteLength);
 
     // --- FIM DA LÓGICA DE CONVERSÃO ADOBE ---
