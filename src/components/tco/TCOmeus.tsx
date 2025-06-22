@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Trash2, Download, Eye, MoreHorizontal, RefreshCw, Users, FileText, Info, X } from "lucide-react";
+import { Trash2, Download, Eye, MoreHorizontal, RefreshCw, Users, FileText, Info, X, FileEdit } from "lucide-react";
 import { format } from "date-fns";
 import { useToast as useShadcnToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -134,6 +134,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
   const [gupmDetailsCache, setGupmDetailsCache] = useState<Record<string, StructuredGupm | null>>({});
   const [isGupmDetailModalOpen, setIsGupmDetailModalOpen] = useState(false);
   const [currentGupmToDisplay, setCurrentGupmToDisplay] = useState<StructuredGupm | null>(null);
+  const [isConverting, setIsConverting] = useState<string | null>(null);
 
   const fetchAndStructureGupmForTco = useCallback(async (rgpms: ExtractedRgpms): Promise<StructuredGupm | null> => {
     if (rgpms.main.length === 0 && rgpms.support.length === 0) return null;
@@ -344,6 +345,54 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     }
   };
 
+  const handleConvertToWord = async (tco: TcoData) => {
+    setIsConverting(tco.id);
+    try {
+      console.log('Starting conversion for TCO:', tco.fileName);
+      
+      const { data, error } = await supabase.functions.invoke('pdf-to-word-converter', {
+        body: {
+          pdfPath: tco.pdfPath,
+          fileName: tco.fileName
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Falha na conversão');
+      }
+
+      // The response should be a blob (Word document)
+      if (data) {
+        // Create blob and download
+        const blob = new Blob([data], { 
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = tco.fileName.replace(/\.pdf$/i, '.docx') || `TCO_${extractTcoDisplayNumber(tco.tcoNumber)}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+
+        toast({ 
+          title: "Conversão Concluída", 
+          description: "O arquivo Word foi baixado com sucesso." 
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao converter PDF para Word:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "Erro na Conversão", 
+        description: `Falha ao converter o PDF para Word. ${error instanceof Error ? error.message : ''}` 
+      });
+    } finally {
+      setIsConverting(null);
+    }
+  };
+
   const openGupmDetailsModal = (tcoId: string) => {
     const details = gupmDetailsCache[tcoId];
     if (details !== undefined) {
@@ -354,7 +403,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
     }
   };
 
-  // O JSX restante é idêntico ao que você enviou, sem nenhuma supressão.
+  // O JSX restante é idêntico ao que você enviou, mas com a adição da nova opção no dropdown
   return (
     <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 flex-grow overflow-hidden flex flex-col py-0 px-[6px] my-[12px]">
     {isLoading && tcoList.length === 0 ? <div className="space-y-4 animate-pulse p-2">
@@ -390,6 +439,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
               }
               const hasAnyOfficerForModal = gupmInfo && (gupmInfo.conductor || gupmInfo.mainTeam.length > 0 || gupmInfo.supportTeam.length > 0);
               const canDelete = tco.userId === user.id || user.userType === 'admin';
+              const isCurrentlyConverting = isConverting === tco.id;
               return <TableRow key={tco.id} aria-selected={selectedTco?.id === tco.id} className={`cursor-pointer transition-colors duration-150 ease-in-out hover:bg-slate-50 ${selectedTco?.id === tco.id ? "bg-primary/10 hover:bg-primary/20" : ""}`} onClick={() => setSelectedTco(tco)}>
                     <TableCell className="px-4 py-3 whitespace-nowrap">
                       <Badge variant="outline" className="text-sm font-medium bg-blue-50 text-blue-700 border-blue-300">
@@ -439,6 +489,18 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                           <DropdownMenuItem onClick={() => handleDownloadPdf(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md">
                             <Download className="h-4 w-4 text-green-500" /> Baixar PDF
                           </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleConvertToWord(tco)} 
+                            disabled={isCurrentlyConverting}
+                            className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md"
+                          >
+                            {isCurrentlyConverting ? (
+                              <RefreshCw className="h-4 w-4 text-orange-500 animate-spin" />
+                            ) : (
+                              <FileEdit className="h-4 w-4 text-orange-500" />
+                            )}
+                            {isCurrentlyConverting ? 'Convertendo...' : 'Converter para Word'}
+                          </DropdownMenuItem>
                           {canDelete && <DropdownMenuItem onClick={() => confirmDelete(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md mt-1">
                               <Trash2 className="h-4 w-4" /> Excluir TCO
                             </DropdownMenuItem>}
@@ -463,6 +525,7 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
           }
           const hasAnyOfficerForModal = gupmInfo && (gupmInfo.conductor || gupmInfo.mainTeam.length > 0 || gupmInfo.supportTeam.length > 0);
           const canDelete = tco.userId === user.id || user.userType === 'admin';
+          const isCurrentlyConverting = isConverting === tco.id;
           return <div key={`card-${tco.id}`} onClick={() => setSelectedTco(tco)} aria-selected={selectedTco?.id === tco.id} className={`bg-white p-4 rounded-lg border border-gray-200 shadow-sm cursor-pointer transition-all duration-150 ease-in-out ${selectedTco?.id === tco.id ? "ring-2 ring-primary ring-offset-1" : "hover:shadow-md"}`}>
                 <div className="flex justify-between items-start mb-2">
                   <Badge variant="outline" className="text-base font-semibold bg-blue-50 text-blue-700 border-blue-300 px-2.5 py-1">
@@ -480,6 +543,18 @@ const TCOmeus: React.FC<TCOmeusProps> = ({
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDownloadPdf(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md">
                         <Download className="h-4 w-4 text-green-500" /> Baixar PDF
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleConvertToWord(tco)} 
+                        disabled={isCurrentlyConverting}
+                        className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-slate-100 rounded-md"
+                      >
+                        {isCurrentlyConverting ? (
+                          <RefreshCw className="h-4 w-4 text-orange-500 animate-spin" />
+                        ) : (
+                          <FileEdit className="h-4 w-4 text-orange-500" />
+                        )}
+                        {isCurrentlyConverting ? 'Convertendo...' : 'Converter para Word'}
                       </DropdownMenuItem>
                       {canDelete && <DropdownMenuItem onClick={() => confirmDelete(tco)} className="flex items-center gap-2 p-2 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md mt-1">
                           <Trash2 className="h-4 w-4" /> Excluir TCO
