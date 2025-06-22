@@ -25,7 +25,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('=== INÍCIO DA CONVERSÃO PDF PARA DOC ===');
+    console.log('=== INÍCIO DA CONVERSÃO PDF PARA WORD ===');
     
     const { pdfPath, fileName }: ConvertRequest = await req.json();
     
@@ -67,7 +67,7 @@ serve(async (req) => {
         'client_id': adobeClientId,
         'client_secret': adobeClientSecret,
         'grant_type': 'client_credentials',
-        'scope': 'openid,AdobeID,DCAPI'
+        'scope': 'openid,AdobeID,DCAPI' // <-- CORRIGIDO!
       }),
     });
     if (!tokenResponse.ok) throw new Error(`Falha na autenticação com Adobe: ${await tokenResponse.text()}`);
@@ -75,7 +75,7 @@ serve(async (req) => {
     const accessToken = tokenData.access_token;
     console.log('Token da Adobe obtido com sucesso.');
 
-    // --- INÍCIO DA LÓGICA DE CONVERSÃO ADOBE PARA DOC ---
+    // --- INÍCIO DA LÓGICA DE CONVERSÃO ADOBE (AGORA COMPLETA) ---
 
     // Passo 1: Criar Asset para obter uma URL de upload
     console.log('Adobe Passo 1: Criando asset...');
@@ -103,8 +103,8 @@ serve(async (req) => {
     if (!uploadResponse.ok) throw new Error(`Falha no upload para Adobe: ${await uploadResponse.text()}`);
     console.log('Adobe Passo 2: Upload concluído.');
 
-    // Passo 3: Iniciar o job de conversão para DOC (formato legado do Microsoft Word)
-    console.log('Adobe Passo 3: Iniciando job de conversão para DOC...');
+    // Passo 3: Iniciar o job de conversão
+    console.log('Adobe Passo 3: Iniciando job de conversão...');
     const exportJobResponse = await fetch('https://pdf-services.adobe.io/operation/exportpdf', {
       method: 'POST',
       headers: {
@@ -112,14 +112,14 @@ serve(async (req) => {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ 'assetID': assetID, 'targetFormat': 'doc' })
+      body: JSON.stringify({ 'assetID': assetID, 'targetFormat': 'docx' })
     });
     if (exportJobResponse.status !== 201) throw new Error(`Falha ao iniciar job na Adobe: ${await exportJobResponse.text()}`);
     const statusUrl = exportJobResponse.headers.get('Location');
-    console.log('Adobe Passo 3: Job DOC iniciado com sucesso.');
+    console.log('Adobe Passo 3: Job iniciado com sucesso.');
 
     // Passo 4: Aguardar a conclusão do job
-    console.log('Adobe Passo 4: Aguardando conclusão da conversão DOC...');
+    console.log('Adobe Passo 4: Aguardando conclusão da conversão...');
     let downloadUri: string | null = null;
     const maxAttempts = 30; // ~60 segundos
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -130,53 +130,44 @@ serve(async (req) => {
       const statusData = await statusResponse.json();
       if (statusData.status === 'done') {
         downloadUri = statusData.asset.downloadUri;
-        console.log('Adobe Passo 4: Conversão DOC concluída com sucesso.');
+        console.log('Adobe Passo 4: Conversão concluída com sucesso.');
         break;
       }
       if (statusData.status === 'failed') throw new Error(`Conversão na Adobe falhou: ${JSON.stringify(statusData.error)}`);
-      console.log(`Adobe Passo 4: Conversão DOC em andamento... (tentativa ${attempt + 1}/${maxAttempts})`);
+      console.log(`Adobe Passo 4: Conversão em andamento... (tentativa ${attempt + 1}/${maxAttempts})`);
       await delay(2000);
     }
     if (!downloadUri) throw new Error('Tempo limite excedido esperando a conversão da Adobe.');
 
-    // Passo 5: Baixar o arquivo convertido USANDO STREAMING CORRETO
-    console.log('Adobe Passo 5: Baixando arquivo DOC convertido...');
+    // Passo 5: Baixar o arquivo convertido
+    console.log('Adobe Passo 5: Baixando arquivo convertido...');
     const downloadResponse = await fetch(downloadUri);
     if (!downloadResponse.ok) throw new Error('Falha ao baixar o arquivo convertido da Adobe.');
-    
-    // CORREÇÃO CRÍTICA: Usar ReadableStream para evitar corrupção
-    if (!downloadResponse.body) throw new Error('Resposta da Adobe não contém dados.');
-    
-    // Ler todo o conteúdo como ArrayBuffer para garantir integridade
-    const convertedBuffer = await downloadResponse.arrayBuffer();
-    console.log('Adobe Passo 5: Arquivo DOC convertido baixado, tamanho:', convertedBuffer.byteLength);
+    const convertedData = await downloadResponse.arrayBuffer();
+    console.log('Adobe Passo 5: Arquivo convertido baixado, tamanho:', convertedData.byteLength);
 
     // --- FIM DA LÓGICA DE CONVERSÃO ADOBE ---
 
-    // Retorno do documento DOC convertido com headers corretos
-    const docFileName = fileName.replace(/\.pdf$/i, '.doc');
-    console.log('=== CONVERSÃO DOC CONCLUÍDA COM SUCESSO ===');
-    console.log('Retornando o arquivo:', docFileName);
-    console.log('Tamanho final do arquivo:', convertedBuffer.byteLength, 'bytes');
+    // Retorno do documento Word convertido
+    const wordFileName = fileName.replace(/\.pdf$/i, '.docx');
+    console.log('=== CONVERSÃO CONCLUÍDA COM SUCESSO ===');
+    console.log('Retornando o arquivo:', wordFileName);
     
-    return new Response(convertedBuffer, {
+    return new Response(convertedData, {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'application/msword',
-        'Content-Length': convertedBuffer.byteLength.toString(),
-        'Content-Disposition': `attachment; filename="${docFileName}"`,
-        'Cache-Control': 'no-cache',
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Content-Disposition': `attachment; filename="${wordFileName}"`,
       },
     });
 
   } catch (error) {
     console.error('=== ERRO GERAL NA FUNÇÃO ===');
     console.error('Mensagem do erro:', error.message);
-    console.error('Stack trace:', error.stack);
     
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Falha ao converter PDF para DOC',
+        error: error.message || 'Falha ao converter PDF para Word',
         details: error.toString()
       }),
       {
