@@ -25,7 +25,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('=== INÍCIO DA CONVERSÃO PDF PARA RTF ===');
+    console.log('=== INÍCIO DA CONVERSÃO PDF PARA DOC ===');
     
     const { pdfPath, fileName }: ConvertRequest = await req.json();
     
@@ -103,8 +103,8 @@ serve(async (req) => {
     if (!uploadResponse.ok) throw new Error(`Falha no upload para Adobe: ${await uploadResponse.text()}`);
     console.log('Adobe Passo 2: Upload concluído.');
 
-    // Passo 3: Iniciar o job de conversão (ALTERADO PARA RTF)
-    console.log('Adobe Passo 3: Iniciando job de conversão para RTF...');
+    // Passo 3: Iniciar o job de conversão (ALTERADO PARA DOC)
+    console.log('Adobe Passo 3: Iniciando job de conversão para DOC...');
     const exportJobResponse = await fetch('https://pdf-services.adobe.io/operation/exportpdf', {
       method: 'POST',
       headers: {
@@ -112,14 +112,14 @@ serve(async (req) => {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ 'assetID': assetID, 'targetFormat': 'rtf' })
+      body: JSON.stringify({ 'assetID': assetID, 'targetFormat': 'doc' })
     });
     if (exportJobResponse.status !== 201) throw new Error(`Falha ao iniciar job na Adobe: ${await exportJobResponse.text()}`);
     const statusUrl = exportJobResponse.headers.get('Location');
-    console.log('Adobe Passo 3: Job RTF iniciado com sucesso.');
+    console.log('Adobe Passo 3: Job DOC iniciado com sucesso.');
 
     // Passo 4: Aguardar a conclusão do job
-    console.log('Adobe Passo 4: Aguardando conclusão da conversão RTF...');
+    console.log('Adobe Passo 4: Aguardando conclusão da conversão DOC...');
     let downloadUri: string | null = null;
     const maxAttempts = 30; // ~60 segundos
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -130,34 +130,34 @@ serve(async (req) => {
       const statusData = await statusResponse.json();
       if (statusData.status === 'done') {
         downloadUri = statusData.asset.downloadUri;
-        console.log('Adobe Passo 4: Conversão RTF concluída com sucesso.');
+        console.log('Adobe Passo 4: Conversão DOC concluída com sucesso.');
         break;
       }
       if (statusData.status === 'failed') throw new Error(`Conversão na Adobe falhou: ${JSON.stringify(statusData.error)}`);
-      console.log(`Adobe Passo 4: Conversão RTF em andamento... (tentativa ${attempt + 1}/${maxAttempts})`);
+      console.log(`Adobe Passo 4: Conversão DOC em andamento... (tentativa ${attempt + 1}/${maxAttempts})`);
       await delay(2000);
     }
     if (!downloadUri) throw new Error('Tempo limite excedido esperando a conversão da Adobe.');
 
     // Passo 5: Baixar o arquivo convertido
-    console.log('Adobe Passo 5: Baixando arquivo RTF convertido...');
+    console.log('Adobe Passo 5: Baixando arquivo DOC convertido...');
     const downloadResponse = await fetch(downloadUri);
     if (!downloadResponse.ok) throw new Error('Falha ao baixar o arquivo convertido da Adobe.');
     const convertedData = await downloadResponse.arrayBuffer();
-    console.log('Adobe Passo 5: Arquivo RTF convertido baixado, tamanho:', convertedData.byteLength);
+    console.log('Adobe Passo 5: Arquivo DOC convertido baixado, tamanho:', convertedData.byteLength);
 
     // --- FIM DA LÓGICA DE CONVERSÃO ADOBE ---
 
-    // Retorno do documento RTF convertido
-    const rtfFileName = fileName.replace(/\.pdf$/i, '.rtf');
-    console.log('=== CONVERSÃO RTF CONCLUÍDA COM SUCESSO ===');
-    console.log('Retornando o arquivo:', rtfFileName);
+    // Retorno do documento DOC convertido
+    const docFileName = fileName.replace(/\.pdf$/i, '.doc');
+    console.log('=== CONVERSÃO DOC CONCLUÍDA COM SUCESSO ===');
+    console.log('Retornando o arquivo:', docFileName);
     
     return new Response(convertedData, {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'application/rtf',
-        'Content-Disposition': `attachment; filename="${rtfFileName}"`,
+        'Content-Type': 'application/msword',
+        'Content-Disposition': `attachment; filename="${docFileName}"`,
       },
     });
 
@@ -167,7 +167,7 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Falha ao converter PDF para RTF',
+        error: error.message || 'Falha ao converter PDF para DOC',
         details: error.toString()
       }),
       {
