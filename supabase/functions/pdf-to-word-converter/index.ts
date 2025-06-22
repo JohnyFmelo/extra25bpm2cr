@@ -136,12 +136,12 @@ serve(async (req) => {
       throw new Error(`Falha ao obter token da Adobe: ${tokenError.message}`);
     }
 
-    // Criação do job de conversão
+    // Criação do job de conversão - CORREÇÃO: removido os dois pontos do endpoint
     console.log('=== CRIANDO JOB DE CONVERSÃO NA ADOBE ===');
     let jobData;
     try {
       console.log('Enviando requisição de criação de job...');
-      const convertResponse = await fetch('https://cpf-ue1.adobe.io/ops/:create?respondWith=%7B%22reltype%22%3A%22http%3A//ns.adobe.com/rel/primary%22%7D', {
+      const convertResponse = await fetch('https://cpf-ue1.adobe.io/ops/create?respondWith=%7B%22reltype%22%3A%22http%3A//ns.adobe.com/rel/primary%22%7D', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
