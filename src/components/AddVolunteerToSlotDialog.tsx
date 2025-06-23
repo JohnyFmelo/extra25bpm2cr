@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -99,6 +98,9 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
           dateValue = (dateField as any).toDate();
         } else if (dateField && typeof dateField === 'string') {
           dateValue = parseISO(dateField);
+        } else if (dateField) {
+          // Handle other potential date formats
+          dateValue = new Date(dateField);
         } else {
           dateValue = new Date();
         }
@@ -186,12 +188,9 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
     const isCurrentlySelected = selectedVolunteers.includes(volunteerFullName);
     
     if (isCurrentlySelected) {
-      // Remove volunteer
       setSelectedVolunteers(prev => prev.filter(name => name !== volunteerFullName));
     } else {
-      // Check if adding this volunteer would exceed the slot limit
-      const currentCount = selectedVolunteers.length;
-      if (currentCount >= timeSlot.slots) {
+      if (selectedVolunteers.length >= timeSlot.slots) {
         toast({
           variant: "destructive",
           title: "Limite de vagas atingido",
@@ -222,10 +221,9 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
         return;
       }
 
-      // Add volunteer (avoiding duplicates)
       setSelectedVolunteers(prev => {
         if (prev.includes(volunteerFullName)) {
-          return prev; // Already exists, don't add duplicate
+          return prev;
         }
         return [...prev, volunteerFullName];
       });
@@ -248,7 +246,6 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
       return;
     }
 
-    // Check slot limit
     if (selectedVolunteers.length > timeSlot.slots) {
       toast({
         variant: "destructive",

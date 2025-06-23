@@ -69,6 +69,74 @@ export type Database = {
         }
         Relationships: []
       }
+      convocation_responses: {
+        Row: {
+          convocation_id: string | null
+          id: string
+          is_volunteer: boolean
+          responded_at: string | null
+          user_email: string
+          user_name: string
+        }
+        Insert: {
+          convocation_id?: string | null
+          id?: string
+          is_volunteer: boolean
+          responded_at?: string | null
+          user_email: string
+          user_name: string
+        }
+        Update: {
+          convocation_id?: string | null
+          id?: string
+          is_volunteer?: boolean
+          responded_at?: string | null
+          user_email?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convocation_responses_convocation_id_fkey"
+            columns: ["convocation_id"]
+            isOneToOne: false
+            referencedRelation: "convocations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      convocations: {
+        Row: {
+          created_at: string | null
+          deadline_days: number | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          month_year: string
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deadline_days?: number | null
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          month_year: string
+          start_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deadline_days?: number | null
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          month_year?: string
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       DEZEMBRO: {
         Row: {
           "Horas 25° BPM": string | null
