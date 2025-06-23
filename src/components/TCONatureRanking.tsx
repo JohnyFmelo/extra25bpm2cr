@@ -1,8 +1,8 @@
+
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
-import { BarChart3, TrendingUp, ExternalLink } from "lucide-react";
+import { BarChart3, TrendingUp } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { Button } from "./ui/button";
 
 interface NatureStats {
   total: number;
@@ -134,10 +134,6 @@ const TCONatureRanking: React.FC = () => {
     fetchNatureStats();
   }, []);
 
-  const handleViewFullRanking = () => {
-    window.open('/ranking-tco', '_blank');
-  };
-
   if (isLoading) {
     return (
       <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
@@ -181,19 +177,6 @@ const TCONatureRanking: React.FC = () => {
       </CardHeader>
       
       <CardContent className="pt-0">
-        {/* Ver Ranking Completo Button */}
-        <div className="mb-4">
-          <Button
-            onClick={handleViewFullRanking}
-            variant="ghost"
-            size="sm"
-            className="bg-white/20 hover:bg-white/30 text-white border-white/30 hover:border-white/50 text-sm"
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Ver ranking completo ({stats.types} naturezas)
-          </Button>
-        </div>
-
         {/* Stats Row */}
         <div className="flex justify-between items-center mb-4 bg-white/10 rounded-lg p-3">
           <div className="text-center">
