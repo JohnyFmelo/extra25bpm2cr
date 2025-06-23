@@ -406,7 +406,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
                         willExceed ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
                       }`}
                     >
-                      <span>{name}</span>
+                      <span className="break-words">{name}</span>
                       <button
                         onClick={() => setSelectedVolunteers(prev => prev.filter(n => n !== name))}
                         className="hover:bg-opacity-75 rounded-full p-0.5"
@@ -472,7 +472,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className={`font-medium truncate ${
+                              <span className={`font-medium break-words ${
                                 willExceedHours ? "text-red-700" : isSelectedNow ? "text-blue-700" : ""
                               }`}>
                                 {fullName}
@@ -490,7 +490,7 @@ const AddVolunteerToSlotDialog: React.FC<AddVolunteerToSlotDialogProps> = ({
                             )}
                           </div>
                           <div className="text-xs text-gray-500 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span>
                                 {currentSlots} serviço{currentSlots !== 1 ? 's' : ''} de {maxSlots}
                               </span>

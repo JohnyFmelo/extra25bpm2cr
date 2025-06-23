@@ -67,4 +67,23 @@
   .center-container {
     @apply w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8;
   }
+
+  /* Melhorar quebra de texto em dispositivos móveis */
+  @media (max-width: 768px) {
+    .break-words {
+      word-break: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+    }
+    
+    .mobile-text-wrap {
+      word-break: break-word;
+      overflow-wrap: break-word;
+      white-space: normal;
+    }
+    
+    .mobile-flex-wrap {
+      flex-wrap: wrap;
+    }
+  }
 }
