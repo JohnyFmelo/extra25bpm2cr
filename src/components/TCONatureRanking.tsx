@@ -1,4 +1,3 @@
-//
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { BarChart3, TrendingUp } from "lucide-react";
@@ -205,7 +204,7 @@ const TCONatureRanking: React.FC = () => {
         {/* Nature Ranking */}
         {ranking.length > 0 && (
           <div className="space-y-4">
-            {ranking.slice(0, 3).map((nature, index) => (
+            {ranking.map((nature, index) => (
               <div
                 key={nature.nature}
                 className="bg-white/10 rounded-lg p-4"
