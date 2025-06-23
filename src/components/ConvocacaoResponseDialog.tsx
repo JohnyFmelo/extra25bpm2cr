@@ -96,29 +96,8 @@ const ConvocacaoResponseDialog = ({
   if (!convocacao) return null;
 
   return (
-    <Dialog 
-      open={open} 
-      onOpenChange={(open) => {
-        // Permite fechar o dialog clicando fora apenas se já respondeu
-        if (!open && hasResponded) {
-          onOpenChange(false);
-        } else if (!open && !hasResponded) {
-          // Se ainda não respondeu, não fecha automaticamente
-          return;
-        } else {
-          onOpenChange(open);
-        }
-      }}
-    >
-      <DialogContent 
-        className="max-w-2xl p-0 overflow-hidden bg-white rounded-2xl"
-        onInteractOutside={(e) => {
-          // Previne fechar clicando fora se ainda não respondeu
-          if (!hasResponded) {
-            e.preventDefault();
-          }
-        }}
-      >
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl p-0 overflow-hidden bg-white rounded-2xl">
         {/* Header */}
         <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white p-6 text-center relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-orange-500/20 animate-pulse"></div>
@@ -181,15 +160,9 @@ const ConvocacaoResponseDialog = ({
               <h3 className="text-xl font-semibold text-gray-800 mb-2">
                 Resposta já registrada!
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600">
                 Você já respondeu a esta convocação.
               </p>
-              <Button
-                onClick={() => onOpenChange(false)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md"
-              >
-                Fechar
-              </Button>
             </div>
           )}
         </div>
