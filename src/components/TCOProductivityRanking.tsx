@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
-import { Trophy, TrendingUp, ChevronDown, ChevronUp, Info } from "lucide-react"; // Adicionado Info
+import { Trophy, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"; // Adicionado Dialog
 
 interface TCOStats {
   total: number;
@@ -337,37 +336,10 @@ const TCOProductivityRanking: React.FC = () => {
         </div>
         
         {ranking.length > 0 && (
-          <div className="mb-4 flex items-center gap-2">
+          <div className="mb-4">
             <div className="inline-flex items-center bg-yellow-400 text-blue-900 px-3 py-1 rounded-full text-sm font-semibold">
               🏆 {showFullRanking ? 'RANKING COMPLETO' : 'PÓDIO - TOP 3'}
             </div>
-            
-            {/* --- ADICIONADO: Ícone de informação com a janela modal --- */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Info className="h-5 w-5 text-yellow-300 cursor-pointer hover:text-yellow-100 transition-colors" />
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md bg-white text-gray-900">
-                <DialogHeader>
-                  <DialogTitle>Sistema de Pontuação por Natureza</DialogTitle>
-                  <DialogDescription>
-                    A pontuação é utilizada como critério de desempate quando dois ou mais militares possuem a mesma quantidade de TCOs.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="mt-4 max-h-80 overflow-y-auto pr-2">
-                  <ul className="space-y-2">
-                    {Object.entries(NATURE_WEIGHTS)
-                      .sort(([, weightA], [, weightB]) => weightB - weightA)
-                      .map(([nature, weight]) => (
-                        <li key={nature} className="flex justify-between items-center text-sm p-2 rounded-md bg-gray-50">
-                          <span className="text-gray-700">{nature}</span>
-                          <span className="font-bold text-blue-600">{weight} Pontos</span>
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         )}
 
@@ -408,6 +380,7 @@ const TCOProductivityRanking: React.FC = () => {
                   }`}>
                     {index + 1}
                   </div>
+                  {/* --- LAYOUT CORRIGIDO --- */}
                   <div className="flex-1 min-w-0 flex flex-col">
                     <span className="text-xs text-white/80 font-medium break-words">
                       {officer.graduacao}
