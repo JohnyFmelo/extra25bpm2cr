@@ -4,8 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 interface ConvocacaoDialogProps {
   open: boolean;
@@ -16,10 +14,7 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
   const [monthYear, setMonthYear] = useState("Junho 2025");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [deadlineDays, setDeadlineDays] = useState(3);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
   // Definir datas padrão (hoje + 3 dias)
   const setDefaultDates = () => {
@@ -37,71 +32,11 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
     }
   }, [open]);
 
-  const updateConvocation = async () => {
-    if (!startDate || !endDate) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Por favor, preencha as datas de início e fim."
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    
-    try {
-      // Primeiro, desativar todas as convocações anteriores
-      await supabase
-        .from('convocations')
-        .update({ is_active: false })
-        .eq('is_active', true);
-
-      // Criar nova convocação
-      const { data, error } = await supabase
-        .from('convocations')
-        .insert({
-          month_year: monthYear,
-          start_date: startDate,
-          end_date: endDate,
-          deadline_days: deadlineDays,
-          is_active: true
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating convocation:', error);
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Não foi possível criar a convocação."
-        });
-        return;
-      }
-
-      console.log('Convocation created:', data);
-      
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        onOpenChange(false);
-      }, 2000);
-
-      toast({
-        title: "Sucesso",
-        description: "Convocação atualizada com sucesso!"
-      });
-
-    } catch (error) {
-      console.error('Exception creating convocation:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Ocorreu um erro inesperado."
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const updateConvocation = () => {
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+    }, 3000);
   };
 
   const formatDate = (dateStr: string) => {
@@ -158,25 +93,11 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="deadlineDays" className="text-gray-700 font-semibold">Prazo para Resposta (dias)</Label>
-              <Input
-                type="number"
-                id="deadlineDays"
-                value={deadlineDays}
-                onChange={(e) => setDeadlineDays(Number(e.target.value))}
-                min="1"
-                max="30"
-                className="mt-2 p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 transition-colors"
-              />
-            </div>
-
             <Button
               onClick={updateConvocation}
-              disabled={isLoading}
               className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
             >
-              {isLoading ? "Processando..." : "Atualizar Convocação"}
+              Atualizar Convocação
             </Button>
 
             {/* Preview Section */}
@@ -187,9 +108,6 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
                 <div className="text-gray-600 mb-3">Serviço Extra - {monthYear}</div>
                 <div className="bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-sm font-semibold inline-block">
                   📅 Período: {formatDate(startDate)} até {formatDate(endDate)}
-                </div>
-                <div className="bg-orange-50 text-orange-600 px-4 py-2 rounded-full text-sm font-semibold inline-block mt-2">
-                  ⏰ Prazo: Encerra em {deadlineDays} dias
                 </div>
               </div>
             </div>
