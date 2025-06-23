@@ -725,7 +725,8 @@ const WeeklyCalendar = ({
         <AddVolunteerToSlotDialog
           open={showAddVolunteerDialog}
           onOpenChange={setShowAddVolunteerDialog}
-          timeSlot={selectedTimeSlotForVolunteer}
+          slotId={selectedTimeSlotForVolunteer.id}
+          date={format(selectedTimeSlotForVolunteer.date, 'yyyy-MM-dd')}
           onVolunteerAdded={handleAddVolunteerSuccess}
         />
       )}
