@@ -5,10 +5,11 @@ import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, Search } from "lucide-react";
+import { Loader2, Users, Search, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VolunteerServicesDialog from "./VolunteerServicesDialog";
+import ConvocacaoDialog from "./ConvocacaoDialog";
 
 interface User {
   id: string;
@@ -38,6 +39,7 @@ const VolunteersManager = () => {
   const [bulkSlotsValue, setBulkSlotsValue] = useState(1);
   const [selectedVolunteer, setSelectedVolunteer] = useState<string | null>(null);
   const [showServicesDialog, setShowServicesDialog] = useState(false);
+  const [showConvocacaoDialog, setShowConvocacaoDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -302,13 +304,25 @@ const VolunteersManager = () => {
   return <div className="w-full max-w-6xl mx-auto p-6 px-0">
       <Card className="shadow-lg">
         <CardHeader className="pb-6">
-          <CardTitle className="flex items-center gap-3 text-2xl">
-            <Users className="h-7 w-7 text-primary" />
-            Gerenciar Voluntários
-          </CardTitle>
-          <p className="mt-2 text-zinc-700">
-            Gerencie o status de voluntário e limite de serviços dos usuários cadastrados
-          </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Users className="h-7 w-7 text-primary" />
+              <div>
+                <CardTitle className="text-2xl">Gerenciar Voluntários</CardTitle>
+                <p className="mt-2 text-zinc-700">
+                  Gerencie o status de voluntário e limite de serviços dos usuários cadastrados
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setShowConvocacaoDialog(true)}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              size="lg"
+            >
+              <FileText className="h-5 w-5 mr-2" />
+              Convocação
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-6 px-6">
@@ -450,6 +464,11 @@ const VolunteersManager = () => {
         open={showServicesDialog}
         onOpenChange={setShowServicesDialog}
         volunteerName={selectedVolunteer || ""}
+      />
+
+      <ConvocacaoDialog 
+        open={showConvocacaoDialog}
+        onOpenChange={setShowConvocacaoDialog}
       />
     </div>;
 };
