@@ -1,14 +1,14 @@
+
 import React, { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Hours from "./pages/Hours";
 import RankingTCO from "./pages/RankingTCO";
-import RankingNaturezas from "./pages/RankingNaturezas";
 import TopBar from "./components/TopBar";
 import BottomMenuBar from "./components/BottomMenuBar";
 import { useUserBlockListener } from "./hooks/useUserBlockListener";
@@ -78,7 +78,7 @@ const Layout = ({
   );
 };
 
-function App() {
+const App = () => {
   const [activeTab, setActiveTab] = useState<string>("main");
   const [newNotification, setNewNotification] = useState<Notification | null>(null);
   const [replyToNotification, setReplyToNotification] = useState<Notification | null>(null);
@@ -124,7 +124,7 @@ function App() {
     <React.StrictMode>
       <UserProvider>
         <QueryClientProvider client={queryClient}>
-          <Router>
+          <BrowserRouter>
             <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -140,8 +140,6 @@ function App() {
                         <Hours />
                       </Layout>
                     </ProtectedRoute>} />
-                <Route path="/ranking-tco" element={<RankingTCO />} />
-                <Route path="/ranking-naturezas" element={<RankingNaturezas />} />
                 {/* Redirect any unknown routes to login */}
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
@@ -158,7 +156,7 @@ function App() {
                 originalNotification={replyToNotification}
               />
             </TooltipProvider>
-          </Router>
+          </BrowserRouter>
         </QueryClientProvider>
       </UserProvider>
     </React.StrictMode>
