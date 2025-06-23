@@ -3,25 +3,31 @@ import { Card, CardContent, CardHeader } from "./ui/card";
 import { BarChart3, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "./ui/button";
+
 interface NatureStats {
   total: number;
   types: number;
   categories: number;
   lastUpdate: string;
 }
+
 interface NatureRanking {
   nature: string;
   count: number;
   percentage: number;
 }
+
 const BUCKET_NAME = 'tco-pdfs';
+
 const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
   if (!fileName) return "Não especificada";
   const parts = fileName.split('_');
   if (parts.length < 4) return "Não especificada";
+  
   let naturezaParts: string[] = [];
   const lastPart = parts[parts.length - 1];
   const rgpmSegmentPotentially = lastPart.replace(/\.pdf$/i, "");
+  
   if (parts.length >= 5 && /^\d/.test(rgpmSegmentPotentially)) {
     naturezaParts = parts.slice(3, parts.length - 1);
   } else {
@@ -29,9 +35,12 @@ const extractTcoNatureFromFilename = (fileName: string | undefined | null): stri
     naturezaParts = parts.slice(3, parts.length - 1);
     naturezaParts.push(lastNaturePart);
   }
+  
   if (naturezaParts.length === 0) return "Não especificada";
+  
   return naturezaParts.join('_').replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ') || "Não especificada";
 };
+
 const TCONatureRanking: React.FC = () => {
   const [stats, setStats] = useState<NatureStats>({
     total: 0,
@@ -42,6 +51,7 @@ const TCONatureRanking: React.FC = () => {
   const [ranking, setRanking] = useState<NatureRanking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showFullRanking, setShowFullRanking] = useState(false);
+
   useEffect(() => {
     const fetchNatureStats = async () => {
       try {
@@ -106,9 +116,12 @@ const TCONatureRanking: React.FC = () => {
     };
     fetchNatureStats();
   }, []);
+
   const itemsToDisplay = showFullRanking ? ranking : ranking.slice(0, 3);
+
   if (isLoading) {
-    return <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+    return (
+      <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <CardContent className="p-6">
           <div className="animate-pulse">
             <div className="h-4 bg-white/20 rounded mb-2"></div>
@@ -120,8 +133,10 @@ const TCONatureRanking: React.FC = () => {
             </div>
           </div>
         </CardContent>
-      </Card>;
+      </Card>
+    );
   }
+
   const getProgressBarColor = (index: number) => {
     switch (index) {
       case 0:
@@ -134,7 +149,9 @@ const TCONatureRanking: React.FC = () => {
         return 'bg-gray-500';
     }
   };
-  return <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg">
+
+  return (
+    <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div>
@@ -164,14 +181,18 @@ const TCONatureRanking: React.FC = () => {
           </div>
         </div>
 
-        {ranking.length > 0 && <div className="mb-4">
+        {ranking.length > 0 && (
+          <div className="mb-4">
             <div className="inline-flex items-center bg-yellow-400 text-blue-900 px-3 py-1 rounded-full text-sm font-semibold">
               🏆 {showFullRanking ? 'RANKING COMPLETO' : 'PÓDIO - TOP 3'}
             </div>
-          </div>}
+          </div>
+        )}
 
-        {ranking.length > 0 && <div className="space-y-4">
-            {itemsToDisplay.map((nature, index) => <div key={nature.nature} className="bg-white/10 rounded-lg p-4">
+        {ranking.length > 0 && (
+          <div className="space-y-4">
+            {itemsToDisplay.map((nature, index) => (
+              <div key={nature.nature} className="bg-white/10 rounded-lg p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${index === 0 ? 'bg-yellow-400 text-blue-600' : index === 1 ? 'bg-gray-300 text-gray-600' : index === 2 ? 'bg-orange-400 text-white' : 'bg-white/20 text-white'}`}>
                     {index + 1}
@@ -197,23 +218,33 @@ const TCONatureRanking: React.FC = () => {
                   </div>
                   <div className="w-full bg-white/20 rounded-full h-2">
                     <div className={`h-2 rounded-full ${getProgressBarColor(index)}`} style={{
-                width: `${nature.percentage}%`
-              }}></div>
+                      width: `${nature.percentage}%`
+                    }}></div>
                   </div>
                 </div>
-              </div>)}
+              </div>
+            ))}
             
-            {/* --- BOTÃO COM ESTILO CORRIGIDO --- */}
-            {ranking.length > 3 && <div className="pt-2 text-center">
-                <Button onClick={() => setShowFullRanking(!showFullRanking)} className="w-full sm:w-auto rounded-full bg-white/10 px-6 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 hover:bg-white/20 transition-all duration-200">
+            {/* --- BOTÃO COM ESTILO IGUAL AO DA IMAGEM --- */}
+            {ranking.length > 3 && (
+              <div className="pt-2 text-center">
+                <Button 
+                  onClick={() => setShowFullRanking(!showFullRanking)} 
+                  className="inline-flex items-center justify-center rounded-lg bg-blue-400 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+                >
                   {showFullRanking ? 'Mostrar menos' : 'Ver ranking completo'}
-                  {showFullRanking ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
+                  {showFullRanking 
+                    ? <ChevronUp className="w-4 h-4 ml-2" /> 
+                    : <ChevronDown className="w-4 h-4 ml-2" />
+                  }
                 </Button>
-              </div>}
-            
-            
-          </div>}
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
+
 export default TCONatureRanking;
