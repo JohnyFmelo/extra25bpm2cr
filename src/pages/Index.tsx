@@ -31,10 +31,13 @@ import TCOProductivityRanking from "@/components/TCOProductivityRanking";
 import TCONatureRanking from "@/components/TCONatureRanking";
 import { useNotifications } from "@/components/notifications/NotificationsList";
 import VolunteersManager from "@/components/VolunteersManager";
+import ConvocacaoResponseDialog from "@/components/ConvocacaoResponseDialog";
+import { useConvocacaoCheck } from "@/hooks/useConvocacaoCheck";
 
 interface IndexProps {
   initialActiveTab?: string;
 }
+
 const Index = ({
   initialActiveTab = "main"
 }: IndexProps) => {
@@ -49,6 +52,7 @@ const Index = ({
   const [activeTrips, setActiveTrips] = useState<any[]>([]);
   const [travelTab, setTravelTab] = useState("trips");
   const [extraSubTab, setExtraSubTab] = useState("extra");
+  const [showConvocacaoDialog, setShowConvocacaoDialog] = useState(false);
   const {
     toast
   } = useToast();
@@ -56,9 +60,19 @@ const Index = ({
   useNotifications(); // This hook now handles global notification count updates.
   const navigate = useNavigate();
 
+  // Verificação de convocação pendente
+  const { pendingConvocacao, isLoading: isLoadingConvocacao, recheckConvocacao } = useConvocacaoCheck(user.email);
+
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
   const [tcoTab, setTcoTab] = useState("list");
+
+  // Mostrar dialog de convocação quando houver uma pendente
+  useEffect(() => {
+    if (pendingConvocacao && !isLoadingConvocacao) {
+      setShowConvocacaoDialog(true);
+    }
+  }, [pendingConvocacao, isLoadingConvocacao]);
 
   useEffect(() => {
     const today = new Date();
@@ -133,9 +147,15 @@ const Index = ({
     }
   }, [initialActiveTab]);
 
+  const handleConvocacaoResponse = () => {
+    setShowConvocacaoDialog(false);
+    recheckConvocacao(); // Recheck to update the state
+  };
+
   // Standardized class strings
   const tabListClasses = "w-full flex gap-1 rounded-lg p-1 bg-slate-200 mb-4";
   const tabTriggerClasses = "flex-1 text-center py-2.5 px-4 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-700 hover:bg-slate-300/70 data-[state=active]:hover:bg-blue-700/90";
+
   return <div className="relative min-h-screen w-full flex flex-col">
       <div className="flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow py-0">
@@ -388,6 +408,16 @@ const Index = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {pendingConvocacao && (
+        <ConvocacaoResponseDialog
+          open={showConvocacaoDialog}
+          onOpenChange={setShowConvocacaoDialog}
+          convocacao={pendingConvocacao}
+          userEmail={user.email}
+          userName={user.name}
+        />
+      )}
 
       <BottomMenuBar activeTab={activeTab} onTabChange={handleTabChange} isAdmin={user?.userType === 'admin'} />
     </div>;
