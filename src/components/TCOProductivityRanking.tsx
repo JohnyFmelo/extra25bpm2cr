@@ -357,7 +357,7 @@ const TCOProductivityRanking: React.FC = () => {
                 <DialogHeader>
                   <DialogTitle className="text-yellow-300">Sistema de Pontuação</DialogTitle>
                   <DialogDescription className="text-slate-400">
-                    A pontuação serve como critério de desempate. A classificação principal é por quantidade de TCOs.
+                    A pontuação serve apenas como critério de desempate. A classificação principal é por quantidade de TCOs.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="mt-4 max-h-80 overflow-y-auto pr-2">
