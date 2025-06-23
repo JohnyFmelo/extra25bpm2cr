@@ -38,7 +38,15 @@ const WeeklyCalendar = ({
   const [showAllWeekSlots, setShowAllWeekSlots] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [showAddVolunteerDialog, setShowAddVolunteerDialog] = useState(false);
-  const [selectedTimeSlotForVolunteer, setSelectedTimeSlotForVolunteer] = useState<TimeSlot | null>(null);
+  const [selectedTimeSlotForVolunteer, setSelectedTimeSlotForVolunteer] = useState<{
+    id?: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    total_slots: number;
+    slots_used: number;
+    volunteers?: string[];
+  } | null>(null);
   const { toast } = useToast();
   
   // Definir isAdmin - assumindo que é sempre true para administradores por enquanto
@@ -200,7 +208,17 @@ const WeeklyCalendar = ({
 
   // Função para lidar com o clique no botão de adicionar voluntário
   const handleAddVolunteerClick = (timeSlot: TimeSlot) => {
-    setSelectedTimeSlotForVolunteer(timeSlot);
+    // Convert TimeSlot to FirebaseTimeSlot format
+    const firebaseTimeSlot = {
+      id: timeSlot.id,
+      date: format(timeSlot.date, 'yyyy-MM-dd'),
+      start_time: formatTimeForDB(timeSlot.startTime),
+      end_time: formatTimeForDB(timeSlot.endTime),
+      total_slots: timeSlot.slots,
+      slots_used: timeSlot.slotsUsed,
+      volunteers: timeSlot.volunteers || []
+    };
+    setSelectedTimeSlotForVolunteer(firebaseTimeSlot);
     setShowAddVolunteerDialog(true);
   };
 
