@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
-import { Trophy, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
+import { Trophy, TrendingUp, ChevronDown, ChevronUp, Info, X } from "lucide-react"; // Adicionado Info e X
 import { supabase } from "@/lib/supabaseClient";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from "@/components/ui/dialog"; // Adicionado DialogClose
 
 interface TCOStats {
   total: number;
@@ -41,37 +42,42 @@ interface TcoData {
 
 const BUCKET_NAME = 'tco-pdfs';
 
-const NATURE_WEIGHTS: { [key: string]: number } = {
-  'Lesão Corporal': 10,
-  'Omissão De Socorro': 9,
-  'Conduzir Veículo Sem Cnh Gerando Perigo De Dano': 9,
-  'Resistência': 8,
-  'Invasão De Domicílio': 7,
-  'Desacato': 7,
-  'Rixa': 6,
-  'Falsa Identidade': 6,
-  'Entregar Veículo A Pessoa Não Habilitada': 6,
-  'Porte De Drogas Para Consumo': 6,
-  'Ameaça': 5,
-  'Dano': 5,
-  'Calúnia': 5,
-  'Exercício Arbitrário Das Próprias Razões': 4,
-  'Fraude Em Comércio': 4,
-  'Vias De Fato': 3,
-  'Desobediência': 3,
-  'Difamação': 2,
-  'Injúria': 2,
-  'Ato Obsceno': 2,
-  'Perturbação Do Sossego': 1,
-  'Trafegar Em Velocidade Incompatível Com Segurança': 1
+// --- ESTRUTURA DE DADOS ALTERADA para incluir peso e pena ---
+interface NatureDetail {
+  weight: number;
+  pena: string;
+}
+
+const NATURE_DETAILS: { [key: string]: NatureDetail } = {
+  'Lesão Corporal': { weight: 10, pena: 'Pena: 3 meses a 1 ano' },
+  'Omissão De Socorro': { weight: 9, pena: 'Pena: 1 a 6 meses ou multa' },
+  'Conduzir Veículo Sem Cnh Gerando Perigo De Dano': { weight: 9, pena: 'Pena: 6 meses a 1 ano ou multa' },
+  'Resistência': { weight: 8, pena: 'Pena: 2 meses a 2 anos' },
+  'Invasão De Domicílio': { weight: 7, pena: 'Pena: 1 a 3 meses ou multa' },
+  'Desacato': { weight: 7, pena: 'Pena: 6 meses a 2 anos ou multa' },
+  'Rixa': { weight: 6, pena: 'Pena: 15 dias a 2 meses ou multa' },
+  'Falsa Identidade': { weight: 6, pena: 'Pena: 3 meses a 1 ano ou multa' },
+  'Entregar Veículo A Pessoa Não Habilitada': { weight: 6, pena: 'Pena: 6 meses a 1 ano ou multa' },
+  'Porte De Drogas Para Consumo': { weight: 6, pena: 'Pena: Advertência, prestação de serviços' },
+  'Ameaça': { weight: 5, pena: 'Pena: 1 a 6 meses ou multa' },
+  'Dano': { weight: 5, pena: 'Pena: 1 a 6 meses ou multa' },
+  'Calúnia': { weight: 5, pena: 'Pena: 6 meses a 2 anos e multa' },
+  'Exercício Arbitrário Das Próprias Razões': { weight: 4, pena: 'Pena: 15 dias a 1 mês ou multa' },
+  'Fraude Em Comércio': { weight: 4, pena: 'Pena: 6 meses a 2 anos ou multa' },
+  'Vias De Fato': { weight: 3, pena: 'Pena: 15 dias a 3 meses ou multa' },
+  'Desobediência': { weight: 3, pena: 'Pena: 15 dias a 6 meses e multa' },
+  'Difamação': { weight: 2, pena: 'Pena: 3 meses a 1 ano e multa' },
+  'Injúria': { weight: 2, pena: 'Pena: 1 a 6 meses ou multa' },
+  'Ato Obsceno': { weight: 2, pena: 'Pena: 3 meses a 1 ano ou multa' },
+  'Perturbação Do Sossego': { weight: 1, pena: 'Pena: 15 dias a 3 meses ou multa' },
+  'Trafegar Em Velocidade Incompatível Com Segurança': { weight: 1, pena: 'Pena: 6 meses a 2 anos' },
 };
 
-// --- FUNÇÃO DE CORREÇÃO: Normaliza strings para comparação ---
 const normalizeString = (str: string): string => {
   return str
     .toLowerCase()
-    .normalize("NFD") // Separa os acentos dos caracteres
-    .replace(/[\u0300-\u036f]/g, ""); // Remove os acentos
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 };
 
 const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
@@ -145,10 +151,9 @@ const TCOProductivityRanking: React.FC = () => {
       try {
         setIsLoading(true);
 
-        // --- CORREÇÃO: Cria um mapa de pesos normalizado para busca segura ---
-        const normalizedWeights = new Map<string, number>();
-        for (const key in NATURE_WEIGHTS) {
-            normalizedWeights.set(normalizeString(key), NATURE_WEIGHTS[key]);
+        const normalizedDetailsMap = new Map<string, NatureDetail>();
+        for (const key in NATURE_DETAILS) {
+            normalizedDetailsMap.set(normalizeString(key), NATURE_DETAILS[key]);
         }
         
         const { data: userFolders, error: foldersError } = await supabase.storage
@@ -204,9 +209,9 @@ const TCOProductivityRanking: React.FC = () => {
             const allRgpmsInvolved = [...tco.rgpmsExtracted.main, ...tco.rgpmsExtracted.support];
             const uniqueRgpms = [...new Set(allRgpmsInvolved)];
             
-            // --- CORREÇÃO: Usa a string normalizada para buscar o peso ---
             const normalizedNature = normalizeString(tco.natureza);
-            const weight = normalizedWeights.get(normalizedNature) || 0;
+            const details = normalizedDetailsMap.get(normalizedNature);
+            const weight = details ? details.weight : 0;
 
             uniqueRgpms.forEach(rgpm => {
               const current = officerTcoCountMap.get(rgpm) || { count: 0, totalWeight: 0 };
@@ -339,10 +344,43 @@ const TCOProductivityRanking: React.FC = () => {
         </div>
         
         {ranking.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-4 flex items-center gap-2">
             <div className="inline-flex items-center bg-yellow-400 text-blue-900 px-3 py-1 rounded-full text-sm font-semibold">
               🏆 {showFullRanking ? 'RANKING COMPLETO' : 'PÓDIO - TOP 3'}
             </div>
+            
+            <Dialog>
+              <DialogTrigger asChild>
+                <Info className="h-5 w-5 text-yellow-300 cursor-pointer hover:text-yellow-100 transition-colors" />
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg bg-slate-800 border-slate-700 text-white">
+                <DialogHeader>
+                  <DialogTitle className="text-yellow-300">Sistema de Pontuação</DialogTitle>
+                  <DialogDescription className="text-slate-400">
+                    A pontuação serve como critério de desempate. A classificação principal é por quantidade de TCOs.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="mt-4 max-h-80 overflow-y-auto pr-2">
+                  <ul className="space-y-2">
+                    {Object.entries(NATURE_DETAILS)
+                      .sort(([, detailsA], [, detailsB]) => detailsB.weight - detailsA.weight)
+                      .map(([nature, details]) => (
+                        <li key={nature} className="flex justify-between items-start text-sm p-3 rounded-md bg-white/5">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-slate-200">{nature}</span>
+                            <span className="text-xs text-slate-400 mt-1">{details.pena}</span>
+                          </div>
+                          <span className="font-bold text-blue-400 flex-shrink-0 ml-4">{details.weight} Pontos</span>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+                <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Fechar</span>
+                </DialogClose>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
 
@@ -383,9 +421,12 @@ const TCOProductivityRanking: React.FC = () => {
                   }`}>
                     {index + 1}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium break-words whitespace-pre-line leading-tight">
-                      {officer.graduacao} {officer.officerName}
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <span className="text-xs text-white/80 font-medium break-words">
+                      {officer.graduacao}
+                    </span>
+                    <span className="text-sm font-semibold break-words whitespace-pre-line leading-tight">
+                      {officer.officerName}
                     </span>
                     <div className="text-xs text-white/80 mt-1 flex items-center gap-2">
                       <span>{officer.tcoCount} TCOs</span>
