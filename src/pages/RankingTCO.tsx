@@ -1,10 +1,65 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Trophy, TrendingUp, ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+// --- NOVAS INTERFACES E CONSTANTES PARA O RANKING COM PESO ---
+
+const natureWeights: { [key: string]: number } = {
+  'Lesão Corporal': 10,
+  'Omissão de Socorro': 9,
+  'Conduzir Veículo Sem Cnh Gerando Perigo de Dano': 9,
+  'Resistência': 8,
+  'Invasão de Domicílio': 7,
+  'Desacato': 7,
+  'Rixa': 6,
+  'Falsa Identidade': 6,
+  'Entregar Veículo a Pessoa Não Habilitada': 6,
+  'Ameaça': 5,
+  'Dano': 5,
+  'Calúnia': 5,
+  'Exercício Arbitrário Das Próprias Razões': 4,
+  'Fraude em Comércio': 4,
+  'Vias de Fato': 3,
+  'Desobediência': 3,
+  'Difamação': 2,
+  'Injúria': 2,
+  'Ato Obsceno': 2,
+  'Porte de Drogas Para Consumo': 1,
+  'Perturbação do Sossego': 1,
+  'Trafegar em Velocidade Incompatível Com Segurança': 1,
+};
+
+// Função para extrair a natureza, copiada do TCONatureRanking
+const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
+  if (!fileName) return "Não especificada";
+  const parts = fileName.split('_');
+  if (parts.length < 4) return "Não especificada";
+  
+  let naturezaParts: string[] = [];
+  const lastPart = parts[parts.length - 1];
+  const rgpmSegmentPotentially = lastPart.replace(/\.pdf$/i, "");
+  
+  if (parts.length >= 5 && /^\d/.test(rgpmSegmentPotentially)) {
+    naturezaParts = parts.slice(3, parts.length - 1);
+  } else {
+    const lastNaturePart = parts[parts.length - 1].replace(/\.pdf$/i, "");
+    naturezaParts = parts.slice(3, parts.length - 1);
+    naturezaParts.push(lastNaturePart);
+  }
+  
+  if (naturezaParts.length === 0) return "Não especificada";
+  
+  return naturezaParts.join('_')
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ') || "Não especificada";
+};
+
+// --- FIM DAS NOVAS ADIÇÕES ---
 
 interface TCOStats {
   total: number;
@@ -17,6 +72,7 @@ interface OfficerRanking {
   officerName: string;
   graduacao: string;
   tcoCount: number;
+  score: number; // Adicionado score para desempate
 }
 
 interface ExtractedRgpms {
@@ -43,10 +99,7 @@ interface TcoData {
 const BUCKET_NAME = 'tco-pdfs';
 
 const extractRGPMsFromFilename = (fileName: string | undefined | null): ExtractedRgpms => {
-  const emptyResult: ExtractedRgpms = {
-    main: [],
-    support: []
-  };
+  const emptyResult: ExtractedRgpms = { main: [], support: [] };
   if (!fileName) return emptyResult;
   const parts = fileName.split('_');
   if (parts.length < 5) return emptyResult;
@@ -70,11 +123,7 @@ const extractRGPMsFromFilename = (fileName: string | undefined | null): Extracte
 };
 
 const RankingTCO: React.FC = () => {
-  const [stats, setStats] = useState<TCOStats>({
-    total: 0,
-    averagePerDay: 0,
-    activeDays: 0
-  });
+  const [stats, setStats] = useState<TCOStats>({ total: 0, averagePerDay: 0, activeDays: 0 });
   const [ranking, setRanking] = useState<OfficerRanking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -85,9 +134,7 @@ const RankingTCO: React.FC = () => {
       try {
         setIsLoading(true);
         
-        const { data: userFolders, error: foldersError } = await supabase.storage
-          .from(BUCKET_NAME)
-          .list('tcos/');
+        const { data: userFolders, error: foldersError } = await supabase.storage.from(BUCKET_NAME).list('tcos/');
 
         if (foldersError) {
           console.error("Erro ao buscar pastas de usuários:", foldersError);
@@ -96,15 +143,13 @@ const RankingTCO: React.FC = () => {
         }
 
         let allTcos: TcoData[] = [];
-        const officerTcoCountMap = new Map<string, { count: number; officerInfo?: OfficerInfo }>();
+        // Mapa modificado para incluir contagem e score
+        const officerTcoCountMap = new Map<string, { count: number; score: number; officerInfo?: OfficerInfo }>();
 
         for (const folder of userFolders || []) {
           if (folder.name === '.emptyFolderPlaceholder') continue;
           
-          const { data: userFiles, error: filesError } = await supabase.storage
-            .from(BUCKET_NAME)
-            .list(`tcos/${folder.name}/`);
-
+          const { data: userFiles, error: filesError } = await supabase.storage.from(BUCKET_NAME).list(`tcos/${folder.name}/`);
           if (filesError) {
             console.error(`Erro ao buscar TCOs do usuário ${folder.name}:`, filesError);
             continue;
@@ -114,17 +159,17 @@ const RankingTCO: React.FC = () => {
             const fileName = file.name;
             const tcoMatch = fileName.match(/TCO[-_]([^_-]+)/i);
             let tcoIdentifierPart = tcoMatch ? tcoMatch[1] : fileName.replace(/\.pdf$/i, "");
-            let finalTcoNumber = tcoIdentifierPart.toUpperCase().startsWith("TCO-") 
-              ? tcoIdentifierPart 
-              : `TCO-${tcoIdentifierPart}`;
+            let finalTcoNumber = tcoIdentifierPart.toUpperCase().startsWith("TCO-") ? tcoIdentifierPart : `TCO-${tcoIdentifierPart}`;
             
             const rgpmsExtracted = extractRGPMsFromFilename(fileName);
+            // Extrai a natureza para usar no cálculo de peso
+            const natureza = extractTcoNatureFromFilename(fileName);
             
             return {
               id: file.id || fileName,
               tcoNumber: finalTcoNumber,
               createdAt: new Date(file.created_at || Date.now()),
-              natureza: "",
+              natureza: natureza, // Popula a natureza
               fileName: fileName,
               userId: folder.name,
               rgpmsExtracted: rgpmsExtracted
@@ -134,19 +179,14 @@ const RankingTCO: React.FC = () => {
           allTcos = [...allTcos, ...userTcos];
 
           userTcos.forEach(tco => {
-            if (tco.rgpmsExtracted.main.length > 0) {
-              const conductorRgpm = tco.rgpmsExtracted.main[0];
-              const current = officerTcoCountMap.get(conductorRgpm) || { count: 0 };
-              officerTcoCountMap.set(conductorRgpm, {
-                count: current.count + 1,
-                officerInfo: current.officerInfo
-              });
-            }
-
-            tco.rgpmsExtracted.main.slice(1).forEach(rgpm => {
-              const current = officerTcoCountMap.get(rgpm) || { count: 0 };
+            const natureScore = natureWeights[tco.natureza] || 0;
+            const allInvolvedRgpms = [...tco.rgpmsExtracted.main, ...tco.rgpmsExtracted.support];
+            
+            allInvolvedRgpms.forEach(rgpm => {
+              const current = officerTcoCountMap.get(rgpm) || { count: 0, score: 0 };
               officerTcoCountMap.set(rgpm, {
                 count: current.count + 1,
+                score: current.score + natureScore,
                 officerInfo: current.officerInfo
               });
             });
@@ -164,40 +204,25 @@ const RankingTCO: React.FC = () => {
             officersData.forEach(officer => {
               const current = officerTcoCountMap.get(officer.rgpm);
               if (current) {
-                officerTcoCountMap.set(officer.rgpm, {
-                  ...current,
-                  officerInfo: officer as OfficerInfo
-                });
+                officerTcoCountMap.set(officer.rgpm, { ...current, officerInfo: officer as OfficerInfo });
               }
             });
           }
         }
 
         const total = allTcos.length;
-        
         if (total === 0) {
-          setStats({
-            total: 0,
-            averagePerDay: 0,
-            activeDays: 0
-          });
+          setStats({ total: 0, averagePerDay: 0, activeDays: 0 });
           setRanking([]);
           setIsLoading(false);
           return;
         }
 
-        const uniqueDates = new Set(
-          allTcos.map(tco => tco.createdAt.toISOString().split('T')[0]).filter(Boolean)
-        );
-        
+        const uniqueDates = new Set(allTcos.map(tco => tco.createdAt.toISOString().split('T')[0]).filter(Boolean));
         const activeDays = uniqueDates.size;
         const averagePerDay = activeDays > 0 ? total / activeDays : 0;
 
-        setStats({
-          total,
-          averagePerDay: Math.round(averagePerDay * 10) / 10,
-          activeDays
-        });
+        setStats({ total, averagePerDay: Math.round(averagePerDay * 10) / 10, activeDays });
 
         const officerRanking: OfficerRanking[] = Array.from(officerTcoCountMap.entries())
           .filter(([_, data]) => data.count > 0)
@@ -205,9 +230,18 @@ const RankingTCO: React.FC = () => {
             rgpm,
             officerName: data.officerInfo?.nome || 'Militar não identificado',
             graduacao: data.officerInfo?.graduacao || '',
-            tcoCount: data.count
+            tcoCount: data.count,
+            score: data.score
           }))
-          .sort((a, b) => b.tcoCount - a.tcoCount);
+          // --- LÓGICA DE ORDENAÇÃO ATUALIZADA ---
+          .sort((a, b) => {
+            // 1. Desempate por contagem de TCOs (maior primeiro)
+            if (b.tcoCount !== a.tcoCount) {
+              return b.tcoCount - a.tcoCount;
+            }
+            // 2. Desempate por score (maior primeiro)
+            return b.score - a.score;
+          });
 
         setRanking(officerRanking);
 
@@ -232,19 +266,13 @@ const RankingTCO: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-4">
-        <Card className="max-w-6xl mx-auto">
-          <CardContent className="p-6">
+        <Card className="max-w-6xl mx-auto"><CardContent className="p-6">
             <div className="animate-pulse space-y-4">
               <div className="h-8 bg-gray-200 rounded w-1/3"></div>
               <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              <div className="space-y-2">
-                {[...Array(10)].map((_, i) => (
-                  <div key={i} className="h-12 bg-gray-200 rounded"></div>
-                ))}
-              </div>
+              <div className="space-y-2">{[...Array(10)].map((_, i) => (<div key={i} className="h-12 bg-gray-200 rounded"></div>))}</div>
             </div>
-          </CardContent>
-        </Card>
+        </CardContent></Card>
       </div>
     );
   }
@@ -253,101 +281,66 @@ const RankingTCO: React.FC = () => {
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto">
         <div className="mb-6 flex items-center gap-4">
-          <Button onClick={handleBack} variant="outline" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Fechar
-          </Button>
+          <Button onClick={handleBack} variant="outline" size="sm"><ArrowLeft className="h-4 w-4 mr-2" />Fechar</Button>
         </div>
-
         <Card className="shadow-lg">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
+          <CardHeader className="pb-4"><div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900">
-                  <Trophy className="h-6 w-6 text-yellow-500" />
-                  Ranking Completo TCO - Militares
-                </h1>
-                <p className="text-gray-600 mt-1">Participação de militares nos TCOs</p>
+                <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900"><Trophy className="h-6 w-6 text-yellow-500" />Ranking Completo TCO - Militares</h1>
+                <p className="text-gray-600 mt-1">Participação de militares nos TCOs com desempate por natureza</p>
               </div>
               <TrendingUp className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardHeader>
-          
+            </div></CardHeader>
           <CardContent>
-            {/* Stats Row */}
             <div className="grid grid-cols-3 gap-4 mb-6 bg-blue-50 rounded-lg p-4">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600">{stats.total}</div>
-                <div className="text-sm text-gray-600">Total TCOs</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600">{stats.averagePerDay}</div>
-                <div className="text-sm text-gray-600">Média/dia</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600">{ranking.length}</div>
-                <div className="text-sm text-gray-600">Militares</div>
-              </div>
+              <div className="text-center"><div className="text-3xl font-bold text-blue-600">{stats.total}</div><div className="text-sm text-gray-600">Total TCOs</div></div>
+              <div className="text-center"><div className="text-3xl font-bold text-blue-600">{stats.averagePerDay}</div><div className="text-sm text-gray-600">Média/dia</div></div>
+              <div className="text-center"><div className="text-3xl font-bold text-blue-600">{ranking.length}</div><div className="text-sm text-gray-600">Militares</div></div>
             </div>
-
-            {/* Current User Position */}
             {currentUserData && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center justify-between">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6"><div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center text-blue-600 font-bold text-lg">
-                      {currentUserRank}º
-                    </div>
+                    <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center text-blue-600 font-bold text-lg">{currentUserRank}º</div>
                     <div>
-                      <div className="font-semibold text-gray-900">
-                        {currentUserData.graduacao} {currentUserData.officerName}
-                      </div>
+                      <div className="font-semibold text-gray-900">{currentUserData.graduacao} {currentUserData.officerName}</div>
                       <div className="text-sm text-gray-600">{currentUserData.tcoCount} TCOs</div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-lg font-semibold text-yellow-700">SUA POSIÇÃO</div>
-                    <div className="text-sm text-gray-600">no ranking</div>
-                  </div>
+                  <div className="text-right"><div className="text-lg font-semibold text-yellow-700">SUA POSIÇÃO</div><div className="text-sm text-gray-600">no ranking</div></div>
+                </div></div>
+            )}
+            
+            {/* --- BADGE DE PÓDIO ADICIONADO --- */}
+            {ranking.length > 0 && (
+              <div className="mb-4">
+                <div className="inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+                  🏆 PÓDIO E CLASSIFICAÇÃO GERAL
                 </div>
               </div>
             )}
-
-            {/* Full Ranking Table */}
+            
             <div className="bg-white rounded-lg border">
               <Table>
-                <TableHeader>
-                  <TableRow>
+                <TableHeader><TableRow>
                     <TableHead className="w-20 text-center">Posição</TableHead>
                     <TableHead>Militar</TableHead>
                     <TableHead className="text-center w-32">TCOs</TableHead>
-                  </TableRow>
-                </TableHeader>
+                </TableRow></TableHeader>
                 <TableBody>
                   {ranking.map((officer, index) => (
-                    <TableRow 
-                      key={officer.rgpm}
-                      className={`
-                        ${currentUserRgpm === officer.rgpm ? 'bg-yellow-50 border-yellow-200' : ''}
-                        ${index < 3 ? 'bg-blue-50' : ''}
-                      `}
-                    >
+                    <TableRow key={officer.rgpm} className={`${currentUserRgpm === officer.rgpm ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''} ${index < 3 ? 'bg-blue-50' : ''}`}>
                       <TableCell className="text-center">
-                        <div className={`
-                          w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold mx-auto
-                          ${index === 0 ? 'bg-yellow-400 text-blue-600' :
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold mx-auto ${
+                            index === 0 ? 'bg-yellow-400 text-blue-600' :
                             index === 1 ? 'bg-gray-300 text-gray-600' :
                             index === 2 ? 'bg-orange-400 text-white' :
-                            'bg-gray-100 text-gray-600'}
-                        `}>
+                            'bg-gray-100 text-gray-600'}`}>
                           {index + 1}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">
-                            {officer.graduacao} {officer.officerName}
-                          </span>
+                          <span className="font-medium text-gray-900">{officer.graduacao} {officer.officerName}</span>
                           <span className="text-xs text-gray-500">RGPM: {officer.rgpm}</span>
                         </div>
                       </TableCell>
@@ -360,12 +353,7 @@ const RankingTCO: React.FC = () => {
                   ))}
                 </TableBody>
               </Table>
-              
-              {ranking.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  Nenhum militar encontrado no ranking
-                </div>
-              )}
+              {ranking.length === 0 && (<div className="text-center py-8 text-gray-500">Nenhum militar encontrado no ranking</div>)}
             </div>
           </CardContent>
         </Card>
