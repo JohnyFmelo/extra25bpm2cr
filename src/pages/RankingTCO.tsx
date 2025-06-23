@@ -16,7 +16,7 @@ interface OfficerRanking {
   officerName: string;
   graduacao: string;
   tcoCount: number;
-  totalWeight: number; // Campo para o peso de desempate
+  totalWeight: number;
 }
 
 interface ExtractedRgpms {
@@ -42,7 +42,7 @@ interface TcoData {
 
 const BUCKET_NAME = 'tco-pdfs';
 
-// --- ADICIONADO: Pesos das naturezas para desempate ---
+// --- ALTERADO: Pontuação de Drogas para 6 ---
 const NATURE_WEIGHTS: { [key: string]: number } = {
   'Lesão Corporal': 10,
   'Omissão De Socorro': 9,
@@ -53,6 +53,7 @@ const NATURE_WEIGHTS: { [key: string]: number } = {
   'Rixa': 6,
   'Falsa Identidade': 6,
   'Entregar Veículo A Pessoa Não Habilitada': 6,
+  'Porte De Drogas Para Consumo': 6, // PONTUAÇÃO AUMENTADA
   'Ameaça': 5,
   'Dano': 5,
   'Calúnia': 5,
@@ -63,12 +64,10 @@ const NATURE_WEIGHTS: { [key: string]: number } = {
   'Difamação': 2,
   'Injúria': 2,
   'Ato Obsceno': 2,
-  'Porte De Drogas Para Consumo': 1,
   'Perturbação Do Sossego': 1,
   'Trafegar Em Velocidade Incompatível Com Segurança': 1
 };
 
-// --- ADICIONADO: Função para extrair a natureza do nome do arquivo ---
 const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
   if (!fileName) return "Não especificada";
   const parts = fileName.split('_');
@@ -130,7 +129,6 @@ const RankingTCO: React.FC = () => {
   });
   const [ranking, setRanking] = useState<OfficerRanking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  // --- ADICIONADO: Estado para controlar a exibição do ranking ---
   const [showFullRanking, setShowFullRanking] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -151,7 +149,6 @@ const RankingTCO: React.FC = () => {
         }
 
         let allTcos: TcoData[] = [];
-        // --- ALTERADO: Mapa agora armazena contagem e peso total ---
         const officerTcoCountMap = new Map<string, { count: number; totalWeight: number; officerInfo?: OfficerInfo }>();
 
         for (const folder of userFolders || []) {
@@ -175,14 +172,13 @@ const RankingTCO: React.FC = () => {
               : `TCO-${tcoIdentifierPart}`;
             
             const rgpmsExtracted = extractRGPMsFromFilename(fileName);
-            // --- ALTERADO: Extrai a natureza para cada TCO ---
             const natureza = extractTcoNatureFromFilename(fileName);
             
             return {
               id: file.id || fileName,
               tcoNumber: finalTcoNumber,
               createdAt: new Date(file.created_at || Date.now()),
-              natureza: natureza, // Popula o campo natureza
+              natureza: natureza,
               fileName: fileName,
               userId: folder.name,
               rgpmsExtracted: rgpmsExtracted
@@ -194,13 +190,13 @@ const RankingTCO: React.FC = () => {
           userTcos.forEach(tco => {
             const allRgpmsInvolved = [...tco.rgpmsExtracted.main, ...tco.rgpmsExtracted.support];
             const uniqueRgpms = [...new Set(allRgpmsInvolved)];
-            const weight = NATURE_WEIGHTS[tco.natureza] || 0; // Pega o peso da natureza, 0 se não encontrar
+            const weight = NATURE_WEIGHTS[tco.natureza] || 0;
 
             uniqueRgpms.forEach(rgpm => {
               const current = officerTcoCountMap.get(rgpm) || { count: 0, totalWeight: 0 };
               officerTcoCountMap.set(rgpm, {
                 count: current.count + 1,
-                totalWeight: current.totalWeight + weight, // Soma o peso
+                totalWeight: current.totalWeight + weight,
                 officerInfo: current.officerInfo
               });
             });
@@ -260,14 +256,13 @@ const RankingTCO: React.FC = () => {
             officerName: data.officerInfo?.nome || 'Militar não identificado',
             graduacao: data.officerInfo?.graduacao || '',
             tcoCount: data.count,
-            totalWeight: data.totalWeight // Adiciona o peso total
+            totalWeight: data.totalWeight
           }))
-          // --- ALTERADO: Lógica de sort para incluir o desempate por peso ---
           .sort((a, b) => {
             if (b.tcoCount !== a.tcoCount) {
-              return b.tcoCount - a.tcoCount; // 1. Ordena por contagem
+              return b.tcoCount - a.tcoCount;
             }
-            return b.totalWeight - a.totalWeight; // 2. Desempata por peso
+            return b.totalWeight - a.totalWeight;
           });
 
         setRanking(officerRanking);
@@ -290,7 +285,6 @@ const RankingTCO: React.FC = () => {
   const currentUserRank = currentUserRgpm ? ranking.findIndex(r => r.rgpm === currentUserRgpm) + 1 : 0;
   const currentUserData = currentUserRgpm ? ranking.find(r => r.rgpm === currentUserRgpm) : null;
   
-  // --- ADICIONADO: Itens a serem exibidos na tabela (pódio ou completo) ---
   const itemsToDisplay = showFullRanking ? ranking : ranking.slice(0, 3);
 
   if (isLoading) {
@@ -364,7 +358,7 @@ const RankingTCO: React.FC = () => {
                       <div className="font-semibold text-gray-900">
                         {currentUserData.graduacao} {currentUserData.officerName}
                       </div>
-                      <div className="text-sm text-gray-600">{currentUserData.tcoCount} TCOs</div>
+                      <div className="text-sm text-gray-600">{currentUserData.tcoCount} TCOs / {currentUserData.totalWeight} Pontos</div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -375,10 +369,10 @@ const RankingTCO: React.FC = () => {
               </div>
             )}
             
-            {/* --- ADICIONADO: Badge dinâmico para Pódio/Ranking Completo --- */}
+            {/* --- ALTERADO: Badge agora é dinâmico e com estilo corrigido --- */}
             {ranking.length > 0 && (
               <div className="mb-4">
-                <div className="inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+                <div className="inline-flex items-center bg-yellow-400 text-blue-900 px-3 py-1 rounded-full text-sm font-semibold">
                   🏆 {showFullRanking ? 'RANKING COMPLETO' : 'PÓDIO - TOP 3'}
                 </div>
               </div>
@@ -390,17 +384,18 @@ const RankingTCO: React.FC = () => {
                   <TableRow>
                     <TableHead className="w-20 text-center">Posição</TableHead>
                     <TableHead>Militar</TableHead>
-                    <TableHead className="text-center w-32">TCOs</TableHead>
+                    <TableHead className="text-center w-28">TCOs</TableHead>
+                    {/* --- ADICIONADO: Nova coluna para a pontuação --- */}
+                    <TableHead className="text-center w-28">Pontuação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* --- ALTERADO: Mapeia sobre 'itemsToDisplay' --- */}
                   {itemsToDisplay.map((officer, index) => (
                     <TableRow 
                       key={officer.rgpm}
                       className={`
                         ${currentUserRgpm === officer.rgpm ? 'bg-yellow-50 border-l-4 border-l-yellow-400' : ''}
-                        ${!showFullRanking && index < 3 ? 'bg-blue-50' : ''}
+                        ${index < 3 ? 'bg-blue-50' : ''}
                       `}
                     >
                       <TableCell className="text-center">
@@ -427,6 +422,12 @@ const RankingTCO: React.FC = () => {
                           {officer.tcoCount}
                         </span>
                       </TableCell>
+                      {/* --- ADICIONADO: Célula para exibir a pontuação --- */}
+                      <TableCell className="text-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {officer.totalWeight}
+                        </span>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -439,7 +440,6 @@ const RankingTCO: React.FC = () => {
               )}
             </div>
 
-            {/* --- ADICIONADO: Botão para expandir/recolher a tabela --- */}
             {ranking.length > 3 && (
               <div className="mt-4 text-center">
                 <Button
