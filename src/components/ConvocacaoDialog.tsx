@@ -4,6 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 interface ConvocacaoDialogProps {
   open: boolean;
@@ -15,6 +18,8 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const { toast } = useToast();
 
   // Definir datas padrão (hoje + 3 dias)
   const setDefaultDates = () => {
@@ -32,11 +37,49 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
     }
   }, [open]);
 
-  const updateConvocation = () => {
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 3000);
+  const updateConvocation = async () => {
+    if (!monthYear || !startDate || !endDate) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      // Criar um ID único para a convocação baseado no mês/ano e datas
+      const convocacaoId = `${monthYear.replace(/\s+/g, '_')}_${startDate}_${endDate}`;
+      
+      const convocacaoRef = doc(db, "convocacoes", convocacaoId);
+      await setDoc(convocacaoRef, {
+        monthYear,
+        startDate,
+        endDate,
+        createdAt: serverTimestamp(),
+        active: true
+      });
+
+      setShowSuccess(true);
+      toast({
+        title: "Convocação criada!",
+        description: "A convocação foi enviada com sucesso e está disponível para os usuários.",
+      });
+
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error("Error creating convocation:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar a convocação.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -95,9 +138,10 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
 
             <Button
               onClick={updateConvocation}
+              disabled={isUpdating}
               className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
             >
-              Atualizar Convocação
+              {isUpdating ? "Atualizando..." : "Atualizar Convocação"}
             </Button>
 
             {/* Preview Section */}

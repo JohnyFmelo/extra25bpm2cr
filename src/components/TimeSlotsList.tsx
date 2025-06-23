@@ -12,6 +12,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import supabase from "@/lib/supabaseClient";
 import CostSummaryCard from "./CostSummaryCard";
+import ConvocacaoResponseDialog from "./ConvocacaoResponseDialog";
+import { useConvocacaoCheck } from "@/hooks/useConvocacaoCheck";
 
 interface TimeSlot {
   id?: string;
@@ -126,6 +128,7 @@ const TimeSlotsList = () => {
   const userDataString = localStorage.getItem('user');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const volunteerName = userData ? `${userData.rank} ${userData.warName}` : '';
+  const userEmail = userData?.email || '';
   const isAdmin = userData?.userType === 'admin';
   const userService = userData?.service;
   const [collapsedDates, setCollapsedDates] = useState<{
@@ -679,14 +682,31 @@ const TimeSlotsList = () => {
     return volunteer;
   };
 
-  return <div className="space-y-6 p-4 py-0 my-0 px-0">
-      {!isAdmin && <div className="bg-white p-4 rounded-lg shadow-sm">
+  // Hook para verificar convocações pendentes
+  const { pendingConvocacao, isLoading: convocacaoLoading } = useConvocacaoCheck(userEmail);
+  const [showConvocacaoDialog, setShowConvocacaoDialog] = useState(false);
+
+  // Verificar se há convocação pendente e mostrar o dialog
+  useEffect(() => {
+    if (pendingConvocacao && !convocacaoLoading && userData) {
+      setShowConvocacaoDialog(true);
+    }
+  }, [pendingConvocacao, convocacaoLoading, userData]);
+
+  return (
+    <div className="space-y-6 p-4 py-0 my-0 px-0">
+      {!isAdmin && (
+        <div className="bg-white p-4 rounded-lg shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              {userSlotCount >= userMaxSlots ? <p className="text-orange-600 font-medium">Horários esgotados</p> : <p className="text-gray-700">
+              {userSlotCount >= userMaxSlots ? (
+                <p className="text-orange-600 font-medium">Horários esgotados</p>
+              ) : (
+                <p className="text-gray-700">
                   Escolha {userMaxSlots - userSlotCount}{" "}
                   {userMaxSlots - userSlotCount === 1 ? "horário" : "horários"}
-                </p>}
+                </p>
+              )}
               <p className="text-sm text-gray-500">
                 {userSlotCount} de {userMaxSlots} horários preenchidos
               </p>
@@ -695,7 +715,8 @@ const TimeSlotsList = () => {
               <span className="text-gray-700 font-medium">{userSlotCount}/{userMaxSlots}</span>
             </div>
           </div>
-        </div>}
+        </div>
+      )}
 
       {isAdmin && totalCostSummary["Total Geral"] > 0 && 
         <CostSummaryCard totalCostSummary={totalCostSummary} />
@@ -822,17 +843,27 @@ const TimeSlotsList = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={() => {
-            if (volunteerToRemove) {
-              handleRemoveVolunteer(volunteerToRemove.timeSlot, volunteerToRemove.name);
-              setVolunteerToRemove(null);
-            }
-          }}>
+              if (volunteerToRemove) {
+                handleRemoveVolunteer(volunteerToRemove.timeSlot, volunteerToRemove.name);
+                setVolunteerToRemove(null);
+              }
+            }}>
               Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>;
+
+      {/* Dialog de resposta à convocação */}
+      <ConvocacaoResponseDialog
+        open={showConvocacaoDialog}
+        onOpenChange={setShowConvocacaoDialog}
+        convocacao={pendingConvocacao}
+        userEmail={userEmail}
+        userName={volunteerName}
+      />
+    </div>
+  );
 };
 
 export default TimeSlotsList;
