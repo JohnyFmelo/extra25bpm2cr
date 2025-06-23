@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
-import { BarChart3, TrendingUp } from "lucide-react";
+import { BarChart3, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { Button } from "./ui/button"; // Importando o botão
 
 interface NatureStats {
   total: number;
@@ -53,6 +54,8 @@ const TCONatureRanking: React.FC = () => {
   });
   const [ranking, setRanking] = useState<NatureRanking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // --- NOVO ESTADO PARA CONTROLAR A EXIBIÇÃO DO RANKING ---
+  const [showFullRanking, setShowFullRanking] = useState(false);
 
   useEffect(() => {
     const fetchNatureStats = async () => {
@@ -117,7 +120,7 @@ const TCONatureRanking: React.FC = () => {
         setStats({
           total: totalTcos,
           types: uniqueTypes,
-          categories: uniqueTypes, // Para este contexto, tipos e categorias são similares
+          categories: uniqueTypes,
           lastUpdate: new Date().toLocaleDateString('pt-BR')
         });
 
@@ -132,6 +135,9 @@ const TCONatureRanking: React.FC = () => {
 
     fetchNatureStats();
   }, []);
+  
+  // --- LÓGICA PARA DECIDIR QUAIS ITENS EXIBIR ---
+  const itemsToDisplay = showFullRanking ? ranking : ranking.slice(0, 3);
 
   if (isLoading) {
     return (
@@ -177,7 +183,7 @@ const TCONatureRanking: React.FC = () => {
       
       <CardContent className="pt-0">
         {/* Stats Row */}
-        <div className="flex justify-between items-center mb-4 bg-white/10 rounded-lg p-3">
+        <div className="flex justify-between items-center my-4 bg-white/10 rounded-lg p-3">
           <div className="text-center">
             <div className="text-2xl font-bold">{stats.total}</div>
             <div className="text-xs text-white/80">Total TCOs</div>
@@ -192,11 +198,11 @@ const TCONatureRanking: React.FC = () => {
           </div>
         </div>
 
-        {/* Ranking Completo Badge */}
+        {/* Pódio / Ranking Completo Badge Dinâmico */}
         {ranking.length > 0 && (
           <div className="mb-4">
             <div className="inline-flex items-center bg-yellow-400 text-blue-900 px-3 py-1 rounded-full text-sm font-semibold">
-              🏆 RANKING COMPLETO
+              🏆 {showFullRanking ? 'RANKING COMPLETO' : 'PÓDIO - TOP 3'}
             </div>
           </div>
         )}
@@ -204,7 +210,8 @@ const TCONatureRanking: React.FC = () => {
         {/* Nature Ranking */}
         {ranking.length > 0 && (
           <div className="space-y-4">
-            {ranking.map((nature, index) => (
+            {/* --- ALTERADO PARA USAR A VARIÁVEL DINÂMICA 'itemsToDisplay' --- */}
+            {itemsToDisplay.map((nature, index) => (
               <div
                 key={nature.nature}
                 className="bg-white/10 rounded-lg p-4"
@@ -232,7 +239,6 @@ const TCONatureRanking: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Progress Bar */}
                 <div className="mb-2">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs text-white/80">Percentual</span>
@@ -248,8 +254,24 @@ const TCONatureRanking: React.FC = () => {
               </div>
             ))}
             
-            {/* Period Info */}
-            <div className="text-center text-sm text-white/80 mt-4">
+            {/* --- BOTÃO PARA MOSTRAR/ESCONDER O RESTO DO RANKING --- */}
+            {ranking.length > 3 && (
+              <div className="pt-2 text-center">
+                <Button
+                  variant="link"
+                  className="text-white/90 hover:text-white"
+                  onClick={() => setShowFullRanking(!showFullRanking)}
+                >
+                  {showFullRanking ? 'Mostrar menos' : 'Ver ranking completo'}
+                  {showFullRanking 
+                    ? <ChevronUp className="w-4 h-4 ml-2" /> 
+                    : <ChevronDown className="w-4 h-4 ml-2" />
+                  }
+                </Button>
+              </div>
+            )}
+            
+            <div className="text-center text-sm text-white/80 pt-4">
               <div>Total: {stats.total} TCOs</div>
               <div>Período: Maio - Junho 2025</div>
             </div>
