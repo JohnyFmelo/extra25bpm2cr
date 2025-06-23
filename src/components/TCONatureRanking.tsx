@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { BarChart3, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { Button } from "./ui/button"; // Importando o botão
+import { Button } from "./ui/button";
 
 interface NatureStats {
   total: number;
@@ -54,7 +54,6 @@ const TCONatureRanking: React.FC = () => {
   });
   const [ranking, setRanking] = useState<NatureRanking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  // --- NOVO ESTADO PARA CONTROLAR A EXIBIÇÃO DO RANKING ---
   const [showFullRanking, setShowFullRanking] = useState(false);
 
   useEffect(() => {
@@ -136,7 +135,6 @@ const TCONatureRanking: React.FC = () => {
     fetchNatureStats();
   }, []);
   
-  // --- LÓGICA PARA DECIDIR QUAIS ITENS EXIBIR ---
   const itemsToDisplay = showFullRanking ? ranking : ranking.slice(0, 3);
 
   if (isLoading) {
@@ -182,7 +180,6 @@ const TCONatureRanking: React.FC = () => {
       </CardHeader>
       
       <CardContent className="pt-0">
-        {/* Stats Row */}
         <div className="flex justify-between items-center my-4 bg-white/10 rounded-lg p-3">
           <div className="text-center">
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -198,7 +195,6 @@ const TCONatureRanking: React.FC = () => {
           </div>
         </div>
 
-        {/* Pódio / Ranking Completo Badge Dinâmico */}
         {ranking.length > 0 && (
           <div className="mb-4">
             <div className="inline-flex items-center bg-yellow-400 text-blue-900 px-3 py-1 rounded-full text-sm font-semibold">
@@ -207,10 +203,8 @@ const TCONatureRanking: React.FC = () => {
           </div>
         )}
 
-        {/* Nature Ranking */}
         {ranking.length > 0 && (
           <div className="space-y-4">
-            {/* --- ALTERADO PARA USAR A VARIÁVEL DINÂMICA 'itemsToDisplay' --- */}
             {itemsToDisplay.map((nature, index) => (
               <div
                 key={nature.nature}
@@ -254,13 +248,12 @@ const TCONatureRanking: React.FC = () => {
               </div>
             ))}
             
-            {/* --- BOTÃO PARA MOSTRAR/ESCONDER O RESTO DO RANKING --- */}
+            {/* --- BOTÃO COM ESTILO CORRIGIDO --- */}
             {ranking.length > 3 && (
               <div className="pt-2 text-center">
                 <Button
-                  variant="link"
-                  className="text-white/90 hover:text-white"
                   onClick={() => setShowFullRanking(!showFullRanking)}
+                  className="w-full sm:w-auto rounded-full bg-white/10 px-6 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20 hover:bg-white/20 transition-all duration-200"
                 >
                   {showFullRanking ? 'Mostrar menos' : 'Ver ranking completo'}
                   {showFullRanking 
