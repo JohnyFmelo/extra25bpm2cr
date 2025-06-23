@@ -1257,10 +1257,13 @@ const TCOForm: React.FC<TCOFormProps> = ({
                     <p className="text-sm font-medium text-gray-600 mb-1.5">Arquivos selecionados:</p>
                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
                       {imageFiles.map((file, index) => <li key={`${file.name}-${index}-${file.lastModified}`} className="flex justify-between items-center p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm">
-                          <span className="truncate mr-2 flex-1 text-gray-700" title={file.name}>
-                            {file.name} <span className="text-gray-400 text-xs">({(file.size / 1024).toFixed(1)} KB)</span>
+                          <span className="flex-1 mr-2 text-gray-700 min-w-0">
+                            <span className="block truncate font-medium" title={file.name}>
+                              {file.name}
+                            </span>
+                            <span className="text-gray-400 text-xs">({(file.size / 1024).toFixed(1)} KB)</span>
                           </span>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveImageFile(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7" aria-label={`Remover imagem ${file.name}`}>
+                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveImageFile(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7 flex-shrink-0" aria-label={`Remover imagem ${file.name}`}>
                             <X className="h-4 w-4" />
                           </Button>
                         </li>)}
@@ -1285,13 +1288,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
                     <p className="text-sm font-medium text-gray-600 mb-1.5">Links adicionados:</p>
                     <ul className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
                       {videoLinks.map((link, index) => <li key={`${index}-${link}`} className="flex justify-between items-start p-1.5 bg-white border border-gray-200 rounded-md text-sm group shadow-sm gap-2">
-                          <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all min-w-0 flex-1 leading-relaxed" title={`Abrir link: ${link}`} style={{
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      wordBreak: 'break-all'
-                    }}>
+                          <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline min-w-0 flex-1 leading-relaxed break-all" title={`Abrir link: ${link}`}>
                             {link}
                           </a>
                           <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveVideoLink(index)} className="text-gray-400 group-hover:text-red-500 hover:bg-red-100 h-7 w-7 shrink-0 mt-0.5" aria-label={`Remover link ${link}`}>
