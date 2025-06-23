@@ -1,8 +1,8 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { BarChart3, TrendingUp } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 interface NatureStats {
   total: number;
@@ -54,6 +54,7 @@ const TCONatureRanking: React.FC = () => {
   });
   const [ranking, setRanking] = useState<NatureRanking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchNatureStats = async () => {
@@ -134,6 +135,10 @@ const TCONatureRanking: React.FC = () => {
     fetchNatureStats();
   }, []);
 
+  const handleViewFullRanking = () => {
+    navigate('/ranking-naturezas');
+  };
+
   if (isLoading) {
     return (
       <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
@@ -172,7 +177,15 @@ const TCONatureRanking: React.FC = () => {
             </h3>
             <p className="text-sm text-white/80">Distribuição por tipo de ocorrência</p>
           </div>
-          <TrendingUp className="h-8 w-8 text-white/60" />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleViewFullRanking}
+              className="text-white/80 hover:text-white transition-colors text-sm underline"
+            >
+              Ver ranking completo
+            </button>
+            <TrendingUp className="h-8 w-8 text-white/60" />
+          </div>
         </div>
       </CardHeader>
       
