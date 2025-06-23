@@ -15,7 +15,7 @@ interface OfficerRanking {
   officerName: string;
   graduacao: string;
   tcoCount: number;
-  totalWeight: number; // Adicionado para a pontuação
+  totalWeight: number;
 }
 
 interface ExtractedRgpms {
@@ -41,7 +41,6 @@ interface TcoData {
 
 const BUCKET_NAME = 'tco-pdfs';
 
-// --- ADICIONADO: Sistema de pontuação para desempate ---
 const NATURE_WEIGHTS: { [key: string]: number } = {
   'Lesão Corporal': 10,
   'Omissão De Socorro': 9,
@@ -52,7 +51,7 @@ const NATURE_WEIGHTS: { [key: string]: number } = {
   'Rixa': 6,
   'Falsa Identidade': 6,
   'Entregar Veículo A Pessoa Não Habilitada': 6,
-  'Porte De Drogas Para Consumo': 6, // PONTUAÇÃO AJUSTADA
+  'Porte De Drogas Para Consumo': 6,
   'Ameaça': 5,
   'Dano': 5,
   'Calúnia': 5,
@@ -65,6 +64,14 @@ const NATURE_WEIGHTS: { [key: string]: number } = {
   'Ato Obsceno': 2,
   'Perturbação Do Sossego': 1,
   'Trafegar Em Velocidade Incompatível Com Segurança': 1
+};
+
+// --- FUNÇÃO DE CORREÇÃO: Normaliza strings para comparação ---
+const normalizeString = (str: string): string => {
+  return str
+    .toLowerCase()
+    .normalize("NFD") // Separa os acentos dos caracteres
+    .replace(/[\u0300-\u036f]/g, ""); // Remove os acentos
 };
 
 const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
@@ -137,6 +144,12 @@ const TCOProductivityRanking: React.FC = () => {
     const fetchAllTcos = async () => {
       try {
         setIsLoading(true);
+
+        // --- CORREÇÃO: Cria um mapa de pesos normalizado para busca segura ---
+        const normalizedWeights = new Map<string, number>();
+        for (const key in NATURE_WEIGHTS) {
+            normalizedWeights.set(normalizeString(key), NATURE_WEIGHTS[key]);
+        }
         
         const { data: userFolders, error: foldersError } = await supabase.storage
           .from(BUCKET_NAME)
@@ -149,7 +162,6 @@ const TCOProductivityRanking: React.FC = () => {
         }
 
         let allTcos: TcoData[] = [];
-        // --- ALTERADO: Mapa agora armazena contagem e pontuação ---
         const officerTcoCountMap = new Map<string, { count: number; totalWeight: number; officerInfo?: OfficerInfo }>();
 
         for (const folder of userFolders || []) {
@@ -173,14 +185,13 @@ const TCOProductivityRanking: React.FC = () => {
               : `TCO-${tcoIdentifierPart}`;
             
             const rgpmsExtracted = extractRGPMsFromFilename(fileName);
-            // --- ADICIONADO: Extração da natureza para cada TCO ---
             const natureza = extractTcoNatureFromFilename(fileName);
             
             return {
               id: file.id || fileName,
               tcoNumber: finalTcoNumber,
               createdAt: new Date(file.created_at || Date.now()),
-              natureza: natureza, // Natureza armazenada
+              natureza: natureza,
               fileName: fileName,
               userId: folder.name,
               rgpmsExtracted: rgpmsExtracted
@@ -189,17 +200,19 @@ const TCOProductivityRanking: React.FC = () => {
 
           allTcos = [...allTcos, ...userTcos];
 
-          // --- ALTERADO: Lógica de contagem para incluir pontuação ---
           userTcos.forEach(tco => {
             const allRgpmsInvolved = [...tco.rgpmsExtracted.main, ...tco.rgpmsExtracted.support];
             const uniqueRgpms = [...new Set(allRgpmsInvolved)];
-            const weight = NATURE_WEIGHTS[tco.natureza] || 0; // Pega o peso da natureza
+            
+            // --- CORREÇÃO: Usa a string normalizada para buscar o peso ---
+            const normalizedNature = normalizeString(tco.natureza);
+            const weight = normalizedWeights.get(normalizedNature) || 0;
 
             uniqueRgpms.forEach(rgpm => {
               const current = officerTcoCountMap.get(rgpm) || { count: 0, totalWeight: 0 };
               officerTcoCountMap.set(rgpm, {
                 count: current.count + 1,
-                totalWeight: current.totalWeight + weight, // Soma o peso
+                totalWeight: current.totalWeight + weight,
                 officerInfo: current.officerInfo
               });
             });
@@ -251,13 +264,10 @@ const TCOProductivityRanking: React.FC = () => {
             tcoCount: data.count,
             totalWeight: data.totalWeight
           }))
-          // --- ALTERADO: Nova lógica de ordenação ---
           .sort((a, b) => {
-            // 1. Por quantidade de TCOs (decrescente)
             if (a.tcoCount !== b.tcoCount) {
               return b.tcoCount - a.tcoCount;
             }
-            // 2. Por pontuação total (decrescente) como desempate
             return b.totalWeight - a.totalWeight;
           });
 
@@ -295,7 +305,6 @@ const TCOProductivityRanking: React.FC = () => {
   const currentUserRank = currentUserRgpm ? ranking.findIndex(r => r.rgpm === currentUserRgpm) + 1 : 0;
   const currentUserData = currentUserRgpm ? ranking.find(r => r.rgpm === currentUserRgpm) : null;
   
-  // --- ALTERADO: Mostra o pódio (Top 3) por padrão ---
   const itemsToDisplay = showFullRanking ? ranking : ranking.slice(0, 3);
 
   return (
@@ -329,7 +338,6 @@ const TCOProductivityRanking: React.FC = () => {
           </div>
         </div>
         
-        {/* --- ALTERADO: Badge dinâmico para Pódio/Ranking --- */}
         {ranking.length > 0 && (
           <div className="mb-4">
             <div className="inline-flex items-center bg-yellow-400 text-blue-900 px-3 py-1 rounded-full text-sm font-semibold">
@@ -349,7 +357,6 @@ const TCOProductivityRanking: React.FC = () => {
                   <div className="font-semibold text-sm break-words">
                     {currentUserData.graduacao} {currentUserData.officerName}
                   </div>
-                  {/* --- ALTERADO: Exibe a pontuação do usuário logado --- */}
                   <div className="text-xs text-white/80">{currentUserData.tcoCount} TCOs / {currentUserData.totalWeight} Pontos</div>
                 </div>
               </div>
@@ -380,7 +387,6 @@ const TCOProductivityRanking: React.FC = () => {
                     <span className="text-sm font-medium break-words whitespace-pre-line leading-tight">
                       {officer.graduacao} {officer.officerName}
                     </span>
-                    {/* --- ALTERADO: Exibe a contagem e a pontuação --- */}
                     <div className="text-xs text-white/80 mt-1 flex items-center gap-2">
                       <span>{officer.tcoCount} TCOs</span>
                       <span className="text-green-300 font-semibold">{officer.totalWeight} Pontos</span>
@@ -390,7 +396,6 @@ const TCOProductivityRanking: React.FC = () => {
               ))}
             </div>
             
-            {/* --- ALTERADO: Condição para mostrar o botão ( > 3) --- */}
             {ranking.length > 3 && (
               <div className="mt-4 pt-4 border-t border-white/10 text-center">
                 <button
