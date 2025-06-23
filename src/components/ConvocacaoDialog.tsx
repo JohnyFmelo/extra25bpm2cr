@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface ConvocacaoDialogProps {
   open: boolean;
@@ -15,6 +17,7 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const { toast } = useToast();
 
   // Definir datas padrão (hoje + 3 dias)
   const setDefaultDates = () => {
@@ -32,11 +35,57 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
     }
   }, [open]);
 
-  const updateConvocation = () => {
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 3000);
+  const updateConvocation = async () => {
+    try {
+      // Primeiro, desativar todas as convocações existentes
+      await supabase
+        .from('convocations')
+        .update({ is_active: false })
+        .eq('is_active', true);
+
+      // Criar nova convocação
+      const { data, error } = await supabase
+        .from('convocations')
+        .insert({
+          month_year: monthYear,
+          start_date: startDate,
+          end_date: endDate,
+          deadline_days: 3,
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao criar convocação:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível criar a convocação.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Convocação criada:', data);
+      
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
+
+      toast({
+        title: "Sucesso",
+        description: "Convocação criada com sucesso! Os usuários verão o diálogo ao fazer login.",
+      });
+
+    } catch (error) {
+      console.error('Erro ao atualizar convocação:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro inesperado.",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatDate = (dateStr: string) => {
