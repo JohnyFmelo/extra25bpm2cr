@@ -5,10 +5,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, Search } from "lucide-react";
+import { Loader2, Users, Search, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VolunteerServicesDialog from "./VolunteerServicesDialog";
+import ConvocacaoDialog from "./ConvocacaoDialog";
+import { useConvocation } from "@/hooks/useConvocation";
 
 interface User {
   id: string;
@@ -39,6 +41,8 @@ const VolunteersManager = () => {
   const [selectedVolunteer, setSelectedVolunteer] = useState<string | null>(null);
   const [showServicesDialog, setShowServicesDialog] = useState(false);
   const { toast } = useToast();
+  const { iniciarConvocacao } = useConvocation();
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   useEffect(() => {
     fetchUsers();
@@ -362,6 +366,16 @@ const VolunteersManager = () => {
                   {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Desmarcar Todos
                 </Button>
+                
+                {/* Botão de Convocação */}
+                <Button 
+                  size="sm" 
+                  onClick={iniciarConvocacao}
+                  className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Convocação
+                </Button>
               </div>
 
               {/* Ajustador de limite em massa */}
@@ -450,6 +464,12 @@ const VolunteersManager = () => {
         open={showServicesDialog}
         onOpenChange={setShowServicesDialog}
         volunteerName={selectedVolunteer || ""}
+      />
+
+      <ConvocacaoDialog 
+        open={showConvocacaoDialog}
+        onOpenChange={setShowConvocacaoDialog}
+        user={user}
       />
     </div>;
 };
