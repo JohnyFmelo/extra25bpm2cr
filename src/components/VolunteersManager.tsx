@@ -515,9 +515,7 @@ const VolunteersManager = () => {
                             {user.isVolunteer && totalHours > 0 && <p className="text-xs text-blue-600 font-medium">
                                 Total: {formattedHours}h
                               </p>}
-                            {isVolunteerFromConvocation && <span className="text-xs text-green-600 font-medium bg-green-100 px-2 py-0.5 rounded-full">
-                                Voluntário Convocação
-                              </span>}
+                            {isVolunteerFromConvocation && <span className="text-xs text-green-600 font-medium bg-green-100 px-2 py-0.5 rounded-full">Voluntário</span>}
                           </div>
                         </div>
                       </div>
