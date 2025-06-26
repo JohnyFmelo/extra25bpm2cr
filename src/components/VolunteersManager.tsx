@@ -19,7 +19,6 @@ interface User {
   rank?: string;
   isVolunteer?: boolean;
   maxSlots?: number;
-  SouVoluntario?: boolean;
 }
 
 interface TimeSlot {
@@ -43,7 +42,7 @@ const VolunteersManager = () => {
   const [showServicesDialog, setShowServicesDialog] = useState(false);
   const [showConvocacaoConfigDialog, setShowConvocacaoConfigDialog] = useState(false);
   const { toast } = useToast();
-  const { iniciarConvocacao, showConvocacao, convocacaoDeadline, activeConvocation, cancelConvocation } = useConvocation();
+  const { iniciarConvocacao, showConvocacao, convocacaoDeadline } = useConvocation();
   const [timeLeft, setTimeLeft] = useState("");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -118,8 +117,7 @@ const VolunteersManager = () => {
         id: userDoc.id,
         ...userDoc.data(),
         isVolunteer: userDoc.data().isVolunteer ?? false,
-        maxSlots: userDoc.data().maxSlots ?? 1,
-        SouVoluntario: userDoc.data().SouVoluntario ?? false
+        maxSlots: userDoc.data().maxSlots ?? 1
       }) as User).sort((a, b) => (a.warName || "").localeCompare(b.warName || ""));
       setUsers(usersData);
     } catch (error) {
@@ -320,12 +318,6 @@ const VolunteersManager = () => {
     setShowConvocacaoConfigDialog(true);
   };
 
-  const handleCancelConvocation = async () => {
-    if (activeConvocation?.id) {
-      await cancelConvocation(activeConvocation.id);
-    }
-  };
-
   const filteredUsers = users.filter(user => {
     const searchTerm = searchQuery.toLowerCase();
     const rank = (user.rank || '').toLowerCase();
@@ -353,37 +345,6 @@ const VolunteersManager = () => {
   }
 
   return <div className="w-full max-w-6xl mx-auto p-6 px-0">
-      <style>{`
-        .military-item-v2 {
-          background: white;
-          border-radius: 12px;
-          padding: 16px 20px;
-          margin-bottom: 12px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          display: flex;
-          align-items: center;
-          position: relative;
-          border-left: 4px solid #ddd;
-          transition: all 0.2s ease;
-        }
-
-        .military-item-v2.volunteer {
-          border-left-color: #00b894;
-          background: linear-gradient(90deg, rgba(0, 184, 148, 0.05) 0%, white 20%);
-        }
-
-        .volunteer-indicator {
-          position: absolute;
-          top: 8px;
-          right: 12px;
-          width: 8px;
-          height: 8px;
-          background: #00b894;
-          border-radius: 50%;
-          box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.2);
-        }
-      `}</style>
-
       <Card className="shadow-lg">
         <CardHeader className="pb-6">
           <CardTitle className="flex items-center gap-3 text-2xl">
@@ -417,21 +378,11 @@ const VolunteersManager = () => {
                     🚨 EXTRAORDINÁRIO
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 text-orange-700">
-                    <Clock className="h-4 w-4" />
-                    <span className="font-mono text-sm font-semibold">
-                      {timeLeft || "Calculando..."}
-                    </span>
-                  </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleCancelConvocation}
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    Cancelar Convocação
-                  </Button>
+                <div className="flex items-center gap-2 text-orange-700">
+                  <Clock className="h-4 w-4" />
+                  <span className="font-mono text-sm font-semibold">
+                    {timeLeft || "Calculando..."}
+                  </span>
                 </div>
               </div>
               <div className="mt-2 text-sm text-orange-700">
@@ -519,15 +470,10 @@ const VolunteersManager = () => {
             const totalHours = calculateUserTotalHours(userFullName);
             const serviceCount = calculateUserServiceCount(userFullName);
             const formattedHours = totalHours % 1 === 0 ? totalHours.toString() : totalHours.toFixed(1);
-            const isVolunteerFromConvocation = user.SouVoluntario === true;
-            
             return <div key={user.id} className={`
-                      military-item-v2 ${isVolunteerFromConvocation ? 'volunteer' : ''}
+                      group flex items-center justify-between p-4 rounded-lg border transition-all duration-200
                       ${user.isVolunteer ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'}
                     `}>
-                    {/* Indicador de voluntário da convocação */}
-                    {isVolunteerFromConvocation && <div className="volunteer-indicator"></div>}
-                    
                     {/* Informações do usuário */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3">
@@ -557,11 +503,6 @@ const VolunteersManager = () => {
                               <p className="text-xs text-blue-600 font-medium">
                                 Total: {formattedHours}h
                               </p>
-                            )}
-                            {isVolunteerFromConvocation && (
-                              <span className="text-xs text-green-600 font-medium bg-green-100 px-2 py-0.5 rounded-full">
-                                Voluntário Convocação
-                              </span>
                             )}
                           </div>
                         </div>

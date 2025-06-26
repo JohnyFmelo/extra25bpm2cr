@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { collection, writeBatch, doc, getDocs, addDoc } from "firebase/firestore";
+import { collection, writeBatch, doc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Clock, Users, AlertTriangle } from "lucide-react";
 
@@ -31,14 +31,24 @@ const ConvocacaoConfigDialog = ({ open, onOpenChange }: ConvocacaoConfigDialogPr
 
     setIsLoading(true);
     try {
-      const deadline = new Date();
-      deadline.setHours(deadline.getHours() + hours);
-
-      // First, clear previous responses from all users
+      // Clear previous responses and set new deadline
       const usersCollection = collection(db, "users");
       const querySnapshot = await getDocs(usersCollection);
       const batch = writeBatch(db);
 
+      const deadline = new Date();
+      deadline.setHours(deadline.getHours() + hours);
+
+      // Create convocation record
+      const convocacaoRef = doc(collection(db, "convocacoes"));
+      batch.set(convocacaoRef, {
+        startTime: new Date().toISOString(),
+        deadline: deadline.toISOString(),
+        active: true,
+        createdBy: JSON.parse(localStorage.getItem("user") || "{}").id
+      });
+
+      // Clear user responses
       querySnapshot.docs.forEach((userDoc) => {
         const userRef = doc(db, "users", userDoc.id);
         batch.update(userRef, {
@@ -50,24 +60,14 @@ const ConvocacaoConfigDialog = ({ open, onOpenChange }: ConvocacaoConfigDialogPr
 
       await batch.commit();
 
-      // Create convocation record in Firebase
-      const convocacaoData = {
-        startTime: new Date().toISOString(),
-        deadline: deadline.toISOString(),
-        active: true,
-        createdBy: JSON.parse(localStorage.getItem("user") || "{}").id || "admin",
-        createdAt: new Date().toISOString(),
-        totalUsers: querySnapshot.docs.length,
-        durationHours: hours
-      };
-
-      await addDoc(collection(db, "convocacoes"), convocacaoData);
-
       toast({
         title: "Convocação iniciada",
         description: `Convocação enviada para ${querySnapshot.docs.length} usuários com prazo de ${hours} horas.`
       });
 
+      // Store deadline globally for the modal system
+      localStorage.setItem('convocacaoDeadline', deadline.toISOString());
+      
       // Trigger global event for convocation
       window.dispatchEvent(new CustomEvent('convocacaoIniciada', {
         detail: { deadline: deadline.toISOString() }
@@ -103,8 +103,8 @@ const ConvocacaoConfigDialog = ({ open, onOpenChange }: ConvocacaoConfigDialogPr
               <div className="text-sm">
                 <p className="font-medium text-amber-800 mb-1">Atenção</p>
                 <p className="text-amber-700">
-                  Esta ação irá enviar uma convocação para <strong>TODOS</strong> os usuários cadastrados no sistema
-                  e resetará as respostas anteriores. Os usuários terão o prazo definido para responder.
+                  Esta ação irá enviar uma convocação para todos os usuários cadastrados no sistema.
+                  Os usuários terão o prazo definido para responder.
                 </p>
               </div>
             </div>

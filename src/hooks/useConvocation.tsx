@@ -7,10 +7,9 @@ import { useToast } from "@/components/ui/use-toast";
 export const useConvocation = () => {
   const [showConvocacao, setShowConvocacao] = useState(false);
   const [convocacaoDeadline, setConvocacaoDeadline] = useState<string | null>(null);
-  const [activeConvocation, setActiveConvocation] = useState<any>(null);
   const { toast } = useToast();
 
-  // Function to clear SouVoluntario field from all users (only when new convocation starts)
+  // Function to clear SouVoluntario field from all users
   const clearVolunteerStatus = async () => {
     try {
       const usersCollection = collection(db, "users");
@@ -21,7 +20,8 @@ export const useConvocation = () => {
         const userRef = doc(db, "users", userDoc.id);
         batch.update(userRef, {
           SouVoluntario: null,
-          dataResposta: null
+          dataResposta: null,
+          convocacaoDeadline: null
         });
       });
 
@@ -31,6 +31,29 @@ export const useConvocation = () => {
       console.error("Erro ao limpar status de voluntário:", error);
     }
   };
+
+  // Check if it's the 1st of the month and clear fields
+  useEffect(() => {
+    const checkAndClearMonthly = () => {
+      const today = new Date();
+      const day = today.getDate();
+      
+      if (day === 1) {
+        const lastCleared = localStorage.getItem('lastVolunteerClear');
+        const currentMonth = today.getFullYear() + '-' + (today.getMonth() + 1);
+        
+        if (lastCleared !== currentMonth) {
+          clearVolunteerStatus();
+          localStorage.setItem('lastVolunteerClear', currentMonth);
+        }
+      }
+    };
+
+    checkAndClearMonthly();
+    const interval = setInterval(checkAndClearMonthly, 24 * 60 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Listen for active convocations
   useEffect(() => {
@@ -45,7 +68,6 @@ export const useConvocation = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         const convocacao = snapshot.docs[0].data();
-        const convocacaoWithId = { id: snapshot.docs[0].id, ...convocacao };
         const deadline = convocacao.deadline;
         const now = new Date().getTime();
         const deadlineTime = new Date(deadline).getTime();
@@ -53,7 +75,6 @@ export const useConvocation = () => {
         // Check if convocation is still active
         if (deadlineTime > now) {
           setConvocacaoDeadline(deadline);
-          setActiveConvocation(convocacaoWithId);
           
           // Check if current user has already responded
           const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -61,16 +82,11 @@ export const useConvocation = () => {
             setShowConvocacao(true);
           }
         } else {
-          // Auto-deactivate expired convocations
-          const convocacaoRef = doc(db, "convocacoes", snapshot.docs[0].id);
-          updateDoc(convocacaoRef, { active: false });
           setConvocacaoDeadline(null);
-          setActiveConvocation(null);
           setShowConvocacao(false);
         }
       } else {
         setConvocacaoDeadline(null);
-        setActiveConvocation(null);
         setShowConvocacao(false);
       }
     });
@@ -98,32 +114,6 @@ export const useConvocation = () => {
     };
   }, []);
 
-  const cancelConvocation = async (convocacaoId: string) => {
-    try {
-      const convocacaoRef = doc(db, "convocacoes", convocacaoId);
-      await updateDoc(convocacaoRef, {
-        active: false,
-        cancelledAt: new Date().toISOString()
-      });
-
-      toast({
-        title: "Convocação cancelada",
-        description: "A convocação foi cancelada com sucesso."
-      });
-
-      setConvocacaoDeadline(null);
-      setActiveConvocation(null);
-      setShowConvocacao(false);
-    } catch (error) {
-      console.error("Erro ao cancelar convocação:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível cancelar a convocação."
-      });
-    }
-  };
-
   const iniciarConvocacao = () => {
     // This will be handled by the ConvocacaoConfigDialog
     return Promise.resolve();
@@ -133,9 +123,7 @@ export const useConvocation = () => {
     showConvocacao,
     setShowConvocacao,
     convocacaoDeadline,
-    activeConvocation,
     iniciarConvocacao,
-    clearVolunteerStatus,
-    cancelConvocation
+    clearVolunteerStatus
   };
 };
