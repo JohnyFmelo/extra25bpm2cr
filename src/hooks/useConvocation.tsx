@@ -19,7 +19,6 @@ export const useConvocation = (userEmail: string) => {
   const [hasUserResponded, setHasUserResponded] = useState(false);
   const [shouldShowDialog, setShouldShowDialog] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isWithinDeadline, setIsWithinDeadline] = useState(false);
 
   useEffect(() => {
     const checkActiveConvocation = async () => {
@@ -50,28 +49,10 @@ export const useConvocation = (userEmail: string) => {
         const convocationDoc = convocationsSnapshot.docs[0];
         const convocationData = {
           id: convocationDoc.id,
-          ...convocationDoc.data(),
-          created_at: convocationDoc.data().created_at?.toDate() || new Date(),
-          updated_at: convocationDoc.data().updated_at?.toDate() || new Date()
+          ...convocationDoc.data()
         } as Convocation;
         
         setActiveConvocation(convocationData);
-
-        // Verificar se está dentro do prazo
-        const now = new Date();
-        const createdAt = convocationData.created_at;
-        const deadlineDate = new Date(createdAt);
-        deadlineDate.setDate(deadlineDate.getDate() + convocationData.deadline_days);
-        
-        const withinDeadline = now <= deadlineDate;
-        setIsWithinDeadline(withinDeadline);
-
-        if (!withinDeadline) {
-          // Fora do prazo - não mostrar dialog
-          setShouldShowDialog(false);
-          setLoading(false);
-          return;
-        }
 
         // Verificar se o usuário já respondeu
         const responsesRef = collection(db, 'convocation_responses');
@@ -85,7 +66,7 @@ export const useConvocation = (userEmail: string) => {
         const hasResponded = !responsesSnapshot.empty;
         
         setHasUserResponded(hasResponded);
-        setShouldShowDialog(!hasResponded && withinDeadline);
+        setShouldShowDialog(!hasResponded);
         
       } catch (error) {
         console.error('Erro ao verificar convocação:', error);
@@ -106,7 +87,6 @@ export const useConvocation = (userEmail: string) => {
     hasUserResponded,
     shouldShowDialog,
     loading,
-    isWithinDeadline,
     dismissDialog
   };
 };

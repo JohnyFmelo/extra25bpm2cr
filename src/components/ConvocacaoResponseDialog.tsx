@@ -14,8 +14,6 @@ interface ConvocacaoResponseDialogProps {
     month_year: string;
     start_date: string;
     end_date: string;
-    created_at: Date;
-    deadline_days: number;
   };
   user: {
     name: string;
@@ -33,32 +31,8 @@ const ConvocacaoResponseDialog = ({ open, onOpenChange, convocation, user }: Con
     return new Date(dateStr).toLocaleDateString('pt-BR');
   };
 
-  const getDeadlineDate = () => {
-    const createdAt = convocation.created_at;
-    const deadlineDate = new Date(createdAt);
-    deadlineDate.setDate(deadlineDate.getDate() + convocation.deadline_days);
-    return deadlineDate;
-  };
-
-  const isWithinDeadline = () => {
-    const now = new Date();
-    const deadline = getDeadlineDate();
-    return now <= deadline;
-  };
-
   const selectOption = async (choice: 'volunteer' | 'not-volunteer') => {
     if (hasResponded || isSubmitting) return;
-
-    // Verificar se ainda está dentro do prazo
-    if (!isWithinDeadline()) {
-      toast({
-        title: "Prazo encerrado",
-        description: "O prazo para responder a convocação já foi encerrado.",
-        variant: "destructive",
-      });
-      onOpenChange(false);
-      return;
-    }
 
     setIsSubmitting(true);
     const isVolunteer = choice === 'volunteer';
@@ -70,8 +44,7 @@ const ConvocacaoResponseDialog = ({ open, onOpenChange, convocation, user }: Con
         user_email: user.email,
         user_name: user.name,
         is_volunteer: isVolunteer,
-        responded_at: new Date(),
-        response_type: isVolunteer ? 'SIM' : 'NAO'
+        responded_at: new Date()
       });
 
       setResponse(isVolunteer);
@@ -100,14 +73,6 @@ const ConvocacaoResponseDialog = ({ open, onOpenChange, convocation, user }: Con
     }
   };
 
-  const getRemainingDays = () => {
-    const now = new Date();
-    const deadline = getDeadlineDate();
-    const diffTime = deadline.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  };
-
   return (
     <Dialog open={open} onOpenChange={!hasResponded ? onOpenChange : () => {}}>
       <DialogContent className="max-w-2xl p-0 overflow-hidden bg-white rounded-2xl border-0">
@@ -116,7 +81,7 @@ const ConvocacaoResponseDialog = ({ open, onOpenChange, convocation, user }: Con
           <h1 className="text-2xl font-bold mb-2 relative z-10">CONVOCAÇÃO EXTRA</h1>
           <p className="text-lg opacity-90 relative z-10">Serviço Extra - {convocation.month_year}</p>
           <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mt-3 inline-block relative z-10">
-            <span className="text-sm font-medium">⏰ Prazo: Encerra em {getRemainingDays()} dias</span>
+            <span className="text-sm font-medium">⏰ Prazo: Encerra em 3 dias</span>
           </div>
         </div>
         
@@ -140,14 +105,7 @@ const ConvocacaoResponseDialog = ({ open, onOpenChange, convocation, user }: Con
             </p>
           </div>
           
-          {!isWithinDeadline() ? (
-            <div className="text-center p-6 rounded-xl border-2 bg-red-50 border-red-200 text-red-800">
-              <div className="text-xl font-bold mb-2">⏰ PRAZO ENCERRADO</div>
-              <p className="text-sm">
-                O prazo para responder a esta convocação foi encerrado em {getDeadlineDate().toLocaleDateString('pt-BR')}.
-              </p>
-            </div>
-          ) : !hasResponded ? (
+          {!hasResponded ? (
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <Button
                 onClick={() => selectOption('volunteer')}
