@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export interface Convocation {
   id: string;
@@ -9,8 +10,8 @@ export interface Convocation {
   end_date: string;
   deadline_days: number;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export const useConvocation = (userEmail: string) => {
@@ -28,48 +29,47 @@ export const useConvocation = (userEmail: string) => {
 
       try {
         // Buscar convocação ativa
-        const { data: convocations, error: convocationError } = await supabase
-          .from('convocations')
-          .select('*')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(1);
+        const convocationsRef = collection(db, 'convocations');
+        const activeQuery = query(
+          convocationsRef, 
+          where('is_active', '==', true),
+          orderBy('created_at', 'desc'),
+          limit(1)
+        );
+        
+        const convocationsSnapshot = await getDocs(activeQuery);
 
-        if (convocationError) {
-          console.error('Erro ao buscar convocação:', convocationError);
-          setLoading(false);
-          return;
-        }
-
-        if (!convocations || convocations.length === 0) {
+        if (convocationsSnapshot.empty) {
           setActiveConvocation(null);
           setShouldShowDialog(false);
           setLoading(false);
           return;
         }
 
-        const convocation = convocations[0];
-        setActiveConvocation(convocation);
+        const convocationDoc = convocationsSnapshot.docs[0];
+        const convocationData = {
+          id: convocationDoc.id,
+          ...convocationDoc.data()
+        } as Convocation;
+        
+        setActiveConvocation(convocationData);
 
         // Verificar se o usuário já respondeu
-        const { data: responses, error: responseError } = await supabase
-          .from('convocation_responses')
-          .select('*')
-          .eq('convocation_id', convocation.id)
-          .eq('user_email', userEmail);
-
-        if (responseError) {
-          console.error('Erro ao verificar resposta:', responseError);
-          setLoading(false);
-          return;
-        }
-
-        const hasResponded = responses && responses.length > 0;
+        const responsesRef = collection(db, 'convocation_responses');
+        const responseQuery = query(
+          responsesRef,
+          where('convocation_id', '==', convocationDoc.id),
+          where('user_email', '==', userEmail)
+        );
+        
+        const responsesSnapshot = await getDocs(responseQuery);
+        const hasResponded = !responsesSnapshot.empty;
+        
         setHasUserResponded(hasResponded);
         setShouldShowDialog(!hasResponded);
         
       } catch (error) {
-        console.error('Erro inesperado:', error);
+        console.error('Erro ao verificar convocação:', error);
       } finally {
         setLoading(false);
       }

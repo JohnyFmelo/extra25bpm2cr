@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, addDoc, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 
 interface ConvocacaoDialogProps {
@@ -42,50 +43,19 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
     setLoading(true);
     
     try {
-      // Verificar se o usuário está autenticado
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError) {
-        console.error('Erro de autenticação:', authError);
-        toast({
-          title: "Erro de Autenticação",
-          description: "Erro ao verificar usuário autenticado.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
-      if (!user) {
-        console.error('Usuário não autenticado');
-        toast({
-          title: "Erro de Autenticação",
-          description: "Usuário não está autenticado.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
-      console.log('Usuário autenticado:', user.id);
+      console.log('Iniciando criação de convocação no Firebase...');
 
       // Primeiro, desativar todas as convocações existentes
       console.log('Desativando convocações existentes...');
-      const { error: updateError } = await supabase
-        .from('convocations')
-        .update({ is_active: false })
-        .eq('is_active', true);
+      const convocationsRef = collection(db, 'convocations');
+      const activeQuery = query(convocationsRef, where('is_active', '==', true));
+      const activeConvocations = await getDocs(activeQuery);
 
-      if (updateError) {
-        console.error('Erro ao desativar convocações:', updateError);
-        toast({
-          title: "Erro",
-          description: `Erro ao desativar convocações: ${updateError.message}`,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
+      // Desativar cada convocação ativa
+      const updatePromises = activeConvocations.docs.map(docSnapshot => 
+        updateDoc(doc(db, 'convocations', docSnapshot.id), { is_active: false })
+      );
+      await Promise.all(updatePromises);
 
       // Criar nova convocação
       console.log('Criando nova convocação...');
@@ -94,33 +64,15 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
         start_date: startDate,
         end_date: endDate,
         deadline_days: 3,
-        is_active: true
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date()
       };
 
       console.log('Dados da convocação:', convocationData);
 
-      const { data, error } = await supabase
-        .from('convocations')
-        .insert(convocationData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Erro ao criar convocação:', error);
-        console.error('Detalhes do erro:', error.details);
-        console.error('Hint:', error.hint);
-        console.error('Code:', error.code);
-        
-        toast({
-          title: "Erro",
-          description: `Não foi possível criar a convocação: ${error.message}`,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
-      console.log('Convocação criada:', data);
+      const docRef = await addDoc(convocationsRef, convocationData);
+      console.log('Convocação criada com ID:', docRef.id);
       
       setShowSuccess(true);
       setTimeout(() => {
@@ -133,10 +85,10 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
       });
 
     } catch (error) {
-      console.error('Erro inesperado:', error);
+      console.error('Erro ao criar convocação:', error);
       toast({
         title: "Erro",
-        description: "Ocorreu um erro inesperado.",
+        description: "Não foi possível criar a convocação. Verifique o console para mais detalhes.",
         variant: "destructive",
       });
     } finally {

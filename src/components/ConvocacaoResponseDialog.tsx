@@ -2,7 +2,8 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 
 interface ConvocacaoResponseDialogProps {
@@ -37,25 +38,14 @@ const ConvocacaoResponseDialog = ({ open, onOpenChange, convocation, user }: Con
     const isVolunteer = choice === 'volunteer';
 
     try {
-      const { error } = await supabase
-        .from('convocation_responses')
-        .insert({
-          convocation_id: convocation.id,
-          user_email: user.email,
-          user_name: user.name,
-          is_volunteer: isVolunteer
-        });
-
-      if (error) {
-        console.error('Erro ao salvar resposta:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível salvar sua resposta. Tente novamente.",
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
+      const responsesRef = collection(db, 'convocation_responses');
+      await addDoc(responsesRef, {
+        convocation_id: convocation.id,
+        user_email: user.email,
+        user_name: user.name,
+        is_volunteer: isVolunteer,
+        responded_at: new Date()
+      });
 
       setResponse(isVolunteer);
       setHasResponded(true);
@@ -73,10 +63,10 @@ const ConvocacaoResponseDialog = ({ open, onOpenChange, convocation, user }: Con
       }, 3000);
 
     } catch (error) {
-      console.error('Erro inesperado:', error);
+      console.error('Erro ao salvar resposta:', error);
       toast({
         title: "Erro",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
+        description: "Não foi possível salvar sua resposta. Tente novamente.",
         variant: "destructive",
       });
       setIsSubmitting(false);
