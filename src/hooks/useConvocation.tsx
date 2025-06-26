@@ -32,11 +32,8 @@ export const useConvocation = () => {
     }
   };
 
-  // Listen for active convocations and user data changes
+  // Listen for active convocations
   useEffect(() => {
-    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!currentUser.id) return;
-
     const convocacoesRef = collection(db, "convocacoes");
     const q = query(
       convocacoesRef,
@@ -45,7 +42,7 @@ export const useConvocation = () => {
       limit(1)
     );
 
-    const unsubscribeConvocacao = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         const convocacao = snapshot.docs[0].data();
         const convocacaoWithId = { id: snapshot.docs[0].id, ...convocacao };
@@ -57,6 +54,12 @@ export const useConvocation = () => {
         if (deadlineTime > now) {
           setConvocacaoDeadline(deadline);
           setActiveConvocation(convocacaoWithId);
+          
+          // Check if current user has already responded
+          const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+          if (currentUser.id && !currentUser.dataResposta) {
+            setShowConvocacao(true);
+          }
         } else {
           // Auto-deactivate expired convocations
           const convocacaoRef = doc(db, "convocacoes", snapshot.docs[0].id);
@@ -72,28 +75,28 @@ export const useConvocation = () => {
       }
     });
 
-    // Listen to user data changes to check SouVoluntario status
-    const userDocRef = doc(db, "users", currentUser.id);
-    const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
-      if (doc.exists()) {
-        const userData = doc.data();
-        const updatedUser = { ...currentUser, ...userData };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        
-        // Show convocation only if there's an active one and user hasn't responded
-        if (activeConvocation && userData.SouVoluntario === null) {
-          setShowConvocacao(true);
-        } else {
-          setShowConvocacao(false);
-        }
-      }
-    });
+    return () => unsubscribe();
+  }, []);
 
-    return () => {
-      unsubscribeConvocacao();
-      unsubscribeUser();
+  // Listen for global convocation events
+  useEffect(() => {
+    const handleConvocacao = (event: CustomEvent) => {
+      const { deadline } = event.detail;
+      setConvocacaoDeadline(deadline);
+      
+      // Show convocation modal for current user if they haven't responded
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (currentUser.id && !currentUser.dataResposta) {
+        setShowConvocacao(true);
+      }
     };
-  }, [activeConvocation]);
+
+    window.addEventListener('convocacaoIniciada', handleConvocacao as EventListener);
+    
+    return () => {
+      window.removeEventListener('convocacaoIniciada', handleConvocacao as EventListener);
+    };
+  }, []);
 
   const cancelConvocation = async (convocacaoId: string) => {
     try {
