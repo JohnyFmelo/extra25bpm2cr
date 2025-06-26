@@ -56,23 +56,11 @@ const Index = ({
     toast
   } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  useNotifications(); 
+  useNotifications(); // This hook now handles global notification count updates.
   const navigate = useNavigate();
 
-  // Hook para gerenciar convocação - garantindo que seja executado para todos os usuários
-  const { 
-    activeConvocation, 
-    shouldShowDialog, 
-    dismissDialog,
-    loading: convocationLoading 
-  } = useConvocation(user?.email || '');
-
-  console.log('Convocation Debug:', {
-    userEmail: user?.email,
-    activeConvocation,
-    shouldShowDialog,
-    convocationLoading
-  });
+  // Hook para gerenciar convocação
+  const { activeConvocation, shouldShowDialog, dismissDialog } = useConvocation(user?.email);
 
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
@@ -97,7 +85,6 @@ const Index = ({
     });
     return () => unsubscribe();
   }, []);
-
   const handleRefresh = () => {
     window.location.reload();
     toast({
@@ -155,7 +142,6 @@ const Index = ({
   // Standardized class strings
   const tabListClasses = "w-full flex gap-1 rounded-lg p-1 bg-slate-200 mb-4";
   const tabTriggerClasses = "flex-1 text-center py-2.5 px-4 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-700 hover:bg-slate-300/70 data-[state=active]:hover:bg-blue-700/90";
-  
   return <div className="relative min-h-screen w-full flex flex-col">
       <div className="flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow py-0">
@@ -409,7 +395,6 @@ const Index = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Diálogo de Convocação - deve aparecer para TODOS os usuários */}
       {shouldShowDialog && activeConvocation && user?.name && user?.email && (
         <ConvocacaoResponseDialog
           open={shouldShowDialog}
