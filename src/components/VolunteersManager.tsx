@@ -40,6 +40,7 @@ const VolunteersManager = () => {
   const [bulkSlotsValue, setBulkSlotsValue] = useState(1);
   const [selectedVolunteer, setSelectedVolunteer] = useState<string | null>(null);
   const [showServicesDialog, setShowServicesDialog] = useState(false);
+  const [showConvocacaoDialog, setShowConvocacaoDialog] = useState(false);
   const { toast } = useToast();
   const { iniciarConvocacao } = useConvocation();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
