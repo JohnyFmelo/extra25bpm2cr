@@ -145,7 +145,8 @@ const Index = ({
   const tabListClasses = "w-full flex gap-1 rounded-lg p-1 bg-slate-200 mb-4";
   const tabTriggerClasses = "flex-1 text-center py-2.5 px-4 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-700 hover:bg-slate-300/70 data-[state=active]:hover:bg-blue-700/90";
   
-  return <div className="relative min-h-screen w-full flex flex-col">
+  return (
+    <div className="relative min-h-screen w-full flex flex-col">
       <div className="flex-grow w-full">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 flex flex-col flex-grow py-0">
           <TabsList className="hidden">
@@ -180,13 +181,12 @@ const Index = ({
                 </TabsList>
                 <TabsContent value="extra">
                   <div className="relative">
-                    <div className="absolute right-0 -top-14">
+                    <div className="absolute right-0 -top-14" />
+                    <div className="fixed bottom-8 right-8 z-10">
+                      <Button onClick={handleEditorClick} className="fixed bottom-6 right-6 rounded-full p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] py-[26px] bg-green-500 hover:bg-green-400">
+                        <Plus className="h-8 w-8" />
+                      </Button>
                     </div>
-                      <div className="fixed bottom-8 right-8 z-10">
-                        <Button onClick={handleEditorClick} className="fixed bottom-6 right-6 rounded-full p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300 my-[69px] mx-0 px-[18px] py-[26px] bg-green-500 hover:bg-green-400">
-                          <Plus className="h-8 w-8" />
-                        </Button>
-                      </div>
                     <TimeSlotsList />
                   </div>
                 </TabsContent>
@@ -196,8 +196,7 @@ const Index = ({
               </Tabs>
             ) : (
               <div className="relative">
-                <div className="absolute right-0 -top-14">
-                </div>
+                <div className="absolute right-0 -top-14" />
                 <TimeSlotsList />
               </div>
             )}
@@ -380,7 +379,7 @@ const Index = ({
       <PasswordChangeDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} userId={user.id || ''} currentPassword="" />
       <InformationDialog open={showInformationDialog} onOpenChange={setShowInformationDialog} isAdmin={user.userType === 'admin'} />
       <VersionDialog open={showVersionDialog} onOpenChange={setShowVersionDialog} />
-      
+
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -402,17 +401,13 @@ const Index = ({
       <ConvocacaoModal 
         open={showConvocacao} 
         onClose={() => setShowConvocacao(false)}
-      {/* ... keep existing code (ProfileUpdateDialog, PasswordChangeDialog, etc.) the same */}
-      {/* Convocation Modal */}
-      <ConvocacaoModal 
-        open={showConvocacao} 
-        onClose={() => setShowConvocacao(false)}
         onResponse={hideConvocation}
         user={user}
         deadline={convocacaoDeadline || ""}
       />
 
       <BottomMenuBar activeTab={activeTab} onTabChange={handleTabChange} isAdmin={user?.userType === 'admin'} />
-    </div>;
+    </div>
+  );
 };
 export default Index;
