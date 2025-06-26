@@ -21,14 +21,19 @@ export const useConvocation = (userEmail: string) => {
   const [loading, setLoading] = useState(true);
   const [isWithinDeadline, setIsWithinDeadline] = useState(false);
 
+  console.log('useConvocation called with email:', userEmail);
+
   useEffect(() => {
     const checkActiveConvocation = async () => {
       if (!userEmail) {
+        console.log('No user email provided');
         setLoading(false);
         return;
       }
 
       try {
+        console.log('Checking for active convocation...');
+        
         // Buscar convocação ativa
         const convocationsRef = collection(db, 'convocations');
         const activeQuery = query(
@@ -39,8 +44,10 @@ export const useConvocation = (userEmail: string) => {
         );
         
         const convocationsSnapshot = await getDocs(activeQuery);
+        console.log('Convocations found:', convocationsSnapshot.size);
 
         if (convocationsSnapshot.empty) {
+          console.log('No active convocation found');
           setActiveConvocation(null);
           setShouldShowDialog(false);
           setLoading(false);
@@ -55,6 +62,7 @@ export const useConvocation = (userEmail: string) => {
           updated_at: convocationDoc.data().updated_at?.toDate() || new Date()
         } as Convocation;
         
+        console.log('Active convocation found:', convocationData);
         setActiveConvocation(convocationData);
 
         // Verificar se está dentro do prazo
@@ -64,10 +72,17 @@ export const useConvocation = (userEmail: string) => {
         deadlineDate.setDate(deadlineDate.getDate() + convocationData.deadline_days);
         
         const withinDeadline = now <= deadlineDate;
+        console.log('Deadline check:', {
+          now: now.toISOString(),
+          createdAt: createdAt.toISOString(),
+          deadlineDate: deadlineDate.toISOString(),
+          withinDeadline
+        });
+        
         setIsWithinDeadline(withinDeadline);
 
         if (!withinDeadline) {
-          // Fora do prazo - não mostrar dialog
+          console.log('Convocation is past deadline');
           setShouldShowDialog(false);
           setLoading(false);
           return;
@@ -84,8 +99,19 @@ export const useConvocation = (userEmail: string) => {
         const responsesSnapshot = await getDocs(responseQuery);
         const hasResponded = !responsesSnapshot.empty;
         
+        console.log('User response check:', {
+          userEmail,
+          convocationId: convocationDoc.id,
+          hasResponded,
+          responsesCount: responsesSnapshot.size
+        });
+        
         setHasUserResponded(hasResponded);
-        setShouldShowDialog(!hasResponded && withinDeadline);
+        
+        // Mostrar dialog apenas se não respondeu e está dentro do prazo
+        const shouldShow = !hasResponded && withinDeadline;
+        console.log('Should show dialog:', shouldShow);
+        setShouldShowDialog(shouldShow);
         
       } catch (error) {
         console.error('Erro ao verificar convocação:', error);
@@ -98,6 +124,7 @@ export const useConvocation = (userEmail: string) => {
   }, [userEmail]);
 
   const dismissDialog = () => {
+    console.log('Dismissing convocation dialog');
     setShouldShowDialog(false);
   };
 
