@@ -50,17 +50,31 @@ export const useConvocation = () => {
         const now = new Date().getTime();
         const deadlineTime = new Date(deadline).getTime();
 
+        console.log("Convocação encontrada:", convocacao);
+        console.log("Deadline:", deadline);
+        console.log("Agora:", now);
+        console.log("Deadline time:", deadlineTime);
+
         // Check if convocation is still active
         if (deadlineTime > now) {
           setConvocacaoDeadline(deadline);
           setActiveConvocation(convocacaoWithId);
           
-          // Check if current user has already responded - only show if SouVoluntario is null
+          // Get current user data
           const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-          if (currentUser.id && currentUser.SouVoluntario === null) {
+          console.log("Current user:", currentUser);
+          console.log("SouVoluntario value:", currentUser.SouVoluntario);
+          
+          // Show convocation only if user hasn't responded yet (SouVoluntario is null)
+          if (currentUser.id && (currentUser.SouVoluntario === null || currentUser.SouVoluntario === undefined)) {
+            console.log("Mostrando convocação para usuário");
             setShowConvocacao(true);
+          } else {
+            console.log("Usuário já respondeu ou SouVoluntario não é null");
+            setShowConvocacao(false);
           }
         } else {
+          console.log("Convocação expirada, desativando");
           // Auto-deactivate expired convocations
           const convocacaoRef = doc(db, "convocacoes", snapshot.docs[0].id);
           updateDoc(convocacaoRef, { active: false });
@@ -69,6 +83,7 @@ export const useConvocation = () => {
           setShowConvocacao(false);
         }
       } else {
+        console.log("Nenhuma convocação ativa encontrada");
         setConvocacaoDeadline(null);
         setActiveConvocation(null);
         setShowConvocacao(false);
@@ -82,18 +97,31 @@ export const useConvocation = () => {
   useEffect(() => {
     const handleUserDataUpdate = (event: CustomEvent) => {
       const updatedUser = event.detail;
+      console.log("Dados do usuário atualizados:", updatedUser);
+      
       // If user responded (SouVoluntario is no longer null), hide convocation
-      if (updatedUser.SouVoluntario !== null) {
+      if (updatedUser.SouVoluntario !== null && updatedUser.SouVoluntario !== undefined) {
+        console.log("Usuário respondeu, ocultando convocação");
+        setShowConvocacao(false);
+      }
+    };
+
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (activeConvocation && (currentUser.SouVoluntario !== null && currentUser.SouVoluntario !== undefined)) {
         setShowConvocacao(false);
       }
     };
 
     window.addEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
+    window.addEventListener('storage', handleStorageChange);
     
     return () => {
       window.removeEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
+      window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [activeConvocation]);
 
   const cancelConvocation = async (convocacaoId: string) => {
     try {
