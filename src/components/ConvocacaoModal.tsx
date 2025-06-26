@@ -9,9 +9,10 @@ interface ConvocacaoModalProps {
   onClose: () => void;
   user: any;
   deadline: string;
+  onResponse?: () => void;
 }
 
-const ConvocacaoModal = ({ open, onClose, user, deadline }: ConvocacaoModalProps) => {
+const ConvocacaoModal = ({ open, onClose, user, deadline, onResponse }: ConvocacaoModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
   const { toast } = useToast();
@@ -51,16 +52,31 @@ const ConvocacaoModal = ({ open, onClose, user, deadline }: ConvocacaoModalProps
     setIsLoading(true);
     try {
       const userRef = doc(db, "users", user.id);
-      await updateDoc(userRef, {
+      const updateData = {
         SouVoluntario: isVolunteer,
         dataResposta: new Date().toISOString()
-      });
+      };
+      
+      await updateDoc(userRef, updateData);
+
+      // Update localStorage immediately
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const updatedUser = { ...currentUser, ...updateData };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+
+      // Dispatch event for immediate UI updates
+      window.dispatchEvent(new CustomEvent('userDataUpdated', { detail: updatedUser }));
 
       toast({
         title: "Resposta registrada",
         description: `Sua resposta foi salva: ${isVolunteer ? "SIM, SOU VOLUNTÁRIO" : "NÃO SOU VOLUNTÁRIO"}`
       });
 
+      // Call onResponse callback to hide modal immediately
+      if (onResponse) {
+        onResponse();
+      }
+      
       onClose();
     } catch (error) {
       console.error("Erro ao salvar resposta:", error);
