@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -9,7 +8,6 @@ import { useVersioning } from "@/hooks/useVersioning";
 import { useUser } from "@/context/UserContext";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
 const TopBar = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -78,9 +76,7 @@ const TopBar = () => {
     // Fallback to userType if service is not available
     return userType === "admin" ? "Administrador" : "Usuário";
   };
-
-  return (
-    <header className="bg-gradient-to-r from-primary-dark via-primary to-primary-light sticky top-0 z-50 shadow-md">
+  return <header className="bg-gradient-to-r from-primary-dark via-primary to-primary-light sticky top-0 z-50 shadow-md">
       <div className="flex h-16 items-center px-6 gap-4 max-w-7xl mx-auto">
         <div className="flex-1 flex items-center gap-3">
           <div className="flex flex-col">
@@ -95,42 +91,17 @@ const TopBar = () => {
         </div>
         
         <div className="flex items-center gap-2">
-          {currentSystemVersion && (
-            <div className="px-2 py-1 bg-white/10 rounded text-xs text-white/80">
+          {currentSystemVersion && <div className="px-2 py-1 bg-white/10 rounded text-xs text-white/80">
               v{currentSystemVersion}
-            </div>
-          )}
+            </div>}
           
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setShowProfileDialog(true)}
-            className="text-white hover:bg-white/10"
-          >
-            <User className="h-5 w-5" />
-            <span className="sr-only">Perfil</span>
-          </Button>
+          
         </div>
         
-        {showProfileDialog && (
-          <ProfileUpdateDialog 
-            open={showProfileDialog} 
-            onOpenChange={setShowProfileDialog} 
-            userData={userData} 
-          />
-        )}
+        {showProfileDialog && <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={userData} />}
         
-        {showPasswordDialog && (
-          <PasswordChangeDialog 
-            open={showPasswordDialog} 
-            onOpenChange={setShowPasswordDialog} 
-            userId={userData.id} 
-            currentPassword={userData.password} 
-          />
-        )}
+        {showPasswordDialog && <PasswordChangeDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} userId={userData.id} currentPassword={userData.password} />}
       </div>
-    </header>
-  );
+    </header>;
 };
-
 export default TopBar;
