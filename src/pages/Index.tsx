@@ -31,13 +31,10 @@ import TCOProductivityRanking from "@/components/TCOProductivityRanking";
 import TCONatureRanking from "@/components/TCONatureRanking";
 import { useNotifications } from "@/components/notifications/NotificationsList";
 import VolunteersManager from "@/components/VolunteersManager";
-import ConvocacaoResponseDialog from "@/components/ConvocacaoResponseDialog";
-import { useConvocation } from "@/hooks/useConvocation";
 
 interface IndexProps {
   initialActiveTab?: string;
 }
-
 const Index = ({
   initialActiveTab = "main"
 }: IndexProps) => {
@@ -58,9 +55,6 @@ const Index = ({
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   useNotifications(); // This hook now handles global notification count updates.
   const navigate = useNavigate();
-
-  // Hook para gerenciar convocação
-  const { activeConvocation, shouldShowDialog, dismissDialog } = useConvocation(user?.email);
 
   // States for TCO management
   const [selectedTco, setSelectedTco] = useState<any>(null);
@@ -394,15 +388,6 @@ const Index = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {shouldShowDialog && activeConvocation && user?.name && user?.email && (
-        <ConvocacaoResponseDialog
-          open={shouldShowDialog}
-          onOpenChange={dismissDialog}
-          convocation={activeConvocation}
-          user={{ name: user.name, email: user.email }}
-        />
-      )}
 
       <BottomMenuBar activeTab={activeTab} onTabChange={handleTabChange} isAdmin={user?.userType === 'admin'} />
     </div>;

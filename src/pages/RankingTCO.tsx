@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Trophy, TrendingUp, ArrowLeft } from "lucide-react";
+import { Trophy, TrendingUp, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,6 +16,7 @@ interface OfficerRanking {
   officerName: string;
   graduacao: string;
   tcoCount: number;
+  totalWeight: number;
 }
 
 interface ExtractedRgpms {
@@ -41,6 +41,58 @@ interface TcoData {
 }
 
 const BUCKET_NAME = 'tco-pdfs';
+
+// --- ALTERADO: Pontuação de Drogas para 6 ---
+const NATURE_WEIGHTS: { [key: string]: number } = {
+  'Lesão Corporal': 10,
+  'Omissão De Socorro': 9,
+  'Conduzir Veículo Sem Cnh Gerando Perigo De Dano': 9,
+  'Resistência': 8,
+  'Invasão De Domicílio': 7,
+  'Desacato': 7,
+  'Rixa': 6,
+  'Falsa Identidade': 6,
+  'Entregar Veículo A Pessoa Não Habilitada': 6,
+  'Porte De Drogas Para Consumo': 6, // PONTUAÇÃO AUMENTADA
+  'Ameaça': 5,
+  'Dano': 5,
+  'Calúnia': 5,
+  'Exercício Arbitrário Das Próprias Razões': 4,
+  'Fraude Em Comércio': 4,
+  'Vias De Fato': 3,
+  'Desobediência': 3,
+  'Difamação': 2,
+  'Injúria': 2,
+  'Ato Obsceno': 2,
+  'Perturbação Do Sossego': 1,
+  'Trafegar Em Velocidade Incompatível Com Segurança': 1
+};
+
+const extractTcoNatureFromFilename = (fileName: string | undefined | null): string => {
+  if (!fileName) return "Não especificada";
+  const parts = fileName.split('_');
+  if (parts.length < 4) return "Não especificada";
+  
+  let naturezaParts: string[] = [];
+  const lastPart = parts[parts.length - 1];
+  const rgpmSegmentPotentially = lastPart.replace(/\.pdf$/i, "");
+  
+  if (parts.length >= 5 && /^\d/.test(rgpmSegmentPotentially)) {
+    naturezaParts = parts.slice(3, parts.length - 1);
+  } else {
+    const lastNaturePart = parts[parts.length - 1].replace(/\.pdf$/i, "");
+    naturezaParts = parts.slice(3, parts.length - 1);
+    naturezaParts.push(lastNaturePart);
+  }
+  
+  if (naturezaParts.length === 0) return "Não especificada";
+  
+  return naturezaParts.join('_')
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ') || "Não especificada";
+};
 
 const extractRGPMsFromFilename = (fileName: string | undefined | null): ExtractedRgpms => {
   const emptyResult: ExtractedRgpms = {
@@ -77,6 +129,7 @@ const RankingTCO: React.FC = () => {
   });
   const [ranking, setRanking] = useState<OfficerRanking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showFullRanking, setShowFullRanking] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -96,7 +149,7 @@ const RankingTCO: React.FC = () => {
         }
 
         let allTcos: TcoData[] = [];
-        const officerTcoCountMap = new Map<string, { count: number; officerInfo?: OfficerInfo }>();
+        const officerTcoCountMap = new Map<string, { count: number; totalWeight: number; officerInfo?: OfficerInfo }>();
 
         for (const folder of userFolders || []) {
           if (folder.name === '.emptyFolderPlaceholder') continue;
@@ -119,12 +172,13 @@ const RankingTCO: React.FC = () => {
               : `TCO-${tcoIdentifierPart}`;
             
             const rgpmsExtracted = extractRGPMsFromFilename(fileName);
+            const natureza = extractTcoNatureFromFilename(fileName);
             
             return {
               id: file.id || fileName,
               tcoNumber: finalTcoNumber,
               createdAt: new Date(file.created_at || Date.now()),
-              natureza: "",
+              natureza: natureza,
               fileName: fileName,
               userId: folder.name,
               rgpmsExtracted: rgpmsExtracted
@@ -134,19 +188,15 @@ const RankingTCO: React.FC = () => {
           allTcos = [...allTcos, ...userTcos];
 
           userTcos.forEach(tco => {
-            if (tco.rgpmsExtracted.main.length > 0) {
-              const conductorRgpm = tco.rgpmsExtracted.main[0];
-              const current = officerTcoCountMap.get(conductorRgpm) || { count: 0 };
-              officerTcoCountMap.set(conductorRgpm, {
-                count: current.count + 1,
-                officerInfo: current.officerInfo
-              });
-            }
+            const allRgpmsInvolved = [...tco.rgpmsExtracted.main, ...tco.rgpmsExtracted.support];
+            const uniqueRgpms = [...new Set(allRgpmsInvolved)];
+            const weight = NATURE_WEIGHTS[tco.natureza] || 0;
 
-            tco.rgpmsExtracted.main.slice(1).forEach(rgpm => {
-              const current = officerTcoCountMap.get(rgpm) || { count: 0 };
+            uniqueRgpms.forEach(rgpm => {
+              const current = officerTcoCountMap.get(rgpm) || { count: 0, totalWeight: 0 };
               officerTcoCountMap.set(rgpm, {
                 count: current.count + 1,
+                totalWeight: current.totalWeight + weight,
                 officerInfo: current.officerInfo
               });
             });
@@ -205,9 +255,15 @@ const RankingTCO: React.FC = () => {
             rgpm,
             officerName: data.officerInfo?.nome || 'Militar não identificado',
             graduacao: data.officerInfo?.graduacao || '',
-            tcoCount: data.count
+            tcoCount: data.count,
+            totalWeight: data.totalWeight
           }))
-          .sort((a, b) => b.tcoCount - a.tcoCount);
+          .sort((a, b) => {
+            if (b.tcoCount !== a.tcoCount) {
+              return b.tcoCount - a.tcoCount;
+            }
+            return b.totalWeight - a.totalWeight;
+          });
 
         setRanking(officerRanking);
 
@@ -219,7 +275,7 @@ const RankingTCO: React.FC = () => {
     };
 
     fetchAllTcos();
-  }, []);
+  }, [user.rgpm]);
 
   const handleBack = () => {
     window.close();
@@ -228,6 +284,8 @@ const RankingTCO: React.FC = () => {
   const currentUserRgpm = user.rgpm;
   const currentUserRank = currentUserRgpm ? ranking.findIndex(r => r.rgpm === currentUserRgpm) + 1 : 0;
   const currentUserData = currentUserRgpm ? ranking.find(r => r.rgpm === currentUserRgpm) : null;
+  
+  const itemsToDisplay = showFullRanking ? ranking : ranking.slice(0, 3);
 
   if (isLoading) {
     return (
@@ -274,7 +332,6 @@ const RankingTCO: React.FC = () => {
           </CardHeader>
           
           <CardContent>
-            {/* Stats Row */}
             <div className="grid grid-cols-3 gap-4 mb-6 bg-blue-50 rounded-lg p-4">
               <div className="text-center">
                 <div className="text-3xl font-bold text-blue-600">{stats.total}</div>
@@ -290,7 +347,6 @@ const RankingTCO: React.FC = () => {
               </div>
             </div>
 
-            {/* Current User Position */}
             {currentUserData && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                 <div className="flex items-center justify-between">
@@ -302,7 +358,7 @@ const RankingTCO: React.FC = () => {
                       <div className="font-semibold text-gray-900">
                         {currentUserData.graduacao} {currentUserData.officerName}
                       </div>
-                      <div className="text-sm text-gray-600">{currentUserData.tcoCount} TCOs</div>
+                      <div className="text-sm text-gray-600">{currentUserData.tcoCount} TCOs / {currentUserData.totalWeight} Pontos</div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -312,23 +368,33 @@ const RankingTCO: React.FC = () => {
                 </div>
               </div>
             )}
+            
+            {/* --- ALTERADO: Badge agora é dinâmico e com estilo corrigido --- */}
+            {ranking.length > 0 && (
+              <div className="mb-4">
+                <div className="inline-flex items-center bg-yellow-400 text-blue-900 px-3 py-1 rounded-full text-sm font-semibold">
+                  🏆 {showFullRanking ? 'RANKING COMPLETO' : 'PÓDIO - TOP 3'}
+                </div>
+              </div>
+            )}
 
-            {/* Full Ranking Table */}
             <div className="bg-white rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-20 text-center">Posição</TableHead>
                     <TableHead>Militar</TableHead>
-                    <TableHead className="text-center w-32">TCOs</TableHead>
+                    <TableHead className="text-center w-28">TCOs</TableHead>
+                    {/* --- ADICIONADO: Nova coluna para a pontuação --- */}
+                    <TableHead className="text-center w-28">Pontuação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {ranking.map((officer, index) => (
+                  {itemsToDisplay.map((officer, index) => (
                     <TableRow 
                       key={officer.rgpm}
                       className={`
-                        ${currentUserRgpm === officer.rgpm ? 'bg-yellow-50 border-yellow-200' : ''}
+                        ${currentUserRgpm === officer.rgpm ? 'bg-yellow-50 border-l-4 border-l-yellow-400' : ''}
                         ${index < 3 ? 'bg-blue-50' : ''}
                       `}
                     >
@@ -356,6 +422,12 @@ const RankingTCO: React.FC = () => {
                           {officer.tcoCount}
                         </span>
                       </TableCell>
+                      {/* --- ADICIONADO: Célula para exibir a pontuação --- */}
+                      <TableCell className="text-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {officer.totalWeight}
+                        </span>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -367,6 +439,21 @@ const RankingTCO: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {ranking.length > 3 && (
+              <div className="mt-4 text-center">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFullRanking(!showFullRanking)}
+                >
+                  {showFullRanking ? 'Mostrar menos' : 'Ver ranking completo'}
+                  {showFullRanking 
+                    ? <ChevronUp className="w-4 h-4 ml-2" /> 
+                    : <ChevronDown className="w-4 h-4 ml-2" />
+                  }
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
