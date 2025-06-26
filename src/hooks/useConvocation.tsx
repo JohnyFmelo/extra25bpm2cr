@@ -55,9 +55,9 @@ export const useConvocation = () => {
           setConvocacaoDeadline(deadline);
           setActiveConvocation(convocacaoWithId);
           
-          // Check if current user has already responded
+          // Check if current user has already responded - only show if SouVoluntario is null
           const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-          if (currentUser.id && !currentUser.dataResposta) {
+          if (currentUser.id && currentUser.SouVoluntario === null) {
             setShowConvocacao(true);
           }
         } else {
@@ -78,23 +78,20 @@ export const useConvocation = () => {
     return () => unsubscribe();
   }, []);
 
-  // Listen for global convocation events
+  // Listen for user data changes to update convocation visibility
   useEffect(() => {
-    const handleConvocacao = (event: CustomEvent) => {
-      const { deadline } = event.detail;
-      setConvocacaoDeadline(deadline);
-      
-      // Show convocation modal for current user if they haven't responded
-      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-      if (currentUser.id && !currentUser.dataResposta) {
-        setShowConvocacao(true);
+    const handleUserDataUpdate = (event: CustomEvent) => {
+      const updatedUser = event.detail;
+      // If user responded (SouVoluntario is no longer null), hide convocation
+      if (updatedUser.SouVoluntario !== null) {
+        setShowConvocacao(false);
       }
     };
 
-    window.addEventListener('convocacaoIniciada', handleConvocacao as EventListener);
+    window.addEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
     
     return () => {
-      window.removeEventListener('convocacaoIniciada', handleConvocacao as EventListener);
+      window.removeEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
     };
   }, []);
 
