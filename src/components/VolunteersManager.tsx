@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import VolunteerServicesDialog from "./VolunteerServicesDialog";
 import ConvocacaoConfigDialog from "./ConvocacaoConfigDialog";
 import { useConvocation } from "@/hooks/useConvocation";
+
 interface User {
   id: string;
   email: string;
@@ -20,6 +21,7 @@ interface User {
   maxSlots?: number;
   SouVoluntario?: boolean;
 }
+
 interface TimeSlot {
   id?: string;
   date: string;
@@ -27,6 +29,7 @@ interface TimeSlot {
   end_time: string;
   volunteers?: string[];
 }
+
 const VolunteersManager = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -39,46 +42,18 @@ const VolunteersManager = () => {
   const [selectedVolunteer, setSelectedVolunteer] = useState<string | null>(null);
   const [showServicesDialog, setShowServicesDialog] = useState(false);
   const [showConvocacaoConfigDialog, setShowConvocacaoConfigDialog] = useState(false);
-  const {
-    toast
-  } = useToast();
-  const {
-    iniciarConvocacao,
-    showConvocacao,
-    convocacaoDeadline,
-    activeConvocation,
-    cancelConvocation
-  } = useConvocation();
+  const { toast } = useToast();
+  const { iniciarConvocacao, showConvocacao, convocacaoDeadline, activeConvocation, cancelConvocation } = useConvocation();
   const [timeLeft, setTimeLeft] = useState("");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+
   useEffect(() => {
-    // Listen to users collection for real-time updates
-    const usersCollection = collection(db, 'users');
-    const usersQuery = query(usersCollection);
-    const unsubscribeUsers = onSnapshot(usersQuery, snapshot => {
-      const usersData = snapshot.docs.map(userDoc => ({
-        id: userDoc.id,
-        ...userDoc.data(),
-        isVolunteer: userDoc.data().isVolunteer ?? false,
-        maxSlots: userDoc.data().maxSlots ?? 1,
-        SouVoluntario: userDoc.data().SouVoluntario ?? null
-      }) as User).sort((a, b) => (a.warName || "").localeCompare(b.warName || ""));
-      setUsers(usersData);
-      setIsLoading(false);
-    }, error => {
-      console.error("Error fetching users:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar usuários",
-        description: "Não foi possível carregar a lista de usuários."
-      });
-      setIsLoading(false);
-    });
+    fetchUsers();
 
     // Listen to timeSlots for real-time updates
     const timeSlotsCollection = collection(db, 'timeSlots');
-    const timeSlotsQuery = query(timeSlotsCollection);
-    const unsubscribeTimeSlots = onSnapshot(timeSlotsQuery, snapshot => {
+    const q = query(timeSlotsCollection);
+    const unsubscribe = onSnapshot(q, snapshot => {
       const formattedSlots: TimeSlot[] = snapshot.docs.map(docSnap => {
         const data = docSnap.data();
         let slotDateStr: string;
@@ -97,11 +72,8 @@ const VolunteersManager = () => {
       });
       setTimeSlots(formattedSlots);
     });
-    return () => {
-      unsubscribeUsers();
-      unsubscribeTimeSlots();
-    };
-  }, [toast]);
+    return () => unsubscribe();
+  }, []);
 
   // Update timer for active convocation
   useEffect(() => {
@@ -109,14 +81,17 @@ const VolunteersManager = () => {
       setTimeLeft("");
       return;
     }
+
     const updateTimer = () => {
       const now = new Date().getTime();
       const deadlineTime = new Date(convocacaoDeadline).getTime();
       const difference = deadlineTime - now;
+
       if (difference > 0) {
         const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-        const hours = Math.floor(difference % (1000 * 60 * 60 * 24) / (1000 * 60 * 60));
-        const minutes = Math.floor(difference % (1000 * 60 * 60) / (1000 * 60));
+        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+        
         if (days > 0) {
           setTimeLeft(`${days}d ${hours}h ${minutes}m`);
         } else if (hours > 0) {
@@ -128,11 +103,37 @@ const VolunteersManager = () => {
         setTimeLeft("Prazo expirado");
       }
     };
+
     updateTimer();
     const interval = setInterval(updateTimer, 30000); // Update every 30 seconds
 
     return () => clearInterval(interval);
   }, [convocacaoDeadline]);
+
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const usersData = querySnapshot.docs.map(userDoc => ({
+        id: userDoc.id,
+        ...userDoc.data(),
+        isVolunteer: userDoc.data().isVolunteer ?? false,
+        maxSlots: userDoc.data().maxSlots ?? 1,
+        SouVoluntario: userDoc.data().SouVoluntario ?? false
+      }) as User).sort((a, b) => (a.warName || "").localeCompare(b.warName || ""));
+      setUsers(usersData);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar usuários",
+        description: "Não foi possível carregar a lista de usuários."
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const calculateTimeDifference = (startTime: string, endTime: string): number => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);
@@ -147,6 +148,7 @@ const VolunteersManager = () => {
     }
     return diffHours + diffMinutes / 60;
   };
+
   const calculateUserTotalHours = (userFullName: string): number => {
     return timeSlots.reduce((totalHours, slot) => {
       if (slot.volunteers && slot.volunteers.includes(userFullName)) {
@@ -156,6 +158,7 @@ const VolunteersManager = () => {
       return totalHours;
     }, 0);
   };
+
   const calculateUserServiceCount = (userFullName: string): number => {
     return timeSlots.reduce((count, slot) => {
       if (slot.volunteers && slot.volunteers.includes(userFullName)) {
@@ -164,6 +167,7 @@ const VolunteersManager = () => {
       return count;
     }, 0);
   };
+
   const handleToggleVolunteer = async (user: User) => {
     try {
       const userRef = doc(db, "users", user.id);
@@ -188,6 +192,7 @@ const VolunteersManager = () => {
       });
     }
   };
+
   const handleSlotsChange = async (userId: string, newSlots: number) => {
     if (newSlots < 0) {
       toast({
@@ -219,6 +224,7 @@ const VolunteersManager = () => {
       });
     }
   };
+
   const handleToggleAllVolunteers = async (makeVolunteer: boolean) => {
     if (filteredUsers.length === 0) {
       toast({
@@ -257,6 +263,7 @@ const VolunteersManager = () => {
       setIsBulkUpdating(false);
     }
   };
+
   const handleBulkSlotsUpdate = async () => {
     if (filteredUsers.length === 0) {
       toast({
@@ -303,18 +310,22 @@ const VolunteersManager = () => {
       setIsBulkUpdating(false);
     }
   };
+
   const handleServiceCountClick = (userFullName: string) => {
     setSelectedVolunteer(userFullName);
     setShowServicesDialog(true);
   };
+
   const handleConvocacaoClick = () => {
     setShowConvocacaoConfigDialog(true);
   };
+
   const handleCancelConvocation = async () => {
     if (activeConvocation?.id) {
       await cancelConvocation(activeConvocation.id);
     }
   };
+
   const filteredUsers = users.filter(user => {
     const searchTerm = searchQuery.toLowerCase();
     const rank = (user.rank || '').toLowerCase();
@@ -331,6 +342,7 @@ const VolunteersManager = () => {
     }
     return matchesSearch && matchesVolunteerFilter;
   });
+
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
@@ -339,6 +351,7 @@ const VolunteersManager = () => {
         </div>
       </div>;
   }
+
   return <div className="w-full max-w-6xl mx-auto p-6 px-0">
       <style>{`
         .military-item-v2 {
@@ -383,6 +396,7 @@ const VolunteersManager = () => {
         </CardHeader>
 
         <CardContent className="space-y-6 px-6">
+          {/* Seção de busca */}
           <div className="relative flex items-center">
             <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10 pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" />
@@ -390,7 +404,9 @@ const VolunteersManager = () => {
             <Input placeholder="Pesquisar por nome, posto ou e-mail..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-11 w-full" />
           </div>
 
-          {convocacaoDeadline && <div className="bg-gradient-to-r from-orange-50 to-red-50 border-l-4 border-orange-400 rounded-lg p-4 mb-4">
+          {/* Status da Convocação Ativa */}
+          {convocacaoDeadline && (
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 border-l-4 border-orange-400 rounded-lg p-4 mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
@@ -408,7 +424,12 @@ const VolunteersManager = () => {
                       {timeLeft || "Calculando..."}
                     </span>
                   </div>
-                  <Button variant="destructive" size="sm" onClick={handleCancelConvocation} className="bg-red-600 hover:bg-red-700 text-white">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleCancelConvocation}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
                     Cancelar Convocação
                   </Button>
                 </div>
@@ -416,9 +437,12 @@ const VolunteersManager = () => {
               <div className="mt-2 text-sm text-orange-700">
                 Convocação para serviço extraordinário em andamento. Prazo para resposta dos militares.
               </div>
-            </div>}
+            </div>
+          )}
 
+          {/* Estatísticas e ações em massa */}
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6 space-y-4">
+            {/* Estatísticas */}
             <div className="flex flex-wrap gap-6 text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
@@ -434,6 +458,7 @@ const VolunteersManager = () => {
               </div>
             </div>
             
+            {/* Filtros */}
             <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-blue-200">
               <div className="flex items-center gap-2">
                 <Switch id="volunteers-only" checked={showVolunteersOnly} onCheckedChange={setShowVolunteersOnly} className="data-[state=checked]:bg-blue-600" />
@@ -446,6 +471,7 @@ const VolunteersManager = () => {
               </div>
             </div>
 
+            {/* Ações em massa */}
             <div className="flex flex-wrap gap-3 items-center justify-between pt-2 border-t border-blue-200">
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => handleToggleAllVolunteers(true)} disabled={isBulkUpdating || filteredUsers.length === 0} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]">
@@ -457,12 +483,18 @@ const VolunteersManager = () => {
                   Desmarcar Todos
                 </Button>
                 
-                <Button size="sm" onClick={handleConvocacaoClick} className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]">
+                {/* Botão de Convocação */}
+                <Button 
+                  size="sm" 
+                  onClick={handleConvocacaoClick}
+                  className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
+                >
                   <UserPlus className="mr-2 h-4 w-4" />
                   Convocação
                 </Button>
               </div>
 
+              {/* Ajustador de limite em massa */}
               <div className="flex items-center gap-2">
                 <Label className="text-sm font-medium text-blue-700 whitespace-nowrap">
                   Limite para todos:
@@ -476,6 +508,7 @@ const VolunteersManager = () => {
             </div>
           </div>
           
+          {/* Lista de usuários */}
           {filteredUsers.length === 0 ? <div className="text-center py-12 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium">Nenhum usuário encontrado</p>
@@ -487,12 +520,15 @@ const VolunteersManager = () => {
             const serviceCount = calculateUserServiceCount(userFullName);
             const formattedHours = totalHours % 1 === 0 ? totalHours.toString() : totalHours.toFixed(1);
             const isVolunteerFromConvocation = user.SouVoluntario === true;
+            
             return <div key={user.id} className={`
-                    military-item-v2 ${isVolunteerFromConvocation ? 'volunteer' : ''}
-                    ${user.isVolunteer ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'}
-                  `}>
-                    {isVolunteerFromConvocation}
+                      military-item-v2 ${isVolunteerFromConvocation ? 'volunteer' : ''}
+                      ${user.isVolunteer ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'}
+                    `}>
+                    {/* Indicador de voluntário da convocação */}
+                    {isVolunteerFromConvocation && <div className="volunteer-indicator"></div>}
                     
+                    {/* Informações do usuário */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3">
                         <div className={`
@@ -509,23 +545,37 @@ const VolunteersManager = () => {
                               E-mail não informado
                             </p>}
                           <div className="flex items-center gap-4 mt-1">
-                            {serviceCount > 0 && <button onClick={() => handleServiceCountClick(userFullName)} className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline cursor-pointer transition-colors">
+                            {serviceCount > 0 && (
+                              <button 
+                                onClick={() => handleServiceCountClick(userFullName)}
+                                className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                              >
                                 {serviceCount} serviço{serviceCount !== 1 ? 's' : ''}
-                              </button>}
-                            {user.isVolunteer && totalHours > 0 && <p className="text-xs text-blue-600 font-medium">
+                              </button>
+                            )}
+                            {user.isVolunteer && totalHours > 0 && (
+                              <p className="text-xs text-blue-600 font-medium">
                                 Total: {formattedHours}h
-                              </p>}
-                            {isVolunteerFromConvocation && <span className="text-xs text-green-600 font-medium bg-green-100 px-2 py-0.5 rounded-full">Voluntário</span>}
+                              </p>
+                            )}
+                            {isVolunteerFromConvocation && (
+                              <span className="text-xs text-green-600 font-medium bg-green-100 px-2 py-0.5 rounded-full">
+                                Voluntário Convocação
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
                     </div>
 
+                    {/* Controles */}
                     <div className="flex items-center gap-4 ml-4">
+                      {/* Limite de serviços - só exibe se for voluntário */}
                       {user.isVolunteer && <div className="flex items-center gap-2">
                           <Input type="number" min="0" value={user.maxSlots || 1} onChange={e => handleSlotsChange(user.id, parseInt(e.target.value) || 0)} className="w-16 h-8 text-center" />
                         </div>}
 
+                      {/* Switch de voluntário */}
                       <div className="flex items-center gap-3">
                         <Switch id={`volunteer-switch-${user.id}`} checked={!!user.isVolunteer} onCheckedChange={() => handleToggleVolunteer(user)} className="data-[state=checked]:bg-green-600" />
                       </div>
@@ -536,9 +586,17 @@ const VolunteersManager = () => {
         </CardContent>
       </Card>
 
-      <VolunteerServicesDialog open={showServicesDialog} onOpenChange={setShowServicesDialog} volunteerName={selectedVolunteer || ""} />
+      <VolunteerServicesDialog 
+        open={showServicesDialog}
+        onOpenChange={setShowServicesDialog}
+        volunteerName={selectedVolunteer || ""}
+      />
 
-      <ConvocacaoConfigDialog open={showConvocacaoConfigDialog} onOpenChange={setShowConvocacaoConfigDialog} />
+      <ConvocacaoConfigDialog 
+        open={showConvocacaoConfigDialog}
+        onOpenChange={setShowConvocacaoConfigDialog}
+      />
     </div>;
 };
+
 export default VolunteersManager;
