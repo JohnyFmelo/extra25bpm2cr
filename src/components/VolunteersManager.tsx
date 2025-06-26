@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, Search, UserPlus } from "lucide-react";
+import { Loader2, Users, Search, UserPlus, Clock, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VolunteerServicesDialog from "./VolunteerServicesDialog";
@@ -42,7 +42,8 @@ const VolunteersManager = () => {
   const [showServicesDialog, setShowServicesDialog] = useState(false);
   const [showConvocacaoConfigDialog, setShowConvocacaoConfigDialog] = useState(false);
   const { toast } = useToast();
-  const { iniciarConvocacao } = useConvocation();
+  const { iniciarConvocacao, showConvocacao, convocacaoDeadline } = useConvocation();
+  const [timeLeft, setTimeLeft] = useState("");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   useEffect(() => {
@@ -72,6 +73,41 @@ const VolunteersManager = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // Update timer for active convocation
+  useEffect(() => {
+    if (!convocacaoDeadline) {
+      setTimeLeft("");
+      return;
+    }
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const deadlineTime = new Date(convocacaoDeadline).getTime();
+      const difference = deadlineTime - now;
+
+      if (difference > 0) {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+        
+        if (days > 0) {
+          setTimeLeft(`${days}d ${hours}h ${minutes}m`);
+        } else if (hours > 0) {
+          setTimeLeft(`${hours}h ${minutes}m`);
+        } else {
+          setTimeLeft(`${minutes} minutos`);
+        }
+      } else {
+        setTimeLeft("Prazo expirado");
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [convocacaoDeadline]);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -328,6 +364,32 @@ const VolunteersManager = () => {
             </div>
             <Input placeholder="Pesquisar por nome, posto ou e-mail..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-11 w-full" />
           </div>
+
+          {/* Status da Convocação Ativa */}
+          {convocacaoDeadline && (
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 border-l-4 border-orange-400 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-orange-600" />
+                    <span className="font-semibold text-orange-800">CONVOCAÇÃO ATIVA</span>
+                  </div>
+                  <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                    🚨 EXTRAORDINÁRIO
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-orange-700">
+                  <Clock className="h-4 w-4" />
+                  <span className="font-mono text-sm font-semibold">
+                    {timeLeft || "Calculando..."}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-2 text-sm text-orange-700">
+                Convocação para serviço extraordinário em andamento. Prazo para resposta dos militares.
+              </div>
+            </div>
+          )}
 
           {/* Estatísticas e ações em massa */}
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6 space-y-4">

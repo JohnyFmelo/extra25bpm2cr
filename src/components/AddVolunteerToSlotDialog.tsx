@@ -1,21 +1,20 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { collection, onSnapshot, query, doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { useToast } from "@/components/ui/use-toast";
-import { Users, UserPlus, Clock, Calendar, Loader2 } from "lucide-react";
-import { parseISO, format, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { collection, getDocs, doc, updateDoc, arrayUnion, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Loader2, UserPlus, Search } from "lucide-react";
 
 interface User {
   id: string;
   email: string;
   warName: string;
   rank?: string;
+  isVolunteer?: boolean;
+  maxSlots?: number;
 }
 
 interface TimeSlot {
@@ -27,85 +26,104 @@ interface TimeSlot {
 }
 
 interface AddVolunteerToSlotDialogProps {
-  children: React.ReactNode;
-  timeSlot: TimeSlot;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  timeSlot: TimeSlot | null;
+  onVolunteerAdded: () => void;
 }
 
-const AddVolunteerToSlotDialog = ({ children, timeSlot }: AddVolunteerToSlotDialogProps) => {
-  const [open, setOpen] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [volunteerName, setVolunteerName] = useState("");
+const AddVolunteerToSlotDialog = ({ open, onOpenChange, timeSlot, onVolunteerAdded }: AddVolunteerToSlotDialogProps) => {
+  const [volunteers, setVolunteers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+  const [newVolunteerName, setNewVolunteerName] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
-    const usersCollection = collection(db, "users");
-    const usersQuery = query(usersCollection);
-
-    const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
-      const usersData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as User[];
-      setUsers(usersData);
-    });
-
-    return () => {
-      unsubscribeUsers();
-    };
-  }, []);
-
-  useEffect(() => {
-    const timeSlotsCollection = collection(db, 'timeSlots');
-    const timeSlotsQuery = query(timeSlotsCollection);
-
-    const unsubscribeTimeSlots = onSnapshot(timeSlotsQuery, (snapshot) => {
-      const formattedSlots: TimeSlot[] = snapshot.docs.map(docSnap => {
-        const data = docSnap.data();
-        let slotDateStr: string;
-        if (data.date && typeof data.date.toDate === 'function') {
-          slotDateStr = data.date.toDate().toISOString().split('T')[0];
-        } else {
-          slotDateStr = data.date as string;
-        }
-        return {
-          id: docSnap.id,
-          date: slotDateStr,
-          start_time: data.start_time,
-          end_time: data.end_time,
-          volunteers: data.volunteers || []
-        };
-      });
-      setTimeSlots(formattedSlots);
-    });
-
-    return () => {
-      unsubscribeTimeSlots();
-    };
-  }, []);
-
-  const handleAddVolunteer = async () => {
-    if (!volunteerName) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Por favor, insira o nome do voluntário."
-      });
-      return;
+    if (open && timeSlot) {
+      fetchVolunteers();
     }
+  }, [open, timeSlot]);
 
+  const fetchVolunteers = async () => {
     setIsLoading(true);
     try {
-      const timeSlotRef = doc(db, "timeSlots", timeSlot.id || "");
-      await updateDoc(timeSlotRef, {
-        volunteers: arrayUnion(volunteerName)
+      const q = query(collection(db, "users"), where("isVolunteer", "==", true));
+      const querySnapshot = await getDocs(q);
+      const usersData = querySnapshot.docs.map(userDoc => ({
+        id: userDoc.id,
+        ...userDoc.data(),
+        isVolunteer: userDoc.data().isVolunteer ?? false,
+        maxSlots: userDoc.data().maxSlots ?? 1
+      }) as User).sort((a, b) => (a.warName || "").localeCompare(b.warName || ""));
+      setVolunteers(usersData);
+    } catch (error) {
+      console.error("Error fetching volunteers:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar voluntários",
+        description: "Não foi possível carregar a lista de voluntários."
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const calculateTimeDifference = (startTime: string, endTime: string): number => {
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    let [endHour, endMinute] = endTime.split(':').map(Number);
+    if (endHour < startHour || endHour === 0 && startHour > 0) {
+      endHour += 24;
+    }
+    let diffHours = endHour - startHour;
+    let diffMinutes = endMinute - startMinute;
+    if (diffMinutes < 0) {
+      diffHours -= 1;
+      diffMinutes += 60;
+    }
+    return diffHours + diffMinutes / 60;
+  };
+
+  const calculateUserServiceCount = (userFullName: string): number => {
+    const timeSlots = JSON.parse(localStorage.getItem("timeSlots") || "[]");
+    return timeSlots.reduce((count: number, slot: TimeSlot) => {
+      if (slot.volunteers && slot.volunteers.includes(userFullName)) {
+        return count + 1;
+      }
+      return count;
+    }, 0);
+  };
+
+  const filteredVolunteers = useMemo(() => {
+    const searchTerm = searchQuery.toLowerCase();
+    return volunteers.filter(user => {
+      const rank = (user.rank || '').toLowerCase();
+      const warName = (user.warName || '').toLowerCase();
+      const email = (user.email || '').toLowerCase();
+      return rank.includes(searchTerm) || warName.includes(searchTerm) || email.includes(searchTerm);
+    });
+  }, [volunteers, searchQuery]);
+
+  const handleAddVolunteer = async (user: User) => {
+    if (!timeSlot?.id) return;
+    
+    setIsAdding(true);
+    try {
+      const userFullName = `${user.rank || ''} ${user.warName}`.trim();
+      const slotRef = doc(db, "timeSlots", timeSlot.id);
+      
+      await updateDoc(slotRef, {
+        volunteers: arrayUnion(userFullName)
+      });
+
       toast({
         title: "Voluntário adicionado",
-        description: `${volunteerName} foi adicionado ao serviço.`
+        description: `${userFullName} foi adicionado ao horário com sucesso.`
       });
-      setOpen(false);
+
+      onVolunteerAdded();
+      onOpenChange(false);
     } catch (error) {
       console.error("Error adding volunteer:", error);
       toast({
@@ -114,139 +132,155 @@ const AddVolunteerToSlotDialog = ({ children, timeSlot }: AddVolunteerToSlotDial
         description: "Não foi possível adicionar o voluntário."
       });
     } finally {
-      setIsLoading(false);
+      setIsAdding(false);
     }
   };
 
-  const handleRemoveVolunteer = async (volunteerToRemove: string) => {
-    setIsLoading(true);
+  const handleQuickAdd = async () => {
+    if (!newVolunteerName.trim() || !timeSlot?.id) return;
+    
+    setIsAdding(true);
     try {
-      const timeSlotRef = doc(db, "timeSlots", timeSlot.id || "");
-      await updateDoc(timeSlotRef, {
-        volunteers: arrayRemove(volunteerToRemove)
+      const slotRef = doc(db, "timeSlots", timeSlot.id);
+      
+      await updateDoc(slotRef, {
+        volunteers: arrayUnion(newVolunteerName.trim())
       });
+
       toast({
-        title: "Voluntário removido",
-        description: `${volunteerToRemove} foi removido do serviço.`
+        title: "Voluntário adicionado",
+        description: `${newVolunteerName} foi adicionado ao horário.`
       });
+
+      setNewVolunteerName("");
+      onVolunteerAdded();
+      onOpenChange(false);
     } catch (error) {
-      console.error("Error removing volunteer:", error);
+      console.error("Error adding volunteer:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Não foi possível remover o voluntário."
+        description: "Não foi possível adicionar o voluntário."
       });
     } finally {
-      setIsLoading(false);
+      setIsAdding(false);
     }
   };
 
-  const currentWeekSlots = useMemo(() => {
-    const currentDate = new Date();
-    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-
-    return timeSlots.filter(slot => {
-      let dateValue: Date;
-      const dateField = slot.date;
-      
-      if (!dateField) {
-        dateValue = new Date();
-      } else if (typeof dateField === 'object' && dateField !== null && 'toDate' in dateField) {
-        dateValue = (dateField as any).toDate();
-      } else if (typeof dateField === 'string') {
-        dateValue = parseISO(dateField);
-      } else {
-        // Handle other date formats if needed
-        dateValue = new Date(dateField);
-      }
-
-      return isWithinInterval(dateValue, { start: weekStart, end: weekEnd });
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
-  }, [timeSlots]);
+  };
+
+  const formatTime = (timeStr: string) => {
+    return timeStr.slice(0, 5);
+  };
+
+  if (!timeSlot) return null;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-blue-500" />
+            <UserPlus className="h-5 w-5" />
             Adicionar Voluntário
           </DialogTitle>
+          <div className="text-sm text-muted-foreground">
+            {formatDate(timeSlot.date)} • {formatTime(timeSlot.start_time)} - {formatTime(timeSlot.end_time)}
+          </div>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Nome
-            </Label>
-            <Input
-              id="name"
-              value={volunteerName}
-              onChange={(e) => setVolunteerName(e.target.value)}
-              className="col-span-3"
-            />
+        <div className="space-y-6">
+          {/* Adição rápida */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <Label className="text-sm font-semibold">Adição Rápida</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Digite o nome completo (ex: 3º SGT João Silva)"
+                value={newVolunteerName}
+                onChange={(e) => setNewVolunteerName(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !isAdding) {
+                    handleQuickAdd();
+                  }
+                }}
+              />
+              <Button 
+                onClick={handleQuickAdd}
+                disabled={!newVolunteerName.trim() || isAdding}
+                className="whitespace-nowrap"
+              >
+                {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Adicionar
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="date" className="text-right">
-              Data
-            </Label>
-            <Input
-              id="date"
-              value={timeSlot.date}
-              className="col-span-3"
-              disabled
-            />
-          </div>
+          {/* Busca de voluntários cadastrados */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Voluntários Cadastrados</Label>
+            
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Buscar voluntários..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="time" className="text-right">
-              Horário
-            </Label>
-            <Input
-              id="time"
-              value={`${timeSlot.start_time} - ${timeSlot.end_time}`}
-              className="col-span-3"
-              disabled
-            />
+            <div className="border rounded-lg max-h-60 overflow-y-auto">
+              {isLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="ml-2">Carregando voluntários...</span>
+                </div>
+              ) : filteredVolunteers.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <UserPlus className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>Nenhum voluntário encontrado</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {filteredVolunteers.map((user) => {
+                    const userFullName = `${user.rank || ''} ${user.warName}`.trim();
+                    const isAlreadyAdded = timeSlot.volunteers?.includes(userFullName);
+                    const serviceCount = calculateUserServiceCount(userFullName);
+                    const maxSlots = user.maxSlots || 1;
+                    const canAdd = serviceCount < maxSlots;
+
+                    return (
+                      <div key={user.id} className="flex items-center justify-between p-3">
+                        <div className="flex-1">
+                          <div className="font-medium">{userFullName}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {user.email} • {serviceCount}/{maxSlots} serviços
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddVolunteer(user)}
+                          disabled={isAlreadyAdded || !canAdd || isAdding}
+                          variant={isAlreadyAdded ? "secondary" : "default"}
+                        >
+                          {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          {isAlreadyAdded ? "Já adicionado" : !canAdd ? "Limite atingido" : "Adicionar"}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-
-        <div className="flex justify-between">
-          <Button variant="secondary" onClick={() => setOpen(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleAddVolunteer} disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Aguarde...
-              </>
-            ) : (
-              "Adicionar"
-            )}
-          </Button>
-        </div>
-
-        {timeSlot.volunteers && timeSlot.volunteers.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-lg font-semibold mb-2">Voluntários Adicionados:</h3>
-            <ul>
-              {timeSlot.volunteers.map((volunteer, index) => (
-                <li key={index} className="flex items-center justify-between py-2 border-b border-gray-200">
-                  <span>{volunteer}</span>
-                  <Button variant="outline" size="sm" onClick={() => handleRemoveVolunteer(volunteer)} disabled={isLoading}>
-                    Remover
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );
