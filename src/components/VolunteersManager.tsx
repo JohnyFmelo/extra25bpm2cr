@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { collection, getDocs, doc, updateDoc, writeBatch, query, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -9,7 +10,7 @@ import { Loader2, Users, Search, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VolunteerServicesDialog from "./VolunteerServicesDialog";
-import ConvocacaoDialog from "./ConvocacaoDialog";
+import ConvocacaoConfigDialog from "./ConvocacaoConfigDialog";
 import { useConvocation } from "@/hooks/useConvocation";
 
 interface User {
@@ -41,6 +42,7 @@ const VolunteersManager = () => {
   const [selectedVolunteer, setSelectedVolunteer] = useState<string | null>(null);
   const [showServicesDialog, setShowServicesDialog] = useState(false);
   const [showConvocacaoDialog, setShowConvocacaoDialog] = useState(false);
+  const [showConvocacaoConfigDialog, setShowConvocacaoConfigDialog] = useState(false);
   const { toast } = useToast();
   const { iniciarConvocacao } = useConvocation();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -277,7 +279,11 @@ const VolunteersManager = () => {
     setSelectedVolunteer(userFullName);
     setShowServicesDialog(true);
   };
-  
+
+  const handleConvocacaoClick = () => {
+    setShowConvocacaoConfigDialog(true);
+  };
+
   const filteredUsers = users.filter(user => {
     const searchTerm = searchQuery.toLowerCase();
     const rank = (user.rank || '').toLowerCase();
@@ -294,7 +300,7 @@ const VolunteersManager = () => {
     }
     return matchesSearch && matchesVolunteerFilter;
   });
-  
+
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
@@ -371,7 +377,7 @@ const VolunteersManager = () => {
                 {/* Botão de Convocação */}
                 <Button 
                   size="sm" 
-                  onClick={iniciarConvocacao}
+                  onClick={handleConvocacaoClick}
                   className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
                 >
                   <UserPlus className="mr-2 h-4 w-4" />
@@ -471,6 +477,11 @@ const VolunteersManager = () => {
         open={showConvocacaoDialog}
         onOpenChange={setShowConvocacaoDialog}
         user={user}
+      />
+
+      <ConvocacaoConfigDialog 
+        open={showConvocacaoConfigDialog}
+        onOpenChange={setShowConvocacaoConfigDialog}
       />
     </div>;
 };
