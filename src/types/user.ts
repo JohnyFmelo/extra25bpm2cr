@@ -1,5 +1,4 @@
 
-
 export interface User {
   id: string;
   email: string;
@@ -11,8 +10,6 @@ export interface User {
   rank?: string;
   rgpm?: string;
   isVolunteer?: boolean;
-  SouVoluntario?: boolean;
-  dataResposta?: string;
 }
 
 export interface TimeSlot {
@@ -30,4 +27,3 @@ export interface Message {
   timestamp: Date;
   type: 'all' | 'individual';
 }
-

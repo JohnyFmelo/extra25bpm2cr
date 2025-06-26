@@ -17,8 +17,6 @@ import { useVersioning } from "./hooks/useVersioning";
 import ImprovementsDialog from "./components/ImprovementsDialog";
 import NewNotificationDialog from "./components/NewNotificationDialog";
 import ReplyNotificationDialog from "./components/ReplyNotificationDialog";
-import ConvocacaoModal from "./components/ConvocacaoModal";
-import { useConvocation } from "./hooks/useConvocation";
 import { Notification } from "./components/notifications/NotificationsList";
 
 // Protected Route component
@@ -57,8 +55,6 @@ const Layout = ({
     setShouldShowImprovements 
   } = useVersioning();
 
-  const { showConvocacao, setShowConvocacao, convocacaoDeadline } = useConvocation();
-
   const handleImprovementsClose = () => {
     updateUserVersion();
     setShouldShowImprovements(false);
@@ -77,13 +73,6 @@ const Layout = ({
         onOpenChange={handleImprovementsClose}
         version={currentSystemVersion}
         improvements={improvements}
-      />
-
-      <ConvocacaoModal
-        open={showConvocacao}
-        onClose={() => setShowConvocacao(false)}
-        user={user || {}}
-        deadline={convocacaoDeadline || ""}
       />
     </div>
   );

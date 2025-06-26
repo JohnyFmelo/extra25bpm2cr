@@ -1,129 +1,92 @@
 
-import { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, writeBatch, query, onSnapshot, where, orderBy, limit } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useToast } from "@/components/ui/use-toast";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
-export const useConvocation = () => {
-  const [showConvocacao, setShowConvocacao] = useState(false);
-  const [convocacaoDeadline, setConvocacaoDeadline] = useState<string | null>(null);
-  const { toast } = useToast();
+export interface Convocation {
+  id: string;
+  month_year: string;
+  start_date: string;
+  end_date: string;
+  deadline_days: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
-  // Function to clear SouVoluntario field from all users
-  const clearVolunteerStatus = async () => {
-    try {
-      const usersCollection = collection(db, "users");
-      const querySnapshot = await getDocs(usersCollection);
-      const batch = writeBatch(db);
+export const useConvocation = (userEmail: string) => {
+  const [activeConvocation, setActiveConvocation] = useState<Convocation | null>(null);
+  const [hasUserResponded, setHasUserResponded] = useState(false);
+  const [shouldShowDialog, setShouldShowDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-      querySnapshot.docs.forEach((userDoc) => {
-        const userRef = doc(db, "users", userDoc.id);
-        batch.update(userRef, {
-          SouVoluntario: null,
-          dataResposta: null,
-          convocacaoDeadline: null
-        });
-      });
-
-      await batch.commit();
-      console.log("Campo SouVoluntario limpo para todos os usuários");
-    } catch (error) {
-      console.error("Erro ao limpar status de voluntário:", error);
-    }
-  };
-
-  // Check if it's the 1st of the month and clear fields
   useEffect(() => {
-    const checkAndClearMonthly = () => {
-      const today = new Date();
-      const day = today.getDate();
-      
-      if (day === 1) {
-        const lastCleared = localStorage.getItem('lastVolunteerClear');
-        const currentMonth = today.getFullYear() + '-' + (today.getMonth() + 1);
+    const checkActiveConvocation = async () => {
+      if (!userEmail) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Buscar convocação ativa
+        const { data: convocations, error: convocationError } = await supabase
+          .from('convocations')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (convocationError) {
+          console.error('Erro ao buscar convocação:', convocationError);
+          setLoading(false);
+          return;
+        }
+
+        if (!convocations || convocations.length === 0) {
+          setActiveConvocation(null);
+          setShouldShowDialog(false);
+          setLoading(false);
+          return;
+        }
+
+        const convocation = convocations[0];
+        setActiveConvocation(convocation);
+
+        // Verificar se o usuário já respondeu
+        const { data: responses, error: responseError } = await supabase
+          .from('convocation_responses')
+          .select('*')
+          .eq('convocation_id', convocation.id)
+          .eq('user_email', userEmail);
+
+        if (responseError) {
+          console.error('Erro ao verificar resposta:', responseError);
+          setLoading(false);
+          return;
+        }
+
+        const hasResponded = responses && responses.length > 0;
+        setHasUserResponded(hasResponded);
+        setShouldShowDialog(!hasResponded);
         
-        if (lastCleared !== currentMonth) {
-          clearVolunteerStatus();
-          localStorage.setItem('lastVolunteerClear', currentMonth);
-        }
+      } catch (error) {
+        console.error('Erro inesperado:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    checkAndClearMonthly();
-    const interval = setInterval(checkAndClearMonthly, 24 * 60 * 60 * 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
+    checkActiveConvocation();
+  }, [userEmail]);
 
-  // Listen for active convocations
-  useEffect(() => {
-    const convocacoesRef = collection(db, "convocacoes");
-    const q = query(
-      convocacoesRef,
-      where("active", "==", true),
-      orderBy("startTime", "desc"),
-      limit(1)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const convocacao = snapshot.docs[0].data();
-        const deadline = convocacao.deadline;
-        const now = new Date().getTime();
-        const deadlineTime = new Date(deadline).getTime();
-
-        // Check if convocation is still active
-        if (deadlineTime > now) {
-          setConvocacaoDeadline(deadline);
-          
-          // Check if current user has already responded
-          const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-          if (currentUser.id && !currentUser.dataResposta) {
-            setShowConvocacao(true);
-          }
-        } else {
-          setConvocacaoDeadline(null);
-          setShowConvocacao(false);
-        }
-      } else {
-        setConvocacaoDeadline(null);
-        setShowConvocacao(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Listen for global convocation events
-  useEffect(() => {
-    const handleConvocacao = (event: CustomEvent) => {
-      const { deadline } = event.detail;
-      setConvocacaoDeadline(deadline);
-      
-      // Show convocation modal for current user if they haven't responded
-      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-      if (currentUser.id && !currentUser.dataResposta) {
-        setShowConvocacao(true);
-      }
-    };
-
-    window.addEventListener('convocacaoIniciada', handleConvocacao as EventListener);
-    
-    return () => {
-      window.removeEventListener('convocacaoIniciada', handleConvocacao as EventListener);
-    };
-  }, []);
-
-  const iniciarConvocacao = () => {
-    // This will be handled by the ConvocacaoConfigDialog
-    return Promise.resolve();
+  const dismissDialog = () => {
+    setShouldShowDialog(false);
   };
 
   return {
-    showConvocacao,
-    setShowConvocacao,
-    convocacaoDeadline,
-    iniciarConvocacao,
-    clearVolunteerStatus
+    activeConvocation,
+    hasUserResponded,
+    shouldShowDialog,
+    loading,
+    dismissDialog
   };
 };
