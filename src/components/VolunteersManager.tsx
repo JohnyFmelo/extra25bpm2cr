@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import VolunteerServicesDialog from "./VolunteerServicesDialog";
 import ConvocacaoConfigDialog from "./ConvocacaoConfigDialog";
 import { useConvocation } from "@/hooks/useConvocation";
-
 interface User {
   id: string;
   email: string;
@@ -20,7 +19,6 @@ interface User {
   isVolunteer?: boolean;
   maxSlots?: number;
 }
-
 interface TimeSlot {
   id?: string;
   date: string;
@@ -28,7 +26,6 @@ interface TimeSlot {
   end_time: string;
   volunteers?: string[];
 }
-
 const VolunteersManager = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -41,11 +38,16 @@ const VolunteersManager = () => {
   const [selectedVolunteer, setSelectedVolunteer] = useState<string | null>(null);
   const [showServicesDialog, setShowServicesDialog] = useState(false);
   const [showConvocacaoConfigDialog, setShowConvocacaoConfigDialog] = useState(false);
-  const { toast } = useToast();
-  const { iniciarConvocacao, showConvocacao, convocacaoDeadline } = useConvocation();
+  const {
+    toast
+  } = useToast();
+  const {
+    iniciarConvocacao,
+    showConvocacao,
+    convocacaoDeadline
+  } = useConvocation();
   const [timeLeft, setTimeLeft] = useState("");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-
   useEffect(() => {
     fetchUsers();
 
@@ -80,17 +82,14 @@ const VolunteersManager = () => {
       setTimeLeft("");
       return;
     }
-
     const updateTimer = () => {
       const now = new Date().getTime();
       const deadlineTime = new Date(convocacaoDeadline).getTime();
       const difference = deadlineTime - now;
-
       if (difference > 0) {
         const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-        
+        const hours = Math.floor(difference % (1000 * 60 * 60 * 24) / (1000 * 60 * 60));
+        const minutes = Math.floor(difference % (1000 * 60 * 60) / (1000 * 60));
         if (days > 0) {
           setTimeLeft(`${days}d ${hours}h ${minutes}m`);
         } else if (hours > 0) {
@@ -102,13 +101,11 @@ const VolunteersManager = () => {
         setTimeLeft("Prazo expirado");
       }
     };
-
     updateTimer();
     const interval = setInterval(updateTimer, 30000); // Update every 30 seconds
 
     return () => clearInterval(interval);
   }, [convocacaoDeadline]);
-
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
@@ -131,7 +128,6 @@ const VolunteersManager = () => {
       setIsLoading(false);
     }
   };
-
   const calculateTimeDifference = (startTime: string, endTime: string): number => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     let [endHour, endMinute] = endTime.split(':').map(Number);
@@ -146,7 +142,6 @@ const VolunteersManager = () => {
     }
     return diffHours + diffMinutes / 60;
   };
-
   const calculateUserTotalHours = (userFullName: string): number => {
     return timeSlots.reduce((totalHours, slot) => {
       if (slot.volunteers && slot.volunteers.includes(userFullName)) {
@@ -156,7 +151,6 @@ const VolunteersManager = () => {
       return totalHours;
     }, 0);
   };
-
   const calculateUserServiceCount = (userFullName: string): number => {
     return timeSlots.reduce((count, slot) => {
       if (slot.volunteers && slot.volunteers.includes(userFullName)) {
@@ -165,7 +159,6 @@ const VolunteersManager = () => {
       return count;
     }, 0);
   };
-
   const handleToggleVolunteer = async (user: User) => {
     try {
       const userRef = doc(db, "users", user.id);
@@ -190,7 +183,6 @@ const VolunteersManager = () => {
       });
     }
   };
-
   const handleSlotsChange = async (userId: string, newSlots: number) => {
     if (newSlots < 0) {
       toast({
@@ -222,7 +214,6 @@ const VolunteersManager = () => {
       });
     }
   };
-
   const handleToggleAllVolunteers = async (makeVolunteer: boolean) => {
     if (filteredUsers.length === 0) {
       toast({
@@ -261,7 +252,6 @@ const VolunteersManager = () => {
       setIsBulkUpdating(false);
     }
   };
-
   const handleBulkSlotsUpdate = async () => {
     if (filteredUsers.length === 0) {
       toast({
@@ -308,16 +298,13 @@ const VolunteersManager = () => {
       setIsBulkUpdating(false);
     }
   };
-
   const handleServiceCountClick = (userFullName: string) => {
     setSelectedVolunteer(userFullName);
     setShowServicesDialog(true);
   };
-
   const handleConvocacaoClick = () => {
     setShowConvocacaoConfigDialog(true);
   };
-
   const filteredUsers = users.filter(user => {
     const searchTerm = searchQuery.toLowerCase();
     const rank = (user.rank || '').toLowerCase();
@@ -334,7 +321,6 @@ const VolunteersManager = () => {
     }
     return matchesSearch && matchesVolunteerFilter;
   });
-
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
@@ -343,7 +329,6 @@ const VolunteersManager = () => {
         </div>
       </div>;
   }
-
   return <div className="w-full max-w-6xl mx-auto p-6 px-0">
       <Card className="shadow-lg">
         <CardHeader className="pb-6">
@@ -366,8 +351,7 @@ const VolunteersManager = () => {
           </div>
 
           {/* Status da Convocação Ativa */}
-          {convocacaoDeadline && (
-            <div className="bg-gradient-to-r from-orange-50 to-red-50 border-l-4 border-orange-400 rounded-lg p-4 mb-4">
+          {convocacaoDeadline && <div className="bg-gradient-to-r from-orange-50 to-red-50 border-l-4 border-orange-400 rounded-lg p-4 mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
@@ -385,11 +369,8 @@ const VolunteersManager = () => {
                   </span>
                 </div>
               </div>
-              <div className="mt-2 text-sm text-orange-700">
-                Convocação para serviço extraordinário em andamento. Prazo para resposta dos militares.
-              </div>
-            </div>
-          )}
+              
+            </div>}
 
           {/* Estatísticas e ações em massa */}
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6 space-y-4">
@@ -435,11 +416,7 @@ const VolunteersManager = () => {
                 </Button>
                 
                 {/* Botão de Convocação */}
-                <Button 
-                  size="sm" 
-                  onClick={handleConvocacaoClick}
-                  className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
-                >
+                <Button size="sm" onClick={handleConvocacaoClick} className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]">
                   <UserPlus className="mr-2 h-4 w-4" />
                   Convocação
                 </Button>
@@ -491,19 +468,12 @@ const VolunteersManager = () => {
                               E-mail não informado
                             </p>}
                           <div className="flex items-center gap-4 mt-1">
-                            {serviceCount > 0 && (
-                              <button 
-                                onClick={() => handleServiceCountClick(userFullName)}
-                                className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline cursor-pointer transition-colors"
-                              >
+                            {serviceCount > 0 && <button onClick={() => handleServiceCountClick(userFullName)} className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline cursor-pointer transition-colors">
                                 {serviceCount} serviço{serviceCount !== 1 ? 's' : ''}
-                              </button>
-                            )}
-                            {user.isVolunteer && totalHours > 0 && (
-                              <p className="text-xs text-blue-600 font-medium">
+                              </button>}
+                            {user.isVolunteer && totalHours > 0 && <p className="text-xs text-blue-600 font-medium">
                                 Total: {formattedHours}h
-                              </p>
-                            )}
+                              </p>}
                           </div>
                         </div>
                       </div>
@@ -527,17 +497,9 @@ const VolunteersManager = () => {
         </CardContent>
       </Card>
 
-      <VolunteerServicesDialog 
-        open={showServicesDialog}
-        onOpenChange={setShowServicesDialog}
-        volunteerName={selectedVolunteer || ""}
-      />
+      <VolunteerServicesDialog open={showServicesDialog} onOpenChange={setShowServicesDialog} volunteerName={selectedVolunteer || ""} />
 
-      <ConvocacaoConfigDialog 
-        open={showConvocacaoConfigDialog}
-        onOpenChange={setShowConvocacaoConfigDialog}
-      />
+      <ConvocacaoConfigDialog open={showConvocacaoConfigDialog} onOpenChange={setShowConvocacaoConfigDialog} />
     </div>;
 };
-
 export default VolunteersManager;
