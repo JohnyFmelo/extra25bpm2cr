@@ -1,27 +1,23 @@
+
 import { Button } from "@/components/ui/button";
-import { MessageSquare, BellDot, Bell, User } from "lucide-react";
+import { User } from "lucide-react";
 import { useState, useEffect } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
-import NotificationsDialog from "./NotificationsDialog";
-import { useNotifications } from "./notifications/NotificationsList";
-import Messages from "./Messages";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useVersioning } from "@/hooks/useVersioning";
 import { useUser } from "@/context/UserContext";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+
 const TopBar = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [showMessagesDialog, setShowMessagesDialog] = useState(false);
-  const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
   const [userData, setUserData] = useState(() => JSON.parse(localStorage.getItem('user') || '{}'));
   const {
     user,
     setUser
   } = useUser();
-  const unreadCount = useNotifications();
   const {
     currentSystemVersion
   } = useVersioning();
@@ -82,9 +78,16 @@ const TopBar = () => {
     // Fallback to userType if service is not available
     return userType === "admin" ? "Administrador" : "Usuário";
   };
-  return <header className="bg-gradient-to-r from-primary-dark via-primary to-primary-light sticky top-0 z-50 shadow-md">
+
+  return (
+    <header className="bg-gradient-to-r from-primary-dark via-primary to-primary-light sticky top-0 z-50 shadow-md">
       <div className="flex h-16 items-center px-6 gap-4 max-w-7xl mx-auto">
         <div className="flex-1 flex items-center gap-3">
+          <Avatar className="h-10 w-10 border-2 border-white/20">
+            <AvatarFallback className="bg-white/10 text-white font-semibold">
+              {getInitials(userData.warName)}
+            </AvatarFallback>
+          </Avatar>
           
           <div className="flex flex-col">
             <h2 className="text-base font-semibold text-white">
@@ -98,48 +101,42 @@ const TopBar = () => {
         </div>
         
         <div className="flex items-center gap-2">
-          {currentSystemVersion && <div className="px-2 py-1 bg-white/10 rounded text-xs text-white/80">
+          {currentSystemVersion && (
+            <div className="px-2 py-1 bg-white/10 rounded text-xs text-white/80">
               v{currentSystemVersion}
-            </div>}
+            </div>
+          )}
           
-          <Button variant="ghost" size="icon" onClick={() => setShowNotificationsDialog(true)} className="text-white hover:bg-white/10 relative">
-            {unreadCount > 0 ? <>
-                <BellDot className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-highlight text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              </> : <Bell className="h-5 w-5" />}
-            <span className="sr-only">Notificações</span>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setShowProfileDialog(true)}
+            className="text-white hover:bg-white/10"
+          >
+            <User className="h-5 w-5" />
+            <span className="sr-only">Perfil</span>
           </Button>
-          
-          {userData.userType === "admin" && <Button variant="ghost" size="icon" onClick={() => setShowMessagesDialog(prev => !prev)} className="text-white hover:bg-white/10">
-              <MessageSquare className="h-5 w-5" />
-              <span className="sr-only">Enviar Recado</span>
-            </Button>}
         </div>
         
-        {showProfileDialog && <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={userData} />}
+        {showProfileDialog && (
+          <ProfileUpdateDialog 
+            open={showProfileDialog} 
+            onOpenChange={setShowProfileDialog} 
+            userData={userData} 
+          />
+        )}
         
-        {showPasswordDialog && <PasswordChangeDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} userId={userData.id} currentPassword={userData.password} />}
-        
-        {showNotificationsDialog && <NotificationsDialog open={showNotificationsDialog} onOpenChange={setShowNotificationsDialog} />}
-        
-        {showMessagesDialog && <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white rounded-lg w-full max-w-md shadow-xl">
-              <div className="p-4 bg-gradient-to-r from-primary-dark to-primary rounded-t-lg">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-white">Enviar Recado</h2>
-                  <Button variant="ghost" size="sm" onClick={() => setShowMessagesDialog(false)} className="text-white hover:bg-white/10">
-                    X
-                  </Button>
-                </div>
-              </div>
-              <div className="max-h-[80vh] overflow-auto">
-                <Messages onClose={() => setShowMessagesDialog(false)} />
-              </div>
-            </div>
-          </div>}
+        {showPasswordDialog && (
+          <PasswordChangeDialog 
+            open={showPasswordDialog} 
+            onOpenChange={setShowPasswordDialog} 
+            userId={userData.id} 
+            currentPassword={userData.password} 
+          />
+        )}
       </div>
-    </header>;
+    </header>
+  );
 };
+
 export default TopBar;

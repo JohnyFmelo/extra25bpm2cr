@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, writeBatch, query, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, writeBatch, query, onSnapshot, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, Search, UserPlus, Clock, AlertTriangle } from "lucide-react";
+import { Loader2, Users, Search, UserPlus, Clock, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VolunteerServicesDialog from "./VolunteerServicesDialog";
@@ -19,7 +19,8 @@ interface User {
   rank?: string;
   isVolunteer?: boolean;
   maxSlots?: number;
-  SouVoluntario?: boolean;
+  SouVoluntario?: boolean | null;
+  dataResposta?: string | null;
 }
 
 interface TimeSlot {
@@ -48,12 +49,26 @@ const VolunteersManager = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   useEffect(() => {
-    fetchUsers();
+    // Listen to users collection for real-time updates
+    const usersCollection = collection(db, "users");
+    const unsubscribe = onSnapshot(usersCollection, (snapshot) => {
+      const usersData = snapshot.docs.map(userDoc => ({
+        id: userDoc.id,
+        ...userDoc.data(),
+        isVolunteer: userDoc.data().isVolunteer ?? false,
+        maxSlots: userDoc.data().maxSlots ?? 1,
+        SouVoluntario: userDoc.data().SouVoluntario ?? null,
+        dataResposta: userDoc.data().dataResposta ?? null
+      }) as User).sort((a, b) => (a.warName || "").localeCompare(b.warName || ""));
+      
+      setUsers(usersData);
+      setIsLoading(false);
+    });
 
     // Listen to timeSlots for real-time updates
     const timeSlotsCollection = collection(db, 'timeSlots');
     const q = query(timeSlotsCollection);
-    const unsubscribe = onSnapshot(q, snapshot => {
+    const unsubscribeSlots = onSnapshot(q, snapshot => {
       const formattedSlots: TimeSlot[] = snapshot.docs.map(docSnap => {
         const data = docSnap.data();
         let slotDateStr: string;
@@ -72,7 +87,11 @@ const VolunteersManager = () => {
       });
       setTimeSlots(formattedSlots);
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribe();
+      unsubscribeSlots();
+    };
   }, []);
 
   // Update timer for active convocation
@@ -109,30 +128,6 @@ const VolunteersManager = () => {
 
     return () => clearInterval(interval);
   }, [convocacaoDeadline]);
-
-  const fetchUsers = async () => {
-    setIsLoading(true);
-    try {
-      const querySnapshot = await getDocs(collection(db, "users"));
-      const usersData = querySnapshot.docs.map(userDoc => ({
-        id: userDoc.id,
-        ...userDoc.data(),
-        isVolunteer: userDoc.data().isVolunteer ?? false,
-        maxSlots: userDoc.data().maxSlots ?? 1,
-        SouVoluntario: userDoc.data().SouVoluntario ?? false
-      }) as User).sort((a, b) => (a.warName || "").localeCompare(b.warName || ""));
-      setUsers(usersData);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar usuários",
-        description: "Não foi possível carregar a lista de usuários."
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const calculateTimeDifference = (startTime: string, endTime: string): number => {
     const [startHour, startMinute] = startTime.split(':').map(Number);
@@ -175,10 +170,6 @@ const VolunteersManager = () => {
       await updateDoc(userRef, {
         isVolunteer: newIsVolunteerStatus
       });
-      setUsers(prevUsers => prevUsers.map(u => u.id === user.id ? {
-        ...u,
-        isVolunteer: newIsVolunteerStatus
-      } : u));
       toast({
         title: "Status atualizado",
         description: `${user.warName} agora ${newIsVolunteerStatus ? "é" : "não é"} um voluntário.`
@@ -207,10 +198,6 @@ const VolunteersManager = () => {
       await updateDoc(userRef, {
         maxSlots: newSlots
       });
-      setUsers(prevUsers => prevUsers.map(u => u.id === userId ? {
-        ...u,
-        maxSlots: newSlots
-      } : u));
       toast({
         title: "Limite atualizado",
         description: `Limite de serviços atualizado para ${newSlots}.`
@@ -244,10 +231,6 @@ const VolunteersManager = () => {
         });
       });
       await batch.commit();
-      setUsers(prevUsers => prevUsers.map(user => filteredUserIds.has(user.id) ? {
-        ...user,
-        isVolunteer: makeVolunteer
-      } : user));
       toast({
         title: "Atualização em massa concluída",
         description: `${filteredUsers.length} usuários foram atualizados com sucesso.`
@@ -291,10 +274,6 @@ const VolunteersManager = () => {
         });
       });
       await batch.commit();
-      setUsers(prevUsers => prevUsers.map(user => filteredUserIds.has(user.id) ? {
-        ...user,
-        maxSlots: bulkSlotsValue
-      } : user));
       toast({
         title: "Limites atualizados",
         description: `${filteredUsers.length} usuários tiveram o limite atualizado para ${bulkSlotsValue}.`
@@ -344,15 +323,18 @@ const VolunteersManager = () => {
   });
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-[400px]">
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
           <p className="text-muted-foreground">Carregando usuários...</p>
         </div>
-      </div>;
+      </div>
+    );
   }
 
-  return <div className="w-full max-w-6xl mx-auto p-6 px-0">
+  return (
+    <div className="w-full max-w-6xl mx-auto p-6 px-0">
       <style>{`
         .military-item-v2 {
           background: white;
@@ -372,6 +354,11 @@ const VolunteersManager = () => {
           background: linear-gradient(90deg, rgba(0, 184, 148, 0.05) 0%, white 20%);
         }
 
+        .military-item-v2.convocation-volunteer {
+          border-left-color: #e17055;
+          background: linear-gradient(90deg, rgba(225, 112, 85, 0.1) 0%, white 20%);
+        }
+
         .volunteer-indicator {
           position: absolute;
           top: 8px;
@@ -381,6 +368,17 @@ const VolunteersManager = () => {
           background: #00b894;
           border-radius: 50%;
           box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.2);
+        }
+
+        .convocation-indicator {
+          position: absolute;
+          top: 8px;
+          right: 12px;
+          width: 8px;
+          height: 8px;
+          background: #e17055;
+          border-radius: 50%;
+          box-shadow: 0 0 0 3px rgba(225, 112, 85, 0.2);
         }
       `}</style>
 
@@ -401,7 +399,12 @@ const VolunteersManager = () => {
             <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10 pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" />
             </div>
-            <Input placeholder="Pesquisar por nome, posto ou e-mail..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-11 w-full" />
+            <Input 
+              placeholder="Pesquisar por nome, posto ou e-mail..." 
+              value={searchQuery} 
+              onChange={e => setSearchQuery(e.target.value)} 
+              className="pl-10 h-11 w-full" 
+            />
           </div>
 
           {/* Status da Convocação Ativa */}
@@ -456,147 +459,219 @@ const VolunteersManager = () => {
                 <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
                 <span className="font-medium text-gray-600">Não Voluntários: {filteredUsers.filter(u => !u.isVolunteer).length}</span>
               </div>
+              {convocacaoDeadline && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                    <span className="font-medium text-orange-700">
+                      Aceitaram Convocação: {filteredUsers.filter(u => u.SouVoluntario === true).length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <span className="font-medium text-red-700">
+                      Recusaram Convocação: {filteredUsers.filter(u => u.SouVoluntario === false).length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                    <span className="font-medium text-gray-700">
+                      Sem Resposta: {filteredUsers.filter(u => u.SouVoluntario === null).length}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
             
             {/* Filtros */}
             <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-blue-200">
               <div className="flex items-center gap-2">
-                <Switch id="volunteers-only" checked={showVolunteersOnly} onCheckedChange={setShowVolunteersOnly} className="data-[state=checked]:bg-blue-600" />
-                <Label htmlFor="volunteers-only" className="text-sm font-medium text-blue-700 whitespace-nowrap">Voluntários</Label>
+                <Switch 
+                  id="volunteers-only" 
+                  checked={showVolunteersOnly} 
+                  onCheckedChange={setShowVolunteersOnly} 
+                  className="data-[state=checked]:bg-blue-600" 
+                />
+                <Label htmlFor="volunteers-only" className="text-sm font-medium text-blue-700 whitespace-nowrap">
+                  Voluntários
+                </Label>
               </div>
               
               <div className="flex items-center gap-2">
-                <Switch id="non-volunteers-only" checked={showNonVolunteersOnly} onCheckedChange={setShowNonVolunteersOnly} className="data-[state=checked]:bg-orange-600" />
-                <Label htmlFor="non-volunteers-only" className="text-sm font-medium text-orange-700 whitespace-nowrap">Não Voluntários</Label>
+                <Switch 
+                  id="non-volunteers-only" 
+                  checked={showNonVolunteersOnly} 
+                  onCheckedChange={setShowNonVolunteersOnly} 
+                  className="data-[state=checked]:bg-blue-600" 
+                />
+                <Label htmlFor="non-volunteers-only" className="text-sm font-medium text-blue-700 whitespace-nowrap">
+                  Não Voluntários
+                </Label>
               </div>
             </div>
-
+            
             {/* Ações em massa */}
-            <div className="flex flex-wrap gap-3 items-center justify-between pt-2 border-t border-blue-200">
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => handleToggleAllVolunteers(true)} disabled={isBulkUpdating || filteredUsers.length === 0} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]">
-                  {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Marcar Todos
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => handleToggleAllVolunteers(false)} disabled={isBulkUpdating || filteredUsers.length === 0} className="border-blue-600 text-blue-600 hover:bg-blue-50 min-w-[120px]">
-                  {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Desmarcar Todos
-                </Button>
-                
-                {/* Botão de Convocação */}
-                <Button 
-                  size="sm" 
-                  onClick={handleConvocacaoClick}
-                  className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Convocação
-                </Button>
-              </div>
-
-              {/* Ajustador de limite em massa */}
+            <div className="flex flex-wrap gap-4 pt-2 border-t border-blue-200">
+              <Button
+                onClick={() => handleToggleAllVolunteers(true)}
+                disabled={isBulkUpdating}
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isBulkUpdating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                Tornar Todos Voluntários
+              </Button>
+              
+              <Button
+                onClick={() => handleToggleAllVolunteers(false)}
+                disabled={isBulkUpdating}
+                size="sm"
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50"
+              >
+                {isBulkUpdating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                Remover Todos como Voluntários
+              </Button>
+              
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium text-blue-700 whitespace-nowrap">
-                  Limite para todos:
-                </Label>
-                <Input type="number" min="0" value={bulkSlotsValue} onChange={e => setBulkSlotsValue(parseInt(e.target.value) || 0)} className="w-16 h-8 text-center border-blue-300 focus:border-blue-500" />
-                <Button size="sm" onClick={handleBulkSlotsUpdate} disabled={isBulkUpdating || filteredUsers.length === 0} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[80px]">
-                  {isBulkUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Aplicar
+                <Input
+                  type="number"
+                  value={bulkSlotsValue}
+                  onChange={e => setBulkSlotsValue(parseInt(e.target.value) || 1)}
+                  className="w-20 h-8"
+                  min="0"
+                />
+                <Button
+                  onClick={handleBulkSlotsUpdate}
+                  disabled={isBulkUpdating}
+                  size="sm"
+                  variant="outline"
+                >
+                  {isBulkUpdating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Aplicar Limite
                 </Button>
               </div>
+              
+              <Button
+                onClick={handleConvocacaoClick}
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+                size="sm"
+              >
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Nova Convocação
+              </Button>
             </div>
           </div>
-          
+
           {/* Lista de usuários */}
-          {filteredUsers.length === 0 ? <div className="text-center py-12 text-muted-foreground">
-              <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">Nenhum usuário encontrado</p>
-              <p className="text-sm">Tente ajustar os termos de busca</p>
-            </div> : <div className="space-y-2">
-              {filteredUsers.map(user => {
-            const userFullName = `${user.rank || ''} ${user.warName}`.trim();
-            const totalHours = calculateUserTotalHours(userFullName);
-            const serviceCount = calculateUserServiceCount(userFullName);
-            const formattedHours = totalHours % 1 === 0 ? totalHours.toString() : totalHours.toFixed(1);
-            const isVolunteerFromConvocation = user.SouVoluntario === true;
-            
-            return <div key={user.id} className={`
-                      military-item-v2 ${isVolunteerFromConvocation ? 'volunteer' : ''}
-                      ${user.isVolunteer ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'}
-                    `}>
-                    {/* Indicador de voluntário da convocação */}
-                    {isVolunteerFromConvocation && <div className="volunteer-indicator"></div>}
-                    
-                    {/* Informações do usuário */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3">
-                        <div className={`
-                          w-2 h-2 rounded-full flex-shrink-0
-                          ${user.isVolunteer ? 'bg-green-500' : 'bg-gray-300'}
-                        `} />
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                            {user.rank && `${user.rank} `}{user.warName}
-                          </p>
-                          {user.email ? <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                              {user.email}
-                            </p> : <p className="text-sm text-gray-400 dark:text-gray-500 italic">
-                              E-mail não informado
-                            </p>}
-                          <div className="flex items-center gap-4 mt-1">
-                            {serviceCount > 0 && (
-                              <button 
-                                onClick={() => handleServiceCountClick(userFullName)}
-                                className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline cursor-pointer transition-colors"
-                              >
-                                {serviceCount} serviço{serviceCount !== 1 ? 's' : ''}
-                              </button>
-                            )}
-                            {user.isVolunteer && totalHours > 0 && (
-                              <p className="text-xs text-blue-600 font-medium">
-                                Total: {formattedHours}h
-                              </p>
-                            )}
-                            {isVolunteerFromConvocation && (
-                              <span className="text-xs text-green-600 font-medium bg-green-100 px-2 py-0.5 rounded-full">
-                                Voluntário Convocação
-                              </span>
-                            )}
-                          </div>
+          <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+            {filteredUsers.map((user) => {
+              const userFullName = `${user.rank || ''} ${user.warName || ''}`.trim();
+              const serviceCount = calculateUserServiceCount(userFullName);
+              const totalHours = calculateUserTotalHours(userFullName);
+              
+              const isConvocationVolunteer = user.SouVoluntario === true;
+              const hasConvocationResponse = user.SouVoluntario !== null;
+
+              return (
+                <div
+                  key={user.id}
+                  className={`military-item-v2 ${
+                    user.isVolunteer ? 'volunteer' : ''
+                  } ${isConvocationVolunteer ? 'convocation-volunteer' : ''}`}
+                >
+                  {user.isVolunteer && <div className="volunteer-indicator"></div>}
+                  {isConvocationVolunteer && <div className="convocation-indicator"></div>}
+                  
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+                    <div className="md:col-span-2">
+                      <div className="font-semibold text-gray-800 text-sm">
+                        {user.rank} {user.warName}
+                      </div>
+                      <div className="text-xs text-gray-500">{user.email}</div>
+                      {user.isVolunteer && (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            ✓ Voluntário
+                          </span>
                         </div>
+                      )}
+                      {convocacaoDeadline && hasConvocationResponse && (
+                        <div className="mt-1">
+                          {isConvocationVolunteer ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Aceitou Convocação
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              <XCircle className="w-3 h-3 mr-1" />
+                              Recusou Convocação
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="text-center">
+                      <div className="text-sm font-medium text-gray-700">Serviços</div>
+                      <button
+                        onClick={() => handleServiceCountClick(userFullName)}
+                        className="text-lg font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      >
+                        {serviceCount}
+                      </button>
+                    </div>
+
+                    <div className="text-center">
+                      <div className="text-sm font-medium text-gray-700">Horas</div>
+                      <div className="text-lg font-bold text-green-600">
+                        {totalHours.toFixed(1)}h
                       </div>
                     </div>
 
-                    {/* Controles */}
-                    <div className="flex items-center gap-4 ml-4">
-                      {/* Limite de serviços - só exibe se for voluntário */}
-                      {user.isVolunteer && <div className="flex items-center gap-2">
-                          <Input type="number" min="0" value={user.maxSlots || 1} onChange={e => handleSlotsChange(user.id, parseInt(e.target.value) || 0)} className="w-16 h-8 text-center" />
-                        </div>}
-
-                      {/* Switch de voluntário */}
-                      <div className="flex items-center gap-3">
-                        <Switch id={`volunteer-switch-${user.id}`} checked={!!user.isVolunteer} onCheckedChange={() => handleToggleVolunteer(user)} className="data-[state=checked]:bg-green-600" />
-                      </div>
+                    <div className="flex items-center justify-center">
+                      <Switch
+                        id={`volunteer-${user.id}`}
+                        checked={user.isVolunteer}
+                        onCheckedChange={() => handleToggleVolunteer(user)}
+                        className="data-[state=checked]:bg-green-600"
+                      />
                     </div>
-                  </div>;
-          })}
-            </div>}
+
+                    <div className="flex items-center justify-center">
+                      <Input
+                        type="number"
+                        value={user.maxSlots || 1}
+                        onChange={e => handleSlotsChange(user.id, parseInt(e.target.value) || 0)}
+                        className="w-16 h-8 text-center text-sm"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 
-      <VolunteerServicesDialog 
-        open={showServicesDialog}
-        onOpenChange={setShowServicesDialog}
-        volunteerName={selectedVolunteer || ""}
-      />
+      {showServicesDialog && selectedVolunteer && (
+        <VolunteerServicesDialog
+          open={showServicesDialog}
+          onOpenChange={setShowServicesDialog}
+          volunteerName={selectedVolunteer}
+        />
+      )}
 
-      <ConvocacaoConfigDialog 
-        open={showConvocacaoConfigDialog}
-        onOpenChange={setShowConvocacaoConfigDialog}
-      />
-    </div>;
+      {showConvocacaoConfigDialog && (
+        <ConvocacaoConfigDialog
+          open={showConvocacaoConfigDialog}
+          onOpenChange={setShowConvocacaoConfigDialog}
+        />
+      )}
+    </div>
+  );
 };
 
 export default VolunteersManager;
