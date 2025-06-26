@@ -17,6 +17,7 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   // Definir datas padrão (hoje + 3 dias)
@@ -36,33 +37,86 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
   }, [open]);
 
   const updateConvocation = async () => {
+    if (loading) return;
+    
+    setLoading(true);
+    
     try {
+      // Verificar se o usuário está autenticado
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error('Erro de autenticação:', authError);
+        toast({
+          title: "Erro de Autenticação",
+          description: "Erro ao verificar usuário autenticado.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (!user) {
+        console.error('Usuário não autenticado');
+        toast({
+          title: "Erro de Autenticação",
+          description: "Usuário não está autenticado.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      console.log('Usuário autenticado:', user.id);
+
       // Primeiro, desativar todas as convocações existentes
-      await supabase
+      console.log('Desativando convocações existentes...');
+      const { error: updateError } = await supabase
         .from('convocations')
         .update({ is_active: false })
         .eq('is_active', true);
 
+      if (updateError) {
+        console.error('Erro ao desativar convocações:', updateError);
+        toast({
+          title: "Erro",
+          description: `Erro ao desativar convocações: ${updateError.message}`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       // Criar nova convocação
+      console.log('Criando nova convocação...');
+      const convocationData = {
+        month_year: monthYear,
+        start_date: startDate,
+        end_date: endDate,
+        deadline_days: 3,
+        is_active: true
+      };
+
+      console.log('Dados da convocação:', convocationData);
+
       const { data, error } = await supabase
         .from('convocations')
-        .insert({
-          month_year: monthYear,
-          start_date: startDate,
-          end_date: endDate,
-          deadline_days: 3,
-          is_active: true
-        })
+        .insert(convocationData)
         .select()
         .single();
 
       if (error) {
         console.error('Erro ao criar convocação:', error);
+        console.error('Detalhes do erro:', error.details);
+        console.error('Hint:', error.hint);
+        console.error('Code:', error.code);
+        
         toast({
           title: "Erro",
-          description: "Não foi possível criar a convocação.",
+          description: `Não foi possível criar a convocação: ${error.message}`,
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
 
@@ -79,12 +133,14 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
       });
 
     } catch (error) {
-      console.error('Erro ao atualizar convocação:', error);
+      console.error('Erro inesperado:', error);
       toast({
         title: "Erro",
         description: "Ocorreu um erro inesperado.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -113,6 +169,7 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
                 onChange={(e) => setMonthYear(e.target.value)}
                 placeholder="Ex: Julho 2025"
                 className="mt-2 p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 transition-colors"
+                disabled={loading}
               />
             </div>
 
@@ -127,6 +184,7 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                     className="mt-1 p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 transition-colors"
+                    disabled={loading}
                   />
                 </div>
                 <div>
@@ -137,6 +195,7 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     className="mt-1 p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 transition-colors"
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -144,9 +203,10 @@ const ConvocacaoDialog = ({ open, onOpenChange }: ConvocacaoDialogProps) => {
 
             <Button
               onClick={updateConvocation}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg disabled:opacity-50"
             >
-              Atualizar Convocação
+              {loading ? "Criando..." : "Atualizar Convocação"}
             </Button>
 
             {/* Preview Section */}
