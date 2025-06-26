@@ -60,8 +60,7 @@ const Index = ({
   const {
     showConvocacao,
     setShowConvocacao,
-    convocacaoDeadline,
-    hideConvocation
+    convocacaoDeadline
   } = useConvocation();
 
   // States for TCO management
@@ -376,13 +375,32 @@ const Index = ({
         </Tabs>
       </div>
 
-      {/* ... keep existing code (ProfileUpdateDialog, PasswordChangeDialog, etc.) the same */}
+      <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={user} />
+      <PasswordChangeDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} userId={user.id || ''} currentPassword="" />
+      <InformationDialog open={showInformationDialog} onOpenChange={setShowInformationDialog} isAdmin={user.userType === 'admin'} />
+      <VersionDialog open={showVersionDialog} onOpenChange={setShowVersionDialog} />
+      
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar logout</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja sair do sistema?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogout}>
+              Sair
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Convocation Modal */}
       <ConvocacaoModal 
         open={showConvocacao} 
         onClose={() => setShowConvocacao(false)}
-        onResponse={hideConvocation}
         user={user}
         deadline={convocacaoDeadline || ""}
       />
