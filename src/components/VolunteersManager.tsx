@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { collection, getDocs, doc, updateDoc, writeBatch, query, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -41,7 +40,6 @@ const VolunteersManager = () => {
   const [bulkSlotsValue, setBulkSlotsValue] = useState(1);
   const [selectedVolunteer, setSelectedVolunteer] = useState<string | null>(null);
   const [showServicesDialog, setShowServicesDialog] = useState(false);
-  const [showConvocacaoDialog, setShowConvocacaoDialog] = useState(false);
   const [showConvocacaoConfigDialog, setShowConvocacaoConfigDialog] = useState(false);
   const { toast } = useToast();
   const { iniciarConvocacao } = useConvocation();
@@ -471,12 +469,6 @@ const VolunteersManager = () => {
         open={showServicesDialog}
         onOpenChange={setShowServicesDialog}
         volunteerName={selectedVolunteer || ""}
-      />
-
-      <ConvocacaoDialog 
-        open={showConvocacaoDialog}
-        onOpenChange={setShowConvocacaoDialog}
-        user={user}
       />
 
       <ConvocacaoConfigDialog 

@@ -21,6 +21,19 @@ interface WeeklyCalendarProps {
   onLockChange?: (locked: boolean) => void;
 }
 
+interface AddVolunteerToSlotDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  timeSlot: {
+    id?: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    volunteers?: string[];
+  };
+  onVolunteerAdded: () => void;
+}
+
 const WeeklyCalendar = ({
   className,
   currentDate: externalCurrentDate,
@@ -725,7 +738,13 @@ const WeeklyCalendar = ({
         <AddVolunteerToSlotDialog
           open={showAddVolunteerDialog}
           onOpenChange={setShowAddVolunteerDialog}
-          timeSlot={selectedTimeSlotForVolunteer}
+          timeSlot={{
+            id: selectedTimeSlotForVolunteer.id,
+            date: format(selectedTimeSlotForVolunteer.date, 'yyyy-MM-dd'),
+            start_time: selectedTimeSlotForVolunteer.startTime,
+            end_time: selectedTimeSlotForVolunteer.endTime,
+            volunteers: selectedTimeSlotForVolunteer.volunteers
+          }}
           onVolunteerAdded={handleAddVolunteerSuccess}
         />
       )}
