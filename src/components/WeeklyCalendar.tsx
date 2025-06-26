@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, UserPlus } from "lucide-react";
 import { format, startOfWeek, addDays, isSameDay, isWithinInterval, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -105,6 +105,7 @@ const WeeklyCalendar = ({
     });
     return () => unsubscribe();
   }, [currentDate]);
+
   const daysInWeek = (): DayWithTimeSlots[] => {
     const start = startOfWeek(currentDate, {
       locale: ptBR
@@ -314,11 +315,9 @@ const WeeklyCalendar = ({
 
       {selectedTimeSlotForVolunteer && <AddVolunteerToSlotDialog open={showAddVolunteerDialog} onOpenChange={setShowAddVolunteerDialog} timeSlot={{
         id: selectedTimeSlotForVolunteer.id,
-        date: format(selectedTimeSlotForVolunteer.date, 'yyyy-MM-dd'),
+        date: selectedTimeSlotForVolunteer.date,
         start_time: selectedTimeSlotForVolunteer.start_time,
         end_time: selectedTimeSlotForVolunteer.end_time,
-        title: selectedTimeSlotForVolunteer.title,
-        description: selectedTimeSlotForVolunteer.description,
         volunteers: selectedTimeSlotForVolunteer.volunteers
       }} onVolunteerAdded={handleAddVolunteerSuccess} />}
 
