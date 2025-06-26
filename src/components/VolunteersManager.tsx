@@ -43,7 +43,7 @@ const VolunteersManager = () => {
   const [showServicesDialog, setShowServicesDialog] = useState(false);
   const [showConvocacaoConfigDialog, setShowConvocacaoConfigDialog] = useState(false);
   const { toast } = useToast();
-  const { iniciarConvocacao, showConvocacao, convocacaoDeadline } = useConvocation();
+  const { iniciarConvocacao, showConvocacao, convocacaoDeadline, activeConvocation, cancelConvocation } = useConvocation();
   const [timeLeft, setTimeLeft] = useState("");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -320,6 +320,12 @@ const VolunteersManager = () => {
     setShowConvocacaoConfigDialog(true);
   };
 
+  const handleCancelConvocation = async () => {
+    if (activeConvocation?.id) {
+      await cancelConvocation(activeConvocation.id);
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     const searchTerm = searchQuery.toLowerCase();
     const rank = (user.rank || '').toLowerCase();
@@ -411,11 +417,21 @@ const VolunteersManager = () => {
                     🚨 EXTRAORDINÁRIO
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-orange-700">
-                  <Clock className="h-4 w-4" />
-                  <span className="font-mono text-sm font-semibold">
-                    {timeLeft || "Calculando..."}
-                  </span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-orange-700">
+                    <Clock className="h-4 w-4" />
+                    <span className="font-mono text-sm font-semibold">
+                      {timeLeft || "Calculando..."}
+                    </span>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleCancelConvocation}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Cancelar Convocação
+                  </Button>
                 </div>
               </div>
               <div className="mt-2 text-sm text-orange-700">
