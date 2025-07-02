@@ -405,15 +405,18 @@ export const TravelManagement = () => {
 
   return (
     <>
-      <div className="demo-container max-w-7xl mx-auto p-2 sm:p-4">
+      <div className="max-w-7xl mx-auto p-4">
         {isAdmin && (
-            <div className="demo-header text-center mb-8 p-6 bg-white rounded-2xl shadow-lg">
-                <h1 className="text-3xl font-bold text-slate-800 mb-2 flex items-center justify-center gap-3"><Handshake/>SINFRA - Sistema de Voluntariado</h1>
-                <p className="text-slate-600">Visão geral de todas as viagens</p>
+            <div className="text-center mb-8 p-6 bg-white rounded-2xl shadow-lg">
+                <h1 className="text-3xl font-bold text-slate-800 mb-2 flex items-center justify-center gap-3">
+                  <Handshake className="h-8 w-8"/>
+                  SINFRA - Sistema de Voluntariado
+                </h1>
+                <p className="text-slate-600 text-lg">Gerenciamento completo de viagens e deslocamentos</p>
             </div>
         )}
 
-        <div className="status-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
           {travels
             .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
             .filter(travel => isAdmin || !travel.archived)
@@ -448,19 +451,23 @@ export const TravelManagement = () => {
               const dailyCount = travel.halfLastDay ? numDays - 0.5 : numDays;
               const totalCost = (travel.dailyRate && dailyCount > 0) ? dailyCount * Number(travel.dailyRate) : 0;
 
-              return (
-                <div key={travel.id} className={`container bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 ${travel.archived ? 'opacity-50' : ''}`}>
+                return (
+                <div key={travel.id} className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${travel.archived ? 'opacity-50' : ''}`}>
                   {/* Card Header */}
-                  <div className={`header text-white p-5 ${statusConfig.headerClass}`}>
+                  <div className={`text-white p-5 ${statusConfig.headerClass}`}>
                     <div className="flex justify-between items-start mb-4">
-                        <div className="title-section">
-                            <h2 className="text-lg font-bold flex items-center gap-2">
-                               {statusConfig.theme === 'open' && <Handshake/>} {statusConfig.theme === 'processing' && <Calculator/>} {statusConfig.theme === 'transit' && <Car/>} {statusConfig.theme === 'finished' && <CheckCircle2/>} {travel.destination}
+                        <div className="title-section flex-1">
+                            <h2 className="text-lg font-bold flex items-center gap-2 mb-1">
+                               {statusConfig.theme === 'open' && <Handshake className="h-5 w-5"/>} 
+                               {statusConfig.theme === 'processing' && <Calculator className="h-5 w-5"/>} 
+                               {statusConfig.theme === 'transit' && <Car className="h-5 w-5"/>} 
+                               {statusConfig.theme === 'finished' && <CheckCircle2 className="h-5 w-5"/>} 
+                               {travel.destination}
                             </h2>
-                            <p className="text-xs opacity-90">{statusConfig.header}</p>
+                            <p className="text-sm opacity-90">{statusConfig.header}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="status-badge bg-white/20 border border-white/30 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 shadow-sm">
+                            <div className="bg-white/20 border border-white/30 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-lg">
                                 {statusConfig.icon} {statusConfig.title}
                             </div>
                             {isAdmin && (
