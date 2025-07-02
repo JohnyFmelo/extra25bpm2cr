@@ -572,43 +572,40 @@ export const TravelManagement = () => {
           const totalCost = travel.dailyRate && dailyCount > 0 ? dailyCount * Number(travel.dailyRate) : 0;
           return <div key={travel.id} className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${travel.archived ? 'opacity-50' : ''}`}>
                   {/* Card Header */}
-                  <div className={`text-white p-5 ${statusConfig.headerClass}`}>
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="title-section flex-1">
-                            <h2 className="text-lg font-bold flex items-center gap-2 mb-1">
-                               {statusConfig.theme === 'open' && <Handshake className="h-5 w-5" />} 
-                               {statusConfig.theme === 'processing' && <Calculator className="h-5 w-5" />} 
-                               {statusConfig.theme === 'transit' && <Car className="h-5 w-5" />} 
-                               {statusConfig.theme === 'finished' && <CheckCircle2 className="h-5 w-5" />} 
-                               {travel.destination}
-                            </h2>
-                            
-                        </div>
+                  <div className={`text-white p-4 ${statusConfig.headerClass}`}>
+                    <div className="flex justify-between items-center mb-3">
                         <div className="flex items-center gap-2">
-                            <div className="bg-white/20 border border-white/30 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-lg">
+                            <div className="bg-white/20 border border-white/30 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5">
                                 {statusConfig.icon} {statusConfig.title}
                             </div>
-                            {isAdmin && <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-black/20 rounded-full text-white">
-                                            <MoreHorizontal className="h-5 w-5" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => handleEditTravel(travel)}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
-                                        {!isClosed && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}>
-                                                {isLocked ? <><LockOpen className="mr-2 h-4 w-4" />Reabrir</> : <><Lock className="mr-2 h-4 w-4" />Processar</>}
-                                            </DropdownMenuItem>}
-                                        <DropdownMenuItem onClick={() => handleArchive(travel.id, !travel.archived)}>
-                                            <Archive className="mr-2 h-4 w-4" />{travel.archived ? "Desarquivar" : "Arquivar"}
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteTravel(travel.id)}>
-                                            <Trash2 className="mr-2 h-4 w-4" />Excluir
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>}
                         </div>
+                        {isAdmin && <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-7 w-7 p-0 hover:bg-black/20 rounded-full text-white">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEditTravel(travel)}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
+                                    {!isClosed && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}>
+                                            {isLocked ? <><LockOpen className="mr-2 h-4 w-4" />Reabrir</> : <><Lock className="mr-2 h-4 w-4" />Processar</>}
+                                        </DropdownMenuItem>}
+                                    <DropdownMenuItem onClick={() => handleArchive(travel.id, !travel.archived)}>
+                                        <Archive className="mr-2 h-4 w-4" />{travel.archived ? "Desarquivar" : "Arquivar"}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteTravel(travel.id)}>
+                                        <Trash2 className="mr-2 h-4 w-4" />Excluir
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>}
                     </div>
+                    <h2 className="text-lg font-bold flex items-center gap-2">
+                        {statusConfig.theme === 'open' && <Handshake className="h-5 w-5" />} 
+                        {statusConfig.theme === 'processing' && <Calculator className="h-5 w-5" />} 
+                        {statusConfig.theme === 'transit' && <Car className="h-5 w-5" />} 
+                        {statusConfig.theme === 'finished' && <CheckCircle2 className="h-5 w-5" />} 
+                        {travel.destination}
+                    </h2>
                   </div>
 
                   {/* Main Content */}
