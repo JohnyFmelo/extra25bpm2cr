@@ -10,12 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { v4 as uuidv4 } from 'uuid';
-
-import { 
-    MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin, UserPlus, 
-    Handshake, Calculator, Car, CheckCircle2, Route, Loader2, UploadCloud, FileText, FileImage, 
-    Download, DollarSign 
-} from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin, UserPlus, Handshake, Calculator, Car, CheckCircle2, Route, Loader2, UploadCloud, FileText, FileImage, Download, DollarSign } from "lucide-react";
 import { Switch } from "./ui/switch";
 import AddVolunteerDialog from "./AddVolunteerDialog";
 
@@ -48,7 +43,6 @@ interface Travel {
   isLocked?: boolean;
   documents?: TravelDocument[]; // Add documents array
 }
-
 export const TravelManagement = () => {
   // Existing State
   const [startDate, setStartDate] = useState("");
@@ -58,19 +52,30 @@ export const TravelManagement = () => {
   const [dailyRate, setDailyRate] = useState("");
   const [halfLastDay, setHalfLastDay] = useState(false);
   const [travels, setTravels] = useState<Travel[]>([]);
-  const [volunteerCounts, setVolunteerCounts] = useState<{ [key: string]: number; }>({});
-  const [diaryCounts, setDiaryCounts] = useState<{ [key: string]: number; }>({});
+  const [volunteerCounts, setVolunteerCounts] = useState<{
+    [key: string]: number;
+  }>({});
+  const [diaryCounts, setDiaryCounts] = useState<{
+    [key: string]: number;
+  }>({});
   const [editingTravel, setEditingTravel] = useState<Travel | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedVolunteers, setSelectedVolunteers] = useState<{ [travelId: string]: string[]; }>({});
+  const [selectedVolunteers, setSelectedVolunteers] = useState<{
+    [travelId: string]: string[];
+  }>({});
   const [addVolunteerDialogOpen, setAddVolunteerDialogOpen] = useState(false);
   const [selectedTravelId, setSelectedTravelId] = useState<string>("");
 
   // New State for file uploads
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
-  const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
-
-  const { toast } = useToast();
+  const [uploadProgress, setUploadProgress] = useState<{
+    [key: string]: number;
+  }>({});
+  const fileInputRefs = useRef<{
+    [key: string]: HTMLInputElement | null;
+  }>({});
+  const {
+    toast
+  } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
   const currentUserInfo = `${user.rank} ${user.warName}`;
@@ -86,25 +91,19 @@ export const TravelManagement = () => {
       setTravels(travelsData);
 
       // Recalculate counts based on fresh data
-      const counts: { [key: string]: number } = {};
-      const diaryCount: { [key: string]: number } = {};
+      const counts: {
+        [key: string]: number;
+      } = {};
+      const diaryCount: {
+        [key: string]: number;
+      } = {};
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-
       travelsData.forEach(travel => {
         const travelStart = new Date(travel.startDate + "T00:00:00");
         const travelEnd = new Date(travel.endDate + "T00:00:00");
-
-        if (
-          (today < travelStart && travel.isLocked) ||
-          (today >= travelStart && today <= travelEnd) ||
-          (today > travelEnd)
-        ) {
-          const finalList =
-            travel.isLocked && travel.selectedVolunteers && travel.selectedVolunteers.length > 0
-              ? travel.selectedVolunteers
-              : travel.volunteers || [];
-
+        if (today < travelStart && travel.isLocked || today >= travelStart && today <= travelEnd || today > travelEnd) {
+          const finalList = travel.isLocked && travel.selectedVolunteers && travel.selectedVolunteers.length > 0 ? travel.selectedVolunteers : travel.volunteers || [];
           finalList.forEach((volunteer: string) => {
             counts[volunteer] = (counts[volunteer] || 0) + 1;
             if (travelEnd >= travelStart) {
@@ -112,7 +111,7 @@ export const TravelManagement = () => {
               const diaryDays = travel.halfLastDay ? days - 0.5 : days;
               diaryCount[volunteer] = (diaryCount[volunteer] || 0) + diaryDays;
             } else {
-              diaryCount[volunteer] = (diaryCount[volunteer] || 0);
+              diaryCount[volunteer] = diaryCount[volunteer] || 0;
             }
           });
         }
@@ -128,42 +127,71 @@ export const TravelManagement = () => {
   const handleCreateTravel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (new Date(endDate) < new Date(startDate)) {
-        toast({ title: "Datas inválidas", description: "A data final não pode ser anterior à data inicial.", variant: "destructive" });
-        return;
+      toast({
+        title: "Datas inválidas",
+        description: "A data final não pode ser anterior à data inicial.",
+        variant: "destructive"
+      });
+      return;
     }
     try {
       if (editingTravel) {
         const travelRef = doc(db, "travels", editingTravel.id);
         await updateDoc(travelRef, {
-          startDate, endDate, slots: Number(slots), destination,
+          startDate,
+          endDate,
+          slots: Number(slots),
+          destination,
           dailyRate: dailyRate ? Number(dailyRate) : null,
-          halfLastDay, updatedAt: new Date(),
+          halfLastDay,
+          updatedAt: new Date()
         });
-        toast({ title: "Sucesso", description: "Viagem atualizada com sucesso!" });
+        toast({
+          title: "Sucesso",
+          description: "Viagem atualizada com sucesso!"
+        });
         setEditingTravel(null);
       } else {
         await addDoc(collection(db, "travels"), {
-          startDate, endDate, slots: Number(slots), destination,
+          startDate,
+          endDate,
+          slots: Number(slots),
+          destination,
           dailyRate: dailyRate ? Number(dailyRate) : null,
-          halfLastDay, createdAt: new Date(), volunteers: [],
-          selectedVolunteers: [], archived: false, isLocked: false, documents: [],
+          halfLastDay,
+          createdAt: new Date(),
+          volunteers: [],
+          selectedVolunteers: [],
+          archived: false,
+          isLocked: false,
+          documents: []
         });
-        toast({ title: "Sucesso", description: "Viagem criada com sucesso!" });
+        toast({
+          title: "Sucesso",
+          description: "Viagem criada com sucesso!"
+        });
       }
       setIsModalOpen(false);
       // Reset form state in a helper function
       resetFormState();
     } catch (error) {
       console.error("Error creating/updating travel:", error);
-      toast({ title: "Erro", description: "Erro ao salvar viagem.", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar viagem.",
+        variant: "destructive"
+      });
     }
   };
-  
   const resetFormState = () => {
-    setStartDate(""); setEndDate(""); setSlots(""); setDestination("");
-    setDailyRate(""); setHalfLastDay(false); setEditingTravel(null);
+    setStartDate("");
+    setEndDate("");
+    setSlots("");
+    setDestination("");
+    setDailyRate("");
+    setHalfLastDay(false);
+    setEditingTravel(null);
   };
-
   const handleEditTravel = (travel: Travel) => {
     setEditingTravel(travel);
     setStartDate(travel.startDate);
@@ -174,35 +202,48 @@ export const TravelManagement = () => {
     setHalfLastDay(travel.halfLastDay || false);
     setIsModalOpen(true);
   };
-  
   const handleDeleteTravel = async (travelId: string) => {
     // Also delete associated files from storage
     const travel = travels.find(t => t.id === travelId);
     if (!travel) return;
-
     if (window.confirm("Tem certeza que deseja excluir esta viagem e TODOS os seus documentos permanentemente?")) {
-        try {
-            // Delete all associated files from Firebase Storage
-            if (travel.documents && travel.documents.length > 0) {
-                const deletePromises = travel.documents.map(doc => deleteObject(ref(storage, doc.path)));
-                await Promise.all(deletePromises);
-            }
-            // Delete the Firestore document
-            await deleteDoc(doc(db, "travels", travelId));
-            toast({ title: "Sucesso", description: "Viagem e documentos excluídos." });
-        } catch (error) {
-            console.error("Error deleting travel:", error);
-            toast({ title: "Erro", description: "Erro ao excluir viagem.", variant: "destructive" });
+      try {
+        // Delete all associated files from Firebase Storage
+        if (travel.documents && travel.documents.length > 0) {
+          const deletePromises = travel.documents.map(doc => deleteObject(ref(storage, doc.path)));
+          await Promise.all(deletePromises);
         }
+        // Delete the Firestore document
+        await deleteDoc(doc(db, "travels", travelId));
+        toast({
+          title: "Sucesso",
+          description: "Viagem e documentos excluídos."
+        });
+      } catch (error) {
+        console.error("Error deleting travel:", error);
+        toast({
+          title: "Erro",
+          description: "Erro ao excluir viagem.",
+          variant: "destructive"
+        });
+      }
     }
   };
-
   const handleArchive = async (travelId: string, newArchivedState: boolean) => {
     try {
-      await updateDoc(doc(db, "travels", travelId), { archived: newArchivedState });
-      toast({ title: "Sucesso", description: newArchivedState ? "Viagem arquivada!" : "Viagem desarquivada!" });
+      await updateDoc(doc(db, "travels", travelId), {
+        archived: newArchivedState
+      });
+      toast({
+        title: "Sucesso",
+        description: newArchivedState ? "Viagem arquivada!" : "Viagem desarquivada!"
+      });
     } catch (error) {
-      toast({ title: "Erro", description: "Erro ao arquivar a viagem.", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: "Erro ao arquivar a viagem.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -210,37 +251,59 @@ export const TravelManagement = () => {
 
   const handleVolunteer = async (travelId: string) => {
     if (!currentUserInfo || !user.rank) {
-      toast({ title: "Erro", description: "Usuário não encontrado. Faça login.", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: "Usuário não encontrado. Faça login.",
+        variant: "destructive"
+      });
       return;
     }
     const travelRef = doc(db, "travels", travelId);
     try {
-        const travelSnap = await getDoc(travelRef);
-        const travelData = travelSnap.data() as Travel;
-        if (travelData.isLocked) {
-          toast({ title: "Ação não permitida", description: "Inscrições encerradas.", variant: "destructive" });
-          return;
-        }
-        const currentVolunteers = travelData.volunteers || [];
-        if (currentVolunteers.includes(currentUserInfo)) {
-          await updateDoc(travelRef, { volunteers: arrayRemove(currentUserInfo) });
-          toast({ title: "Sucesso", description: "Você desistiu da viagem." });
-        } else {
-          await updateDoc(travelRef, { volunteers: arrayUnion(currentUserInfo) });
-          toast({ title: "Sucesso", description: "Você se candidatou com sucesso!" });
-        }
+      const travelSnap = await getDoc(travelRef);
+      const travelData = travelSnap.data() as Travel;
+      if (travelData.isLocked) {
+        toast({
+          title: "Ação não permitida",
+          description: "Inscrições encerradas.",
+          variant: "destructive"
+        });
+        return;
+      }
+      const currentVolunteers = travelData.volunteers || [];
+      if (currentVolunteers.includes(currentUserInfo)) {
+        await updateDoc(travelRef, {
+          volunteers: arrayRemove(currentUserInfo)
+        });
+        toast({
+          title: "Sucesso",
+          description: "Você desistiu da viagem."
+        });
+      } else {
+        await updateDoc(travelRef, {
+          volunteers: arrayUnion(currentUserInfo)
+        });
+        toast({
+          title: "Sucesso",
+          description: "Você se candidatou com sucesso!"
+        });
+      }
     } catch (error) {
-      toast({ title: "Erro", description: "Erro ao se candidatar.", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: "Erro ao se candidatar.",
+        variant: "destructive"
+      });
     }
   };
-
   const handleToggleLock = async (travelId: string) => {
     const travelRef = doc(db, "travels", travelId);
     const travelSnap = await getDoc(travelRef);
     if (!travelSnap.exists()) return;
     const travelData = travelSnap.data() as Travel;
     try {
-      if (!travelData.isLocked) { // Locking the travel
+      if (!travelData.isLocked) {
+        // Locking the travel
         const allVolunteers = travelData.volunteers ?? [];
         const processed = allVolunteers.map(v => ({
           fullName: v,
@@ -248,16 +311,32 @@ export const TravelManagement = () => {
           rankWeight: getMilitaryRankWeight(getVolunteerRank(v)),
           originalIndex: allVolunteers.indexOf(v)
         })).sort((a, b) => a.diaryCount - b.diaryCount || b.rankWeight - a.rankWeight || a.originalIndex - b.originalIndex);
-        
         const finalSelectedVolunteers = processed.slice(0, travelData.slots).map(v => v.fullName);
-        await updateDoc(travelRef, { isLocked: true, selectedVolunteers: finalSelectedVolunteers });
-        toast({ title: "Sucesso", description: "Viagem processada e voluntários selecionados!" });
-      } else { // Unlocking
-        await updateDoc(travelRef, { isLocked: false, selectedVolunteers: [] });
-        toast({ title: "Sucesso", description: "Viagem reaberta para inscrições!" });
+        await updateDoc(travelRef, {
+          isLocked: true,
+          selectedVolunteers: finalSelectedVolunteers
+        });
+        toast({
+          title: "Sucesso",
+          description: "Viagem processada e voluntários selecionados!"
+        });
+      } else {
+        // Unlocking
+        await updateDoc(travelRef, {
+          isLocked: false,
+          selectedVolunteers: []
+        });
+        toast({
+          title: "Sucesso",
+          description: "Viagem reaberta para inscrições!"
+        });
       }
     } catch (error) {
-      toast({ title: "Erro", description: "Erro ao alterar o status da viagem.", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar o status da viagem.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -266,72 +345,100 @@ export const TravelManagement = () => {
   const handleFileSelect = (travelId: string) => {
     fileInputRefs.current[travelId]?.click();
   };
-  
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, travel: Travel) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        toast({ title: "Arquivo muito grande", description: "O tamanho máximo do arquivo é 10MB.", variant: "destructive" });
-        return;
+    if (file.size > 10 * 1024 * 1024) {
+      // 10MB limit
+      toast({
+        title: "Arquivo muito grande",
+        description: "O tamanho máximo do arquivo é 10MB.",
+        variant: "destructive"
+      });
+      return;
     }
-    
     const uniqueFileName = `${uuidv4()}-${file.name}`;
     const storagePath = `travels/${travel.id}/${user.id}/${uniqueFileName}`;
     const storageRef = ref(storage, storagePath);
     const uploadTask = uploadBytesResumable(storageRef, file);
-
-    toast({ title: "Iniciando upload...", description: file.name });
-    
-    uploadTask.on('state_changed', 
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setUploadProgress(prev => ({ ...prev, [uniqueFileName]: progress }));
-      }, 
-      (error) => {
-        console.error("Upload error:", error);
-        toast({ title: "Erro de Upload", description: "Não foi possível enviar o arquivo.", variant: "destructive" });
-        setUploadProgress(prev => { const newState = {...prev}; delete newState[uniqueFileName]; return newState; });
-      }, 
-      async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        const newDocument: TravelDocument = {
-          id: uuidv4(),
-          name: file.name,
-          url: downloadURL,
-          path: storagePath,
-          size: file.size,
-          type: file.type,
-          uploaderId: user.id,
-          uploaderName: currentUserInfo,
-          createdAt: new Date().toISOString(),
+    toast({
+      title: "Iniciando upload...",
+      description: file.name
+    });
+    uploadTask.on('state_changed', snapshot => {
+      const progress = snapshot.bytesTransferred / snapshot.totalBytes * 100;
+      setUploadProgress(prev => ({
+        ...prev,
+        [uniqueFileName]: progress
+      }));
+    }, error => {
+      console.error("Upload error:", error);
+      toast({
+        title: "Erro de Upload",
+        description: "Não foi possível enviar o arquivo.",
+        variant: "destructive"
+      });
+      setUploadProgress(prev => {
+        const newState = {
+          ...prev
         };
-
-        const travelRef = doc(db, "travels", travel.id);
-        await updateDoc(travelRef, { documents: arrayUnion(newDocument) });
-
-        toast({ title: "Sucesso", description: "Documento enviado com sucesso!" });
-        setUploadProgress(prev => { const newState = {...prev}; delete newState[uniqueFileName]; return newState; });
-      }
-    );
+        delete newState[uniqueFileName];
+        return newState;
+      });
+    }, async () => {
+      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+      const newDocument: TravelDocument = {
+        id: uuidv4(),
+        name: file.name,
+        url: downloadURL,
+        path: storagePath,
+        size: file.size,
+        type: file.type,
+        uploaderId: user.id,
+        uploaderName: currentUserInfo,
+        createdAt: new Date().toISOString()
+      };
+      const travelRef = doc(db, "travels", travel.id);
+      await updateDoc(travelRef, {
+        documents: arrayUnion(newDocument)
+      });
+      toast({
+        title: "Sucesso",
+        description: "Documento enviado com sucesso!"
+      });
+      setUploadProgress(prev => {
+        const newState = {
+          ...prev
+        };
+        delete newState[uniqueFileName];
+        return newState;
+      });
+    });
   };
-  
   const handleFileDelete = async (travel: Travel, documentToDelete: TravelDocument) => {
-      if (!window.confirm(`Tem certeza que deseja excluir o arquivo "${documentToDelete.name}"?`)) return;
+    if (!window.confirm(`Tem certeza que deseja excluir o arquivo "${documentToDelete.name}"?`)) return;
+    try {
+      // Delete from Storage
+      const fileRef = ref(storage, documentToDelete.path);
+      await deleteObject(fileRef);
 
-      try {
-          // Delete from Storage
-          const fileRef = ref(storage, documentToDelete.path);
-          await deleteObject(fileRef);
-
-          // Remove from Firestore
-          const travelRef = doc(db, "travels", travel.id);
-          await updateDoc(travelRef, { documents: arrayRemove(documentToDelete) });
-
-          toast({ title: "Sucesso", description: "Arquivo excluído." });
-      } catch (error) {
-          console.error("Error deleting file:", error);
-          toast({ title: "Erro", description: "Não foi possível excluir o arquivo.", variant: "destructive" });
-      }
+      // Remove from Firestore
+      const travelRef = doc(db, "travels", travel.id);
+      await updateDoc(travelRef, {
+        documents: arrayRemove(documentToDelete)
+      });
+      toast({
+        title: "Sucesso",
+        description: "Arquivo excluído."
+      });
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o arquivo.",
+        variant: "destructive"
+      });
+    }
   };
 
   // --- Helper & Formatting Functions ---
@@ -339,30 +446,29 @@ export const TravelManagement = () => {
   const cbSdRanks = ["Sd", "Sd PM", "Cb", "Cb PM"];
   const stSgtRanks = ["3° Sgt", "3° Sgt PM", "2° Sgt", "2° Sgt PM", "1° Sgt", "1° Sgt PM", "Sub Ten", "Sub Ten PM"];
   const oficiaisRanks = ["2° Ten", "2° Ten PM", "1° Ten", "1° Ten PM", "Cap", "Cap PM", "Maj", "Maj PM", "Ten Cel", "Ten Cel PM", "Cel", "Cel PM"];
-
   const getVolunteerRank = (volunteerFullName: string): string => {
     if (!volunteerFullName || typeof volunteerFullName !== 'string') return "N/A";
     const parts = volunteerFullName.split(" ");
     if (parts.length >= 3 && (parts[1] === "Sgt" || parts[1] === "Ten") && parts[2] === "PM") return `${parts[0]} ${parts[1]} ${parts[2]}`;
     if (parts.length >= 2 && (parts[1] === "Sgt" || parts[1] === "Ten" || parts[0] === "Sub" || parts[0] === "Ten")) {
-        const twoPartRank = `${parts[0]} ${parts[1]}`;
-        if ([...stSgtRanks, ...oficiaisRanks].includes(twoPartRank)) return twoPartRank;
+      const twoPartRank = `${parts[0]} ${parts[1]}`;
+      if ([...stSgtRanks, ...oficiaisRanks].includes(twoPartRank)) return twoPartRank;
     }
     return parts[0];
   };
-  
   const getMilitaryRankWeight = (rank: string): number => {
     if (cbSdRanks.includes(rank)) return 1;
     if (stSgtRanks.includes(rank)) return 2;
     if (oficiaisRanks.includes(rank)) return 3;
     return 0;
   };
-  
   const formattedDiaryCount = (count: number) => {
-    const fmtCount = count.toLocaleString("pt-BR", { minimumFractionDigits: count % 1 !== 0 ? 1 : 0, maximumFractionDigits: 1 });
+    const fmtCount = count.toLocaleString("pt-BR", {
+      minimumFractionDigits: count % 1 !== 0 ? 1 : 0,
+      maximumFractionDigits: 1
+    });
     return `${fmtCount} ${count === 1 ? 'diária' : 'diárias'}`;
   };
-
   const getSortedVolunteers = (travel: Travel) => {
     const allRegisteredVolunteers = travel.volunteers || [];
     let displayList = allRegisteredVolunteers.map((volunteerName, index) => ({
@@ -371,18 +477,17 @@ export const TravelManagement = () => {
       diaryCount: diaryCounts[volunteerName] || 0,
       rankWeight: getMilitaryRankWeight(getVolunteerRank(volunteerName)),
       originalIndex: index,
-      isSelected: false,
+      isSelected: false
     }));
-    
+
     // Sort by criteria
     displayList.sort((a, b) => a.diaryCount - b.diaryCount || b.rankWeight - a.rankWeight || a.originalIndex - b.originalIndex);
-
     if (travel.isLocked) {
       const finalSelected = travel.selectedVolunteers || [];
-      return displayList
-        .filter(v => finalSelected.includes(v.fullName))
-        .map(v => ({...v, isSelected: true}))
-        .sort((a,b) => finalSelected.indexOf(a.fullName) - finalSelected.indexOf(b.fullName));
+      return displayList.filter(v => finalSelected.includes(v.fullName)).map(v => ({
+        ...v,
+        isSelected: true
+      })).sort((a, b) => finalSelected.indexOf(a.fullName) - finalSelected.indexOf(b.fullName));
     } else {
       let slotsToFill = travel.slots || 0;
       return displayList.map(v => {
@@ -394,7 +499,6 @@ export const TravelManagement = () => {
       });
     }
   };
-
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -402,97 +506,107 @@ export const TravelManagement = () => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
-
-  return (
-    <>
+  return <>
       <div className="max-w-7xl mx-auto p-4">
-        {isAdmin && (
-            <div className="text-center mb-8 p-6 bg-white rounded-2xl shadow-lg">
+        {isAdmin && <div className="text-center mb-8 p-6 bg-white rounded-2xl shadow-lg">
                 <h1 className="text-3xl font-bold text-slate-800 mb-2 flex items-center justify-center gap-3">
-                  <Handshake className="h-8 w-8"/>
+                  <Handshake className="h-8 w-8" />
                   SINFRA - Sistema de Voluntariado
                 </h1>
                 <p className="text-slate-600 text-lg">Gerenciamento completo de viagens e deslocamentos</p>
-            </div>
-        )}
+            </div>}
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-          {travels
-            .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-            .filter(travel => isAdmin || !travel.archived)
-            .map(travel => {
-              const travelStart = new Date(travel.startDate + "T00:00:00");
-              const travelEnd = new Date(travel.endDate + "T00:00:00");
-              const today = new Date(); today.setHours(0, 0, 0, 0);
-
-              const isLocked = travel.isLocked ?? false;
-              const isProcessing = today < travelStart && isLocked;
-              const isOngoing = today >= travelStart && today <= travelEnd; // Always considered ongoing in its period
-              const isClosed = today > travelEnd;
-              const isOpen = !isLocked && !isClosed;
-              
-              const isUserVolunteered = travel.volunteers?.includes(currentUserInfo);
-              const isUserSelected = travel.selectedVolunteers?.includes(currentUserInfo);
-
-              let statusConfig = {
-                  theme: 'finished', title: 'Missão Concluída', header: 'SINFRA - VIAGEM ENCERRADA', icon: <CheckCircle2 size={16}/>, headerClass: 'bg-gray-500', ctaClass: 'bg-gray-500'
-              };
-              if (isOpen) {
-                  statusConfig = { theme: 'open', title: 'Em aberto', header: 'SINFRA - OPORTUNIDADE', icon: <div className="w-2 h-2 bg-white rounded-full animate-pulse"/>, headerClass: 'bg-emerald-500', ctaClass: 'bg-emerald-500 hover:bg-emerald-600' };
-              } else if (isProcessing) {
-                  statusConfig = { theme: 'processing', title: 'Processando diária', header: 'SINFRA - PROCESSANDO DIÁRIAS', icon: <Loader2 size={14} className="animate-spin"/>, headerClass: 'bg-amber-500', ctaClass: 'bg-amber-500' };
-              } else if (isOngoing) {
-                  statusConfig = { theme: 'transit', title: 'Em trânsito', header: 'SINFRA - VOLUNTÁRIO EM MISSÃO', icon: <Route size={14}/>, headerClass: 'bg-blue-500', ctaClass: 'bg-blue-500 hover:bg-blue-600' };
-              }
-              
-              const displayVolunteersList = getSortedVolunteers(travel);
-              let numDays = 0;
-              if (travelEnd >= travelStart) numDays = differenceInDays(travelEnd, travelStart) + 1;
-              const dailyCount = travel.halfLastDay ? numDays - 0.5 : numDays;
-              const totalCost = (travel.dailyRate && dailyCount > 0) ? dailyCount * Number(travel.dailyRate) : 0;
-
-                return (
-                <div key={travel.id} className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${travel.archived ? 'opacity-50' : ''}`}>
+          {travels.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()).filter(travel => isAdmin || !travel.archived).map(travel => {
+          const travelStart = new Date(travel.startDate + "T00:00:00");
+          const travelEnd = new Date(travel.endDate + "T00:00:00");
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const isLocked = travel.isLocked ?? false;
+          const isProcessing = today < travelStart && isLocked;
+          const isOngoing = today >= travelStart && today <= travelEnd; // Always considered ongoing in its period
+          const isClosed = today > travelEnd;
+          const isOpen = !isLocked && !isClosed;
+          const isUserVolunteered = travel.volunteers?.includes(currentUserInfo);
+          const isUserSelected = travel.selectedVolunteers?.includes(currentUserInfo);
+          let statusConfig = {
+            theme: 'finished',
+            title: 'Missão Concluída',
+            header: 'SINFRA - VIAGEM ENCERRADA',
+            icon: <CheckCircle2 size={16} />,
+            headerClass: 'bg-gray-500',
+            ctaClass: 'bg-gray-500'
+          };
+          if (isOpen) {
+            statusConfig = {
+              theme: 'open',
+              title: 'Em aberto',
+              header: 'SINFRA - OPORTUNIDADE',
+              icon: <div className="w-2 h-2 bg-white rounded-full animate-pulse" />,
+              headerClass: 'bg-emerald-500',
+              ctaClass: 'bg-emerald-500 hover:bg-emerald-600'
+            };
+          } else if (isProcessing) {
+            statusConfig = {
+              theme: 'processing',
+              title: 'Processando diária',
+              header: 'SINFRA - PROCESSANDO DIÁRIAS',
+              icon: <Loader2 size={14} className="animate-spin" />,
+              headerClass: 'bg-amber-500',
+              ctaClass: 'bg-amber-500'
+            };
+          } else if (isOngoing) {
+            statusConfig = {
+              theme: 'transit',
+              title: 'Em trânsito',
+              header: 'SINFRA - VOLUNTÁRIO EM MISSÃO',
+              icon: <Route size={14} />,
+              headerClass: 'bg-blue-500',
+              ctaClass: 'bg-blue-500 hover:bg-blue-600'
+            };
+          }
+          const displayVolunteersList = getSortedVolunteers(travel);
+          let numDays = 0;
+          if (travelEnd >= travelStart) numDays = differenceInDays(travelEnd, travelStart) + 1;
+          const dailyCount = travel.halfLastDay ? numDays - 0.5 : numDays;
+          const totalCost = travel.dailyRate && dailyCount > 0 ? dailyCount * Number(travel.dailyRate) : 0;
+          return <div key={travel.id} className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${travel.archived ? 'opacity-50' : ''}`}>
                   {/* Card Header */}
                   <div className={`text-white p-5 ${statusConfig.headerClass}`}>
                     <div className="flex justify-between items-start mb-4">
                         <div className="title-section flex-1">
                             <h2 className="text-lg font-bold flex items-center gap-2 mb-1">
-                               {statusConfig.theme === 'open' && <Handshake className="h-5 w-5"/>} 
-                               {statusConfig.theme === 'processing' && <Calculator className="h-5 w-5"/>} 
-                               {statusConfig.theme === 'transit' && <Car className="h-5 w-5"/>} 
-                               {statusConfig.theme === 'finished' && <CheckCircle2 className="h-5 w-5"/>} 
+                               {statusConfig.theme === 'open' && <Handshake className="h-5 w-5" />} 
+                               {statusConfig.theme === 'processing' && <Calculator className="h-5 w-5" />} 
+                               {statusConfig.theme === 'transit' && <Car className="h-5 w-5" />} 
+                               {statusConfig.theme === 'finished' && <CheckCircle2 className="h-5 w-5" />} 
                                {travel.destination}
                             </h2>
-                            <p className="text-sm opacity-90">{statusConfig.header}</p>
+                            
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="bg-white/20 border border-white/30 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-lg">
                                 {statusConfig.icon} {statusConfig.title}
                             </div>
-                            {isAdmin && (
-                                <DropdownMenu>
+                            {isAdmin && <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-black/20 rounded-full text-white">
                                             <MoreHorizontal className="h-5 w-5" />
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => handleEditTravel(travel)}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
-                                        {!isClosed && (
-                                            <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}>
-                                                {isLocked ? <><LockOpen className="mr-2 h-4 w-4"/>Reabrir</> : <><Lock className="mr-2 h-4 w-4"/>Processar</>}
-                                            </DropdownMenuItem>
-                                        )}
+                                        <DropdownMenuItem onClick={() => handleEditTravel(travel)}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
+                                        {!isClosed && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}>
+                                                {isLocked ? <><LockOpen className="mr-2 h-4 w-4" />Reabrir</> : <><Lock className="mr-2 h-4 w-4" />Processar</>}
+                                            </DropdownMenuItem>}
                                         <DropdownMenuItem onClick={() => handleArchive(travel.id, !travel.archived)}>
-                                            <Archive className="mr-2 h-4 w-4"/>{travel.archived ? "Desarquivar" : "Arquivar"}
+                                            <Archive className="mr-2 h-4 w-4" />{travel.archived ? "Desarquivar" : "Arquivar"}
                                         </DropdownMenuItem>
                                         <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteTravel(travel.id)}>
-                                            <Trash2 className="mr-2 h-4 w-4"/>Excluir
+                                            <Trash2 className="mr-2 h-4 w-4" />Excluir
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
+                                </DropdownMenu>}
                         </div>
                     </div>
                   </div>
@@ -514,7 +628,10 @@ export const TravelManagement = () => {
                         </div>
                         <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-purple-400">
                             <div className="text-xs font-medium text-slate-500 uppercase">Remuneração</div>
-                            <div className="text-sm font-semibold text-slate-800">{totalCost > 0 ? totalCost.toLocaleString("pt-BR", {style: 'currency', currency: 'BRL'}) : 'N/A'}</div>
+                            <div className="text-sm font-semibold text-slate-800">{totalCost > 0 ? totalCost.toLocaleString("pt-BR", {
+                      style: 'currency',
+                      currency: 'BRL'
+                    }) : 'N/A'}</div>
                         </div>
                     </div>
 
@@ -523,95 +640,86 @@ export const TravelManagement = () => {
                             <h3 className="text-sm font-semibold text-slate-800">
                                 {isOpen ? `Voluntários (${travel.volunteers?.length || 0} inscritos)` : 'Voluntário(s) em Missão'}
                             </h3>
-                            {isAdmin && isOpen && (
-                                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAddVolunteerDialogOpen(true)}><UserPlus className="h-3.5 w-3.5 mr-1.5"/>Adicionar</Button>
-                            )}
+                            {isAdmin && isOpen && <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAddVolunteerDialogOpen(true)}><UserPlus className="h-3.5 w-3.5 mr-1.5" />Adicionar</Button>}
                         </div>
                         <div className="volunteer-grid grid gap-2">
-                           {displayVolunteersList.length > 0 ? displayVolunteersList.map(vol => (
-                               <div key={vol.fullName} className={`volunteer-item border rounded-lg p-3 transition-all ${vol.isSelected ? 'border-emerald-400 bg-emerald-50' : 'bg-white'}`}>
+                           {displayVolunteersList.length > 0 ? displayVolunteersList.map(vol => <div key={vol.fullName} className={`volunteer-item border rounded-lg p-3 transition-all ${vol.isSelected ? 'border-emerald-400 bg-emerald-50' : 'bg-white'}`}>
                                    <div className="flex justify-between items-center">
                                         <p className={`text-sm font-semibold ${vol.isSelected ? 'text-emerald-800' : 'text-slate-800'}`}>{vol.fullName}</p>
                                         <div className="flex gap-3 text-xs text-slate-500">
-                                            <span className="flex items-center gap-1"><MapPin size={12}/> {volunteerCounts[vol.fullName] || 0} viagens</span>
-                                            <span className="flex items-center gap-1"><DollarSign size={12}/> {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}</span>
+                                            <span className="flex items-center gap-1"><MapPin size={12} /> {volunteerCounts[vol.fullName] || 0} viagens</span>
+                                            <span className="flex items-center gap-1"><DollarSign size={12} /> {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}</span>
                                         </div>
                                    </div>
-                               </div>
-                           )) : <p className="text-xs text-slate-500 italic">Nenhum voluntário {isOpen ? 'inscrito' : 'selecionado'}.</p>}
+                               </div>) : <p className="text-xs text-slate-500 italic">Nenhum voluntário {isOpen ? 'inscrito' : 'selecionado'}.</p>}
                         </div>
                     </div>
 
                     {/* Document Section */}
-                    {(isOngoing || isClosed) && (isUserSelected || isAdmin) && (
-                        <div className="documents-section mb-5">
+                    {(isOngoing || isClosed) && (isUserSelected || isAdmin) && <div className="documents-section mb-5">
                             <div className="section-header flex justify-between items-center mb-3 pb-2 border-b">
                                 <h3 className="section-title text-sm font-semibold text-slate-800">Prestação de Contas</h3>
                             </div>
                              {isOngoing && <div onClick={() => handleFileSelect(travel.id)} className="document-upload border-2 border-dashed border-slate-300 rounded-lg p-5 text-center bg-slate-50 hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer mb-3">
                                 <div className="flex flex-col items-center gap-2">
-                                    <UploadCloud className="text-slate-500" size={28}/>
+                                    <UploadCloud className="text-slate-500" size={28} />
                                     <p className="font-semibold text-slate-700">Adicionar Documentos</p>
                                     <p className="text-xs text-slate-500">PDF, JPG, PNG até 10MB</p>
-                                    <input type="file" ref={el => fileInputRefs.current[travel.id] = el} onChange={(e) => handleFileUpload(e, travel)} className="hidden" accept=".pdf,.jpg,.jpeg,.png"/>
+                                    <input type="file" ref={el => fileInputRefs.current[travel.id] = el} onChange={e => handleFileUpload(e, travel)} className="hidden" accept=".pdf,.jpg,.jpeg,.png" />
                                 </div>
                             </div>}
                             <div className="document-list mt-2 space-y-2">
-                                {Object.entries(uploadProgress).map(([fileName, progress]) => (
-                                    <div key={fileName} className="p-2 border rounded-md bg-slate-100">
+                                {Object.entries(uploadProgress).map(([fileName, progress]) => <div key={fileName} className="p-2 border rounded-md bg-slate-100">
                                         <p className="text-xs text-slate-600 truncate">{fileName}</p>
                                         <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1">
-                                            <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                                            <div className="bg-blue-500 h-1.5 rounded-full" style={{
+                        width: `${progress}%`
+                      }}></div>
                                         </div>
-                                    </div>
-                                ))}
-                                {travel.documents && travel.documents.length > 0 ? travel.documents.map(doc => (
-                                    <div key={doc.id} className="document-item flex items-center justify-between p-2.5 bg-white border rounded-lg">
+                                    </div>)}
+                                {travel.documents && travel.documents.length > 0 ? travel.documents.map(doc => <div key={doc.id} className="document-item flex items-center justify-between p-2.5 bg-white border rounded-lg">
                                         <div className="flex items-center gap-3">
-                                            {doc.type.includes('pdf') ? <FileText className="text-red-500"/> : <FileImage className="text-sky-500"/>}
+                                            {doc.type.includes('pdf') ? <FileText className="text-red-500" /> : <FileImage className="text-sky-500" />}
                                             <div>
                                                 <a href={doc.url} target="_blank" rel="noopener noreferrer" className="document-name text-sm font-medium text-slate-800 hover:underline">{doc.name}</a>
-                                                <div className="document-size text-xs text-slate-500">{formatFileSize(doc.size)} - por {doc.uploaderName.split(' ').slice(0,2).join(' ')}</div>
+                                                <div className="document-size text-xs text-slate-500">{formatFileSize(doc.size)} - por {doc.uploaderName.split(' ').slice(0, 2).join(' ')}</div>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <a href={doc.url} download={doc.name} target="_blank" rel="noopener noreferrer"><Download size={16} className="text-slate-500 hover:text-blue-600 cursor-pointer"/></a>
-                                            {(doc.uploaderId === user.id || isAdmin) && (
-                                                <button onClick={() => handleFileDelete(travel, doc)}><X size={16} className="text-slate-500 hover:text-red-600 cursor-pointer"/></button>
-                                            )}
+                                            <a href={doc.url} download={doc.name} target="_blank" rel="noopener noreferrer"><Download size={16} className="text-slate-500 hover:text-blue-600 cursor-pointer" /></a>
+                                            {(doc.uploaderId === user.id || isAdmin) && <button onClick={() => handleFileDelete(travel, doc)}><X size={16} className="text-slate-500 hover:text-red-600 cursor-pointer" /></button>}
                                         </div>
-                                    </div>
-                                )) : <p className="text-xs text-slate-500 italic">Nenhum documento enviado.</p>}
+                                    </div>) : <p className="text-xs text-slate-500 italic">Nenhum documento enviado.</p>}
                             </div>
-                        </div>
-                    )}
+                        </div>}
 
                     {/* CTA Section */}
-                    {isOpen && (
-                        <div className="cta-section pt-4 border-t">
+                    {isOpen && <div className="cta-section pt-4 border-t">
                             <Button onClick={() => handleVolunteer(travel.id)} className={`w-full font-bold text-base py-6 rounded-xl shadow-lg transition-all transform hover:-translate-y-1 ${isUserVolunteered ? 'bg-red-500 hover:bg-red-600' : statusConfig.ctaClass}`}>
                                 {isUserVolunteered ? "Desistir da Viagem" : "Quero ser Voluntário"}
                             </Button>
-                        </div>
-                    )}
+                        </div>}
                   </div>
-                </div>
-              );
-            })}
+                </div>;
+        })}
         </div>
       </div>
 
-      {isAdmin && (
-        <Button onClick={() => { setIsModalOpen(true); resetFormState(); }} className="fixed bottom-6 right-6 h-16 w-16 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-xl hover:shadow-2xl transition-all z-30">
+      {isAdmin && <Button onClick={() => {
+      setIsModalOpen(true);
+      resetFormState();
+    }} className="fixed bottom-6 right-6 h-16 w-16 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-xl hover:shadow-2xl transition-all z-30">
           <Plus className="h-8 w-8" />
-        </Button>
-      )}
+        </Button>}
 
       {/* Create/Edit Modal */}
       {isModalOpen && <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <Card className="p-6 bg-white shadow-2xl max-w-lg w-full relative rounded-lg">
-            <button onClick={() => { setIsModalOpen(false); resetFormState(); }} className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition-colors p-1 rounded-full hover:bg-gray-100" title="Fechar">
-              <X className="h-5 w-5"/>
+            <button onClick={() => {
+          setIsModalOpen(false);
+          resetFormState();
+        }} className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition-colors p-1 rounded-full hover:bg-gray-100" title="Fechar">
+              <X className="h-5 w-5" />
             </button>
             <form onSubmit={handleCreateTravel} className="space-y-5">
               <h2 className="text-xl font-semibold text-gray-800">
@@ -653,7 +761,10 @@ export const TravelManagement = () => {
                 <Button type="submit" className="w-full sm:w-auto flex-grow bg-blue-600 hover:bg-blue-700">
                   {editingTravel ? "Salvar Alterações" : "Criar Viagem"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => { setIsModalOpen(false); resetFormState(); }} className="w-full sm:w-auto">
+                <Button type="button" variant="outline" onClick={() => {
+              setIsModalOpen(false);
+              resetFormState();
+            }} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
               </div>
@@ -661,15 +772,10 @@ export const TravelManagement = () => {
           </Card>
         </div>}
       
-      <AddVolunteerDialog
-        open={addVolunteerDialogOpen}
-        onOpenChange={setAddVolunteerDialogOpen}
-        travelId={selectedTravelId}
-        currentVolunteers={travels.find(t => t.id === selectedTravelId)?.volunteers || []}
-        onVolunteersAdded={() => toast({ title: "Sucesso", description: "Voluntários adicionados com sucesso!" })}
-      />
-    </>
-  );
+      <AddVolunteerDialog open={addVolunteerDialogOpen} onOpenChange={setAddVolunteerDialogOpen} travelId={selectedTravelId} currentVolunteers={travels.find(t => t.id === selectedTravelId)?.volunteers || []} onVolunteersAdded={() => toast({
+      title: "Sucesso",
+      description: "Voluntários adicionados com sucesso!"
+    })} />
+    </>;
 };
-
 export default TravelManagement;
