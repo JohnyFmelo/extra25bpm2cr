@@ -6,8 +6,9 @@ import { Card } from "./ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { collection, addDoc, onSnapshot, query, getDoc, doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import { db, storage } from "@/lib/firebase";
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
+import { uploadPDF, deletePDF } from "@/lib/supabaseStorage";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -121,29 +122,31 @@ const AddDocumentDialog = ({
     }
     setIsUploading(true);
     setProgress(0);
-    const uniqueFileName = `${uuidv4()}-${file.name}`;
-    const storagePath = `travels/${travel.id}/${user.id}/${uniqueFileName}`;
-    const storageRef = ref(storage, storagePath);
-    const uploadTask = uploadBytesResumable(storageRef, file);
-    uploadTask.on('state_changed', snapshot => {
-      const prog = snapshot.bytesTransferred / snapshot.totalBytes * 100;
-      setProgress(prog);
-    }, error => {
-      console.error("Upload error:", error);
-      toast({
-        title: "Erro de Upload",
-        description: "Não foi possível enviar o arquivo.",
-        variant: "destructive"
-      });
-      setIsUploading(false);
-    }, async () => {
-      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+    
+    try {
+      const uniqueFileName = `${uuidv4()}-${file.name}`;
+      const storagePath = `travels/${travel.id}/${user.id}/${uniqueFileName}`;
+      
+      // Simular progresso para melhor UX
+      const progressInterval = setInterval(() => {
+        setProgress(prev => Math.min(prev + 10, 90));
+      }, 200);
+      
+      const { url, error } = await uploadPDF(storagePath, file);
+      
+      clearInterval(progressInterval);
+      setProgress(100);
+      
+      if (error || !url) {
+        throw new Error(error?.message || "Erro no upload");
+      }
+      
       const newDocument: TravelDocument = {
         id: uuidv4(),
         name: name.trim(),
         category: category,
         originalFileName: file.name,
-        url: downloadURL,
+        url: url,
         path: storagePath,
         size: file.size,
         type: file.type,
@@ -151,10 +154,12 @@ const AddDocumentDialog = ({
         uploaderName: currentUserInfo,
         createdAt: new Date().toISOString()
       };
+      
       const travelRef = doc(db, "travels", travel.id);
       await updateDoc(travelRef, {
         documents: arrayUnion(newDocument)
       });
+      
       toast({
         title: "Sucesso",
         description: "Documento enviado!"
@@ -162,7 +167,15 @@ const AddDocumentDialog = ({
       setIsUploading(false);
       onUploadSuccess();
       onOpenChange(false);
-    });
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({
+        title: "Erro de Upload",
+        description: "Não foi possível enviar o arquivo.",
+        variant: "destructive"
+      });
+      setIsUploading(false);
+    }
   };
   return <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[480px]">
@@ -191,7 +204,7 @@ const AddDocumentDialog = ({
                     <div>
                         <Label>Arquivo</Label>
                         <div className="mt-1">
-                            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" />
                             <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
                                 <FileUp className="mr-2 h-4 w-4" />
                                 {file ? 'Trocar Arquivo' : 'Selecionar Arquivo'}
@@ -369,7 +382,7 @@ export const TravelManagement = () => {
     if (window.confirm("Tem certeza que deseja excluir esta viagem e TODOS os seus documentos permanentemente?")) {
       try {
         if (travel.documents && travel.documents.length > 0) {
-          const deletePromises = travel.documents.map(doc => deleteObject(ref(storage, doc.path)));
+          const deletePromises = travel.documents.map(doc => deletePDF(doc.path));
           await Promise.all(deletePromises);
         }
         await deleteDoc(doc(db, "travels", travelId));
@@ -495,12 +508,17 @@ export const TravelManagement = () => {
   const handleFileDelete = async (travel: Travel, documentToDelete: TravelDocument) => {
     if (!window.confirm(`Tem certeza que deseja excluir o arquivo "${documentToDelete.name}"?`)) return;
     try {
-      const fileRef = ref(storage, documentToDelete.path);
-      await deleteObject(fileRef);
+      const { success, error } = await deletePDF(documentToDelete.path);
+      
+      if (!success) {
+        throw new Error(error?.message || "Erro ao excluir arquivo");
+      }
+      
       const travelRef = doc(db, "travels", travel.id);
       await updateDoc(travelRef, {
         documents: arrayRemove(documentToDelete)
       });
+      
       toast({
         title: "Sucesso",
         description: "Arquivo excluído."
