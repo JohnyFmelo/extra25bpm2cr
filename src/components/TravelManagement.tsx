@@ -465,7 +465,6 @@ export const TravelManagement = () => {
     return `${fmtCount} ${count === 1 ? 'diária' : 'diárias'}`;
   };
 
-  // *** CORRIGIDO E FINALIZADO ***
   const getSortedVolunteers = (travel: Travel) => {
     const allRegisteredVolunteers = travel.volunteers || [];
     let displayList = allRegisteredVolunteers.map((volunteerName, index) => ({
@@ -473,19 +472,14 @@ export const TravelManagement = () => {
       diaryCount: diaryCounts[volunteerName] || 0,
       rankWeight: getMilitaryRankWeight(getVolunteerRank(volunteerName)),
       originalIndex: index,
-      // `isSelected` aqui reflete apenas a seleção MANUAL (do banco de dados)
       isSelected: (travel.selectedVolunteers || []).includes(volunteerName)
     }));
 
     if (travel.isLocked) {
-      // Se a viagem está travada, mostra apenas os selecionados na ordem final
       return displayList
         .filter(v => (travel.selectedVolunteers || []).includes(v.fullName))
         .sort((a, b) => (travel.selectedVolunteers || []).indexOf(a.fullName) - (travel.selectedVolunteers || []).indexOf(b.fullName));
     } else {
-      // Se a viagem está ABERTA, fazemos a ordenação E a pré-seleção visual
-
-      // 1. Ordena a lista inteira para estabelecer o ranking
       displayList.sort((a, b) => {
         if (a.isSelected && !b.isSelected) return -1;
         if (!a.isSelected && b.isSelected) return 1;
@@ -494,22 +488,15 @@ export const TravelManagement = () => {
         return a.originalIndex - b.originalIndex;
       });
 
-      // 2. Faz uma segunda passagem para marcar os auto-selecionados para a VISUALIZAÇÃO
       let selectedCount = 0;
       return displayList.map(volunteer => {
-        let finalIsSelected = volunteer.isSelected; // Mantém a seleção manual
+        let finalIsSelected = volunteer.isSelected; 
         if (selectedCount < travel.slots && !finalIsSelected) {
-          // Se ainda há vagas e o voluntário não foi selecionado manualmente,
-          // ele é pré-selecionado automaticamente para a UI.
           finalIsSelected = true;
         }
-        
-        // Incrementa o contador apenas se o voluntário for considerado selecionado (manual ou auto)
         if(finalIsSelected) {
             selectedCount++;
         }
-
-        // Retorna o objeto do voluntário com a propriedade `isSelected` atualizada para a UI
         return { ...volunteer, isSelected: finalIsSelected };
       });
     }
@@ -539,28 +526,31 @@ export const TravelManagement = () => {
             const isArchived = travel.archived ?? false;
             const isPast = today > travelEnd;
             const isOpen = !isLocked && !isPast && !isArchived;
-            const isProcessing = isLocked && !isPast && !isArchived; 
             const isOngoing = isLocked && today >= new Date(travel.startDate + "T00:00:00") && today <= travelEnd && !isArchived;
+            const isProcessing = isLocked && !isPast && !isOngoing && !isArchived; 
             const isAwaitingAccountability = isPast && !isArchived;
             const isConcluded = isArchived;
+            const requiresAccountability = travel.agency !== "Gefron";
 
             const isUserVolunteered = travel.volunteers?.includes(currentUserInfo);
-            const isUserSelected = travel.selectedVolunteers?.includes(currentUserInfo);
+            const isUserSelected = (travel.selectedVolunteers || []).includes(currentUserInfo);
 
             let statusConfig;
             if (isConcluded) { 
-              statusConfig = { title: 'Missão Concluída', icon: <CheckCircle2 size={16} />, headerClass: 'bg-gray-500', h2Icon: <CheckCircle2 className="h-5 w-5" /> };
+              statusConfig = { title: requiresAccountability ? 'Missão Concluída' : 'Viagem Encerrada', icon: <CheckCircle2 size={16} />, headerClass: 'bg-gray-500', h2Icon: <CheckCircle2 className="h-5 w-5" /> };
             } else if (isOpen) {
               statusConfig = { title: 'Em aberto', icon: <div className="w-2 h-2 bg-white rounded-full animate-pulse" />, headerClass: 'bg-emerald-500', ctaClass: 'bg-emerald-500 hover:bg-emerald-600', h2Icon: <Handshake className="h-5 w-5" /> };
-            } else if (isProcessing || isOngoing) { 
-              statusConfig = { title: isOngoing ? 'Em trânsito' : 'Processando diária', icon: isOngoing ? <Route size={14}/> : <Loader2 size={14} className="animate-spin" />, headerClass: 'bg-blue-500', h2Icon: isOngoing ? <Car className="h-5 w-5" /> : <Calculator className="h-5 w-5" /> };
+            } else if (isOngoing) {
+              statusConfig = { title: 'Em trânsito', icon: <Route size={14}/>, headerClass: 'bg-blue-500', h2Icon: <Car className="h-5 w-5" /> };
+            } else if (isProcessing) {
+              statusConfig = { title: 'Processando diária', icon: <Loader2 size={14} className="animate-spin" />, headerClass: 'bg-orange-500', h2Icon: <Calculator className="h-5 w-5" /> };
             } else if (isAwaitingAccountability) { 
-              statusConfig = { title: 'Aguardando Prestação de Contas', icon: <Info size={16} />, headerClass: 'bg-red-600', h2Icon: <Info className="h-5 w-5" /> };
+              statusConfig = { title: requiresAccountability ? 'Aguardando P. de Contas' : 'Viagem Encerrada', icon: <Info size={16} />, headerClass: 'bg-red-600', h2Icon: <Info className="h-5 w-5" /> };
             } else {
               statusConfig = { title: 'Status Desconhecido', icon: <CheckCircle2 size={16} />, headerClass: 'bg-gray-500', h2Icon: <CheckCircle2 className="h-5 w-5" /> };
             }
           
-            const missingDocs = REQUIRED_DOCS.filter(reqDoc => !(travel.documents?.map(d => d.category).includes(reqDoc)));
+            const missingDocs = requiresAccountability ? REQUIRED_DOCS.filter(reqDoc => !(travel.documents?.map(d => d.category).includes(reqDoc))) : [];
             const displayVolunteersList = getSortedVolunteers(travel);
             const dailyCount = differenceInDays(travelEnd, new Date(travel.startDate + "T00:00:00")) + (travel.halfLastDay ? 0.5 : 1);
             const totalCost = travel.dailyRate && dailyCount > 0 ? dailyCount * Number(travel.dailyRate) : 0;
@@ -578,8 +568,8 @@ export const TravelManagement = () => {
                         {!isLocked && !isPast && <DropdownMenuItem onClick={() => handleEditTravel(travel)}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>}
                         {isOpen && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}><Lock className="mr-2 h-4 w-4" />Processar</DropdownMenuItem>}
                         {(isProcessing || isOngoing) && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}><LockOpen className="mr-2 h-4 w-4" />Reabrir</DropdownMenuItem>}
-                        {isAwaitingAccountability && <DropdownMenuItem onClick={() => handleArchive(travel.id, true)}><CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />Encerrar P. de Contas</DropdownMenuItem>}
-                        {isConcluded && <DropdownMenuItem onClick={() => handleArchive(travel.id, false)}><Archive className="mr-2 h-4 w-4" />Reabrir P. de Contas</DropdownMenuItem>}
+                        {isAwaitingAccountability && requiresAccountability && <DropdownMenuItem onClick={() => handleArchive(travel.id, true)}><CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />Encerrar P. de Contas</DropdownMenuItem>}
+                        {isConcluded && requiresAccountability && <DropdownMenuItem onClick={() => handleArchive(travel.id, false)}><Archive className="mr-2 h-4 w-4" />Reabrir P. de Contas</DropdownMenuItem>}
                         <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteTravel(travel.id)}><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>}
@@ -593,7 +583,7 @@ export const TravelManagement = () => {
                 <div className="main-content p-5">
                   <div className="info-section mb-5 grid grid-cols-2 gap-3">
                       <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-blue-400"><div className="text-xs font-medium text-slate-500 uppercase">Período</div><div className="text-sm font-semibold text-slate-800">{new Date(travel.startDate + 'T00:00').toLocaleDateString()} - {new Date(travel.endDate + 'T00:00').toLocaleDateString()}</div></div>
-                      <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-emerald-400"><div className="text-xs font-medium text-slate-500 uppercase">{isOpen ? "Vagas" : "Selecionados"}</div><div className="text-sm font-semibold text-slate-800">{isLocked || isConcluded ? `${travel.selectedVolunteers?.length || 0}` : `${travel.slots} para seleção`}</div></div>
+                      <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-emerald-400"><div className="text-xs font-medium text-slate-500 uppercase">{isOpen ? "Vagas" : "Selecionados"}</div><div className="text-sm font-semibold text-slate-800">{isLocked || isConcluded ? `${(travel.selectedVolunteers || []).length}` : `${travel.slots} para seleção`}</div></div>
                       <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-amber-400"><div className="text-xs font-medium text-slate-500 uppercase">Duração</div><div className="text-sm font-semibold text-slate-800">{formattedDiaryCount(dailyCount)}</div></div>
                       <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-purple-400"><div className="text-xs font-medium text-slate-500 uppercase">Remuneração</div><div className="text-sm font-semibold text-slate-800">{totalCost > 0 ? totalCost.toLocaleString("pt-BR", { style: 'currency', currency: 'BRL' }) : 'N/A'}</div></div>
                   </div>
@@ -621,12 +611,12 @@ export const TravelManagement = () => {
                               </div>) : <p className="text-xs text-slate-500 italic">Nenhum voluntário {isOpen ? 'inscrito' : 'selecionado'}.</p>}
                       </div>
                   </div>
-                  {(isAwaitingAccountability || isConcluded) && (isUserSelected || isAdmin) && <div className="documents-section mb-5">
+                  {(isOngoing || isAwaitingAccountability || isConcluded) && (isUserSelected || isAdmin) && requiresAccountability && <div className="documents-section mb-5">
                           <div className="section-header flex justify-between items-center mb-3 pb-2 border-b">
                               <h3 className="section-title text-sm font-semibold text-slate-800">Prestação de Contas</h3>
                               {!isConcluded && <Button size="sm" onClick={() => { setSelectedTravelForDocument(travel); setIsDocumentModalOpen(true); }}><Plus className="h-4 w-4 mr-2" /> Adicionar Documento</Button>}
                           </div>
-                          {isAwaitingAccountability && missingDocs.length > 0 && <div className="p-3 my-3 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg">
+                          {(isOngoing || isAwaitingAccountability) && missingDocs.length > 0 && <div className="p-3 my-3 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg">
                                   <p className="font-semibold flex items-center gap-2 text-sm"><AlertTriangle size={16} /> Documentos Obrigatórios Pendentes:</p>
                                   <ul className="list-disc list-inside mt-1 pl-2 text-xs">{missingDocs.map(doc => <li key={doc}>{doc}</li>)}</ul>
                               </div>}
