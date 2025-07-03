@@ -398,7 +398,6 @@ export const TravelManagement = () => {
     }
   };
 
-  // *** CORRIGIDO ***
   const handleToggleLock = async (travelId: string) => {
     const travelRef = doc(db, "travels", travelId);
     const travelSnap = await getDoc(travelRef);
@@ -406,27 +405,16 @@ export const TravelManagement = () => {
     const travelData = travelSnap.data() as Travel;
     try {
       if (!travelData.isLocked) {
-        // Obter voluntários já selecionados manualmente via duplo clique
         const manualSelections = travelData.selectedVolunteers || [];
-        
-        // Calcular quantas vagas restam para preencher automaticamente
         const availableSlots = Math.max(0, (travelData.slots || 0) - manualSelections.length);
-
-        // Determinar candidatos para seleção automática (todos os inscritos, exceto os selecionados manualmente)
         const autoSelectCandidates = (travelData.volunteers || []).filter(v => !manualSelections.includes(v));
-
-        // Classificar os candidatos
         const processed = autoSelectCandidates.map(v => ({
             fullName: v,
             diaryCount: diaryCounts[v] || 0,
             rankWeight: getMilitaryRankWeight(getVolunteerRank(v)),
             originalIndex: (travelData.volunteers || []).indexOf(v)
         })).sort((a, b) => a.diaryCount - b.diaryCount || b.rankWeight - a.rankWeight || a.originalIndex - b.originalIndex);
-
-        // Pegar os candidatos mais bem classificados para preencher as vagas restantes
         const autoSelectedVolunteers = processed.slice(0, availableSlots).map(v => v.fullName);
-
-        // Combinar seleções manuais e automáticas para a lista final
         const finalSelectedVolunteers = [...manualSelections, ...autoSelectedVolunteers];
         
         await updateDoc(travelRef, { isLocked: true, selectedVolunteers: finalSelectedVolunteers });
@@ -476,7 +464,8 @@ export const TravelManagement = () => {
     const fmtCount = count.toLocaleString("pt-BR", { minimumFractionDigits: count % 1 !== 0 ? 1 : 0, maximumFractionDigits: 1 });
     return `${fmtCount} ${count === 1 ? 'diária' : 'diárias'}`;
   };
-  // *** CORRIGIDO ***
+
+  // *** CORRIGIDO E FINALIZADO ***
   const getSortedVolunteers = (travel: Travel) => {
     const allRegisteredVolunteers = travel.volunteers || [];
     let displayList = allRegisteredVolunteers.map((volunteerName, index) => ({
@@ -484,29 +473,48 @@ export const TravelManagement = () => {
       diaryCount: diaryCounts[volunteerName] || 0,
       rankWeight: getMilitaryRankWeight(getVolunteerRank(volunteerName)),
       originalIndex: index,
+      // `isSelected` aqui reflete apenas a seleção MANUAL (do banco de dados)
       isSelected: (travel.selectedVolunteers || []).includes(volunteerName)
     }));
 
     if (travel.isLocked) {
       // Se a viagem está travada, mostra apenas os selecionados na ordem final
       return displayList
-        .filter(v => v.isSelected)
+        .filter(v => (travel.selectedVolunteers || []).includes(v.fullName))
         .sort((a, b) => (travel.selectedVolunteers || []).indexOf(a.fullName) - (travel.selectedVolunteers || []).indexOf(b.fullName));
     } else {
-      // Se a viagem está aberta, ordena para dar feedback visual ao admin
+      // Se a viagem está ABERTA, fazemos a ordenação E a pré-seleção visual
+
+      // 1. Ordena a lista inteira para estabelecer o ranking
       displayList.sort((a, b) => {
-        // 1. Prioriza os voluntários selecionados manualmente, colocando-os no topo
         if (a.isSelected && !b.isSelected) return -1;
         if (!a.isSelected && b.isSelected) return 1;
-
-        // 2. Para voluntários com o mesmo status de seleção (ambos selecionados ou ambos não), aplica os critérios de classificação
         if (a.diaryCount !== b.diaryCount) return a.diaryCount - b.diaryCount;
         if (a.rankWeight !== b.rankWeight) return b.rankWeight - a.rankWeight;
         return a.originalIndex - b.originalIndex;
       });
-      return displayList;
+
+      // 2. Faz uma segunda passagem para marcar os auto-selecionados para a VISUALIZAÇÃO
+      let selectedCount = 0;
+      return displayList.map(volunteer => {
+        let finalIsSelected = volunteer.isSelected; // Mantém a seleção manual
+        if (selectedCount < travel.slots && !finalIsSelected) {
+          // Se ainda há vagas e o voluntário não foi selecionado manualmente,
+          // ele é pré-selecionado automaticamente para a UI.
+          finalIsSelected = true;
+        }
+        
+        // Incrementa o contador apenas se o voluntário for considerado selecionado (manual ou auto)
+        if(finalIsSelected) {
+            selectedCount++;
+        }
+
+        // Retorna o objeto do voluntário com a propriedade `isSelected` atualizada para a UI
+        return { ...volunteer, isSelected: finalIsSelected };
+      });
     }
   };
+  
   const getCategoryChipColor = (category?: string) => {
     switch (category) {
       case "KM Inicial": return "bg-blue-100 text-blue-800";
@@ -530,12 +538,11 @@ export const TravelManagement = () => {
             const isLocked = travel.isLocked ?? false;
             const isArchived = travel.archived ?? false;
             const isPast = today > travelEnd;
-            const isOpen = !isLocked && !isPast && !isArchived; // Correção: não deve estar arquivado para estar aberto
-            const isProcessing = isLocked && !isPast && !isArchived; // Correção: não deve estar arquivado
+            const isOpen = !isLocked && !isPast && !isArchived;
+            const isProcessing = isLocked && !isPast && !isArchived; 
             const isOngoing = isLocked && today >= new Date(travel.startDate + "T00:00:00") && today <= travelEnd && !isArchived;
             const isAwaitingAccountability = isPast && !isArchived;
             const isConcluded = isArchived;
-
 
             const isUserVolunteered = travel.volunteers?.includes(currentUserInfo);
             const isUserSelected = travel.selectedVolunteers?.includes(currentUserInfo);
@@ -545,7 +552,7 @@ export const TravelManagement = () => {
               statusConfig = { title: 'Missão Concluída', icon: <CheckCircle2 size={16} />, headerClass: 'bg-gray-500', h2Icon: <CheckCircle2 className="h-5 w-5" /> };
             } else if (isOpen) {
               statusConfig = { title: 'Em aberto', icon: <div className="w-2 h-2 bg-white rounded-full animate-pulse" />, headerClass: 'bg-emerald-500', ctaClass: 'bg-emerald-500 hover:bg-emerald-600', h2Icon: <Handshake className="h-5 w-5" /> };
-            } else if (isProcessing || isOngoing) { // Combinado para simplificar
+            } else if (isProcessing || isOngoing) { 
               statusConfig = { title: isOngoing ? 'Em trânsito' : 'Processando diária', icon: isOngoing ? <Route size={14}/> : <Loader2 size={14} className="animate-spin" />, headerClass: 'bg-blue-500', h2Icon: isOngoing ? <Car className="h-5 w-5" /> : <Calculator className="h-5 w-5" /> };
             } else if (isAwaitingAccountability) { 
               statusConfig = { title: 'Aguardando Prestação de Contas', icon: <Info size={16} />, headerClass: 'bg-red-600', h2Icon: <Info className="h-5 w-5" /> };
@@ -593,9 +600,9 @@ export const TravelManagement = () => {
                   <div className="volunteers-section mb-5">
                        <div className="flex justify-between items-center mb-3 pb-2 border-b"><h3 className="text-sm font-semibold text-slate-800">{isOpen ? `Voluntários (${travel.volunteers?.length || 0} inscritos)` : 'Voluntário(s) em Missão'}</h3>{isAdmin && isOpen && <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setSelectedTravelId(travel.id); setAddVolunteerDialogOpen(true); }}><UserPlus className="h-3.5 w-3.5 mr-1.5" />Adicionar</Button>}</div>
                       <div className="volunteer-grid grid gap-2">
-                          {displayVolunteersList.length > 0 ? displayVolunteersList.map(vol => <div 
-                              key={vol.fullName} 
-                              className={`volunteer-item border rounded-lg p-3 transition-all ${!isLocked ? 'cursor-pointer' : ''} ${isLocked || isConcluded ? 'border-emerald-400 bg-emerald-50' : vol.isSelected ? 'border-blue-400 bg-blue-50' : 'bg-white'}`}
+                          {displayVolunteersList.length > 0 ? displayVolunteersList.map((vol, index) => <div 
+                              key={`${vol.fullName}-${index}`} 
+                              className={`volunteer-item border rounded-lg p-3 transition-all ${!isLocked && !isConcluded ? 'cursor-pointer' : ''} ${isLocked || isConcluded ? 'border-emerald-400 bg-emerald-50' : vol.isSelected ? 'border-blue-400 bg-blue-50' : 'bg-white'}`}
                               onDoubleClick={() => isAdmin && isOpen && handleToggleSelectedVolunteer(travel.id, vol.fullName)}
                           >
                                   <div className="flex justify-between items-start">
@@ -607,7 +614,7 @@ export const TravelManagement = () => {
                                            </div>
                                       </div>
                                       <div className="flex items-center gap-2 pl-2">
-                                          {(isLocked || isConcluded) && vol.isSelected && <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />}
+                                          {(isLocked || isConcluded) && (travel.selectedVolunteers || []).includes(vol.fullName) && <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />}
                                           {isAdmin && isOpen && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={(e) => { e.stopPropagation(); handleRemoveVolunteer(travel.id, vol.fullName); }}><X className="h-4 w-4 text-red-500" /></Button>}
                                       </div>
                                   </div>
