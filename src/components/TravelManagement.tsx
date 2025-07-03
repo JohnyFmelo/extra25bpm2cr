@@ -464,6 +464,75 @@ export const TravelManagement = () => {
       });
     }
   };
+
+  const handleToggleSelectedVolunteer = async (travelId: string, volunteerName: string) => {
+    if (!isAdmin) return;
+    
+    try {
+      const travelRef = doc(db, "travels", travelId);
+      const travelSnap = await getDoc(travelRef);
+      
+      if (!travelSnap.exists()) return;
+      
+      const travelData = travelSnap.data() as Travel;
+      const currentSelected = travelData.selectedVolunteers || [];
+      
+      if (currentSelected.includes(volunteerName)) {
+        // Remove from selected
+        await updateDoc(travelRef, {
+          selectedVolunteers: arrayRemove(volunteerName)
+        });
+        toast({
+          title: "Voluntário desmarcado",
+          description: `${volunteerName} foi removido da seleção.`
+        });
+      } else {
+        // Add to selected
+        await updateDoc(travelRef, {
+          selectedVolunteers: arrayUnion(volunteerName)
+        });
+        toast({
+          title: "Voluntário selecionado",
+          description: `${volunteerName} foi adicionado à seleção.`
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling volunteer selection:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar seleção do voluntário.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRemoveVolunteer = async (travelId: string, volunteerName: string) => {
+    if (!isAdmin) return;
+    
+    if (!window.confirm(`Tem certeza que deseja remover ${volunteerName} desta viagem?`)) {
+      return;
+    }
+    
+    try {
+      const travelRef = doc(db, "travels", travelId);
+      await updateDoc(travelRef, {
+        volunteers: arrayRemove(volunteerName),
+        selectedVolunteers: arrayRemove(volunteerName)
+      });
+      
+      toast({
+        title: "Voluntário removido",
+        description: `${volunteerName} foi removido da viagem.`
+      });
+    } catch (error) {
+      console.error("Error removing volunteer:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao remover voluntário.",
+        variant: "destructive"
+      });
+    }
+  };
   const handleToggleLock = async (travelId: string) => {
     const travelRef = doc(db, "travels", travelId);
     const travelSnap = await getDoc(travelRef);
@@ -624,9 +693,10 @@ export const TravelManagement = () => {
           const isOpen = !isLocked && !isClosed;
           const isUserVolunteered = travel.volunteers?.includes(currentUserInfo);
           const isUserSelected = travel.selectedVolunteers?.includes(currentUserInfo);
+          
           let statusConfig = {
             theme: 'finished',
-            title: 'Missão Concluída',
+            title: isUserSelected ? 'Aguardando Prestação de Contas' : 'Missão Concluída',
             header: 'SINFRA - VIAGEM ENCERRADA',
             icon: <CheckCircle2 size={16} />,
             headerClass: 'bg-gray-500',
@@ -703,18 +773,35 @@ export const TravelManagement = () => {
                     setAddVolunteerDialogOpen(true);
                   }}><UserPlus className="h-3.5 w-3.5 mr-1.5" />Adicionar</Button>}</div>
                         <div className="volunteer-grid grid gap-2">
-                           {displayVolunteersList.length > 0 ? displayVolunteersList.map(vol => <div key={vol.fullName} className={`volunteer-item border rounded-lg p-3 transition-all ${vol.isSelected && !isOpen ? 'border-emerald-400 bg-emerald-50' : vol.isSelected && isOpen ? 'border-blue-300 bg-blue-50' : 'bg-white'}`}>
-                                   <div className="flex justify-between items-start">
-                                       <div className="flex flex-col">
-                                            <p className={`text-sm font-semibold ${vol.isSelected && !isOpen ? 'text-emerald-800' : 'text-slate-800'}`}>{vol.fullName}</p>
-                                            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                                                <span className="flex items-center gap-1.5"><MapPin size={12} /> {volunteerCounts[vol.fullName] || 0} viagens</span>
-                                                <span className="flex items-center gap-1.5"><DollarSign size={12} /> {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}</span>
-                                            </div>
-                                       </div>
-                                       {vol.isSelected && !isOpen && <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />}
-                                   </div>
-                               </div>) : <p className="text-xs text-slate-500 italic">Nenhum voluntário {isOpen ? 'inscrito' : 'selecionado'}.</p>}
+                            {displayVolunteersList.length > 0 ? displayVolunteersList.map(vol => <div 
+                                key={vol.fullName} 
+                                className={`volunteer-item border rounded-lg p-3 transition-all cursor-pointer ${vol.isSelected && !isOpen ? 'border-emerald-400 bg-emerald-50' : vol.isSelected && isOpen ? 'border-blue-300 bg-blue-50' : 'bg-white'}`}
+                                onDoubleClick={() => isAdmin && handleToggleSelectedVolunteer(travel.id, vol.fullName)}
+                            >
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex flex-col flex-1">
+                                             <p className={`text-sm font-semibold ${vol.isSelected && !isOpen ? 'text-emerald-800' : 'text-slate-800'}`}>{vol.fullName}</p>
+                                             <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                                                 <span className="flex items-center gap-1.5"><MapPin size={12} /> {volunteerCounts[vol.fullName] || 0} viagens</span>
+                                                 <span className="flex items-center gap-1.5"><DollarSign size={12} /> {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}</span>
+                                             </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {vol.isSelected && !isOpen && <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />}
+                                            {isAdmin && <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRemoveVolunteer(travel.id, vol.fullName);
+                                                }}
+                                            >
+                                                <X className="h-4 w-4 text-red-500" />
+                                            </Button>}
+                                        </div>
+                                    </div>
+                                </div>) : <p className="text-xs text-slate-500 italic">Nenhum voluntário {isOpen ? 'inscrito' : 'selecionado'}.</p>}
                         </div>
                     </div>
 
