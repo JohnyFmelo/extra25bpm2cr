@@ -24,9 +24,9 @@ const Login = () => {
 
         <div className="text-center text-sm text-gray-600">
           {/* --- CORRECTED LINE BELOW --- */}
-          <p>© {new Date().getFullYear()} - Sistema de Controle de Extraordinária, Viagens e TCO</p>
+          <p>Sistema de Controle de Extraordinária, Viagens e TCO</p>
           {/* This might be a version number, which is fine. If it's a placeholder, consider removing it. */}
-          <p>05.02.2025</p>
+          <p>© 16.01.2025</p>
         </div>
       </div>
     </div>
