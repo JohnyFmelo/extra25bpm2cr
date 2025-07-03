@@ -13,77 +13,50 @@ import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { v4 as uuidv4 } from 'uuid';
-import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin, UserPlus, Handshake, Calculator, CheckCircle2, Route, Loader2, FileText, FileImage, Download, DollarSign, FileUp, AlertTriangle } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin, UserPlus, Handshake, Calculator, Car, CheckCircle2, Route, Loader2, UploadCloud, FileText, FileImage, Download, DollarSign, FileUp, AlertTriangle } from "lucide-react";
 import { Switch } from "./ui/switch";
 import AddVolunteerDialog from "./AddVolunteerDialog";
-
-// --- NEW: Animated Police Car Icon Component ---
-const PoliceCarIcon = ({ className }: { className?: string }) => (
-  <div className={className}>
-    <svg viewBox="0 0 200 125" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <defs>
-        <linearGradient id="carBody" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style={{ stopColor: '#6B7280', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: '#4B5563', stopOpacity: 1 }} />
-        </linearGradient>
-      </defs>
-      <g>
-        <animateTransform attributeName="transform" type="translate" values="0,0; 5,0; 0,0; -5,0; 0,0" dur="2s" repeatCount="indefinite" />
-        <rect x="50" y="60" width="120" height="40" rx="5" fill="url(#carBody)" stroke="#374151" strokeWidth="2"/>
-        <rect x="70" y="35" width="80" height="30" rx="8" fill="url(#carBody)" stroke="#374151" strokeWidth="2"/>
-        <rect x="75" y="40" width="25" height="20" rx="3" fill="#87CEEB" opacity="0.8"/>
-        <rect x="105" y="40" width="30" height="20" rx="3" fill="#87CEEB" opacity="0.8"/>
-        <rect x="140" y="40" width="10" height="20" rx="3" fill="#87CEEB" opacity="0.8"/>
-        <rect x="110" y="25" width="20" height="12" rx="6" fill="#ff0000">
-          <animate attributeName="fill" values="#ff0000;#0000ff;#ff0000" dur="0.4s" repeatCount="indefinite"/>
-        </rect>
-        <text x="110" y="82" fontFamily="Arial, sans-serif" fontSize="12" fontWeight="bold" textAnchor="middle" fill="white">POLÍCIA</text>
-        <circle cx="170" cy="70" r="5" fill="#ffffcc">
-          <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
-        </circle>
-        <g>
-          <circle cx="80" cy="100" r="15" fill="#2D3748" stroke="#1A202C" strokeWidth="2"/>
-          <circle cx="80" cy="100" r="8" fill="#4A5568"/>
-          <circle cx="80" cy="100" r="3" fill="#CBD5E0"/>
-          <animateTransform attributeName="transform" type="rotate" values="0 80 100; 360 80 100" dur="0.6s" repeatCount="indefinite"/>
-        </g>
-        <g>
-          <circle cx="140" cy="100" r="15" fill="#2D3748" stroke="#1A202C" strokeWidth="2"/>
-          <circle cx="140" cy="100" r="8" fill="#4A5568"/>
-          <circle cx="140" cy="100" r="3" fill="#CBD5E0"/>
-          <animateTransform attributeName="transform" type="rotate" values="0 140 100; 360 140 100" dur="0.6s" repeatCount="indefinite"/>
-        </g>
-        <g opacity="0.4">
-          <line x1="30" y1="65" x2="15" y2="65" stroke="#9CA3AF" strokeWidth="2"><animate attributeName="opacity" values="0;1;0" dur="0.6s" repeatCount="indefinite"/></line>
-          <line x1="25" y1="75" x2="10" y2="75" stroke="#9CA3AF" strokeWidth="2"><animate attributeName="opacity" values="0;1;0" dur="0.8s" repeatCount="indefinite"/></line>
-        </g>
-        <animateTransform attributeName="transform" type="translate" values="0,0; 1,0; 0,0; -1,0; 0,0" dur="0.1s" repeatCount="indefinite" additive="sum"/>
-      </g>
-    </svg>
-  </div>
-);
-
+import PoliceCarIcon from "./PoliceCarIcon"; // NEW: Import the custom icon
 
 // Interface for uploaded documents
 interface TravelDocument {
-  id: string; name: string; category?: string; originalFileName?: string;
-  url: string; path: string; size: number; type: string;
-  uploaderId: string; uploaderName: string; createdAt: string;
+  id: string;
+  name: string;
+  category?: string;
+  originalFileName?: string;
+  url: string;
+  path: string;
+  size: number;
+  type: string;
+  uploaderId: string;
+  uploaderName: string;
+  createdAt: string;
 }
 
 // Updated Travel interface
 interface Travel {
-  id: string; startDate: string; endDate: string; slots: number;
-  destination: string; agency?: string; dailyAllowance?: number | null;
-  dailyRate?: number | null; halfLastDay: boolean; volunteers: string[];
-  selectedVolunteers?: string[]; archived: boolean; isLocked?: boolean;
+  id: string;
+  startDate: string;
+  endDate: string;
+  slots: number;
+  destination: string;
+  agency?: string;
+  dailyAllowance?: number | null;
+  dailyRate?: number | null;
+  halfLastDay: boolean;
+  volunteers: string[];
+  selectedVolunteers?: string[];
+  archived: boolean;
+  isLocked?: boolean;
   documents?: TravelDocument[];
 }
 
+// Constants
 const REQUIRED_DOCS = ["KM Inicial", "Abastecimento", "KM Final", "Termo de Cautela"];
 const AGENCIES = ["Sinfra", "Gefron", "Sema", "Rural"];
 const DOCUMENT_CATEGORIES = ["KM Inicial", "Abastecimento", "KM Final", "Termo de Cautela", "Outros Gastos", "Outros"];
 
+// Helper Functions
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -92,7 +65,18 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-const AddDocumentDialog = ({ open, onOpenChange, travel, onUploadSuccess }: { open: boolean; onOpenChange: (open: boolean) => void; travel: Travel | null; onUploadSuccess: () => void; }) => {
+// Add Document Dialog Component
+const AddDocumentDialog = ({
+  open,
+  onOpenChange,
+  travel,
+  onUploadSuccess
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  travel: Travel | null;
+  onUploadSuccess: () => void;
+}) => {
   const [file, setFile] = useState<File | null>(null);
   const [category, setCategory] = useState("");
   const [name, setName] = useState("");
@@ -103,37 +87,121 @@ const AddDocumentDialog = ({ open, onOpenChange, travel, onUploadSuccess }: { op
   const currentUserInfo = `${user.rank} ${user.warName}`;
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  useEffect(() => { if (!open) { setFile(null); setCategory(""); setName(""); setIsUploading(false); setProgress(0); } }, [open]);
+  useEffect(() => {
+    if (!open) {
+      setFile(null);
+      setCategory("");
+      setName("");
+      setIsUploading(false);
+      setProgress(0);
+    }
+  }, [open]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      if (selectedFile.size > 10 * 1024 * 1024) { toast({ title: "Arquivo muito grande", description: "O tamanho máximo do arquivo é 10MB.", variant: "destructive" }); return; }
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        toast({ title: "Arquivo muito grande", description: "O tamanho máximo do arquivo é 10MB.", variant: "destructive" });
+        return;
+      }
       setFile(selectedFile);
-      if (!name) setName(selectedFile.name.split('.').slice(0, -1).join('.'));
+      if (!name) {
+        setName(selectedFile.name.split('.').slice(0, -1).join('.'));
+      }
     }
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !category || !name.trim() || !travel) { toast({ title: "Campos obrigatórios", description: "Por favor, preencha todos os campos e selecione um arquivo.", variant: "destructive" }); return; }
-    setIsUploading(true); setProgress(0);
+    if (!file || !category || !name.trim() || !travel) {
+      toast({ title: "Campos obrigatórios", description: "Por favor, preencha todos os campos e selecione um arquivo.", variant: "destructive" });
+      return;
+    }
+    setIsUploading(true);
+    setProgress(0);
+    
     try {
       const uniqueFileName = `${uuidv4()}-${file.name}`;
       const storagePath = `travels/${travel.id}/${user.id}/${uniqueFileName}`;
+      
       const progressInterval = setInterval(() => setProgress(prev => Math.min(prev + 10, 90)), 200);
       const { url, error } = await uploadPDF(storagePath, file);
-      clearInterval(progressInterval); setProgress(100);
+      clearInterval(progressInterval);
+      setProgress(100);
+      
       if (error || !url) throw new Error(error?.message || "Erro no upload");
-      const newDocument: TravelDocument = { id: uuidv4(), name: name.trim(), category, originalFileName: file.name, url, path: storagePath, size: file.size, type: file.type, uploaderId: user.id, uploaderName: currentUserInfo, createdAt: new Date().toISOString() };
-      await updateDoc(doc(db, "travels", travel.id), { documents: arrayUnion(newDocument) });
+      
+      const newDocument: TravelDocument = {
+        id: uuidv4(),
+        name: name.trim(),
+        category: category,
+        originalFileName: file.name,
+        url,
+        path: storagePath,
+        size: file.size,
+        type: file.type,
+        uploaderId: user.id,
+        uploaderName: currentUserInfo,
+        createdAt: new Date().toISOString()
+      };
+      
+      const travelRef = doc(db, "travels", travel.id);
+      await updateDoc(travelRef, { documents: arrayUnion(newDocument) });
+      
       toast({ title: "Sucesso", description: "Documento enviado!" });
-      setIsUploading(false); onUploadSuccess(); onOpenChange(false);
+      setIsUploading(false);
+      onUploadSuccess();
+      onOpenChange(false);
     } catch (error) {
       console.error("Upload error:", error);
       toast({ title: "Erro de Upload", description: "Não foi possível enviar o arquivo.", variant: "destructive" });
       setIsUploading(false);
     }
   };
-  return <Dialog open={open} onOpenChange={onOpenChange}> <DialogContent className="sm:max-w-[480px]"> <DialogHeader> <DialogTitle>Adicionar Documento de Viagem</DialogTitle> <DialogDescription className="text-gray-600"> Envie um arquivo para a prestação de contas da viagem para {travel?.destination}. </DialogDescription> </DialogHeader> <form onSubmit={handleSubmit} className="space-y-4 pt-4"> <div> <Label htmlFor="category">Categoria do Documento</Label> <Select value={category} onValueChange={setCategory}> <SelectTrigger id="category" className="w-full mt-1"><SelectValue placeholder="Selecione uma categoria..." /></SelectTrigger> <SelectContent>{DOCUMENT_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent> </Select> </div> <div> <Label htmlFor="doc-name">Nome / Descrição do Documento</Label> <Input id="doc-name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Nota fiscal do abastecimento" className="mt-1" /> </div> <div> <Label>Arquivo</Label> <div className="mt-1"> <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" /> <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}> <FileUp className="mr-2 h-4 w-4" /> {file ? 'Trocar Arquivo' : 'Selecionar Arquivo'} </Button> </div> {file && <div className="mt-2 text-sm text-slate-600 bg-slate-50 p-2 rounded-md border">{file.name} ({formatFileSize(file.size)})</div>} </div> {isUploading && <div className="w-full bg-slate-200 rounded-full h-2.5"><div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div></div>} </form> <DialogFooter> <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isUploading}>Cancelar</Button> <Button type="submit" onClick={handleSubmit} disabled={isUploading || !file || !category || !name.trim()}> {isUploading ? `Enviando... ${Math.round(progress)}%` : "Enviar Documento"} </Button> </DialogFooter> </DialogContent> </Dialog>;
+
+  return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="sm:max-w-[480px]">
+              <DialogHeader>
+                  <DialogTitle>Adicionar Documento de Viagem</DialogTitle>
+                  <DialogDescription className="text-gray-600">
+                      Envie um arquivo para a prestação de contas da viagem para {travel?.destination}.
+                  </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                  <div>
+                      <Label htmlFor="category">Categoria do Documento</Label>
+                      <Select value={category} onValueChange={setCategory}>
+                          <SelectTrigger id="category" className="w-full mt-1"><SelectValue placeholder="Selecione uma categoria..." /></SelectTrigger>
+                          <SelectContent>{DOCUMENT_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+                      </Select>
+                  </div>
+                   <div>
+                      <Label htmlFor="doc-name">Nome / Descrição do Documento</Label>
+                      <Input id="doc-name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Nota fiscal do abastecimento" className="mt-1" />
+                  </div>
+                  <div>
+                      <Label>Arquivo</Label>
+                      <div className="mt-1">
+                          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" />
+                          <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                              <FileUp className="mr-2 h-4 w-4" />
+                              {file ? 'Trocar Arquivo' : 'Selecionar Arquivo'}
+                          </Button>
+                      </div>
+                      {file && <div className="mt-2 text-sm text-slate-600 bg-slate-50 p-2 rounded-md border">{file.name} ({formatFileSize(file.size)})</div>}
+                  </div>
+                  {isUploading && <div className="w-full bg-slate-200 rounded-full h-2.5"><div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div></div>}
+              </form>
+              <DialogFooter>
+                  <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isUploading}>Cancelar</Button>
+                  <Button type="submit" onClick={handleSubmit} disabled={isUploading || !file || !category || !name.trim()}>
+                      {isUploading ? `Enviando... ${Math.round(progress)}%` : "Enviar Documento"}
+                  </Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
+  );
 };
 
 export const TravelManagement = () => {
@@ -153,8 +221,6 @@ export const TravelManagement = () => {
   const [selectedTravelId, setSelectedTravelId] = useState<string>("");
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   const [selectedTravelForDocument, setSelectedTravelForDocument] = useState<Travel | null>(null);
-  // --- NEW STATE from reference code for manual selection ---
-  const [selectedVolunteers, setSelectedVolunteers] = useState<{ [travelId: string]: string[] }>({});
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType === "admin";
@@ -196,32 +262,64 @@ export const TravelManagement = () => {
 
   const handleCreateTravel = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (new Date(endDate) < new Date(startDate)) { toast({ title: "Datas inválidas", description: "A data final não pode ser anterior à data inicial.", variant: "destructive" }); return; }
-    const travelData = { startDate, endDate, slots: Number(slots), destination, agency, dailyRate: dailyRate ? Number(dailyRate) : null, halfLastDay, };
+    if (new Date(endDate) < new Date(startDate)) {
+      toast({ title: "Datas inválidas", description: "A data final não pode ser anterior à data inicial.", variant: "destructive" });
+      return;
+    }
+    const travelData = {
+      startDate,
+      endDate,
+      slots: Number(slots),
+      destination,
+      agency,
+      dailyRate: dailyRate ? Number(dailyRate) : null,
+      halfLastDay,
+    };
     try {
       if (editingTravel) {
         await updateDoc(doc(db, "travels", editingTravel.id), { ...travelData, updatedAt: new Date() });
         toast({ title: "Sucesso", description: "Viagem atualizada com sucesso!" });
       } else {
-        await addDoc(collection(db, "travels"), { ...travelData, createdAt: new Date(), volunteers: [], selectedVolunteers: [], archived: false, isLocked: false, documents: [] });
+        await addDoc(collection(db, "travels"), {
+          ...travelData,
+          createdAt: new Date(),
+          volunteers: [],
+          selectedVolunteers: [],
+          archived: false,
+          isLocked: false,
+          documents: []
+        });
         toast({ title: "Sucesso", description: "Viagem criada com sucesso!" });
       }
-      setIsModalOpen(false); resetFormState();
+      setIsModalOpen(false);
+      resetFormState();
     } catch (error) {
       console.error("Error creating/updating travel:", error);
       toast({ title: "Erro", description: "Erro ao salvar viagem.", variant: "destructive" });
     }
   };
 
-  const resetFormState = () => { setStartDate(""); setEndDate(""); setSlots(""); setDestination(""); setAgency(""); setDailyRate(""); setHalfLastDay(false); setEditingTravel(null); };
-  const handleEditTravel = (travel: Travel) => { setEditingTravel(travel); setStartDate(travel.startDate); setEndDate(travel.endDate); setSlots(String(travel.slots)); setDestination(travel.destination); setAgency(travel.agency || ""); setDailyRate(String(travel.dailyRate || "")); setHalfLastDay(travel.halfLastDay || false); setIsModalOpen(true); };
+  const resetFormState = () => {
+    setStartDate(""); setEndDate(""); setSlots(""); setDestination(""); setAgency("");
+    setDailyRate(""); setHalfLastDay(false); setEditingTravel(null);
+  };
+
+  const handleEditTravel = (travel: Travel) => {
+    setEditingTravel(travel);
+    setStartDate(travel.startDate); setEndDate(travel.endDate); setSlots(String(travel.slots));
+    setDestination(travel.destination); setAgency(travel.agency || "");
+    setDailyRate(String(travel.dailyRate || "")); setHalfLastDay(travel.halfLastDay || false);
+    setIsModalOpen(true);
+  };
 
   const handleDeleteTravel = async (travelId: string) => {
     const travel = travels.find(t => t.id === travelId);
     if (!travel) return;
     if (window.confirm(`Tem certeza que deseja excluir a viagem para "${travel.destination}" e TODOS os seus documentos permanentemente?`)) {
       try {
-        if (travel.documents && travel.documents.length > 0) await Promise.all(travel.documents.map(doc => deletePDF(doc.path)));
+        if (travel.documents && travel.documents.length > 0) {
+          await Promise.all(travel.documents.map(doc => deletePDF(doc.path)));
+        }
         await deleteDoc(doc(db, "travels", travelId));
         toast({ title: "Sucesso", description: "Viagem e documentos excluídos." });
       } catch (error) {
@@ -235,16 +333,24 @@ export const TravelManagement = () => {
     try {
       await updateDoc(doc(db, "travels", travelId), { archived: newArchivedState });
       toast({ title: "Sucesso", description: newArchivedState ? "Prestação de contas encerrada!" : "Status da viagem redefinido." });
-    } catch (error) { toast({ title: "Erro", description: "Erro ao alterar o status da viagem.", variant: "destructive" }); }
+    } catch (error) {
+      toast({ title: "Erro", description: "Erro ao alterar o status da viagem.", variant: "destructive" });
+    }
   };
   
   const handleVolunteer = async (travelId: string) => {
-    if (!currentUserInfo || !user.rank) { toast({ title: "Erro", description: "Usuário não encontrado. Faça login.", variant: "destructive" }); return; }
+    if (!currentUserInfo || !user.rank) {
+      toast({ title: "Erro", description: "Usuário não encontrado. Faça login.", variant: "destructive" });
+      return;
+    }
     const travelRef = doc(db, "travels", travelId);
     try {
       const travelSnap = await getDoc(travelRef);
       const travelData = travelSnap.data() as Travel;
-      if (travelData.isLocked) { toast({ title: "Ação não permitida", description: "Inscrições encerradas.", variant: "destructive" }); return; }
+      if (travelData.isLocked) {
+        toast({ title: "Ação não permitida", description: "Inscrições encerradas.", variant: "destructive" });
+        return;
+      }
       const currentVolunteers = travelData.volunteers || [];
       if (currentVolunteers.includes(currentUserInfo)) {
         await updateDoc(travelRef, { volunteers: arrayRemove(currentUserInfo) });
@@ -253,21 +359,29 @@ export const TravelManagement = () => {
         await updateDoc(travelRef, { volunteers: arrayUnion(currentUserInfo) });
         toast({ title: "Sucesso", description: "Você se candidatou com sucesso!" });
       }
-    } catch (error) { toast({ title: "Erro", description: "Erro ao se candidatar.", variant: "destructive" }); }
+    } catch (error) {
+      toast({ title: "Erro", description: "Erro ao se candidatar.", variant: "destructive" });
+    }
   };
 
-  // --- NEW FUNCTION from reference code for manual selection ---
-  const handleManualVolunteerSelection = (travelId: string, volunteerName: string) => {
+  const handleToggleSelectedVolunteer = async (travelId: string, volunteerName: string) => {
     if (!isAdmin) return;
-    setSelectedVolunteers(prev => {
-        const currentSelections = prev[travelId] || [];
-        const isSelected = currentSelections.includes(volunteerName);
-        if (isSelected) {
-            return { ...prev, [travelId]: currentSelections.filter(name => name !== volunteerName) };
-        } else {
-            return { ...prev, [travelId]: [...currentSelections, volunteerName] };
-        }
-    });
+    try {
+      const travelRef = doc(db, "travels", travelId);
+      const travelSnap = await getDoc(travelRef);
+      if (!travelSnap.exists()) return;
+      const travelData = travelSnap.data() as Travel;
+      const currentSelected = travelData.selectedVolunteers || [];
+      if (currentSelected.includes(volunteerName)) {
+        await updateDoc(travelRef, { selectedVolunteers: arrayRemove(volunteerName) });
+        toast({ title: "Voluntário desmarcado" });
+      } else {
+        await updateDoc(travelRef, { selectedVolunteers: arrayUnion(volunteerName) });
+        toast({ title: "Voluntário selecionado manualmente" });
+      }
+    } catch (error) {
+      toast({ title: "Erro", description: "Erro ao alterar seleção do voluntário.", variant: "destructive" });
+    }
   };
 
   const handleRemoveVolunteer = async (travelId: string, volunteerName: string) => {
@@ -275,13 +389,16 @@ export const TravelManagement = () => {
     if (!window.confirm(`Tem certeza que deseja remover ${volunteerName} desta viagem?`)) return;
     try {
       const travelRef = doc(db, "travels", travelId);
-      await updateDoc(travelRef, { volunteers: arrayRemove(volunteerName), selectedVolunteers: arrayRemove(volunteerName) });
-      handleManualVolunteerSelection(travelId, volunteerName); // Also remove from local manual selection state
+      await updateDoc(travelRef, {
+        volunteers: arrayRemove(volunteerName),
+        selectedVolunteers: arrayRemove(volunteerName)
+      });
       toast({ title: "Voluntário removido", description: `${volunteerName} foi removido da viagem.` });
-    } catch (error) { toast({ title: "Erro", description: "Erro ao remover voluntário.", variant: "destructive" }); }
+    } catch (error) {
+      toast({ title: "Erro", description: "Erro ao remover voluntário.", variant: "destructive" });
+    }
   };
 
-  // --- MODIFIED FUNCTION with hybrid logic ---
   const handleToggleLock = async (travelId: string) => {
     const travelRef = doc(db, "travels", travelId);
     const travelSnap = await getDoc(travelRef);
@@ -289,16 +406,17 @@ export const TravelManagement = () => {
     const travelData = travelSnap.data() as Travel;
     try {
       if (!travelData.isLocked) {
-        const manualSelections = selectedVolunteers[travelId] || [];
-        const hasManualSelection = manualSelections.length > 0;
-        let finalSelectedVolunteers: string[] = [];
+        const hasManualSelection = travelData.selectedVolunteers && travelData.selectedVolunteers.length > 0;
+        let finalSelectedVolunteers = travelData.selectedVolunteers || [];
 
-        if (hasManualSelection) {
-            finalSelectedVolunteers = manualSelections;
-        } else {
+        if (!hasManualSelection) {
             const allVolunteers = travelData.volunteers ?? [];
-            const processed = allVolunteers.map(v => ({ fullName: v, diaryCount: diaryCounts[v] || 0, rankWeight: getMilitaryRankWeight(getVolunteerRank(v)), originalIndex: allVolunteers.indexOf(v) }))
-              .sort((a, b) => a.diaryCount - b.diaryCount || b.rankWeight - a.rankWeight || a.originalIndex - b.originalIndex);
+            const processed = allVolunteers.map(v => ({
+              fullName: v,
+              diaryCount: diaryCounts[v] || 0,
+              rankWeight: getMilitaryRankWeight(getVolunteerRank(v)),
+              originalIndex: allVolunteers.indexOf(v)
+            })).sort((a, b) => a.diaryCount - b.diaryCount || b.rankWeight - a.rankWeight || a.originalIndex - b.originalIndex);
             finalSelectedVolunteers = processed.slice(0, travelData.slots).map(v => v.fullName);
         }
         
@@ -306,10 +424,11 @@ export const TravelManagement = () => {
         toast({ title: "Sucesso", description: "Viagem processada e voluntários selecionados!" });
       } else {
         await updateDoc(travelRef, { isLocked: false, selectedVolunteers: [] });
-        setSelectedVolunteers(prev => { const newSelections = {...prev}; delete newSelections[travelId]; return newSelections; }); // Clear manual selection state
         toast({ title: "Sucesso", description: "Viagem reaberta para inscrições!" });
       }
-    } catch (error) { toast({ title: "Erro", description: "Erro ao alterar o status da viagem.", variant: "destructive" }); }
+    } catch (error) {
+      toast({ title: "Erro", description: "Erro ao alterar o status da viagem.", variant: "destructive" });
+    }
   };
   
   const handleFileDelete = async (travel: Travel, documentToDelete: TravelDocument) => {
@@ -319,7 +438,9 @@ export const TravelManagement = () => {
       if (!success) throw new Error(error?.message || "Erro ao excluir arquivo");
       await updateDoc(doc(db, "travels", travel.id), { documents: arrayRemove(documentToDelete) });
       toast({ title: "Sucesso", description: "Arquivo excluído." });
-    } catch (error) { toast({ title: "Erro", description: "Não foi possível excluir o arquivo.", variant: "destructive" }); }
+    } catch (error) {
+      toast({ title: "Erro", description: "Não foi possível excluir o arquivo.", variant: "destructive" });
+    }
   };
 
   const cbSdRanks = ["Sd", "Sd PM", "Cb", "Cb PM"];
@@ -336,63 +457,50 @@ export const TravelManagement = () => {
     return parts[0];
   };
   const getMilitaryRankWeight = (rank: string): number => {
-    if (cbSdRanks.includes(rank)) return 1; if (stSgtRanks.includes(rank)) return 2; if (oficiaisRanks.includes(rank)) return 3; return 0;
+    if (cbSdRanks.includes(rank)) return 1;
+    if (stSgtRanks.includes(rank)) return 2;
+    if (oficiaisRanks.includes(rank)) return 3;
+    return 0;
   };
   const formattedDiaryCount = (count: number) => {
     const fmtCount = count.toLocaleString("pt-BR", { minimumFractionDigits: count % 1 !== 0 ? 1 : 0, maximumFractionDigits: 1 });
     return `${fmtCount} ${count === 1 ? 'diária' : 'diárias'}`;
   };
-  // --- MODIFIED FUNCTION from reference code ---
   const getSortedVolunteers = (travel: Travel) => {
     const allRegisteredVolunteers = travel.volunteers || [];
-    const manualSelections = selectedVolunteers[travel.id] || [];
-
     let displayList = allRegisteredVolunteers.map((volunteerName, index) => ({
       fullName: volunteerName,
       diaryCount: diaryCounts[volunteerName] || 0,
       rankWeight: getMilitaryRankWeight(getVolunteerRank(volunteerName)),
       originalIndex: index,
-      isManual: manualSelections.includes(volunteerName),
-      isSelected: false // default
+      isSelected: (travel.selectedVolunteers || []).includes(volunteerName)
     }));
 
-    displayList.sort((a, b) => a.diaryCount - b.diaryCount || b.rankWeight - a.rankWeight || a.originalIndex - b.originalIndex);
-
     if (travel.isLocked) {
-      const finalSelected = travel.selectedVolunteers || [];
       return displayList
-        .filter(v => finalSelected.includes(v.fullName))
-        .map(v => ({...v, isSelected: true}))
-        .sort((a, b) => finalSelected.indexOf(a.fullName) - finalSelected.indexOf(b.fullName));
+        .filter(v => v.isSelected)
+        .sort((a, b) => (travel.selectedVolunteers || []).indexOf(a.fullName) - (travel.selectedVolunteers || []).indexOf(b.fullName));
     } else {
-        // Pre-selection logic for open travels
-        let slotsToFill = travel.slots;
-        const preSelected = new Set(manualSelections);
-        
-        displayList.forEach(v => {
-            if (preSelected.has(v.fullName)) {
-                // Already manually selected
-            } else if (preSelected.size < slotsToFill) {
-                preSelected.add(v.fullName);
-            }
-        });
-        
-        return displayList.map(v => ({ ...v, isSelected: preSelected.has(v.fullName) }));
+      displayList.sort((a, b) => a.diaryCount - b.diaryCount || b.rankWeight - a.rankWeight || a.originalIndex - b.originalIndex);
+      return displayList;
     }
   };
   const getCategoryChipColor = (category?: string) => {
     switch (category) {
-      case "KM Inicial": return "bg-blue-100 text-blue-800"; case "KM Final": return "bg-blue-100 text-blue-800";
-      case "Abastecimento": return "bg-amber-100 text-amber-800"; case "Termo de Cautela": return "bg-red-100 text-red-800";
-      case "Outros Gastos": return "bg-purple-100 text-purple-800"; default: return "bg-slate-100 text-slate-800";
+      case "KM Inicial": return "bg-blue-100 text-blue-800";
+      case "KM Final": return "bg-blue-100 text-blue-800";
+      case "Abastecimento": return "bg-amber-100 text-amber-800";
+      case "Termo de Cautela": return "bg-red-100 text-red-800";
+      case "Outros Gastos": return "bg-purple-100 text-purple-800";
+      default: return "bg-slate-100 text-slate-800";
     }
   };
 
   return <>
       <div className="max-w-7xl p-4 mx-0 px-[5px]">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-          {travels.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()).map(travel => {
-            const travelStart = new Date(travel.startDate + "T00:00:00");
+          {travels.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+            .map(travel => {
             const travelEnd = new Date(travel.endDate + "T00:00:00");
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -400,10 +508,9 @@ export const TravelManagement = () => {
             const isLocked = travel.isLocked ?? false;
             const isArchived = travel.archived ?? false;
             const isPast = today > travelEnd;
-            // CORRECTED: "Em trânsito" logic
-            const isOngoing = today >= travelStart && today <= travelEnd && isLocked;
             const isOpen = !isLocked && !isPast;
-            const isProcessing = !isPast && isLocked && !isOngoing;
+            const isProcessing = !isPast && isLocked;
+            const isOngoing = today >= new Date(travel.startDate + "T00:00:00") && today <= travelEnd;
 
             const isUserVolunteered = travel.volunteers?.includes(currentUserInfo);
             const isUserSelected = travel.selectedVolunteers?.includes(currentUserInfo);
@@ -416,8 +523,13 @@ export const TravelManagement = () => {
             } else if (isProcessing) {
               statusConfig = { title: 'Processando diária', icon: <Loader2 size={14} className="animate-spin" />, headerClass: 'bg-orange-500', h2Icon: <Calculator className="h-5 w-5" /> };
             } else if (isOngoing) {
-              // CORRECTED: Using animated police car icon
-              statusConfig = { title: 'Em trânsito', icon: <PoliceCarIcon className="w-8 h-4" />, headerClass: 'bg-blue-500', h2Icon: <PoliceCarIcon className="w-12 h-6" /> };
+              statusConfig = { 
+                title: 'Em trânsito', 
+                icon: <Car size={14} />, // Use simple car for the small lozenge
+                headerClass: 'bg-blue-500', 
+                // UPDATED: Use the new animated PoliceCarIcon component
+                h2Icon: <PoliceCarIcon className="h-12 w-24 -ml-2 -mt-2" /> 
+              };
             } else if (isPast) { 
               statusConfig = { title: 'Aguardando Prestação de Contas', icon: <Info size={16} />, headerClass: 'bg-red-600', h2Icon: <Info className="h-5 w-5" /> };
             } else {
@@ -426,11 +538,12 @@ export const TravelManagement = () => {
           
             const missingDocs = REQUIRED_DOCS.filter(reqDoc => !(travel.documents?.map(d => d.category).includes(reqDoc)));
             const displayVolunteersList = getSortedVolunteers(travel);
-            const dailyCount = differenceInDays(travelEnd, travelStart) + (travel.halfLastDay ? 0.5 : 1);
+            const dailyCount = differenceInDays(travelEnd, new Date(travel.startDate + "T00:00:00")) + (travel.halfLastDay ? 0.5 : 1);
             const totalCost = travel.dailyRate && dailyCount > 0 ? dailyCount * Number(travel.dailyRate) : 0;
             const isAwaitingAccountability = isPast && !isArchived;
 
-            return <div key={travel.id} className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+            return (
+              <div key={travel.id} className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
                 <div className={`text-white p-4 ${statusConfig.headerClass}`}>
                   <div className="flex justify-between items-center mb-3">
                     <div className="flex items-center gap-2">
@@ -441,7 +554,7 @@ export const TravelManagement = () => {
                       <DropdownMenuContent align="end">
                         {isOpen && <DropdownMenuItem onClick={() => handleEditTravel(travel)}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>}
                         {isOpen && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}><Lock className="mr-2 h-4 w-4" />Processar</DropdownMenuItem>}
-                        {(isProcessing || isOngoing) && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}><LockOpen className="mr-2 h-4 w-4" />Reabrir</DropdownMenuItem>}
+                        {isProcessing && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}><LockOpen className="mr-2 h-4 w-4" />Reabrir</DropdownMenuItem>}
                         {isAwaitingAccountability && <DropdownMenuItem onClick={() => handleArchive(travel.id, true)}><CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />Encerrar P. de Contas</DropdownMenuItem>}
                         <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteTravel(travel.id)}><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -449,36 +562,30 @@ export const TravelManagement = () => {
                   </div>
                   <h2 className="text-lg font-bold flex items-center gap-2">
                      {statusConfig.h2Icon} 
-                     {travel.agency && <span className="font-normal text-white/80 uppercase text-base">{travel.agency} /</span>}
-                     {travel.destination}
+                     <div className="flex flex-col">
+                        {travel.agency && <span className="font-normal text-white/80 uppercase text-sm leading-tight">{travel.agency}</span>}
+                        <span className="leading-tight">{travel.destination}</span>
+                     </div>
                   </h2>
                 </div>
                 <div className="main-content p-5 px-[8px] mx-0">
                   <div className="info-section mb-5 grid grid-cols-2 gap-3">
-                      <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-blue-400"><div className="text-xs font-medium text-slate-500 uppercase">Período</div><div className="text-sm font-semibold text-slate-800">{travelStart.toLocaleDateString()} - {travelEnd.toLocaleDateString()}</div></div>
+                      <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-blue-400"><div className="text-xs font-medium text-slate-500 uppercase">Período</div><div className="text-sm font-semibold text-slate-800">{new Date(travel.startDate + 'T00:00').toLocaleDateString()} - {new Date(travel.endDate + 'T00:00').toLocaleDateString()}</div></div>
                       <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-emerald-400"><div className="text-xs font-medium text-slate-500 uppercase">{isOpen ? "Vagas" : "Selecionados"}</div><div className="text-sm font-semibold text-slate-800">{isLocked ? `${travel.selectedVolunteers?.length || 0}` : `${travel.slots} para seleção`}</div></div>
                       <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-amber-400"><div className="text-xs font-medium text-slate-500 uppercase">Duração</div><div className="text-sm font-semibold text-slate-800">{formattedDiaryCount(dailyCount)}</div></div>
                       <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-purple-400"><div className="text-xs font-medium text-slate-500 uppercase">Remuneração</div><div className="text-sm font-semibold text-slate-800">{totalCost > 0 ? totalCost.toLocaleString("pt-BR", { style: 'currency', currency: 'BRL' }) : 'N/A'}</div></div>
                   </div>
                   <div className="volunteers-section mb-5">
-                    <div className="flex justify-between items-center mb-3 pb-2 border-b"><h3 className="text-sm font-semibold text-slate-800">{isOpen ? `Voluntários (${travel.volunteers?.length || 0} inscritos)` : 'Voluntário(s) em Missão'}</h3>{isAdmin && isOpen && <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setSelectedTravelId(travel.id); setAddVolunteerDialogOpen(true); }}><UserPlus className="h-3.5 w-3.5 mr-1.5" />Adicionar</Button>}</div>
+                       <div className="flex justify-between items-center mb-3 pb-2 border-b"><h3 className="text-sm font-semibold text-slate-800">{isOpen ? `Voluntários (${travel.volunteers?.length || 0} inscritos)` : 'Voluntário(s) em Missão'}</h3>{isAdmin && isOpen && <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setSelectedTravelId(travel.id); setAddVolunteerDialogOpen(true); }}><UserPlus className="h-3.5 w-3.5 mr-1.5" />Adicionar</Button>}</div>
                       <div className="volunteer-grid grid gap-2">
                           {displayVolunteersList.length > 0 ? displayVolunteersList.map(vol => <div 
                               key={vol.fullName} 
-                              className={`volunteer-item border rounded-lg p-3 transition-all ${!isLocked ? 'cursor-pointer' : ''} 
-                                  ${isLocked ? 'border-emerald-400 bg-emerald-50' 
-                                  : vol.isManual ? 'border-yellow-400 bg-yellow-50' 
-                                  : vol.isSelected ? 'border-blue-400 bg-blue-50' 
-                                  : 'bg-white'}`}
-                              onDoubleClick={() => isAdmin && isOpen && handleManualVolunteerSelection(travel.id, vol.fullName)}
+                              className={`volunteer-item border rounded-lg p-3 transition-all ${!isLocked ? 'cursor-pointer' : ''} ${isLocked ? 'border-emerald-400 bg-emerald-50' : vol.isSelected ? 'border-blue-400 bg-blue-50' : 'bg-white'}`}
+                              onDoubleClick={() => isAdmin && isOpen && handleToggleSelectedVolunteer(travel.id, vol.fullName)}
                           >
                                   <div className="flex justify-between items-start">
                                       <div className="flex flex-col flex-1 overflow-hidden">
-                                           <p className={`text-sm font-semibold truncate 
-                                              ${isLocked ? 'text-emerald-800' 
-                                              : vol.isManual ? 'text-yellow-800' 
-                                              : vol.isSelected ? 'text-blue-800'
-                                              : 'text-slate-800'}`}>{vol.fullName}</p>
+                                           <p className={`text-sm font-semibold truncate ${isLocked ? 'text-emerald-800' : vol.isSelected ? 'text-blue-800' : 'text-slate-800'}`}>{vol.fullName}</p>
                                            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                                                <span className="flex items-center gap-1.5"><MapPin size={12} /> {volunteerCounts[vol.fullName] || 0} viagens</span>
                                                <span className="flex items-center gap-1.5"><DollarSign size={12} /> {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}</span>
@@ -526,7 +633,8 @@ export const TravelManagement = () => {
                           </Button>
                       </div>}
                 </div>
-              </div>;
+              </div>
+            );
           })}
         </div>
       </div>
@@ -538,7 +646,10 @@ export const TravelManagement = () => {
               <h2 className="text-xl font-semibold text-gray-800">{editingTravel ? "Editar Viagem" : "Criar Nova Viagem"}</h2>
               <div className="space-y-4">
                 <div><Label htmlFor="destination" className="text-sm font-medium text-gray-700">Destino</Label><Input id="destination" type="text" value={destination} onChange={e => setDestination(e.target.value)} required placeholder="Ex: Operação Fronteira Segura" className="w-full mt-1" /></div>
-                <div><Label htmlFor="agency" className="text-sm font-medium text-gray-700">Órgão</Label><Select value={agency} onValueChange={setAgency}><SelectTrigger id="agency" className="w-full mt-1"><SelectValue placeholder="Selecione um órgão..." /></SelectTrigger><SelectContent>{AGENCIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent></Select></div>
+                <div>
+                  <Label htmlFor="agency" className="text-sm font-medium text-gray-700">Órgão</Label>
+                  <Select value={agency} onValueChange={setAgency}><SelectTrigger id="agency" className="w-full mt-1"><SelectValue placeholder="Selecione um órgão..." /></SelectTrigger><SelectContent>{AGENCIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent></Select>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><Label htmlFor="startDate" className="text-sm font-medium text-gray-700">Data Inicial</Label><Input id="startDate" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required className="w-full mt-1" /></div>
                   <div><Label htmlFor="endDate" className="text-sm font-medium text-gray-700">Data Final</Label><Input id="endDate" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} required className="w-full mt-1" /></div>
@@ -560,5 +671,4 @@ export const TravelManagement = () => {
       <AddVolunteerDialog open={addVolunteerDialogOpen} onOpenChange={setAddVolunteerDialogOpen} travelId={selectedTravelId} currentVolunteers={travels.find(t => t.id === selectedTravelId)?.volunteers || []} onVolunteersAdded={() => toast({ title: "Sucesso", description: "Voluntários adicionados com sucesso!" })} />
     </>;
 };
-
 export default TravelManagement;
