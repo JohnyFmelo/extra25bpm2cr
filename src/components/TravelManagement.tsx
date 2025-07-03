@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { v4 as uuidv4 } from 'uuid';
-import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin, UserPlus, Handshake, Calculator, Car, CheckCircle2, Route, Loader2, UploadCloud, FileText, FileImage, Download, DollarSign, FileUp, AlertTriangle } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin, UserPlus, Handshake, Calculator, Car, CheckCircle2, Route, Loader2, UploadCloud, FileText, FileImage, Download, DollarSign, FileUp, AlertTriangle, Paperclip } from "lucide-react";
 import { Switch } from "./ui/switch";
 import AddVolunteerDialog from "./AddVolunteerDialog";
 
@@ -64,7 +64,7 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// Add Document Dialog Component
+// *** NOVO E MELHORADO COMPONENTE DE DIÁLOGO DE DOCUMENTOS ***
 const AddDocumentDialog = ({
   open,
   onOpenChange,
@@ -76,132 +76,196 @@ const AddDocumentDialog = ({
   travel: Travel | null;
   onUploadSuccess: () => void;
 }) => {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [category, setCategory] = useState("");
   const [name, setName] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [dragActive, setDragActive] = useState(false);
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const currentUserInfo = `${user.rank} ${user.warName}`;
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  const resetState = useCallback(() => {
+    setFiles([]);
+    setCategory("");
+    setName("");
+    setIsUploading(false);
+    setDragActive(false);
+  }, []);
+
   useEffect(() => {
     if (!open) {
-      setFile(null);
-      setCategory("");
-      setName("");
-      setIsUploading(false);
-      setProgress(0);
+      resetState();
     }
-  }, [open]);
+  }, [open, resetState]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        toast({ title: "Arquivo muito grande", description: "O tamanho máximo do arquivo é 10MB.", variant: "destructive" });
+  const handleFilesChange = (newFiles: FileList | null) => {
+    if (newFiles) {
+      const addedFiles = Array.from(newFiles).filter(newFile => 
+        !files.some(existingFile => existingFile.name === newFile.name && existingFile.size === newFile.size)
+      );
+
+      if (addedFiles.length === 0 && newFiles.length > 0) {
+        toast({ title: "Arquivos duplicados", description: "Alguns arquivos selecionados já estão na lista.", variant: "default" });
         return;
       }
-      setFile(selectedFile);
-      if (!name) {
-        setName(selectedFile.name.split('.').slice(0, -1).join('.'));
+      
+      setFiles(prev => [...prev, ...addedFiles]);
+      if (!name && addedFiles.length > 0) {
+        setName(addedFiles[0].name.split('.').slice(0, -1).join('.'));
       }
     }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFilesChange(e.dataTransfer.files);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !category || !name.trim() || !travel) {
-      toast({ title: "Campos obrigatórios", description: "Por favor, preencha todos os campos e selecione um arquivo.", variant: "destructive" });
+    if (files.length === 0 || !category || !name.trim() || !travel) {
+      toast({ title: "Campos obrigatórios", description: "Por favor, preencha todos os campos e selecione ao menos um arquivo.", variant: "destructive" });
       return;
     }
     setIsUploading(true);
-    setProgress(0);
     
     try {
-      const uniqueFileName = `${uuidv4()}-${file.name}`;
-      const storagePath = `travels/${travel.id}/${user.id}/${uniqueFileName}`;
-      
-      const progressInterval = setInterval(() => setProgress(prev => Math.min(prev + 10, 90)), 200);
-      const { url, error } = await uploadPDF(storagePath, file);
-      clearInterval(progressInterval);
-      setProgress(100);
-      
-      if (error || !url) throw new Error(error?.message || "Erro no upload");
-      
-      const newDocument: TravelDocument = {
-        id: uuidv4(),
-        name: name.trim(),
-        category: category,
-        originalFileName: file.name,
-        url,
-        path: storagePath,
-        size: file.size,
-        type: file.type,
-        uploaderId: user.id,
-        uploaderName: currentUserInfo,
-        createdAt: new Date().toISOString()
-      };
+      const uploadPromises = files.map(async (file) => {
+        const uniqueFileName = `${uuidv4()}-${file.name}`;
+        const storagePath = `travels/${travel.id}/${user.id}/${uniqueFileName}`;
+        
+        const { url, error } = await uploadPDF(storagePath, file);
+        if (error || !url) throw new Error(`Falha no upload de ${file.name}: ${error?.message || "Erro desconhecido"}`);
+
+        const newDocument: TravelDocument = {
+          id: uuidv4(),
+          name: files.length > 1 ? `${name.trim()} - ${file.name}` : name.trim(),
+          category: category,
+          originalFileName: file.name,
+          url,
+          path: storagePath,
+          size: file.size,
+          type: file.type,
+          uploaderId: user.id,
+          uploaderName: currentUserInfo,
+          createdAt: new Date().toISOString()
+        };
+        return newDocument;
+      });
+
+      const newDocuments = await Promise.all(uploadPromises);
       
       const travelRef = doc(db, "travels", travel.id);
-      await updateDoc(travelRef, { documents: arrayUnion(newDocument) });
+      await updateDoc(travelRef, { documents: arrayUnion(...newDocuments) });
       
-      toast({ title: "Sucesso", description: "Documento enviado!" });
-      setIsUploading(false);
+      toast({ title: "Sucesso!", description: `${newDocuments.length} documento(s) enviado(s)!` });
       onUploadSuccess();
       onOpenChange(false);
     } catch (error) {
       console.error("Upload error:", error);
-      toast({ title: "Erro de Upload", description: "Não foi possível enviar o arquivo.", variant: "destructive" });
+      toast({ title: "Erro de Upload", description: (error as Error).message, variant: "destructive" });
+    } finally {
       setIsUploading(false);
     }
   };
 
+  const isFormValid = files.length > 0 && category && name.trim();
+
   return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="sm:max-w-[480px]">
+          <DialogContent className="sm:max-w-lg" onDragEnter={handleDrag}>
               <DialogHeader>
-                  <DialogTitle>Adicionar Documento de Viagem</DialogTitle>
-                  <DialogDescription className="text-gray-600">
-                      Envie um arquivo para a prestação de contas da viagem para {travel?.destination}.
+                  <DialogTitle>Adicionar Documento(s) de Viagem</DialogTitle>
+                  <DialogDescription>
+                      Envie arquivos para a prestação de contas da viagem para {travel?.destination}.
                   </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-                  <div>
-                      <Label htmlFor="category">Categoria do Documento</Label>
-                      <Select value={category} onValueChange={setCategory}>
-                          <SelectTrigger id="category" className="w-full mt-1"><SelectValue placeholder="Selecione uma categoria..." /></SelectTrigger>
-                          <SelectContent>{DOCUMENT_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
-                      </Select>
+                  <div className="form-group">
+                    <Label htmlFor="category">Categoria do Documento</Label>
+                    <Select value={category} onValueChange={setCategory} disabled={isUploading}>
+                        <SelectTrigger id="category" className="w-full mt-1"><SelectValue placeholder="Selecione uma categoria..." /></SelectTrigger>
+                        <SelectContent>{DOCUMENT_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+                    </Select>
                   </div>
-                   <div>
-                      <Label htmlFor="doc-name">Nome / Descrição do Documento</Label>
-                      <Input id="doc-name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Nota fiscal do abastecimento" className="mt-1" />
+                   <div className="form-group">
+                      <Label htmlFor="doc-name">Nome / Descrição Principal</Label>
+                      <Input id="doc-name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Notas fiscais de abastecimento" className="mt-1" disabled={isUploading} />
                   </div>
-                  <div>
-                      <Label>Arquivo</Label>
-                      <div className="mt-1">
-                          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" />
-                          <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                              <FileUp className="mr-2 h-4 w-4" />
-                              {file ? 'Trocar Arquivo' : 'Selecionar Arquivo'}
-                          </Button>
+                  <div className="form-group">
+                      <Label>Arquivos</Label>
+                      <div 
+                        onDragEnter={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDragOver={handleDrag}
+                        onDrop={handleDrop}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`relative mt-1 flex justify-center rounded-lg border-2 border-dashed px-6 py-10 transition-colors duration-200 cursor-pointer ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:border-slate-400'}`}
+                      >
+                        <div className="text-center">
+                            <UploadCloud className="mx-auto h-12 w-12 text-slate-400" />
+                            <p className="mt-2 text-sm font-semibold text-slate-700">Clique para selecionar ou arraste e solte</p>
+                            <p className="text-xs text-slate-500">PDF, JPG, PNG, DOCX, etc. (Máx 10MB por arquivo)</p>
+                        </div>
+                        <input 
+                            ref={fileInputRef}
+                            type="file" 
+                            multiple
+                            onChange={(e) => handleFilesChange(e.target.files)}
+                            className="hidden" 
+                            accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                            disabled={isUploading}
+                        />
                       </div>
-                      {file && <div className="mt-2 text-sm text-slate-600 bg-slate-50 p-2 rounded-md border">{file.name} ({formatFileSize(file.size)})</div>}
                   </div>
-                  {isUploading && <div className="w-full bg-slate-200 rounded-full h-2.5"><div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div></div>}
+                  {files.length > 0 && (
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                        {files.map((file, index) => (
+                          <div key={`${file.name}-${index}`} className="flex items-center justify-between rounded-md border bg-slate-50 p-2 text-sm">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <Paperclip className="h-4 w-4 flex-shrink-0 text-slate-500"/>
+                              <span className="truncate" title={file.name}>{file.name}</span>
+                              <span className="text-slate-400 flex-shrink-0">({formatFileSize(file.size)})</span>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)} disabled={isUploading}>
+                                <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+                  )}
               </form>
               <DialogFooter>
                   <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isUploading}>Cancelar</Button>
-                  <Button type="submit" onClick={handleSubmit} disabled={isUploading || !file || !category || !name.trim()}>
-                      {isUploading ? `Enviando... ${Math.round(progress)}%` : "Enviar Documento"}
+                  <Button type="submit" onClick={handleSubmit} disabled={!isFormValid || isUploading}>
+                      {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</> : `Enviar ${files.length > 0 ? files.length : ''} Documento(s)`}
                   </Button>
               </DialogFooter>
           </DialogContent>
       </Dialog>
   );
 };
+
 
 export const TravelManagement = () => {
   const [startDate, setStartDate] = useState("");
