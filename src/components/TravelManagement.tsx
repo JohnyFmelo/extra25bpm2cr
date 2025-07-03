@@ -48,6 +48,15 @@ interface Travel {
   documents?: TravelDocument[];
 }
 
+// --- Helper Functions ---
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
 // --- NEW: Add Document Dialog Component ---
 const DOCUMENT_CATEGORIES = ["KM Inicial", "Abastecimento", "KM Final", "Termo de Cautela", "Outros Gastos", "Outros"];
 const AddDocumentDialog = ({
@@ -563,13 +572,6 @@ export const TravelManagement = () => {
         return v;
       });
     }
-  };
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
   const getCategoryChipColor = (category?: string) => {
     switch (category) {
