@@ -102,9 +102,20 @@ const TopBar = () => {
               v{currentSystemVersion}
             </div>}
           
+          <Button variant="ghost" size="icon" onClick={() => setShowNotificationsDialog(true)} className="text-white hover:bg-white/10 relative">
+            {unreadCount > 0 ? <>
+                <BellDot className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 bg-highlight text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              </> : <Bell className="h-5 w-5" />}
+            <span className="sr-only">Notificações</span>
+          </Button>
           
-          
-          {userData.userType === "admin"}
+          {userData.userType === "admin" && <Button variant="ghost" size="icon" onClick={() => setShowMessagesDialog(prev => !prev)} className="text-white hover:bg-white/10">
+              <MessageSquare className="h-5 w-5" />
+              <span className="sr-only">Enviar Recado</span>
+            </Button>}
         </div>
         
         {showProfileDialog && <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={userData} />}
