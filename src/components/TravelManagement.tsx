@@ -1,3 +1,5 @@
+--- START OF FILE TravelManagement (5).tsx ---
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -13,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { v4 as uuidv4 } from 'uuid';
-import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin, UserPlus, Handshake, Calculator, Car, CheckCircle2, Route, Loader2, UploadCloud, FileText, FileImage, Download, DollarSign, FileUp } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin, UserPlus, Handshake, Calculator, Car, CheckCircle2, Route, Loader2, UploadCloud, FileText, FileImage, Download, DollarSign, FileUp, AlertTriangle } from "lucide-react";
 import { Switch } from "./ui/switch";
 import AddVolunteerDialog from "./AddVolunteerDialog";
 
@@ -48,6 +50,9 @@ interface Travel {
   isLocked?: boolean;
   documents?: TravelDocument[];
 }
+
+// --- NEW: Required Documents Constant ---
+const REQUIRED_DOCS = ["KM Inicial", "Abastecimento", "KM Final", "Termo de Cautela"];
 
 // --- Helper Functions ---
 const formatFileSize = (bytes: number): string => {
@@ -407,12 +412,12 @@ export const TravelManagement = () => {
       });
       toast({
         title: "Sucesso",
-        description: newArchivedState ? "Viagem arquivada!" : "Viagem desarquivada!"
+        description: newArchivedState ? "Viagem encerrada/arquivada!" : "Viagem desarquivada!"
       });
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao arquivar a viagem.",
+        description: "Erro ao alterar o status da viagem.",
         variant: "destructive"
       });
     }
@@ -686,22 +691,20 @@ export const TravelManagement = () => {
           const travelEnd = new Date(travel.endDate + "T00:00:00");
           const today = new Date();
           today.setHours(0, 0, 0, 0);
+
           const isLocked = travel.isLocked ?? false;
+          const isArchived = travel.archived ?? false;
+          
           const isProcessing = today < travelStart && isLocked;
           const isOngoing = today >= travelStart && today <= travelEnd;
-          const isClosed = today > travelEnd;
-          const isOpen = !isLocked && !isClosed;
+          const isPast = today > travelEnd;
+          const isOpen = !isLocked && !isPast;
+          
           const isUserVolunteered = travel.volunteers?.includes(currentUserInfo);
           const isUserSelected = travel.selectedVolunteers?.includes(currentUserInfo);
           
-          let statusConfig = {
-            theme: 'finished',
-            title: isUserSelected ? 'Aguardando Prestação de Contas' : 'Missão Concluída',
-            header: 'SINFRA - VIAGEM ENCERRADA',
-            icon: <CheckCircle2 size={16} />,
-            headerClass: 'bg-gray-500',
-            ctaClass: 'bg-gray-500'
-          };
+          let statusConfig;
+
           if (isOpen) {
             statusConfig = {
               theme: 'open',
@@ -709,7 +712,8 @@ export const TravelManagement = () => {
               header: 'SINFRA - OPORTUNIDADE',
               icon: <div className="w-2 h-2 bg-white rounded-full animate-pulse" />,
               headerClass: 'bg-emerald-500',
-              ctaClass: 'bg-emerald-500 hover:bg-emerald-600'
+              ctaClass: 'bg-emerald-500 hover:bg-emerald-600',
+              h2Icon: <Handshake className="h-5 w-5" />
             };
           } else if (isProcessing) {
             statusConfig = {
@@ -717,8 +721,9 @@ export const TravelManagement = () => {
               title: 'Processando diária',
               header: 'SINFRA - PROCESSANDO DIÁRIAS',
               icon: <Loader2 size={14} className="animate-spin" />,
-              headerClass: 'bg-amber-500',
-              ctaClass: 'bg-amber-500'
+              headerClass: 'bg-orange-500',
+              ctaClass: 'bg-orange-500',
+              h2Icon: <Calculator className="h-5 w-5" />
             };
           } else if (isOngoing) {
             statusConfig = {
@@ -727,14 +732,52 @@ export const TravelManagement = () => {
               header: 'SINFRA - VOLUNTÁRIO EM MISSÃO',
               icon: <Route size={14} />,
               headerClass: 'bg-blue-500',
-              ctaClass: 'bg-blue-500 hover:bg-blue-600'
+              ctaClass: 'bg-blue-500 hover:bg-blue-600',
+              h2Icon: <Car className="h-5 w-5" />
             };
+          } else if (isPast) {
+              if (!isArchived) { // Awaiting Accountability
+                  statusConfig = {
+                      theme: 'accountability',
+                      title: 'Aguardando Prestação de Contas',
+                      header: 'SINFRA - PRESTAÇÃO DE CONTAS',
+                      icon: <Info size={16} />,
+                      headerClass: 'bg-red-600',
+                      ctaClass: 'bg-red-600',
+                      h2Icon: <Info className="h-5 w-5" />
+                  };
+              } else { // Concluded
+                  statusConfig = {
+                      theme: 'finished',
+                      title: 'Missão Concluída',
+                      header: 'SINFRA - VIAGEM CONCLUÍDA',
+                      icon: <CheckCircle2 size={16} />,
+                      headerClass: 'bg-gray-500',
+                      ctaClass: 'bg-gray-500',
+                      h2Icon: <CheckCircle2 className="h-5 w-5" />
+                  };
+              }
+          } else {
+             // Fallback
+             statusConfig = {
+                  theme: 'finished',
+                  title: 'Status Desconhecido',
+                  header: 'SINFRA',
+                  icon: <CheckCircle2 size={16} />,
+                  headerClass: 'bg-gray-500',
+                  ctaClass: 'bg-gray-500',
+                  h2Icon: <CheckCircle2 className="h-5 w-5" />
+             };
           }
+          
+          const uploadedDocCategories = travel.documents?.map(doc => doc.category).filter(Boolean) as string[] || [];
+          const missingDocs = REQUIRED_DOCS.filter(reqDoc => !uploadedDocCategories.includes(reqDoc));
           const displayVolunteersList = getSortedVolunteers(travel);
           let numDays = 0;
           if (travelEnd >= travelStart) numDays = differenceInDays(travelEnd, travelStart) + 1;
           const dailyCount = travel.halfLastDay ? numDays - 0.5 : numDays;
           const totalCost = travel.dailyRate && dailyCount > 0 ? dailyCount * Number(travel.dailyRate) : 0;
+
           return <div key={travel.id} className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${travel.archived ? 'opacity-50' : ''}`}>
                   <div className={`text-white p-4 ${statusConfig.headerClass}`}>
                     <div className="flex justify-between items-center mb-3">
@@ -745,14 +788,20 @@ export const TravelManagement = () => {
                                 <DropdownMenuTrigger asChild><Button variant="ghost" className="h-7 w-7 p-0 hover:bg-black/20 rounded-full text-white"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => handleEditTravel(travel)}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
-                                    {!isClosed && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}>{isLocked ? <><LockOpen className="mr-2 h-4 w-4" />Reabrir</> : <><Lock className="mr-2 h-4 w-4" />Processar</>}</DropdownMenuItem>}
-                                    <DropdownMenuItem onClick={() => handleArchive(travel.id, !travel.archived)}><Archive className="mr-2 h-4 w-4" />{travel.archived ? "Desarquivar" : "Arquivar"}</DropdownMenuItem>
+                                    {!isPast && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}>{isLocked ? <><LockOpen className="mr-2 h-4 w-4" />Reabrir</> : <><Lock className="mr-2 h-4 w-4" />Processar</>}</DropdownMenuItem>}
+                                    <DropdownMenuItem onClick={() => handleArchive(travel.id, !isArchived)}>
+                                      {isPast && !isArchived ? (
+                                        <><CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />Encerrar</>
+                                      ) : (
+                                        <><Archive className="mr-2 h-4 w-4" />{isArchived ? "Desarquivar" : "Arquivar"}</>
+                                      )}
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteTravel(travel.id)}><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>}
                     </div>
                     <h2 className="text-lg font-bold flex items-center gap-2">
-                        {statusConfig.theme === 'open' && <Handshake className="h-5 w-5" />} {statusConfig.theme === 'processing' && <Calculator className="h-5 w-5" />} {statusConfig.theme === 'transit' && <Car className="h-5 w-5" />} {statusConfig.theme === 'finished' && <CheckCircle2 className="h-5 w-5" />} {travel.destination}
+                       {statusConfig.h2Icon} {travel.destination}
                     </h2>
                   </div>
 
@@ -805,7 +854,7 @@ export const TravelManagement = () => {
                         </div>
                     </div>
 
-                    {(isOngoing || isClosed) && (isUserSelected || isAdmin) && <div className="documents-section mb-5">
+                    {(isOngoing || isPast) && (isUserSelected || isAdmin) && <div className="documents-section mb-5">
                             <div className="section-header flex justify-between items-center mb-3 pb-2 border-b">
                                 <h3 className="section-title text-sm font-semibold text-slate-800">Prestação de Contas</h3>
                                 <Button size="sm" onClick={() => {
@@ -815,6 +864,14 @@ export const TravelManagement = () => {
                                     <Plus className="h-4 w-4 mr-2" /> Adicionar Documento
                                 </Button>
                             </div>
+                            {missingDocs.length > 0 && !isArchived && (
+                                <div className="p-3 my-3 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg">
+                                    <p className="font-semibold flex items-center gap-2 text-sm"><AlertTriangle size={16} /> Documentos Obrigatórios Pendentes:</p>
+                                    <ul className="list-disc list-inside mt-1 pl-2 text-xs">
+                                        {missingDocs.map(doc => <li key={doc}>{doc}</li>)}
+                                    </ul>
+                                </div>
+                            )}
                             <div className="document-list mt-3 space-y-2">
                                 {travel.documents && travel.documents.length > 0 ? travel.documents.map(doc => <div key={doc.id} className="document-item flex items-center justify-between p-2.5 bg-white border rounded-lg">
                                         <div className="flex items-center gap-3 overflow-hidden">
