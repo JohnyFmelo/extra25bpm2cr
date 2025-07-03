@@ -24,7 +24,8 @@ const Login = () => {
         </div>
 
         <div className="text-center text-sm text-gray-600">
-          <p>© {new Date().getFullYear()} - Sistema de Controle de Extraodinária e Viagens</p>
+          <p>© {new Date().getFul - Sistema de Controle de Extraodinária, Viagens e TCO</p>
+          <p>05.02.2025</p>
         </div>
       </div>
     </div>
