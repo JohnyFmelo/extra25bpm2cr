@@ -168,7 +168,7 @@ const AddDocumentDialog = ({
             <DialogContent className="sm:max-w-[480px]">
                 <DialogHeader>
                     <DialogTitle>Adicionar Documento de Viagem</DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-gray-600">
                         Envie um arquivo para a prestação de contas da viagem para {travel?.destination}.
                     </DialogDescription>
                 </DialogHeader>
