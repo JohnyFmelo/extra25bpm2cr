@@ -16,7 +16,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { MoreHorizontal, Edit, Trash2, Archive, Plus, Lock, LockOpen, Info, X, MapPin, UserPlus, Handshake, Calculator, Car, CheckCircle2, Route, Loader2, UploadCloud, FileText, FileImage, Download, DollarSign, FileUp, AlertTriangle } from "lucide-react";
 import { Switch } from "./ui/switch";
 import AddVolunteerDialog from "./AddVolunteerDialog";
-import PoliceCarIcon from "./PoliceCarIcon"; // NEW: Import the custom icon
 
 // Interface for uploaded documents
 interface TravelDocument {
@@ -315,6 +314,7 @@ export const TravelManagement = () => {
   const handleDeleteTravel = async (travelId: string) => {
     const travel = travels.find(t => t.id === travelId);
     if (!travel) return;
+    // CORRECTED: Specific confirmation message
     if (window.confirm(`Tem certeza que deseja excluir a viagem para "${travel.destination}" e TODOS os seus documentos permanentemente?`)) {
       try {
         if (travel.documents && travel.documents.length > 0) {
@@ -406,10 +406,11 @@ export const TravelManagement = () => {
     const travelData = travelSnap.data() as Travel;
     try {
       if (!travelData.isLocked) {
+        // CORRECTED: Hybrid selection logic
         const hasManualSelection = travelData.selectedVolunteers && travelData.selectedVolunteers.length > 0;
         let finalSelectedVolunteers = travelData.selectedVolunteers || [];
 
-        if (!hasManualSelection) {
+        if (!hasManualSelection) { // Automatic selection if no manual override
             const allVolunteers = travelData.volunteers ?? [];
             const processed = allVolunteers.map(v => ({
               fullName: v,
@@ -523,13 +524,7 @@ export const TravelManagement = () => {
             } else if (isProcessing) {
               statusConfig = { title: 'Processando diária', icon: <Loader2 size={14} className="animate-spin" />, headerClass: 'bg-orange-500', h2Icon: <Calculator className="h-5 w-5" /> };
             } else if (isOngoing) {
-              statusConfig = { 
-                title: 'Em trânsito', 
-                icon: <Car size={14} />, // Use simple car for the small lozenge
-                headerClass: 'bg-blue-500', 
-                // UPDATED: Use the new animated PoliceCarIcon component
-                h2Icon: <PoliceCarIcon className="h-12 w-24 -ml-2 -mt-2" /> 
-              };
+              statusConfig = { title: 'Em trânsito', icon: <Route size={14} />, headerClass: 'bg-blue-500', h2Icon: <Car className="h-5 w-5" /> };
             } else if (isPast) { 
               statusConfig = { title: 'Aguardando Prestação de Contas', icon: <Info size={16} />, headerClass: 'bg-red-600', h2Icon: <Info className="h-5 w-5" /> };
             } else {
@@ -543,6 +538,7 @@ export const TravelManagement = () => {
             const isAwaitingAccountability = isPast && !isArchived;
 
             return (
+              // CORRECTED: Opacity class removed
               <div key={travel.id} className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
                 <div className={`text-white p-4 ${statusConfig.headerClass}`}>
                   <div className="flex justify-between items-center mb-3">
@@ -562,10 +558,8 @@ export const TravelManagement = () => {
                   </div>
                   <h2 className="text-lg font-bold flex items-center gap-2">
                      {statusConfig.h2Icon} 
-                     <div className="flex flex-col">
-                        {travel.agency && <span className="font-normal text-white/80 uppercase text-sm leading-tight">{travel.agency}</span>}
-                        <span className="leading-tight">{travel.destination}</span>
-                     </div>
+                     {travel.agency && <span className="font-normal text-white/80 uppercase text-base">{travel.agency} /</span>}
+                     {travel.destination}
                   </h2>
                 </div>
                 <div className="main-content p-5 px-[8px] mx-0">
