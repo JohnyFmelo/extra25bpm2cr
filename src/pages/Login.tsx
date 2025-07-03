@@ -1,4 +1,3 @@
-
 import LoginForm from "@/components/LoginForm";
 
 const Login = () => {
@@ -24,7 +23,9 @@ const Login = () => {
         </div>
 
         <div className="text-center text-sm text-gray-600">
-          <p>© {new Date().getFul - Sistema de Controle de Extraodinária, Viagens e TCO</p>
+          {/* --- CORRECTED LINE BELOW --- */}
+          <p>© {new Date().getFullYear()} - Sistema de Controle de Extraordinária, Viagens e TCO</p>
+          {/* This might be a version number, which is fine. If it's a placeholder, consider removing it. */}
           <p>05.02.2025</p>
         </div>
       </div>
