@@ -314,7 +314,6 @@ export const TravelManagement = () => {
   const handleDeleteTravel = async (travelId: string) => {
     const travel = travels.find(t => t.id === travelId);
     if (!travel) return;
-    // CORRECTED: Specific confirmation message
     if (window.confirm(`Tem certeza que deseja excluir a viagem para "${travel.destination}" e TODOS os seus documentos permanentemente?`)) {
       try {
         if (travel.documents && travel.documents.length > 0) {
@@ -399,6 +398,7 @@ export const TravelManagement = () => {
     }
   };
 
+  // *** CORRIGIDO ***
   const handleToggleLock = async (travelId: string) => {
     const travelRef = doc(db, "travels", travelId);
     const travelSnap = await getDoc(travelRef);
@@ -406,20 +406,28 @@ export const TravelManagement = () => {
     const travelData = travelSnap.data() as Travel;
     try {
       if (!travelData.isLocked) {
-        // CORRECTED: Hybrid selection logic
-        const hasManualSelection = travelData.selectedVolunteers && travelData.selectedVolunteers.length > 0;
-        let finalSelectedVolunteers = travelData.selectedVolunteers || [];
+        // Obter voluntários já selecionados manualmente via duplo clique
+        const manualSelections = travelData.selectedVolunteers || [];
+        
+        // Calcular quantas vagas restam para preencher automaticamente
+        const availableSlots = Math.max(0, (travelData.slots || 0) - manualSelections.length);
 
-        if (!hasManualSelection) { // Automatic selection if no manual override
-            const allVolunteers = travelData.volunteers ?? [];
-            const processed = allVolunteers.map(v => ({
-              fullName: v,
-              diaryCount: diaryCounts[v] || 0,
-              rankWeight: getMilitaryRankWeight(getVolunteerRank(v)),
-              originalIndex: allVolunteers.indexOf(v)
-            })).sort((a, b) => a.diaryCount - b.diaryCount || b.rankWeight - a.rankWeight || a.originalIndex - b.originalIndex);
-            finalSelectedVolunteers = processed.slice(0, travelData.slots).map(v => v.fullName);
-        }
+        // Determinar candidatos para seleção automática (todos os inscritos, exceto os selecionados manualmente)
+        const autoSelectCandidates = (travelData.volunteers || []).filter(v => !manualSelections.includes(v));
+
+        // Classificar os candidatos
+        const processed = autoSelectCandidates.map(v => ({
+            fullName: v,
+            diaryCount: diaryCounts[v] || 0,
+            rankWeight: getMilitaryRankWeight(getVolunteerRank(v)),
+            originalIndex: (travelData.volunteers || []).indexOf(v)
+        })).sort((a, b) => a.diaryCount - b.diaryCount || b.rankWeight - a.rankWeight || a.originalIndex - b.originalIndex);
+
+        // Pegar os candidatos mais bem classificados para preencher as vagas restantes
+        const autoSelectedVolunteers = processed.slice(0, availableSlots).map(v => v.fullName);
+
+        // Combinar seleções manuais e automáticas para a lista final
+        const finalSelectedVolunteers = [...manualSelections, ...autoSelectedVolunteers];
         
         await updateDoc(travelRef, { isLocked: true, selectedVolunteers: finalSelectedVolunteers });
         toast({ title: "Sucesso", description: "Viagem processada e voluntários selecionados!" });
@@ -428,6 +436,7 @@ export const TravelManagement = () => {
         toast({ title: "Sucesso", description: "Viagem reaberta para inscrições!" });
       }
     } catch (error) {
+      console.error("Error toggling lock:", error);
       toast({ title: "Erro", description: "Erro ao alterar o status da viagem.", variant: "destructive" });
     }
   };
@@ -467,6 +476,7 @@ export const TravelManagement = () => {
     const fmtCount = count.toLocaleString("pt-BR", { minimumFractionDigits: count % 1 !== 0 ? 1 : 0, maximumFractionDigits: 1 });
     return `${fmtCount} ${count === 1 ? 'diária' : 'diárias'}`;
   };
+  // *** CORRIGIDO ***
   const getSortedVolunteers = (travel: Travel) => {
     const allRegisteredVolunteers = travel.volunteers || [];
     let displayList = allRegisteredVolunteers.map((volunteerName, index) => ({
@@ -478,11 +488,22 @@ export const TravelManagement = () => {
     }));
 
     if (travel.isLocked) {
+      // Se a viagem está travada, mostra apenas os selecionados na ordem final
       return displayList
         .filter(v => v.isSelected)
         .sort((a, b) => (travel.selectedVolunteers || []).indexOf(a.fullName) - (travel.selectedVolunteers || []).indexOf(b.fullName));
     } else {
-      displayList.sort((a, b) => a.diaryCount - b.diaryCount || b.rankWeight - a.rankWeight || a.originalIndex - b.originalIndex);
+      // Se a viagem está aberta, ordena para dar feedback visual ao admin
+      displayList.sort((a, b) => {
+        // 1. Prioriza os voluntários selecionados manualmente, colocando-os no topo
+        if (a.isSelected && !b.isSelected) return -1;
+        if (!a.isSelected && b.isSelected) return 1;
+
+        // 2. Para voluntários com o mesmo status de seleção (ambos selecionados ou ambos não), aplica os critérios de classificação
+        if (a.diaryCount !== b.diaryCount) return a.diaryCount - b.diaryCount;
+        if (a.rankWeight !== b.rankWeight) return b.rankWeight - a.rankWeight;
+        return a.originalIndex - b.originalIndex;
+      });
       return displayList;
     }
   };
@@ -509,23 +530,24 @@ export const TravelManagement = () => {
             const isLocked = travel.isLocked ?? false;
             const isArchived = travel.archived ?? false;
             const isPast = today > travelEnd;
-            const isOpen = !isLocked && !isPast;
-            const isProcessing = !isPast && isLocked;
-            const isOngoing = today >= new Date(travel.startDate + "T00:00:00") && today <= travelEnd;
+            const isOpen = !isLocked && !isPast && !isArchived; // Correção: não deve estar arquivado para estar aberto
+            const isProcessing = isLocked && !isPast && !isArchived; // Correção: não deve estar arquivado
+            const isOngoing = isLocked && today >= new Date(travel.startDate + "T00:00:00") && today <= travelEnd && !isArchived;
+            const isAwaitingAccountability = isPast && !isArchived;
+            const isConcluded = isArchived;
+
 
             const isUserVolunteered = travel.volunteers?.includes(currentUserInfo);
             const isUserSelected = travel.selectedVolunteers?.includes(currentUserInfo);
 
             let statusConfig;
-            if (isArchived && isPast) { 
+            if (isConcluded) { 
               statusConfig = { title: 'Missão Concluída', icon: <CheckCircle2 size={16} />, headerClass: 'bg-gray-500', h2Icon: <CheckCircle2 className="h-5 w-5" /> };
             } else if (isOpen) {
               statusConfig = { title: 'Em aberto', icon: <div className="w-2 h-2 bg-white rounded-full animate-pulse" />, headerClass: 'bg-emerald-500', ctaClass: 'bg-emerald-500 hover:bg-emerald-600', h2Icon: <Handshake className="h-5 w-5" /> };
-            } else if (isProcessing) {
-              statusConfig = { title: 'Processando diária', icon: <Loader2 size={14} className="animate-spin" />, headerClass: 'bg-orange-500', h2Icon: <Calculator className="h-5 w-5" /> };
-            } else if (isOngoing) {
-              statusConfig = { title: 'Em trânsito', icon: <Route size={14} />, headerClass: 'bg-blue-500', h2Icon: <Car className="h-5 w-5" /> };
-            } else if (isPast) { 
+            } else if (isProcessing || isOngoing) { // Combinado para simplificar
+              statusConfig = { title: isOngoing ? 'Em trânsito' : 'Processando diária', icon: isOngoing ? <Route size={14}/> : <Loader2 size={14} className="animate-spin" />, headerClass: 'bg-blue-500', h2Icon: isOngoing ? <Car className="h-5 w-5" /> : <Calculator className="h-5 w-5" /> };
+            } else if (isAwaitingAccountability) { 
               statusConfig = { title: 'Aguardando Prestação de Contas', icon: <Info size={16} />, headerClass: 'bg-red-600', h2Icon: <Info className="h-5 w-5" /> };
             } else {
               statusConfig = { title: 'Status Desconhecido', icon: <CheckCircle2 size={16} />, headerClass: 'bg-gray-500', h2Icon: <CheckCircle2 className="h-5 w-5" /> };
@@ -535,10 +557,8 @@ export const TravelManagement = () => {
             const displayVolunteersList = getSortedVolunteers(travel);
             const dailyCount = differenceInDays(travelEnd, new Date(travel.startDate + "T00:00:00")) + (travel.halfLastDay ? 0.5 : 1);
             const totalCost = travel.dailyRate && dailyCount > 0 ? dailyCount * Number(travel.dailyRate) : 0;
-            const isAwaitingAccountability = isPast && !isArchived;
-
+            
             return (
-              // CORRECTED: Opacity class removed
               <div key={travel.id} className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
                 <div className={`text-white p-4 ${statusConfig.headerClass}`}>
                   <div className="flex justify-between items-center mb-3">
@@ -548,10 +568,11 @@ export const TravelManagement = () => {
                     {isAdmin && <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" className="h-7 w-7 p-0 hover:bg-black/20 rounded-full text-white"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {isOpen && <DropdownMenuItem onClick={() => handleEditTravel(travel)}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>}
+                        {!isLocked && !isPast && <DropdownMenuItem onClick={() => handleEditTravel(travel)}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>}
                         {isOpen && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}><Lock className="mr-2 h-4 w-4" />Processar</DropdownMenuItem>}
-                        {isProcessing && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}><LockOpen className="mr-2 h-4 w-4" />Reabrir</DropdownMenuItem>}
+                        {(isProcessing || isOngoing) && <DropdownMenuItem onClick={() => handleToggleLock(travel.id)}><LockOpen className="mr-2 h-4 w-4" />Reabrir</DropdownMenuItem>}
                         {isAwaitingAccountability && <DropdownMenuItem onClick={() => handleArchive(travel.id, true)}><CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />Encerrar P. de Contas</DropdownMenuItem>}
+                        {isConcluded && <DropdownMenuItem onClick={() => handleArchive(travel.id, false)}><Archive className="mr-2 h-4 w-4" />Reabrir P. de Contas</DropdownMenuItem>}
                         <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteTravel(travel.id)}><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>}
@@ -562,10 +583,10 @@ export const TravelManagement = () => {
                      {travel.destination}
                   </h2>
                 </div>
-                <div className="main-content p-5 px-[8px] mx-0">
+                <div className="main-content p-5">
                   <div className="info-section mb-5 grid grid-cols-2 gap-3">
                       <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-blue-400"><div className="text-xs font-medium text-slate-500 uppercase">Período</div><div className="text-sm font-semibold text-slate-800">{new Date(travel.startDate + 'T00:00').toLocaleDateString()} - {new Date(travel.endDate + 'T00:00').toLocaleDateString()}</div></div>
-                      <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-emerald-400"><div className="text-xs font-medium text-slate-500 uppercase">{isOpen ? "Vagas" : "Selecionados"}</div><div className="text-sm font-semibold text-slate-800">{isLocked ? `${travel.selectedVolunteers?.length || 0}` : `${travel.slots} para seleção`}</div></div>
+                      <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-emerald-400"><div className="text-xs font-medium text-slate-500 uppercase">{isOpen ? "Vagas" : "Selecionados"}</div><div className="text-sm font-semibold text-slate-800">{isLocked || isConcluded ? `${travel.selectedVolunteers?.length || 0}` : `${travel.slots} para seleção`}</div></div>
                       <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-amber-400"><div className="text-xs font-medium text-slate-500 uppercase">Duração</div><div className="text-sm font-semibold text-slate-800">{formattedDiaryCount(dailyCount)}</div></div>
                       <div className="info-item bg-slate-50 p-3 rounded-lg border-l-4 border-purple-400"><div className="text-xs font-medium text-slate-500 uppercase">Remuneração</div><div className="text-sm font-semibold text-slate-800">{totalCost > 0 ? totalCost.toLocaleString("pt-BR", { style: 'currency', currency: 'BRL' }) : 'N/A'}</div></div>
                   </div>
@@ -574,31 +595,31 @@ export const TravelManagement = () => {
                       <div className="volunteer-grid grid gap-2">
                           {displayVolunteersList.length > 0 ? displayVolunteersList.map(vol => <div 
                               key={vol.fullName} 
-                              className={`volunteer-item border rounded-lg p-3 transition-all ${!isLocked ? 'cursor-pointer' : ''} ${isLocked ? 'border-emerald-400 bg-emerald-50' : vol.isSelected ? 'border-blue-400 bg-blue-50' : 'bg-white'}`}
+                              className={`volunteer-item border rounded-lg p-3 transition-all ${!isLocked ? 'cursor-pointer' : ''} ${isLocked || isConcluded ? 'border-emerald-400 bg-emerald-50' : vol.isSelected ? 'border-blue-400 bg-blue-50' : 'bg-white'}`}
                               onDoubleClick={() => isAdmin && isOpen && handleToggleSelectedVolunteer(travel.id, vol.fullName)}
                           >
                                   <div className="flex justify-between items-start">
                                       <div className="flex flex-col flex-1 overflow-hidden">
-                                           <p className={`text-sm font-semibold truncate ${isLocked ? 'text-emerald-800' : vol.isSelected ? 'text-blue-800' : 'text-slate-800'}`}>{vol.fullName}</p>
+                                           <p className={`text-sm font-semibold truncate ${isLocked || isConcluded ? 'text-emerald-800' : vol.isSelected ? 'text-blue-800' : 'text-slate-800'}`}>{vol.fullName}</p>
                                            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                                                <span className="flex items-center gap-1.5"><MapPin size={12} /> {volunteerCounts[vol.fullName] || 0} viagens</span>
                                                <span className="flex items-center gap-1.5"><DollarSign size={12} /> {formattedDiaryCount(diaryCounts[vol.fullName] || 0)}</span>
                                            </div>
                                       </div>
                                       <div className="flex items-center gap-2 pl-2">
-                                          {isLocked && <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />}
+                                          {(isLocked || isConcluded) && vol.isSelected && <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />}
                                           {isAdmin && isOpen && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500" onClick={(e) => { e.stopPropagation(); handleRemoveVolunteer(travel.id, vol.fullName); }}><X className="h-4 w-4 text-red-500" /></Button>}
                                       </div>
                                   </div>
                               </div>) : <p className="text-xs text-slate-500 italic">Nenhum voluntário {isOpen ? 'inscrito' : 'selecionado'}.</p>}
                       </div>
                   </div>
-                  {isAwaitingAccountability && (isUserSelected || isAdmin) && <div className="documents-section mb-5">
+                  {(isAwaitingAccountability || isConcluded) && (isUserSelected || isAdmin) && <div className="documents-section mb-5">
                           <div className="section-header flex justify-between items-center mb-3 pb-2 border-b">
                               <h3 className="section-title text-sm font-semibold text-slate-800">Prestação de Contas</h3>
-                              <Button size="sm" onClick={() => { setSelectedTravelForDocument(travel); setIsDocumentModalOpen(true); }}><Plus className="h-4 w-4 mr-2" /> Adicionar Documento</Button>
+                              {!isConcluded && <Button size="sm" onClick={() => { setSelectedTravelForDocument(travel); setIsDocumentModalOpen(true); }}><Plus className="h-4 w-4 mr-2" /> Adicionar Documento</Button>}
                           </div>
-                          {missingDocs.length > 0 && <div className="p-3 my-3 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg">
+                          {isAwaitingAccountability && missingDocs.length > 0 && <div className="p-3 my-3 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg">
                                   <p className="font-semibold flex items-center gap-2 text-sm"><AlertTriangle size={16} /> Documentos Obrigatórios Pendentes:</p>
                                   <ul className="list-disc list-inside mt-1 pl-2 text-xs">{missingDocs.map(doc => <li key={doc}>{doc}</li>)}</ul>
                               </div>}
@@ -616,7 +637,7 @@ export const TravelManagement = () => {
                                       </div>
                                       <div className="flex items-center gap-2 pl-2">
                                           <a href={doc.url} download={doc.originalFileName || doc.name} target="_blank" rel="noopener noreferrer" title="Baixar"><Download size={16} className="text-slate-500 hover:text-blue-600 cursor-pointer" /></a>
-                                          {(doc.uploaderId === user.id || isAdmin) && <button onClick={() => handleFileDelete(travel, doc)} title="Excluir"><X size={16} className="text-slate-500 hover:text-red-600 cursor-pointer" /></button>}
+                                          {(doc.uploaderId === user.id || isAdmin) && !isConcluded && <button onClick={() => handleFileDelete(travel, doc)} title="Excluir"><X size={16} className="text-slate-500 hover:text-red-600 cursor-pointer" /></button>}
                                       </div>
                                   </div>) : <p className="text-xs text-slate-500 italic">Nenhum documento enviado.</p>}
                           </div>
