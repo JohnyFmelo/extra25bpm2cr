@@ -31,6 +31,10 @@ export const useUserBlockListener = () => {
           navigate('/login');
         }
       }
+      // NÃO remove dados se documento não existir - pode ser problema temporário de conexão
+    }, (error) => {
+      // Em caso de erro de conexão, apenas loga - NÃO desloga o usuário
+      console.error('UserBlockListener - Firebase connection error:', error);
     });
 
     return () => unsubscribe();
