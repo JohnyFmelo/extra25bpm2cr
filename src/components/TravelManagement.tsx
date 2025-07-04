@@ -560,7 +560,7 @@ export const TravelManagement = () => {
         {isAdmin}
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-          {travels.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()).filter(travel => isAdmin || !travel.archived || (travel.archived && today > new Date(travel.endDate + "T00:00:00"))).map(travel => {
+          {travels.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()).filter(travel => isAdmin || !travel.archived).map(travel => {
           const travelStart = new Date(travel.startDate + "T00:00:00");
           const travelEnd = new Date(travel.endDate + "T00:00:00");
           const today = new Date();

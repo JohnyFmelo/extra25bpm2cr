@@ -44,25 +44,34 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         const unsubscribe = onSnapshot(userDocRef, (doc) => {
           if (doc.exists()) {
             const firebaseData = doc.data();
-            const updatedUserData = {
-              ...userData,
-              warName: firebaseData.warName || userData.warName,
-              rank: firebaseData.rank || userData.rank,
-              service: firebaseData.service || userData.service,
-              rgpm: firebaseData.rgpm,
-              email: firebaseData.email || userData.email,
-              registration: firebaseData.registration || userData.registration,
-              currentVersion: firebaseData.currentVersion || userData.currentVersion,
-              lastVersionUpdate: firebaseData.lastVersionUpdate || userData.lastVersionUpdate,
-              isVolunteer: firebaseData.isVolunteer ?? false,
-            };
             
-            // Atualiza tanto o estado quanto o localStorage
-            setUser(updatedUserData);
-            localStorage.setItem('user', JSON.stringify(updatedUserData));
-            
-            console.log("UserContext - Real-time update from Firebase:", updatedUserData);
+            // Só atualiza se não estiver bloqueado - deixa o useUserBlockListener lidar com bloqueios
+            if (!firebaseData.blocked) {
+              const updatedUserData = {
+                ...userData,
+                warName: firebaseData.warName || userData.warName,
+                rank: firebaseData.rank || userData.rank,
+                service: firebaseData.service || userData.service,
+                rgpm: firebaseData.rgpm,
+                email: firebaseData.email || userData.email,
+                registration: firebaseData.registration || userData.registration,
+                currentVersion: firebaseData.currentVersion || userData.currentVersion,
+                lastVersionUpdate: firebaseData.lastVersionUpdate || userData.lastVersionUpdate,
+                isVolunteer: firebaseData.isVolunteer ?? false,
+                blocked: firebaseData.blocked || false,
+              };
+              
+              // Atualiza tanto o estado quanto o localStorage
+              setUser(updatedUserData);
+              localStorage.setItem('user', JSON.stringify(updatedUserData));
+              
+              console.log("UserContext - Real-time update from Firebase:", updatedUserData);
+            }
           }
+          // Se o documento não existir, mantém os dados locais - não limpa automaticamente
+        }, (error) => {
+          // Em caso de erro, mantém os dados locais e apenas loga o erro
+          console.error("UserContext - Firebase listener error:", error);
         });
 
         return () => unsubscribe();
