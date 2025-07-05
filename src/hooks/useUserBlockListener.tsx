@@ -1,42 +1,49 @@
 
 import { useEffect } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/context/UserContext';
 
 export const useUserBlockListener = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, session } = useUser();
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    
-    if (!user.id) return;
+    if (!user?.id || !session) return;
 
-    // Listener para mudanças no documento do usuário
-    const userDocRef = doc(db, 'users', user.id);
-    const unsubscribe = onSnapshot(userDocRef, (doc) => {
-      if (doc.exists()) {
-        const userData = doc.data();
-        
-        // Se o usuário foi bloqueado, fazer logout imediato
-        if (userData.blocked) {
-          localStorage.removeItem('user');
-          toast({
-            title: "Acesso Bloqueado",
-            description: "Sua conta foi bloqueada. Contate o administrador.",
-            variant: "destructive",
-          });
-          navigate('/login');
+    // Listener para mudanças em tempo real no perfil do usuário
+    const channel = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `user_id=eq.${session.user.id}`
+        },
+        (payload) => {
+          console.log('Profile updated:', payload);
+          const newData = payload.new as any;
+          
+          // Se o usuário foi bloqueado, fazer logout imediato
+          if (newData.blocked) {
+            supabase.auth.signOut();
+            toast({
+              title: "Acesso Bloqueado",
+              description: "Sua conta foi bloqueada. Contate o administrador.",
+              variant: "destructive",
+            });
+            navigate('/login');
+          }
         }
-      }
-      // NÃO remove dados se documento não existir - pode ser problema temporário de conexão
-    }, (error) => {
-      // Em caso de erro de conexão, apenas loga - NÃO desloga o usuário
-      console.error('UserBlockListener - Firebase connection error:', error);
-    });
+      )
+      .subscribe();
 
-    return () => unsubscribe();
-  }, [navigate, toast]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, session, navigate, toast]);
 };
