@@ -463,7 +463,7 @@ export const TravelManagement = () => {
           selectedVolunteers: arrayUnion(volunteerName)
         });
         toast({
-          title: "Voluntário selecionado manualmente"
+          title: "Voluntário selecionado manually"
         });
       }
     } catch (error) {
@@ -646,6 +646,13 @@ export const TravelManagement = () => {
               headerClass: 'bg-gray-500',
               h2Icon: <CheckCircle2 className="h-5 w-5" />
             };
+          } else if (isOngoing) {
+            statusConfig = {
+              title: 'Em trânsito',
+              icon: <Route size={14} />,
+              headerClass: 'bg-blue-500',
+              h2Icon: <Car className="h-5 w-5" />
+            };
           } else if (isOpen) {
             statusConfig = {
               title: 'Em aberto',
@@ -660,13 +667,6 @@ export const TravelManagement = () => {
               icon: <Loader2 size={14} className="animate-spin" />,
               headerClass: 'bg-orange-500',
               h2Icon: <Calculator className="h-5 w-5" />
-            };
-          } else if (isOngoing) {
-            statusConfig = {
-              title: 'Em trânsito',
-              icon: <Route size={14} />,
-              headerClass: 'bg-blue-500',
-              h2Icon: <Car className="h-5 w-5" />
             };
           } else if (isPast) {
             statusConfig = {
