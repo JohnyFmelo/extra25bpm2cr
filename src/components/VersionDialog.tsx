@@ -69,39 +69,29 @@ const VersionDialog = ({ open, onOpenChange }: VersionDialogProps) => {
         updatedBy: JSON.parse(localStorage.getItem("user") || "{}").id
       });
 
-      // Resetar a versão de todos os usuários apenas se for uma atualização major
-      if (shouldForceGlobalLogout(currentVersion, newVersion)) {
-        console.log("Forçando logout global devido a atualização major:", { currentVersion, newVersion });
-        const usersSnapshot = await getDocs(collection(db, "users"));
-        const batch = [];
-        
-        usersSnapshot.docs.forEach((userDoc) => {
-          batch.push(
-            setDoc(doc(db, "users", userDoc.id), {
-              ...userDoc.data(),
-              currentVersion: "0.0.0" // Versão antiga para forçar atualização
-            })
-          );
-        });
+      // Resetar a versão de todos os usuários para forçar novo login
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      const batch = [];
+      
+      usersSnapshot.docs.forEach((userDoc) => {
+        batch.push(
+          setDoc(doc(db, "users", userDoc.id), {
+            ...userDoc.data(),
+            currentVersion: "0.0.0" // Versão antiga para forçar atualização
+          })
+        );
+      });
 
-        await Promise.all(batch);
+      await Promise.all(batch);
 
-        toast({
-          title: "Sucesso",
-          description: "Versão atualizada com sucesso! Todos os usuários serão deslogados devido à grande atualização.",
-        });
+      toast({
+        title: "Sucesso",
+        description: "Versão atualizada com sucesso! Todos os usuários serão deslogados.",
+      });
 
-        // Forçar logout e refresh da página
-        localStorage.removeItem("user");
-        window.location.reload();
-      } else {
-        toast({
-          title: "Sucesso", 
-          description: "Versão atualizada com sucesso! Usuários verão as melhorias no próximo login.",
-        });
-        
-        onOpenChange(false);
-      }
+      // Forçar logout e refresh da página
+      localStorage.removeItem("user");
+      window.location.reload();
       
     } catch (error) {
       console.error("Erro ao atualizar versão:", error);
@@ -113,20 +103,6 @@ const VersionDialog = ({ open, onOpenChange }: VersionDialogProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Função para determinar se uma atualização requer logout global
-  const shouldForceGlobalLogout = (oldVersion: string, newVersion: string): boolean => {
-    const parseVersion = (version: string) => {
-      const parts = version.split('.').map(Number);
-      return { major: parts[0] || 0, minor: parts[1] || 0, patch: parts[2] || 0 };
-    };
-
-    const oldV = parseVersion(oldVersion);
-    const newV = parseVersion(newVersion);
-
-    // Força logout apenas se mudou versão major ou minor significativa
-    return newV.major > oldV.major || (newV.major === oldV.major && newV.minor > oldV.minor + 1);
   };
 
   return (
@@ -164,7 +140,7 @@ const VersionDialog = ({ open, onOpenChange }: VersionDialogProps) => {
           </div>
 
           <div className="text-sm text-orange-600 bg-orange-50 p-3 rounded">
-            <strong>Atenção:</strong> Atualizações major (ex: 1.0.0 → 2.0.0) ou minor significativas (ex: 1.0.0 → 1.2.0) farão logout automático de todos os usuários. Atualizações patch (ex: 1.0.0 → 1.0.1) não deslogam usuários.
+            <strong>Atenção:</strong> Ao atualizar a versão, todos os usuários serão deslogados automaticamente.
           </div>
         </div>
 

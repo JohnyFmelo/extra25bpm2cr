@@ -44,13 +44,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         const unsubscribe = onSnapshot(userDocRef, (doc) => {
           if (doc.exists()) {
             const firebaseData = doc.data();
-            
-            // Verifica se o usuário foi bloqueado - só atualiza se não estiver bloqueado
-            if (firebaseData.blocked === true) {
-              console.log("UserContext - Usuário bloqueado detectado, não atualizando contexto");
-              return; // Deixa o useUserBlockListener handle o logout
-            }
-            
             const updatedUserData = {
               ...userData,
               warName: firebaseData.warName || userData.warName,
@@ -62,7 +55,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
               currentVersion: firebaseData.currentVersion || userData.currentVersion,
               lastVersionUpdate: firebaseData.lastVersionUpdate || userData.lastVersionUpdate,
               isVolunteer: firebaseData.isVolunteer ?? false,
-              blocked: firebaseData.blocked || false,
             };
             
             // Atualiza tanto o estado quanto o localStorage
@@ -71,8 +63,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             
             console.log("UserContext - Real-time update from Firebase:", updatedUserData);
           }
-        }, (error) => {
-          console.error("Erro no listener do UserContext:", error);
         });
 
         return () => unsubscribe();
