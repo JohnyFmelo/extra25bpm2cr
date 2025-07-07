@@ -20,8 +20,11 @@ export const useUserBlockListener = () => {
       if (doc.exists()) {
         const userData = doc.data();
         
+        console.log("UserBlockListener - Dados do usuário:", userData);
+        
         // Se o usuário foi bloqueado, fazer logout imediato
-        if (userData.blocked) {
+        if (userData.blocked === true) {
+          console.log("Usuário bloqueado, fazendo logout...");
           localStorage.removeItem('user');
           toast({
             title: "Acesso Bloqueado",
@@ -31,6 +34,8 @@ export const useUserBlockListener = () => {
           navigate('/login');
         }
       }
+    }, (error) => {
+      console.error("Erro no listener de bloqueio:", error);
     });
 
     return () => unsubscribe();
