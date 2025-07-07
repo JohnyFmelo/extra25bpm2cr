@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { EyeOff, Eye, Mail, Lock } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { useNavigate } from "react-router-dom";
 
 const LoginForm = () => {
@@ -19,14 +19,17 @@ const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      // Login com Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const db = getFirestore();
+      const usersRef = collection(db, "users");
+      const q = query(
+        usersRef,
+        where("email", "==", email),
+        where("password", "==", password)
+      );
 
-      if (authError) {
-        console.error("Auth error:", authError);
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
         toast({
           title: "Erro no login",
           description: "Email ou senha incorretos.",
@@ -35,34 +38,11 @@ const LoginForm = () => {
         return;
       }
 
-      if (!authData.user) {
-        toast({
-          title: "Erro no login",
-          description: "Erro interno. Tente novamente.",
-          variant: "destructive",
-        });
-        return;
-      }
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
 
-      // Buscar dados do perfil do usuário
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', authData.user.id)
-        .single();
-
-      if (profileError) {
-        console.error("Profile error:", profileError);
-        toast({
-          title: "Erro no login",
-          description: "Erro ao carregar dados do usuário.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Verificar se usuário está bloqueado
-      if (profile?.blocked) {
+      // Check if user is blocked
+      if (userData.blocked) {
         toast({
           title: "Usuário Bloqueado",
           description: "Seu usuário está bloqueado. Por favor, contate a P1.",
@@ -71,6 +51,18 @@ const LoginForm = () => {
         setIsLoading(false);
         return;
       }
+
+      // Store ALL user data in localStorage, including 'service'
+      localStorage.setItem('user', JSON.stringify({
+        id: userDoc.id,
+        email: userData.email,
+        userType: userData.userType,
+        warName: userData.warName,
+        registration: userData.registration,
+        rank: userData.rank,
+        blocked: userData.blocked,
+        service: userData.service // <-- INCLUÍDO AQUI!
+      }));
 
       toast({
         title: "Login realizado",
@@ -86,7 +78,6 @@ const LoginForm = () => {
       navigate("/");
 
     } catch (error) {
-      console.error("Login error:", error);
       toast({
         title: "Erro no login",
         description: "Ocorreu um erro ao tentar fazer login.",

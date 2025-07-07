@@ -1,44 +1,76 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { EyeOff, Eye, Mail, Lock, User, Shield, Badge } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getFirestore, collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const RegisterForm = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [warName, setWarName] = useState("");
-  const [registration, setRegistration] = useState("");
   const [rank, setRank] = useState("");
+  const [registration, setRegistration] = useState("");
+  const [password, setPassword] = useState("");
   const [userType, setUserType] = useState("user");
   const [service, setService] = useState("");
-  const [rgpm, setRgpm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  const ranks = [
+    "Cel PM",
+    "Ten Cel PM",
+    "Maj PM",
+    "Cap PM",
+    "1° Ten PM",
+    "2° Ten PM",
+    "Sub Ten PM",
+    "1° Sgt PM",
+    "2° Sgt PM",
+    "3° Sgt PM",
+    "Cb PM",
+    "Sd PM",
+    "Estágio"
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    if (password !== confirmPassword) {
+    
+    // Validate all required fields
+    if (!email || !warName || !rank || !registration || !password) {
       toast({
         title: "Erro no cadastro",
-        description: "As senhas não coincidem.",
+        description: "Por favor, preencha todos os campos obrigatórios.",
         variant: "destructive",
       });
-      setIsLoading(false);
       return;
     }
 
-    if (password.length < 6) {
+    // Additional validation for admin registration
+    if (userType === "admin" && !adminPassword) {
       toast({
         title: "Erro no cadastro",
-        description: "A senha deve ter pelo menos 6 caracteres.",
+        description: "Por favor, insira a senha de administrador.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    
+    if (userType === "admin" && adminPassword !== "010355") {
+      toast({
+        title: "Erro no cadastro",
+        description: "Senha de administrador incorreta.",
         variant: "destructive",
       });
       setIsLoading(false);
@@ -46,57 +78,58 @@ const RegisterForm = () => {
     }
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const db = getFirestore();
       
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            war_name: warName,
-            registration,
-            rank,
-            user_type: userType,
-            service,
-            rgpm,
-            is_volunteer: false
-          }
-        }
-      });
-
-      if (error) {
-        console.error("Register error:", error);
+      // Verificar se já existe um usuário com a mesma matrícula
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("registration", "==", registration));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
         toast({
           title: "Erro no cadastro",
-          description: error.message,
+          description: "Já existe um usuário com esta matrícula.",
           variant: "destructive",
         });
+        setIsLoading(false);
         return;
       }
 
+      // Criar novo usuário com todos os dados necessários
+      const userData = {
+        email,
+        warName,
+        rank,
+        registration,
+        password,
+        userType,
+        service,
+        createdAt: new Date(),
+      };
+
+      const docRef = await addDoc(collection(db, "users"), userData);
+      console.log("Usuário cadastrado com ID:", docRef.id);
+
       toast({
-        title: "Cadastro realizado",
-        description: "Verifique seu email para confirmar a conta.",
-        className: "bg-green-500 text-white",
+        title: "Usuário cadastrado",
+        description: "Cadastro realizado com sucesso!",
+        className: "bg-blue-500 text-white",
       });
 
       // Clear form
       setEmail("");
-      setPassword("");
-      setConfirmPassword("");
       setWarName("");
-      setRegistration("");
       setRank("");
+      setRegistration("");
+      setPassword("");
       setUserType("user");
       setService("");
-      setRgpm("");
-
+      setAdminPassword("");
     } catch (error) {
-      console.error("Register error:", error);
+      console.error("Erro ao cadastrar:", error);
       toast({
         title: "Erro no cadastro",
-        description: "Ocorreu um erro ao tentar fazer o cadastro.",
+        description: "Ocorreu um erro ao realizar o cadastro.",
         variant: "destructive",
       });
     } finally {
@@ -106,180 +139,116 @@ const RegisterForm = () => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label htmlFor="warName" className="block text-sm font-medium text-gray-700">
-            Nome de Guerra
-          </label>
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              id="warName"
-              type="text"
-              value={warName}
-              onChange={(e) => setWarName(e.target.value)}
-              required
-              className="pl-10"
-              placeholder="Nome de guerra"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="registration" className="block text-sm font-medium text-gray-700">
-            Matrícula
-          </label>
-          <div className="relative">
-            <Badge className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              id="registration"
-              type="text"
-              value={registration}
-              onChange={(e) => setRegistration(e.target.value)}
-              required
-              className="pl-10"
-              placeholder="Matrícula"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label htmlFor="rank" className="block text-sm font-medium text-gray-700">
-            Graduação
-          </label>
-          <div className="relative">
-            <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              id="rank"
-              type="text"
-              value={rank}
-              onChange={(e) => setRank(e.target.value)}
-              required
-              className="pl-10"
-              placeholder="Graduação"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="userType" className="block text-sm font-medium text-gray-700">
-            Tipo de Usuário
-          </label>
-          <Select value={userType} onValueChange={setUserType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="user">Usuário</SelectItem>
-              <SelectItem value="admin">Administrador</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label htmlFor="service" className="block text-sm font-medium text-gray-700">
-            Serviço
-          </label>
-          <Input
-            id="service"
-            type="text"
-            value={service}
-            onChange={(e) => setService(e.target.value)}
-            placeholder="Serviço (opcional)"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="rgpm" className="block text-sm font-medium text-gray-700">
-            RGPM
-          </label>
-          <Input
-            id="rgpm"
-            type="text"
-            value={rgpm}
-            onChange={(e) => setRgpm(e.target.value)}
-            placeholder="RGPM (opcional)"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-          Email
+      <div>
+        <label htmlFor="register-email" className="block text-sm font-medium text-gray-700">
+          Email *
         </label>
-        <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="pl-10"
-            placeholder="Digite seu email"
-          />
-        </div>
+        <Input
+          id="register-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
       </div>
-
-      <div className="space-y-2">
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-          Senha
+      <div>
+        <label htmlFor="war-name" className="block text-sm font-medium text-gray-700">
+          Nome de Guerra *
         </label>
-        <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            id="password"
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="pl-10"
-            placeholder="Digite sua senha"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
-          </button>
-        </div>
+        <Input
+          id="war-name"
+          type="text"
+          value={warName}
+          onChange={(e) => setWarName(e.target.value)}
+          required
+        />
       </div>
-
-      <div className="space-y-2">
-        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-          Confirmar Senha
+      <div>
+        <label htmlFor="rank" className="block text-sm font-medium text-gray-700">
+          Graduação *
         </label>
-        <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            id="confirmPassword"
-            type={showConfirmPassword ? "text" : "password"}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            className="pl-10"
-            placeholder="Confirme sua senha"
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            {showConfirmPassword ? <Eye size={20} /> : <EyeOff size={20} />}
-          </button>
-        </div>
+        <Select value={rank} onValueChange={setRank} required>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione a graduação" />
+          </SelectTrigger>
+          <SelectContent>
+            {ranks.map((rankOption) => (
+              <SelectItem key={rankOption} value={rankOption}>
+                {rankOption}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-
-      <Button 
-        type="submit" 
-        className="w-full bg-primary hover:bg-primary-light transition-colors duration-300"
-        disabled={isLoading}
-      >
+      <div>
+        <label htmlFor="registration" className="block text-sm font-medium text-gray-700">
+          Matrícula *
+        </label>
+        <Input
+          id="registration"
+          type="text"
+          value={registration}
+          onChange={(e) => setRegistration(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <label htmlFor="service" className="block text-sm font-medium text-gray-700">
+          Serviço
+        </label>
+        <Select value={service} onValueChange={setService}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o serviço" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Operacional">Operacional</SelectItem>
+            <SelectItem value="Administrativo">Administrativo</SelectItem>
+            <SelectItem value="Inteligência">Inteligência</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <label htmlFor="register-password" className="block text-sm font-medium text-gray-700">
+          Senha *
+        </label>
+        <Input
+          id="register-password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Tipo de Usuário *
+        </label>
+        <RadioGroup value={userType} onValueChange={setUserType} className="flex gap-4">
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="user" id="user" />
+            <Label htmlFor="user">Usuário</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="admin" id="admin" />
+            <Label htmlFor="admin">Administrador</Label>
+          </div>
+        </RadioGroup>
+      </div>
+      {userType === "admin" && (
+        <div>
+          <label htmlFor="admin-password" className="block text-sm font-medium text-gray-700">
+            Senha do Administrador *
+          </label>
+          <Input
+            id="admin-password"
+            type="password"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+            required
+          />
+        </div>
+      )}
+      <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? "Cadastrando..." : "Cadastrar"}
       </Button>
     </form>

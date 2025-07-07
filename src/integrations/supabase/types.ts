@@ -548,60 +548,6 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
-        Row: {
-          blocked: boolean | null
-          created_at: string
-          current_version: string | null
-          email: string
-          id: string
-          is_volunteer: boolean | null
-          last_version_update: string | null
-          rank: string
-          registration: string
-          rgpm: string | null
-          service: string | null
-          updated_at: string
-          user_id: string | null
-          user_type: string
-          war_name: string
-        }
-        Insert: {
-          blocked?: boolean | null
-          created_at?: string
-          current_version?: string | null
-          email: string
-          id?: string
-          is_volunteer?: boolean | null
-          last_version_update?: string | null
-          rank: string
-          registration: string
-          rgpm?: string | null
-          service?: string | null
-          updated_at?: string
-          user_id?: string | null
-          user_type?: string
-          war_name: string
-        }
-        Update: {
-          blocked?: boolean | null
-          created_at?: string
-          current_version?: string | null
-          email?: string
-          id?: string
-          is_volunteer?: boolean | null
-          last_version_update?: string | null
-          rank?: string
-          registration?: string
-          rgpm?: string | null
-          service?: string | null
-          updated_at?: string
-          user_id?: string | null
-          user_type?: string
-          war_name?: string
-        }
-        Relationships: []
-      }
       SETEMBRO: {
         Row: {
           "Horas 25° BPM": string | null

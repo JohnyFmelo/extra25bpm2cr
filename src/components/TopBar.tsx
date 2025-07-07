@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { MessageSquare, BellDot, Bell, User, LogOut } from "lucide-react";
+import { MessageSquare, BellDot, Bell, User } from "lucide-react";
 import { useState, useEffect } from "react";
 import ProfileUpdateDialog from "./ProfileUpdateDialog";
 import PasswordChangeDialog from "./PasswordChangeDialog";
@@ -9,49 +9,62 @@ import Messages from "./Messages";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useVersioning } from "@/hooks/useVersioning";
 import { useUser } from "@/context/UserContext";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 const TopBar = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showMessagesDialog, setShowMessagesDialog] = useState(false);
   const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
-  const { user } = useUser();
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const [userData, setUserData] = useState(() => JSON.parse(localStorage.getItem('user') || '{}'));
+  const {
+    user,
+    setUser
+  } = useUser();
   const unreadCount = useNotifications();
-  const { currentSystemVersion } = useVersioning();
+  const {
+    currentSystemVersion
+  } = useVersioning();
 
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Logout error:", error);
-        toast({
-          title: "Erro ao sair",
-          description: "Ocorreu um erro ao tentar sair.",
-          variant: "destructive",
-        });
-        return;
+  // Listen for real-time updates from Firebase
+  useEffect(() => {
+    if (!userData?.id) return;
+    const userDocRef = doc(db, "users", userData.id);
+    const unsubscribe = onSnapshot(userDocRef, doc => {
+      if (doc.exists()) {
+        const firebaseData = doc.data();
+        const updatedUserData = {
+          ...userData,
+          warName: firebaseData.warName || userData.warName,
+          rank: firebaseData.rank || userData.rank,
+          service: firebaseData.service || userData.service,
+          rgpm: firebaseData.rgpm || userData.rgpm,
+          email: firebaseData.email || userData.email,
+          registration: firebaseData.registration || userData.registration
+        };
+
+        // Update both local state and localStorage
+        setUserData(updatedUserData);
+        localStorage.setItem('user', JSON.stringify(updatedUserData));
+
+        // Update context as well
+        setUser(updatedUserData);
+        console.log("TopBar - Real-time update from Firebase:", updatedUserData);
       }
+    });
+    return () => unsubscribe();
+  }, [userData?.id, setUser]);
 
-      toast({
-        title: "Logout realizado",
-        description: "Você foi desconectado com sucesso.",
-        className: "bg-blue-500 text-white",
-      });
-
-      navigate("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-      toast({
-        title: "Erro ao sair",
-        description: "Ocorreu um erro inesperado.",
-        variant: "destructive",
-      });
-    }
-  };
+  // Listen for user data updates from localStorage events
+  useEffect(() => {
+    const handleUserDataUpdate = (event: CustomEvent) => {
+      setUserData(event.detail);
+    };
+    window.addEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
+    return () => {
+      window.removeEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
+    };
+  }, []);
 
   // Get user initials for avatar
   const getInitials = (name: string) => {
@@ -72,13 +85,14 @@ const TopBar = () => {
   return <header className="bg-gradient-to-r from-primary-dark via-primary to-primary-light sticky top-0 z-50 shadow-md">
       <div className="flex h-16 items-center px-6 gap-4 max-w-7xl mx-auto">
         <div className="flex-1 flex items-center gap-3">
+          
           <div className="flex flex-col">
             <h2 className="text-base font-semibold text-white">
-              {user?.rank} {user?.warName}
+              {userData.rank} {userData.warName}
             </h2>
             <div className="flex items-center gap-2">
-              <p className="text-xs text-white/80">{getServiceDisplay(user?.service, user?.userType)}</p>
-              {user?.rgpm && <span className="text-xs text-white/60">• RGPM: {user?.rgpm}</span>}
+              <p className="text-xs text-white/80">{getServiceDisplay(userData.service, userData.userType)}</p>
+              {userData.rgpm && <span className="text-xs text-white/60">• RGPM: {userData.rgpm}</span>}
             </div>
           </div>
         </div>
@@ -88,21 +102,14 @@ const TopBar = () => {
               v{currentSystemVersion}
             </div>}
           
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className="text-white hover:bg-white/10"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
           
-          {user?.userType === "admin"}
+          
+          {userData.userType === "admin"}
         </div>
         
-        {showProfileDialog && <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={user} />}
+        {showProfileDialog && <ProfileUpdateDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} userData={userData} />}
         
-        {showPasswordDialog && <PasswordChangeDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} userId={user?.id} currentPassword="" />}
+        {showPasswordDialog && <PasswordChangeDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} userId={userData.id} currentPassword={userData.password} />}
         
         {showNotificationsDialog && <NotificationsDialog open={showNotificationsDialog} onOpenChange={setShowNotificationsDialog} />}
         
