@@ -585,13 +585,12 @@ export const TravelManagement = () => {
             const travelEnd = new Date(travel.endDate + "T00:00:00");
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            const travelStart = new Date(travel.startDate + "T00:00:00");
 
             const isLocked = travel.isLocked ?? false;
             const isArchived = travel.archived ?? false;
             const isPast = today > travelEnd;
             const isOpen = !isLocked && !isPast && !isArchived;
-            const isOngoing = isLocked && today >= travelStart && today <= travelEnd && !isArchived;
+            const isOngoing = isLocked && today >= new Date(travel.startDate + "T00:00:00") && today <= travelEnd && !isArchived;
             const isProcessing = isLocked && !isPast && !isOngoing && !isArchived; 
             const isAwaitingAccountability = isPast && !isArchived;
             const isConcluded = isArchived;
