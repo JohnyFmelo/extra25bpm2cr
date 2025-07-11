@@ -332,7 +332,7 @@ const BasicInformationTab: React.FC<BasicInformationTabProps> = ({
             </div>}
 
           <div className="space-y-2">
-            <Label>Apresentação em Juizado Especial VG</Label>
+            <Label>TERMO DE COMPROMISSO - Apresentação em Juizado Especial VG</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
               <div className="space-y-1">
                 <Label htmlFor="juizadoData">Data</Label>
