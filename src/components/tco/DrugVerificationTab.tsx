@@ -195,7 +195,6 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
             placeholder="Informe o número do lacre (ex: 12345678)"
             value={lacreNumero}
             onChange={e => setLacreNumero(e.target.value)}
-            maxLength={8}
             className="mt-2 text-lg"
           />
         </div>
