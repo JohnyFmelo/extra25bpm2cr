@@ -29,19 +29,8 @@ export const addTermoConstatacaoDroga = (doc, data) => {
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
-    
-    // Título principal
     doc.text("TERMO DE CONSTATAÇÃO PRELIMINAR DE DROGA", PAGE_WIDTH / 2, yPos, { align: "center" });
-    yPos += 5;
-    
-    // Número de requisição, se fornecido
-    if (data.numeroRequisicao) {
-        doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-        doc.text(`Nº ${data.numeroRequisicao}`, PAGE_WIDTH / 2, yPos, { align: "center" });
-        yPos += 10;
-    } else {
-        yPos += 5;
-    }
+    yPos += 10;
 
     const tipificacaoDroga = data.tipificacao || "PORTE DE DROGA PARA CONSUMO PESSOAL (ART. 28 DA LEI 11.343/06)";
     const textoIntro = `EM RAZÃO DA LAVRATURA DESTE TERMO CIRCUNSTANCIADO DE OCORRÊNCIA, PELO DELITO TIPIFICADO: ${tipificacaoDroga}, FOI APREENDIDO O MATERIAL DESCRITO ABAIXO, EM PODER ${pronomeAutor} ${generoAutor} ABAIXO ASSINADO JÁ QUALIFICAD${autor?.sexo?.toLowerCase() === 'feminino' ? 'A' : 'O'} NOS AUTOS. APÓS CIÊNCIA DAS IMPLICAÇÕES LEGAIS DO ENCARGO ASSUMIDO, FIRMOU-SE O COMPROMISSO LEGAL DE PROCEDER À ANÁLISE PRELIMINAR DOS SEGUINTES MATERIAIS:`;
