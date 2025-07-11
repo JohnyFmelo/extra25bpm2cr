@@ -60,9 +60,7 @@ export const addRequisicaoExameDrogas = (doc, data) => {
     // Título
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
-    const anoAtual = new Date().getFullYear();
-    const numeroRequisicao = data.numeroRequisicao || "001";
-    doc.text(`REQUISIÇÃO DE EXAME PERICIAL EM DROGAS ${numeroRequisicao}.2ºCR.VG.${anoAtual}`.toUpperCase(), PAGE_WIDTH / 2, yPos, { align: "center" });
+    doc.text("REQUISIÇÃO DE EXAME PERICIAL EM DROGAS".toUpperCase(), PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 10;
 
     // Conteúdo principal

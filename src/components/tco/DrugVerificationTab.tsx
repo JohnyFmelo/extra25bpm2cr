@@ -34,9 +34,6 @@ interface DrugVerificationTabProps {
   // Estado para o número do lacre, que é único para todas as drogas
   lacreNumero: string;
   setLacreNumero: (value: string) => void;
-  // Estado para o número de requisição
-  numeroRequisicao: string;
-  setNumeroRequisicao: (value: string) => void;
 }
 
 const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
@@ -47,8 +44,6 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
   onRemoverDroga,
   lacreNumero,
   setLacreNumero,
-  numeroRequisicao,
-  setNumeroRequisicao,
 }) => {
   return (
     <Card>
@@ -191,18 +186,6 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
             ))}
           </div>
         )}
-
-        {/* --- CAMPO DO NÚMERO DE REQUISIÇÃO --- */}
-        <div className="border-t pt-6">
-          <Label htmlFor="numeroRequisicao" className="text-base font-semibold">Número de Requisição *</Label>
-          <Input
-            id="numeroRequisicao"
-            placeholder="Ex: 119.2ª CR.VG.2025"
-            value={numeroRequisicao}
-            onChange={e => setNumeroRequisicao(e.target.value)}
-            className="mt-2 text-lg"
-          />
-        </div>
 
         {/* --- CAMPO DO NÚMERO DO LACRE --- */}
         <div className="border-t pt-6">

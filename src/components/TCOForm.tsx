@@ -230,7 +230,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
   const [operacao, setOperacao] = useState("");
   const [apreensoes, setApreensoes] = useState("");
   const [lacreNumero, setLacreNumero] = useState("");
-  const [numeroRequisicao, setNumeroRequisicao] = useState("");
   const [componentesGuarnicao, setComponentesGuarnicao] = useState<ComponenteGuarnicao[]>([]);
 
   // << CORREÇÃO: Os estados individuais de droga foram removidos. >>
@@ -968,10 +967,10 @@ const TCOForm: React.FC<TCOFormProps> = ({
     }
 
     // << CORREÇÃO: A validação agora checa se o array de drogas não está vazio e se o lacre foi preenchido. >>
-    if (isPrimaryDrugCase && (drogas.length === 0 || !lacreNumero.trim() || !numeroRequisicao.trim())) {
+    if (isPrimaryDrugCase && (drogas.length === 0 || !lacreNumero.trim())) {
       toast({
         title: "Dados da Droga Incompletos",
-        description: "Para Porte de Drogas, adicione pelo menos um tipo de droga à lista e preencha o Número de Requisição e o Número do Lacre.",
+        description: "Para Porte de Drogas, adicione pelo menos um tipo de droga à lista e preencha o Número do Lacre.",
         className: "bg-red-600 text-white border-red-700",
         duration: 7000
       });
@@ -1042,7 +1041,6 @@ const TCOForm: React.FC<TCOFormProps> = ({
         apreensoes: apreensoes.trim(),
         conclusaoPolicial: conclusaoPolicial.trim(),
         lacreNumero: isPrimaryDrugCase ? lacreNumero.trim() : undefined,
-        numeroRequisicao: isPrimaryDrugCase ? numeroRequisicao.trim() : undefined,
         drogas: isPrimaryDrugCase ? drogas : undefined, // << CAMPO NOVO COM O ARRAY DE DROGAS >>
         startTime: startTime?.toISOString(),
         endTime: completionNow.toISOString(),
@@ -1211,7 +1209,7 @@ const TCOForm: React.FC<TCOFormProps> = ({
 
         {isPrimaryDrugCase && <div className="mb-8">
             {/* << CORREÇÃO: As props do DrugVerificationTab foram completamente alteradas para refletir o novo modelo de dados. >> */}
-            <DrugVerificationTab novaDroga={novaDroga} onNovaDrogaChange={handleNovaDrogaChange} onAdicionarDroga={handleAdicionarDroga} drogasAdicionadas={drogas} onRemoverDroga={handleRemoverDroga} lacreNumero={lacreNumero} setLacreNumero={setLacreNumero} numeroRequisicao={numeroRequisicao} setNumeroRequisicao={setNumeroRequisicao} />
+            <DrugVerificationTab novaDroga={novaDroga} onNovaDrogaChange={handleNovaDrogaChange} onAdicionarDroga={handleAdicionarDroga} drogasAdicionadas={drogas} onRemoverDroga={handleRemoverDroga} lacreNumero={lacreNumero} setLacreNumero={setLacreNumero} />
           </div>}
 
         <div className="mb-8 pb-8 border-b border-gray-200 last:border-b-0 last:pb-0">
