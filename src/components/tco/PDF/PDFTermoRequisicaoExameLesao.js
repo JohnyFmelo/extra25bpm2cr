@@ -49,7 +49,9 @@ export const addRequisicaoExameLesao = (doc, data) => {
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     yPos = checkPageBreak(doc, yPos, 15, data);
-    doc.text("REQUISIÇÃO DE EXAME DE LESÃO CORPORAL", PAGE_WIDTH / 2, yPos, { align: "center" });
+    const anoAtual = new Date().getFullYear();
+    const numeroRequisicao = `.2ºCR.VG.${anoAtual}`;
+    doc.text(`REQUISIÇÃO DE EXAME DE LESÃO CORPORAL ${numeroRequisicao}`, PAGE_WIDTH / 2, yPos, { align: "center" });
     yPos += 10;
 
     const textoRequisicao = `REQUISITO A POLITEC - PERÍCIA OFICIAL E IDENTIFICAÇÃO TÉCNICA, NOS TERMOS DOS ARTIGOS 158 E SEGUINTES DO CÓDIGO DE PROCESSO PENAL E ARTIGO 69, CAPUT, DA LEI Nº 9.099/1995, A REALIZAÇÃO DE EXAME DE CORPO DE DELITO ${pronome} ${periciado.toUpperCase()}, ${qualificado} NO TERMO CIRCUNSTANCIADO DE OCORRÊNCIA EM REFERÊNCIA, EM RAZÃO DE FATOS DE NATUREZA "${naturezaLesao.toUpperCase()}", OCORRIDOS NA DATA ${dataOcorrencia}. PARA TANTO, SOLICITO QUE SEJA RESPONDIDO AOS QUESITOS OFICIAIS, CONFORME LEGISLAÇÃO PERTINENTE (ART. 159, § 3º CPP E PORTARIAS DA POLITEC):`;
