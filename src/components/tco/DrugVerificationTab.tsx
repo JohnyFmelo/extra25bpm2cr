@@ -197,7 +197,7 @@ const DrugVerificationTab: React.FC<DrugVerificationTabProps> = ({
           <Label htmlFor="numeroRequisicao" className="text-base font-semibold">Número de Requisição *</Label>
           <Input
             id="numeroRequisicao"
-            placeholder="Somente o n° (ex: 119")
+            placeholder="Somente o n° Ex: 119"
             value={numeroRequisicao}
             onChange={e => setNumeroRequisicao(e.target.value)}
             className="mt-2 text-lg"
