@@ -62,7 +62,9 @@ const naturezaTipificacoes: Record<string, string> = {
   "Resistência": "ART. 329 DO CÓDIGO PENAL",
   "Desobediência": "ART. 330 DO CÓDIGO PENAL",
   "Desacato": "ART. 331 DO CÓDIGO PENAL",
-  "Exercício arbitrário das próprias razões": "ART. 345 DO CÓDIGO PENAL"
+  "Exercício arbitrário das próprias razões": "ART. 345 DO CÓDIGO PENAL",
+  "Receptação culposa": "ART. 180, § 3º, DO CÓDIGO PENAL",
+  "Receptação": "ART. 180 DO CÓDIGO PENAL"
 };
 const GeneralInformationTab: React.FC<GeneralInformationTabProps> = ({
   natureza,

@@ -530,6 +530,14 @@ const TCOForm: React.FC<TCOFormProps> = ({
           tipificacaoAtual = "ART. 345 DO CÓDIGO PENAL";
           penaAtual = "DETENÇÃO DE 15 DIAS A 1 MÊS, OU MULTA";
           break;
+        case "Receptação":
+          tipificacaoAtual = "ART. 180 DO CÓDIGO PENAL";
+          penaAtual = "RECLUSÃO DE 1 A 4 ANOS, E MULTA";
+          break;
+        case "Receptação culposa":
+          tipificacaoAtual = "ART. 180, § 3º, DO CÓDIGO PENAL";
+          penaAtual = "DETENÇÃO DE 1 MÊS A 1 ANO, OU MULTA";
+          break;
         default:
           tipificacaoAtual = "[TIPIFICAÇÃO NÃO MAPEADA]";
           penaAtual = "";
@@ -1192,7 +1200,32 @@ const TCOForm: React.FC<TCOFormProps> = ({
     window.open('https://www.ilovepdf.com/pt/pdf_para_word', '_blank');
   };
 
-  const naturezaOptions = ["Ameaça", "Vias de Fato", "Lesão Corporal", "Dano", "Injúria", "Difamação", "Calúnia", "Perturbação do Sossego", "Porte de drogas para consumo", "Conduzir veículo sem CNH gerando perigo de dano", "Entregar veículo automotor a pessoa não habilitada", "Trafegar em velocidade incompatível com segurança", "Omissão de socorro", "Rixa", "Invasão de domicílio", "Fraude em comércio", "Ato obsceno", "Falsa identidade", "Resistência", "Desobediência", "Desacato", "Exercício arbitrário das próprias razões", "Outros"];
+  const naturezaOptions = [
+    "Ameaça",
+    "Vias de Fato",
+    "Lesão Corporal",
+    "Dano",
+    "Injúria",
+    "Difamação",
+    "Calúnia",
+    "Perturbação do Sossego",
+    "Porte de drogas para consumo",
+    "Conduzir veículo sem CNH gerando perigo de dano",
+    "Entregar veículo automotor a pessoa não habilitada",
+    "Trafegar em velocidade incompatível com segurança",
+    "Omissão de socorro",
+    "Rixa",
+    "Invasão de domicílio",
+    "Fraude em comércio",
+    "Ato obsceno",
+    "Falsa identidade",
+    "Resistência",
+    "Desobediência",
+    "Desacato",
+    "Exercício arbitrário das próprias razões",
+    "Receptação culposa",
+    "Outros"
+  ];
   const condutorParaDisplay = componentesGuarnicao.find(c => c.nome && c.rg);
   return <div className="container md:py-10 max-w-5xl mx-auto py-0 px-[9px]">
       <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6" noValidate>

@@ -58,6 +58,9 @@ const naturezaPenas: Record<string, number> = {
   "Desobediência": 0.5,
   "Desacato": 2.0,
   "Exercício arbitrário das próprias razões": 0.08
+  ,
+  "Receptação": 4.0,
+  "Receptação culposa": 1.0
 };
 const naturezaTipificacoes: Record<string, string> = {
   "Ameaça": "ART. 147 DO CÓDIGO PENAL",
@@ -82,6 +85,9 @@ const naturezaTipificacoes: Record<string, string> = {
   "Desobediência": "ART. 330 DO CÓDIGO PENAL",
   "Desacato": "ART. 331 DO CÓDIGO PENAL",
   "Exercício arbitrário das próprias razões": "ART. 345 DO CÓDIGO PENAL"
+  ,
+  "Receptação": "ART. 180 DO CÓDIGO PENAL",
+  "Receptação culposa": "ART. 180, § 3º, DO CÓDIGO PENAL"
 };
 const formatarPena = (anosDecimais: number): string => {
   if (anosDecimais < 0) return "Pena indeterminada";
